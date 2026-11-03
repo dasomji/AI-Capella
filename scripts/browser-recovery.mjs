@@ -24,7 +24,8 @@ try {
   assert.equal((await page.request.post(base+'/api/auth/sign-up/email',{headers:{origin:base},data:{email,password:'attacker-password-42',name:'Victim'}})).status(),200);
   console.log('opening mailed link');
   await page.goto(await link('verify-email'));
-  console.log('verification screen', await page.locator('body').innerText());
+  await page.locator('[name=confirm]').waitFor({state:'visible'});
+  console.log('verification password-proof screen ready');
   await page.getByRole('button',{name:'Forgot password',exact:true}).click();
   assert.equal(await page.locator('[name=confirm]').count(),0);
   await page.locator('[name=email]').fill(email);
