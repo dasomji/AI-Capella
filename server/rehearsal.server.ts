@@ -88,6 +88,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         finally { if(checkLead) (db as PoolClient).release(); }
     }
     async function publish(s: RehearsalState, checkLead = false) {
+        if(closed) throw Error('unavailable');
         await persist(s,checkLead);
         if (closed) return;
         ns.to(`rehearsal:${s.ensembleId}`).emit('playback:state',s); schedule(s);
@@ -109,7 +110,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         owner = await pool.connect();
         const lock = await owner.query('select pg_try_advisory_lock(714083, 1) as locked');
         if (!lock.rows[0].locked) { owner.release(); owner=undefined; throw Error('unavailable'); }
-        owner.on('error', () => { closed=true; for(const timer of timers.values()) clearTimeout(timer); });
+        owner.on('error', () => { closed=true; for(const timer of timers.values()) clearTimeout(timer); for(const timer of idle.values()) clearTimeout(timer); });
         const {rows} = await pool.query('select ensemble_id,revision,state from rehearsal_sessions');
         for(const row of rows) {
             let s: RehearsalState;
