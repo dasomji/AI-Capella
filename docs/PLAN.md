@@ -323,3 +323,89 @@ existing Start/legacy renderer and its inline scripts. Offline persistence remai
 Phase 5. Public invitation-expiry/already-used explanations are implemented;
 revoked and wrong-account states have explicit browser coverage, while time-based
 expiry remains covered by domain integration tests.
+
+### Phase 2 review fixes — 2026-11-03
+
+Review B1/B2 and S1–S11 were verified against the Phase 2a server and Phase 2b
+client. This entry supersedes the earlier account-closure, resend-limit and
+reorder decisions above.
+
+- Invitation limits use durable send-intent rows across every invitation state:
+  five per recipient/ensemble in a rolling 24 hours, at least 60 seconds apart.
+  Ensemble and inviter budgets default to 50 and 100 per rolling day. Revoking,
+  expiring, deleting an issuer, or recreating an invitation cannot reset history.
+  Expired pending invitations can renew once their window clears. Mutation and
+  ensemble-creation limits are DB-backed (120/minute and 10/rolling day by default).
+- Body middleware bounds auth/settings requests at 16 KiB and score requests at
+  SCORE_MAX_BYTES + 64 KiB before JSON parsing. The decoded score still has the
+  SCORE_MAX_BYTES cap. Granular settings follow the client's boolean split map,
+  treble/treble8/bass clefs, saved bpm/transpose/sections/played and percussion map;
+  values, keys, nesting and stored map counts are bounded.
+- Pending invitations are revoked atomically when their issuer loses authority,
+  leaves, is removed, or closes their account. Acceptance independently checks
+  issuer authority and clamps a manager's grants to none. Manager resends preserve
+  an existing lead's pending grants. Rotated hashes return `superseded`, with a
+  translated client explanation. Co-leads remain equals: they may demote/remove
+  one another, with audited mutations and last-lead protection.
+- Replays bind normalized payload hashes to ensemble/user/key and operation.
+  Invitation create/resend share a key scope. Mismatches return 422. Piece replay
+  records survive piece deletion for 24 hours. `accounts:cleanup` also removes
+  expired replay/send records and old superseded hashes. These tables deliberately
+  retain opaque ids independently of deleted domain rows for their retention window.
+- Ensemble create/rename include membershipId, isLead and capabilities. Reorder
+  requires `expectedOrder` and returns 409 `stale_order` plus current ids on conflict;
+  it updates sort keys without changing content revisions. The client sends its
+  cached order. Real HTTP responses are parsed against shared Zod schemas in tests.
+- Version downloads use attachment disposition, sandbox CSP and nosniff; MusicXML
+  uses application/octet-stream. The unchanged fetch-based parsing/playback works
+  in the browser smoke. Score validation/hashing precedes the ensemble transaction.
+  Transactions set 5-second lock and 15-second statement timeouts, preserve the
+  original error after a failed rollback, and discard broken clients. DB_POOL_MAX
+  configures pool size. Migration 0003 adds delivery-state CHECK and deferred lead
+  constraint triggers (including newly created ensembles); keep the handwritten
+  trigger SQL when maintaining migrations.
+- Capability events target only the affected member and preserve subscriptions;
+  removal alone evicts. Library emission runs after commit in tracked background
+  work, batches recipient membership/session checks, and logs transient failures
+  without evicting sockets or changing the HTTP result. Version, metadata-op,
+  account deletion and bounded denied-mutation audits contain ids/op names only.
+- Account closure computes sole-member ensembles under locks. DELETE requires an
+  exact explicit `deleteEnsembleIds` list; mismatch returns 409 with current ids.
+  Sole-member ensembles and their pieces are deleted. Last leads of shared
+  ensembles receive 409 with the relevant ids and must hand over first. Sessions
+  older than ten minutes require password re-entry. The existing account sheet
+  now previews deletions and provides confirmation/password controls in EN/DE.
+- Duplicate signup on an unverified account sends password recovery rather than
+  verification; completing recovery verifies the email, changes the password and
+  revokes sessions. Original signup verification remains available. Unverified
+  sign-in no longer sends a plain verification link. Failed sign-ins are scoped
+  to email + IP, with a looser global email budget; IPv6 clients share /64 buckets.
+  Every successful JSON auth response removes session tokens before JS receives it.
+- Playwright was already present in devDependencies at the reviewed HEAD. The
+  browser command now owns disposable Postgres, Mailpit and a built server, uses
+  free ports by default, and cleans them up. BROWSER_PORT, BROWSER_DB_PORT,
+  BROWSER_SMTP_PORT and BROWSER_MAIL_PORT can pin ports; BROWSER_EVIDENCE and
+  CHROMIUM_PATH are supported. Missing Playwright Chromium is installed under
+  ignored .review-evidence/browsers. Standalone browser scripts accept BROWSER_BASE
+  and MAILPIT_URL (compose defaults localhost:3000 and 127.0.0.1:28025).
+
+Verification results are recorded below after the final runs. No push, deployment,
+production data access, or real email delivery was performed.
+
+Final verification: `npm run typecheck` passed; `npm test` passed (6 unit tests);
+`npm run build` passed; `npm run test:integration` passed (20 scenarios, disposable
+Postgres, real HTTP/session/socket boundaries); `npm run check:secrets` passed
+(positive control detected, client artifacts clean); `npm run test:browser` passed
+from fresh disposable DB/Mailpit/server, including the account-deletion sheet;
+`npm run db:generate` reported no schema changes. Regressions include chunked body
+limits, change-password token omission, post-commit emitter failure, transient
+socket membership reads, original-error preservation after rollback failure,
+issuer acceptance clamps, deny audits, creation/mutation/email budgets, stale
+order/revision separation, legacy invitation budget backfill and pre-hijack
+password recovery. The migration conservatively ages legacy send counts from
+last_sent_at because older per-send instants were not stored. Windows are elapsed
+UTC durations rather than calendar-day rules; new stored instants use timestamptz.
+
+Implementation commits: a1655aa (auth/HTTP), 14981de (domain/schema), 2b200a6
+(upgrade budgets and confirmation), ad935a4 (client), 76a817c (browser harness).
+All commits remain on production-v1; no push or PR.
