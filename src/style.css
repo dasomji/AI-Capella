@@ -4379,3 +4379,35 @@ body:has(#app.mode-landing)::after {
 .member-row { padding:1rem 0; border-bottom:1px solid var(--hair-2); display:grid; gap:.6rem; }
 .domain-gold { color:var(--gold, #d4ad65); }
 .landing-empty { border-top:1px solid var(--hair-2); padding-top:1rem; }
+
+/* Account and ensemble controls share the player's ruled, pencil-and-ink language. */
+.domain-heading { margin:1.2rem 0 0; padding-top:1.2rem; border-top:1px solid var(--hair-2); font:500 11px/1.5 'Atkinson Hyperlegible Mono Variable',monospace; text-transform:uppercase; letter-spacing:.13em; color:var(--paper-dim); }
+.domain-heading:first-child { border:0; padding-top:0; margin-top:0; }
+.member-head { display:flex; align-items:center; gap:12px; }
+.member-identity { min-width:0; flex:1; }
+.member-identity b { font:500 16px 'Atkinson Hyperlegible Next Variable',sans-serif; }
+.member-email { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:4px 0 0; color:var(--paper-dim); font:400 12px 'Atkinson Hyperlegible Mono Variable',monospace; }
+.domain-gold, .invitation-state { font:500 10px 'Atkinson Hyperlegible Mono Variable',monospace; text-transform:uppercase; letter-spacing:.06em; }
+.invitation-state { color:var(--paper-dim); }
+.domain-sheet form > label { display:grid; gap:6px; color:var(--paper-dim); font:500 11px 'Atkinson Hyperlegible Mono Variable',monospace; text-transform:uppercase; letter-spacing:.08em; }
+.domain-sheet input:not([type=checkbox]) { width:100%; min-width:0; box-sizing:border-box; border-color:var(--paper-dim); padding:8px 0; font:400 16px 'Atkinson Hyperlegible Next Variable',sans-serif; }
+.capability-row { display:flex; flex-wrap:wrap; gap:12px 18px; }
+.domain-sheet .capability-switch { position:relative; display:inline-flex; flex-wrap:nowrap; gap:8px; color:var(--paper-dim); font:400 12px 'Atkinson Hyperlegible Next Variable',sans-serif; cursor:pointer; min-height:32px; }
+.capability-switch input { position:absolute; opacity:0; width:28px; height:24px; margin:0; }
+.switch-track { display:inline-block; width:28px; height:16px; border:1px solid var(--paper-dim); border-radius:16px; flex:none; }
+.switch-track::after { content:''; display:block; width:10px; height:10px; margin:2px; border-radius:50%; background:var(--paper); transition:transform .15s; }
+.capability-switch input:checked + .switch-track { border-color:var(--gold); background:var(--gold); }
+.capability-switch input:checked + .switch-track::after { transform:translateX(12px); background:var(--ink-0); }
+.capability-switch input:focus-visible + .switch-track { outline:2px solid var(--gold); outline-offset:3px; }
+.row-menu { position:relative; flex:none; }
+.row-menu summary { list-style:none; cursor:pointer; padding:6px 10px; font-size:22px; color:var(--paper-dim); }
+.row-menu summary::-webkit-details-marker { display:none; }
+.row-menu .menu-list { position:absolute; right:0; top:100%; z-index:3; min-width:200px; background:var(--ink-2); border:1px solid var(--hair-2); box-shadow:0 8px 24px #0003; }
+.row-menu .menu-item { width:100%; }
+.landing-empty { text-align:center; border:0; max-width:360px; margin:auto; }
+.landing-empty > p:first-child { font:500 28px 'Bodoni Moda Variable',serif; }
+.landing-empty .btn, .landing-empty .link-btn { display:block; margin:18px auto 0; }
+.no-ensemble .landing-choice { align-items:center; text-align:center; }
+body:has(.domain-sheet) #toast { top:16px; bottom:auto; max-width:calc(100vw - 32px); }
+@media (prefers-reduced-motion:reduce) { .switch-track::after { transition:none; } }
+:root[data-ground='pergament'] .domain-gold { color:#795315; }

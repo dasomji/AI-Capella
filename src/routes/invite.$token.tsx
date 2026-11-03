@@ -1,3 +1,4 @@
+import { AccountStage } from "../account-stage";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { pt, lang, type Lang } from "../i18n";
@@ -77,25 +78,16 @@ function Invitation() {
     sessionStorage.setItem("lightscore-invite", token);
     location.assign(`/?invite=${encodeURIComponent(token)}&mode=${mode}`);
   }
-  const invalid = ["revoked", "expired", "already_used", "not_found"].includes(
+  const invalid = ["revoked", "expired", "already_used", "not_found", "superseded"].includes(
     state,
   );
   return (
-    <main className="auth-shell">
-      <h1>LightScore</h1>
-      <select
-        aria-label="Language / Sprache"
-        value={language}
-        onChange={(e) => setLanguage(e.target.value as Lang)}
-      >
-        <option value="de">Deutsch</option>
-        <option value="en">English</option>
-      </select>
+    <AccountStage language={language} onLanguage={setLanguage}>
       {preview && (
         <>
-          <h2>{text("invitationTitle", { name: preview.ensembleName })}</h2>
+          <h2 className="invitation-title"><span className="invitation-kicker">{text("invitationTitle", { name: "" }).trim()}</span>{" "}<span>{preview.ensembleName}</span></h2>
           <p>{text("invitedBy", { name: preview.inviter })}</p>
-          <p>{preview.email}</p>
+          <p className="account-email">{preview.email}</p>
         </>
       )}
       <p role="status">
@@ -124,7 +116,7 @@ function Invitation() {
           <a href="/app">LightScore</a>
         </>
       ) : state === "wrong_account" ? (
-        <button
+        <button className="btn primary"
           onClick={async () => {
             const r = await fetch("/api/auth/sign-out", {
               method: "POST",
@@ -138,21 +130,21 @@ function Invitation() {
           {text("switchAccount")}
         </button>
       ) : preview && user ? (
-        <button disabled={busy} onClick={() => void accept()}>
+        <button className="btn primary" disabled={busy} onClick={() => void accept()}>
           {text("acceptInvitation")}
         </button>
       ) : (
         preview && (
-          <nav>
-            <button onClick={() => authenticate("signup")}>
+          <div>
+            <button className="btn primary" onClick={() => authenticate("signup")}>
               {text("createAccount")}
             </button>
-            <button onClick={() => authenticate("signin")}>
+            <nav className="account-links"><button onClick={() => authenticate("signin")}>
               {text("signin")}
-            </button>
-          </nav>
+            </button></nav>
+          </div>
         )
       )}
-    </main>
+    </AccountStage>
   );
 }

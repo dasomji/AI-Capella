@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { AccountStage } from "./account-stage";
 import { authMessages } from "./i18n";
 export function AuthPage() {
   const [language, setLanguage] = useState<"en" | "de">("en");
@@ -10,6 +11,11 @@ export function AuthPage() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const [resendAt, setResendAt] = useState(0);
+  const [clock, setClock] = useState(Date.now());
+  useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
   const m = authMessages[language];
   useEffect(() => {
     document.documentElement.lang = language;
@@ -24,7 +30,9 @@ export function AuthPage() {
     const params = new URLSearchParams(location.search);
     const invitation =
       params.get("invite") || sessionStorage.getItem("lightscore-invite");
+    if (params.get("mode") === "signup") setMode("signup");
     if (invitation) {
+      void fetch(`/api/invitations/${encodeURIComponent(invitation)}`).then(r => r.ok ? r.json() : null).then(data => { if (data) setMaskedEmail(data.email); }).catch(() => {});
       setInvite(invitation);
       sessionStorage.setItem("lightscore-invite", invitation);
       if (params.get("mode") === "signup") setMode("signup");
@@ -93,80 +101,49 @@ export function AuthPage() {
         history.replaceState(null, "", "/");
         setMode("signin");
         setStatus("done");
-      } else setStatus("check");
+      } else { setStatus("check"); setResendAt(Date.now() + 60000); }
     } catch {
       setStatus("error");
     } finally {
       setBusy(false);
     }
   }
-  return (
-    <main className="auth-shell">
-      <h1>LightScore</h1>
-      <select
-        aria-label="Language / Sprache"
-        value={language}
-        onChange={(e) => {
-          const value = e.target.value as "en" | "de";
-          setLanguage(value);
-          localStorage.setItem("ai-capella-lang", value);
-        }}
-      >
-        <option value="en">English</option>
-        <option value="de">Deutsch</option>
-      </select>
-      <h2>{m[mode]}</h2>
-      <form onSubmit={submit}>
-        {mode === "signup" && (
-          <label>
-            {m.name}
-            <input name="name" autoComplete="name" required />
-          </label>
-        )}
-        {mode !== "reset" && (
-          <label>
-            {m.email}
-            <input
-              type="email"
-              name="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-          </label>
-        )}
-        {mode !== "forgot" && (
-          <label>
-            {m.password}
-            <input
-              name="password"
-              type="password"
-              minLength={8}
-              maxLength={128}
-              autoComplete={
-                mode === "signin" ? "current-password" : "new-password"
-              }
-              required
-            />
-          </label>
-        )}
-        <button disabled={busy}>{m[mode]}</button>
-      </form>
-      <p role="status">{m[status as keyof typeof m] ?? ""}</p>
-      <nav>
-        {(["signin", "signup", "forgot"] as const).map((value) => (
-          <button
-            key={value}
-            onClick={() => {
-              setMode(value);
-              setStatus("");
-            }}
-          >
-            {m[value]}
-          </button>
-        ))}
+  function changeMode(next: typeof mode) { setMode(next); setStatus(""); setShowPassword(false); }
+  async function resend() {
+    if (busy || Date.now() < resendAt) return;
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/auth/${mode === "forgot" ? "request-password-reset" : "send-verification-email"}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, redirectTo: location.origin + '/', callbackURL: invite ? `${location.origin}/invite/${encodeURIComponent(invite)}` : `${location.origin}/?state=verified` }),
+      });
+      setResendAt(Date.now() + 60000);
+      if (!response.ok) setStatus(response.status === 429 ? "limited" : "error");
+    } catch { setStatus("error"); } finally { setBusy(false); }
+  }
+  const checking = status === "check";
+  const result = ["verified", "invalid", "done"].includes(status);
+  return <AccountStage language={language} onLanguage={setLanguage}>
+    <h2>{checking ? m.checkTitle : result ? m.resultTitle : m[mode]}</h2>
+    {checking || result ? <>
+      <p role="status">{m[status as keyof typeof m]}</p>
+      {checking && <p className="account-email">{email}</p>}
+      <nav className="account-links">
+        {checking ? <><button type="button" disabled={busy || clock < resendAt} onClick={() => void resend()}>{m.resend}</button><span aria-hidden="true"> · </span><button type="button" onClick={() => setStatus("")}>{m.otherEmail}</button></> : <button type="button" onClick={() => changeMode(status === "invalid" ? "forgot" : "signin")}>{status === "invalid" ? m.forgot : m.signin}</button>}
       </nav>
-    </main>
-  );
+    </> : <>
+      {mode === "signup" && maskedEmail && <p className="account-hint">{m.inviteHint.replace('{email}', maskedEmail)}</p>}
+      <form onSubmit={submit}>
+        {mode === "signup" && <label>{m.name}<input name="name" autoComplete="name" required /></label>}
+        {mode !== "reset" && <label>{m.email}<input type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required /></label>}
+        {mode !== "forgot" && <label>{m.password}<span className="password-line"><input aria-label={m.password} name="password" type={showPassword ? "text" : "password"} minLength={8} maxLength={128} autoComplete={mode === "signin" ? "current-password" : "new-password"} required /><button className="password-toggle" type="button" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? m.hide : m.show}</button></span></label>}
+        <p role="status" className={status && !['signedout', 'expired'].includes(status) ? 'account-error' : ''}>{m[status as keyof typeof m] ?? ""}</p>
+        <button className="btn primary" type="submit" disabled={busy}>{m[mode]}</button>
+      </form>
+      {status === "unverified" && <nav className="account-links"><button type="button" disabled={busy || clock < resendAt} onClick={() => void resend()}>{m.resend}</button></nav>}
+      <nav className="account-links">
+        {mode === "signin" ? <><button type="button" onClick={() => changeMode('signup')}>{m.signup}</button><span aria-hidden="true"> · </span><button type="button" onClick={() => changeMode('forgot')}>{m.forgot}</button></> : <button type="button" onClick={() => changeMode('signin')}>{mode === "signup" ? m.haveAccount + ' ' : ''}{m.signin}</button>}
+      </nav>
+    </>}
+  </AccountStage>;
 }

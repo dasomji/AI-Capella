@@ -576,6 +576,9 @@ function renderLanding(_now=false) {
  const chosen=activeEnsemble();currentEnsemble=chosen ?? PUBLIC_ID;
  const empty=!unlockedEnsembles().length && chosen!==PUBLIC_ID;
  document.querySelector<HTMLElement>('#landing-empty')!.hidden=!empty;
+ document.querySelector('#landing')!.classList.toggle('no-ensemble',empty);
+ const create=document.querySelector<HTMLElement>('#landing-create')!;create.className=empty?'btn primary landing-aside':'link-btn landing-aside';
+ if(empty)document.querySelector('#landing-empty')!.insertBefore(create,document.querySelector('#landing-samples'));else document.querySelector('.landing-choice')!.append(create);
  landingModesEl.hidden=empty;dedicationEl.hidden=empty;
  dedicationEl.replaceChildren();
  const name=document.createElement('span');name.className='ded-name';name.textContent=(inPublicFolder()?'':t('dedicationFor')+' ')+ensembleName(currentEnsemble);dedicationEl.append(name);
@@ -4093,10 +4096,13 @@ window.addEventListener('offline', renderSongList);
 
 async function openAccountArea(anchor: HTMLElement) {
   const body = document.createElement("div");
+  body.className = "sheet-body domain-sheet account-sheet";
   const email = document.createElement("p");
+  email.className = "member-email";
   email.textContent = account?.email ?? "";
   body.append(email);
   const signout = document.createElement("button");
+  signout.className = "btn primary";
   signout.textContent = t("accountSignOut");
   signout.onclick = async () => {
     const r = await fetch("/api/auth/sign-out", {
@@ -4113,6 +4119,7 @@ async function openAccountArea(anchor: HTMLElement) {
   };
   body.append(signout);
   const remove = document.createElement("button");
+  remove.className = "link-btn";
   remove.textContent = t("accountDelete");
   remove.onclick = async () => {
     const plan = await api("/account/deletion");
@@ -4159,6 +4166,7 @@ async function openAccountArea(anchor: HTMLElement) {
   body.append(remove);
   openSheet(t("accountArea"), body, anchor);
   const heading = document.createElement("h3");
+  heading.className = "domain-heading";
   heading.textContent = pt("devices");
   body.append(heading);
   const response = await fetch("/api/auth/list-sessions");
@@ -4173,6 +4181,7 @@ async function openAccountArea(anchor: HTMLElement) {
       deviceLabel(session.userAgent) +
       (session.current ? " · " + pt("thisDevice") : "");
     const revoke = document.createElement("button");
+    revoke.className = "link-btn";
     revoke.textContent = t("accountRevoke");
     revoke.onclick = async () => {
       const result = await fetch("/api/auth/revoke-session", {

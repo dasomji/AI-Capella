@@ -150,6 +150,7 @@ export interface TitleName {
   /** "Score"'s baseline and cap height, and the name's extent -- viewport px (the staff's frame). */
   geometry(): { baseline: number; capTop: number; left: number; right: number; lightRight: number; scoreLeft: number } | null;
   nib(): { x: number; y: number } | null; // where the pen of light is right now, viewport px
+  dispose(): void;
   ignite(): void; // stage: the light comes on -- "Light", a shadow in the dark until now, lights up
 }
 
@@ -184,6 +185,8 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
   let started = 0;
   let raf = 0;
   let done = false;
+  let disposed = false;
+  let fallbackTimer = 0;
   let glided = false;
   let scoreShift = 0; // px "Score" stands left of its place while it is in the middle
   let inkPad = 0;
@@ -342,6 +345,7 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
 
   const fonts = Promise.all([loadScriptFont(), document.fonts.load(`${BRAND_WEIGHT} 100px ${FONT_BRAND}`).catch(() => undefined)]);
   void fonts.then(() => {
+    if (disposed) return;
     layout();
     if (reduce || mode === 'stage') {
       glided = true;
@@ -355,21 +359,23 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
     }
     wrap.classList.add('score-in');
     shownNow();
-    window.setTimeout(push, PUSH_FALLBACK_SEC * 1000);
+    fallbackTimer = window.setTimeout(push, PUSH_FALLBACK_SEC * 1000);
     // (The staff calls push() itself once it is ruled; the fallback is only for when it can't.)
   });
   // Should the typefaces never arrive, the voice lines needn't wait for ever.
-  window.setTimeout(shownNow, 6000);
+  const shownTimer = window.setTimeout(shownNow, 6000);
   let timer = 0;
-  window.addEventListener('resize', () => {
+  const onResize = () => {
     clearTimeout(timer);
     timer = window.setTimeout(() => {
       layout();
       if (done) finish();
       else if (!raf && started) raf = requestAnimationFrame(frame);
     }, 120);
-  });
+  };
+  window.addEventListener('resize', onResize);
   return {
+    dispose: () => { disposed = true; done = true; cancelAnimationFrame(raf); clearTimeout(timer); clearTimeout(fallbackTimer); clearTimeout(shownTimer); window.removeEventListener('resize', onResize); },
     shown,
     written,
     scoreLeft: () => (leftCache ??= score.getBoundingClientRect().left + inkPad),

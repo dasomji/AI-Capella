@@ -3,6 +3,9 @@ import '@fontsource-variable/bodoni-moda/opsz.css';
 import '@fontsource-variable/atkinson-hyperlegible-next/wght.css';
 // Keep the prototype's base → parchment cascade in one eager chunk. Loading
 // the base only from the lazy player lets it override parchment's panel grounds.
+import '@fontsource-variable/atkinson-hyperlegible-mono/wght.css';
+import '@fontsource/italianno';
+import '../revivalType.css';
 import '../style.css';
 import '../parchment.css';
 import '../auth.css';
