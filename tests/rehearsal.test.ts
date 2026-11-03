@@ -65,3 +65,10 @@ it('derives tempo-map marks in quarter units from existing score model', () => {
     const timing = timingFromScore({ tempo: 120, totalBeats: 16, measures: [], marks: [{ kind: 'tempo', beat: 4, metronome: { unit: 'half', dots: 1, perMinute: '40' } }] } as any);
     expect(timing.tempos).toEqual([{ beat: 0, bpm: 120 }, { beat: 4, bpm: 120 }]);
 });
+it('counts in at the local tempo after a tempo-map change and reports elapsed natural end', () => {
+    const configured = run(s, { type: 'setCountIn', bars: 1 });
+    const pre = run(configured, { type: 'play', fromBeat: 6 });
+    expect(pre.countInUntil).toBe(4400);
+    const playing = run(s, { type: 'play' });
+    expect(lateJoin(playing, 99999, t).status).toBe('stopped');
+});
