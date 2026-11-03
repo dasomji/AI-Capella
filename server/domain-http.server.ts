@@ -61,9 +61,9 @@ async function readBody(req: { json: () => Promise<unknown> }) {
   while (stack.length) {
     const [v, depth] = stack.pop()!;
     if (depth > 64) throw new DomainError("nesting_limit", 422);
-    if (typeof v === "string" && v.includes("\0")) throw new DomainError("invalid_text", 422);
+    if (typeof v === "string" && (v.includes("\0") || !v.isWellFormed())) throw new DomainError("invalid_text", 422);
     if (v && typeof v === "object")
-      for (const [key,child] of Object.entries(v)) {if(key.includes("\0")) throw new DomainError("invalid_text",422);stack.push([child, depth + 1]);}
+      for (const [key,child] of Object.entries(v)) {if((key.includes("\0") || !key.isWellFormed())) throw new DomainError("invalid_text",422);stack.push([child, depth + 1]);}
   }
   return value;
 }
@@ -949,7 +949,7 @@ domain.post("/ensembles/:ensemble/pieces", async (c) => {
   const e = c.req.param("ensemble"), u = c.get("user");
   await authorize(pool, u.id, e, "editPieces");
   const meta = createPieceInput.omit({content:true}).parse({title: scoreTitle(c.req.header("x-score-title") ?? ""), idempotencyKey:c.req.header("idempotency-key")});
-  if(meta.title.includes("\0")) throw new DomainError("invalid_text",422);
+  if((meta.title.includes("\0") || !meta.title.isWellFormed())) throw new DomainError("invalid_text",422);
   const input = {...meta, content: await upload(c.req)};
   const data = await content(input.content);
   const result = await transaction(async (db) => {

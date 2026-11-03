@@ -1712,3 +1712,13 @@ test('malformed percent-encoded score title returns validation error',async()=>{
     assert.equal(r.status,422);assert.equal((await r.json()).code,'invalid_text');
   }
 });
+
+test('JSON lone surrogates in values and keys fail before jsonb insertion',async()=>{
+  const owner=await account(), e=await ok('ensembles','POST',{name:'Unicode validation'},owner.cookie);
+  for(const name of ['\ud800','\udfff','ok\ud800bad']) {
+    const r=await request(`ensembles/${e.id}`,'PATCH',{name},owner.cookie);
+    assert.equal(r.status,422); assert.equal((await r.json()).code,'invalid_text');
+  }
+  const r=await request(`ensembles/${e.id}`,'PATCH',{name:'Valid',['\ud800']:true},owner.cookie);
+  assert.equal(r.status,422);
+});
