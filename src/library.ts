@@ -68,6 +68,7 @@ export type VoiceClef = "treble" | "treble8" | "bass";
 const metadata = new Map<string, PieceMetadata>();
 const bodies = new Map<string, Promise<string>>();
 let notify: (() => void) | undefined;
+let stopSubscription: (() => void) | undefined;
 const base = () => `/ensembles/${activeEnsemble()}/pieces`;
 function stored(m: PieceMetadata): StoredSong {
   const s = m.settings as any;
@@ -112,6 +113,9 @@ export async function scoreBody(id: string): Promise<string> {
   return body;
 }
 export function clearLibrary() {
+  const stop = stopSubscription;
+  stopSubscription = undefined;
+  stop?.();
   metadata.clear();
   bodies.clear();
   notify = undefined;
@@ -141,6 +145,9 @@ export function subscribeToSongs(
     emit();
   };
   const socket = io({ withCredentials: true, transports: ["websocket"] });
+  socket.on("membership:changed", () =>
+    window.dispatchEvent(new Event("membership:refresh")),
+  );
   socket.on("connect", () => {
     socket.emit("ensemble:join", ensemble);
     void refresh().catch(onError);
@@ -167,11 +174,15 @@ export function subscribeToSongs(
   const rejoin = () => socket.emit("ensemble:join", ensemble);
   window.addEventListener("membership:changed", rejoin);
   void refresh().catch(onError);
-  return () => {
+  const stop = () => {
     closed = true;
     socket.disconnect();
     window.removeEventListener("membership:changed", rejoin);
-    clearLibrary();
+  };
+  stopSubscription = stop;
+  return () => {
+    if (stopSubscription === stop) clearLibrary();
+    else stop();
   };
 }
 export const songOrder = (s: { sortKey?: number; importedAt: number }) =>

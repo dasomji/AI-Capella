@@ -113,3 +113,18 @@ TRUSTED_ORIGINS=http://localhost:3005, and MAIL_TRANSPORT=smtp. Run
 Run `npm run test:browser` (optionally `CHROMIUM_PATH=/path/to/chromium`). The script uses Playwright Chromium by default, writes evidence in a temporary directory, and exercises the production CSP (also enforced in test mode).
 Remove the fixture container with `docker rm -fv` when finished. Never point this
 script at an existing account or real mail service.
+
+Phase 2b: accounts now create ensembles or browse Samples from the title screen.
+Ensemble repertoire persists through the authenticated API; ordinary members may
+open local MusicXML/MXL/MIDI files privately without uploading them. Together uses
+the local transport until Phase 3. No service worker is installed.
+
+`npm run test:browser` runs the two-context Phase 2b workflow; the retained musical,
+auth/recovery/PDF and full theme harness is `npm run test:browser:foundation`.
+Install Chromium with `npx playwright install chromium`, or set CHROMIUM_PATH.
+Both require the disposable built-mode server and Mailpit described above.
+Phase 2b evidence defaults to `/tmp/aicap-p2b/shots/` (override BROWSER_EVIDENCE);
+BROWSER_BASE defaults to `http://localhost:3005`. The implementation run used an
+owned `aicap-p2b-client` Postgres container on loopback port 25436; it never used
+or altered development database fixtures. Remove only your owned fixture container
+after stopping its server. SMTP must target the local Mailpit, never Resend.

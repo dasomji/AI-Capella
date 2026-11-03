@@ -73,9 +73,11 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
   const body = element("div");
   body.className = "sheet-body domain-sheet";
   openSheet(pt("membersInvitations"), body, anchor);
-  const base = `/ensembles/${id}`,
-    isLead = leads(id);
+  const base = `/ensembles/${id}`;
+  let isLead = leads(id);
   async function render() {
+    await refreshEnsembleNames();
+    isLead = leads(id);
     const [members, invitations] = await Promise.all([
       api(`${base}/members`),
       api(`${base}/invitations`),

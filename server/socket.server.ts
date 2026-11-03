@@ -33,7 +33,7 @@ export function attachSockets(server: ServerType) {
   }
   const unsubscribeMembership = onMembershipChange((ensemble, user) => {
     for (const socket of connected) if (!user || socket.data.userId === user) {
-      if (!ensemble) socket.disconnect(true); else void socket.leave(`ensemble:${ensemble}`);
+      if (!ensemble) socket.disconnect(true); else { socket.emit('membership:changed',{ensembleId:ensemble}); void socket.leave(`ensemble:${ensemble}`); }
     }
   });
   const unsubscribeLibrary = onLibraryChange(async (ensemble, changes) => {

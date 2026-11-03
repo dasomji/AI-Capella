@@ -138,6 +138,7 @@ export type PieceMetadata = z.infer<typeof metadataSchema>;
 
 export const ensembleSchema = z.object({
   id: z.string(),
+  membershipId: z.string(),
   name: z.string(),
   kind: z.enum(["choir", "band", "other"]).nullable(),
   isLead: z.boolean(),
@@ -145,6 +146,7 @@ export const ensembleSchema = z.object({
 });
 export const memberSchema = z.object({
   id: z.string(),
+  ensembleId: z.string(),
   userId: z.string(),
   isLead: z.boolean(),
   capabilities,

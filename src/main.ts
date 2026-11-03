@@ -1,6 +1,6 @@
 import { api } from './domain-client';
 import { createEnsembleSheet, membersSheet, leaveEnsemble } from './ensemble-ui';
-import { pt } from './i18n';
+import { pt, domainError } from './i18n';
 // Typefaces are bundled with the app rather than loaded from Google's servers: no visitor data goes
 // to a third party (German courts have fined sites for remotely loaded Google Fonts), and they keep
 // working on weak rehearsal-room Wi-Fi.
@@ -1347,6 +1347,7 @@ function applySongTitle(songId: string, value: string, previousTitle: string) {
 }
 
 function errorText(err: unknown): string {
+  if(err && typeof err==='object' && 'code' in err)return domainError(String(err.code));
   return err instanceof Error ? err.message : String(err);
 }
 
@@ -1410,24 +1411,11 @@ async function importFiles(files: FileList | File[]) {
 let songListStale = false;
 const reorder = attachReorder(songGridEl, document.querySelector<HTMLElement>('.lib-scroll')!, {
   movable: (card) => !inPublicFolder() && editable() && libraryState === 'ready' && !searchInput.value.trim() && !!importedSongs.find((s) => s.id === card.dataset.id),
-  onDrop: (ids, movedId) => {
-    const at = (id: string | undefined) => importedSongs.find((s) => s.id === id)?.order ?? 0;
-    const i = ids.indexOf(movedId);
-    const prev = ids[i - 1];
-    const next = ids[i + 1];
-    let places: { id: string; sortKey: number }[];
-    const between = prev && next ? (at(prev) + at(next)) / 2 : prev ? at(prev) + 1000 : at(next) - 1000;
-    if (prev && next && !(at(prev) < between && between < at(next))) {
-      // No room left between them: number the whole list afresh.
-      const base = at(ids[0]);
-      places = ids.map((id, j) => ({ id, sortKey: base + j * 1000 }));
-    } else places = [{ id: movedId, sortKey: between }];
-    for (const { id, sortKey } of places) {
-      const song = importedSongs.find((s) => s.id === id);
-      if (song) song.order = sortKey;
-    }
-    importedSongs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    saveSongOrder(places).catch((err) => toast(t('moveFailed', { msg: errorText(err) }), 'error'));
+  onDrop: (ids) => {
+    const places=ids.filter(id=>importedSongs.some(song=>song.id===id)).map((id,sortKey)=>({id,sortKey}));
+    for(const place of places){const song=importedSongs.find(s=>s.id===place.id);if(song)song.order=place.sortKey;}
+    importedSongs.sort((a,b)=>(a.order??0)-(b.order??0));
+    saveSongOrder(places).catch(err=>{toast(t('moveFailed',{msg:errorText(err)}),'error');location.reload();});
   },
   onEnd: () => {
     if (songListStale) {
@@ -2165,7 +2153,7 @@ function applyVoiceSetup(score: Score, song: SongEntry) {
 let percussionParts = new Set<string>();
 
 function voiceSetupKey(song: SongEntry): string {
-  return JSON.stringify([song.removedParts ?? [], song.splitParts ?? [], song.clefOverrides ?? {}, song.percussion ?? {}, !!song.swing]);
+  return JSON.stringify([song.contentHash,song.removedParts ?? [], song.splitParts ?? [], song.clefOverrides ?? {}, song.percussion ?? {}, !!song.swing]);
 }
 
 // Swing (swing.ts): a library song's choice is stored with it, for everyone; the bundled samples
@@ -4110,6 +4098,7 @@ async function openAccountArea(anchor: HTMLElement) {
   signout.onclick = async () => { const r = await fetch('/api/auth/sign-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); if (r.ok) {clearLibrary();localStorage.removeItem(PLACE_KEY);sessionStorage.removeItem(MODE_SWITCH_KEY);location.replace('/?state=signed-out');} else toast(pt('errorGeneric'),'error'); };
   body.append(signout);
   openSheet(t('accountArea'), body, anchor);
+  const heading=document.createElement('h3');heading.textContent=pt('devices');body.append(heading);
   const response = await fetch('/api/auth/list-sessions'); if (!response.ok) {toast(pt('errorGeneric'),'error');return;}
   const sessions = await response.json();
   for (const session of sessions) {
@@ -4123,6 +4112,8 @@ async function openAccountArea(anchor: HTMLElement) {
 function deviceLabel(ua:string='') { const browser=/Edg/.test(ua)?'Edge':/Firefox/.test(ua)?'Firefox':/Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':t('accountDevice'); const os=/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iOS':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':'';return [browser,os].filter(Boolean).join(' · '); }
 window.addEventListener('piece:conflict',()=>{toast(pt('conflict'));if(currentSong)void reloadCurrentSong();});
 let checkingMembership=false;
-setInterval(async()=>{if(checkingMembership)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(me.user.id!==account?.id){clearLibrary();location.reload();return;}await refreshEnsembleNames();if(!inPublicFolder()&&!ensembleById(currentEnsemble)){stopPlayback();clearLibrary();importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{}finally{checkingMembership=false;}},3000);
+async function checkMembership(){if(checkingMembership)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(me.user.id!==account?.id){clearLibrary();location.reload();return;}await refreshEnsembleNames();window.dispatchEvent(new Event('membership:changed'));if(!inPublicFolder()&&!ensembleById(currentEnsemble)){stopPlayback();clearLibrary();importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{}finally{checkingMembership=false;}}
+setInterval(()=>void checkMembership(),3000);
+window.addEventListener('membership:refresh',()=>void checkMembership());
 
 window.addEventListener('domain:error', (event)=>{const status=(event as CustomEvent).detail.status;if(status===401){stopPlayback();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});

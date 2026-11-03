@@ -267,3 +267,59 @@ an injected clock across DST and midnight under a non-UTC process zone. No new
 interactive browser smoke run in Phase 2a; the browser script is portable and the
 Phase 1 musical behavior checks remain intact. Parent review/verification and the
 Phase 2b client migration remain separate work.
+
+### Phase 2b — 2026-11-03 (client)
+
+Replaced prototype code/PIN ensembles with authenticated account memberships and
+account-scoped last-ensemble/last-place storage. Title, create-ensemble sheet,
+heading switcher (including bundled read-only Samples), rename/leave protection,
+and bilingual member/invitation management use the existing menus, sheets and
+parchment themes. Member managers cannot grant capabilities; leads can delegate
+three independent capabilities, promote/demote leads and remove members with
+confirmation. Library and player menus expose account/device sessions and logout.
+
+The repertoire now lists server metadata, fetches immutable version bodies lazily
+and caches promises by content hash. Cover parsing remains queued. Authenticated
+WebSocket library events fetch only changed metadata; reconnect reconciles the
+metadata list. Selection ahead of the list uses the single-piece endpoint.
+Edits use granular operations plus expectedRevision, conflicts reload and show a
+pencil notice, and dragging submits the complete order to the atomic endpoint.
+Edit controls follow current capability grants. Private local imports remain
+memory-only, open/play locally and carry a persistent pencil notice. Together
+continues through the local playback transport pending Phase 3.
+
+`/invite/:token` preserves the trusted callback through signup, verification and
+sign-in, then accepts and selects the invited ensemble. It explains wrong account,
+revoked/expired/unavailable and already-used links. Public preview remains masked.
+
+Minimal server response changes required by the client: membership responses add
+ensembleId (acceptance destination); session listing adds current (device mark);
+sockets emit membership:changed before removing subscriptions. Clients recheck
+membership, rejoin, hide revoked controls, or return to the title with an
+explanation. A three-second account/membership check backs up socket delivery.
+No schema/database migration, infrastructure change, real email or paid provider.
+
+Validation: npm run typecheck; npm test (6 passing); npm run build;
+npm run test:integration (13 passing, disposable Postgres); npm run check:secrets
+(positive control and clean client artifacts); npm run test:browser (two isolated
+headless Chromium contexts against built start + disposable Postgres + Mailpit).
+Browser scenarios cover creation/import, signup/verification/invitation acceptance,
+read-only playback/private import, live capability grant and rename, revision
+conflict preserving concurrent data, wrong-account/revoked links, removal fallback,
+current-device mark and library-menu logout. Evidence: /tmp/aicap-p2b/shots/,
+including title-empty-{dark,light}, title-ensemble-{dark,light},
+members-{dark,light}, invite-{dark,light}, invite-wrong-account, invite-revoked,
+and player-{dark,light}.png. Dark defaults to Papier. The retained foundation
+browser harness also exercises real audio, staff rendering, PDF and all five
+stored/system theme combinations.
+
+Phase 2b open questions / explicit limits: a first-time signed-out registration
+cannot prefill the full invitation email from the deliberately masked public
+preview; the invitee enters it. Exposing the full address would weaken the Phase
+2a privacy contract. Cross-device verification works because the callback carries
+the token and the invitation page restarts sign-in. CSP nonce migration from the
+Phase 2a notes remains a shell/security follow-up; this change preserves the
+existing Start/legacy renderer and its inline scripts. Offline persistence remains
+Phase 5. Public invitation-expiry/already-used explanations are implemented;
+revoked and wrong-account states have explicit browser coverage, while time-based
+expiry remains covered by domain integration tests.
