@@ -868,3 +868,27 @@ Pre-roll settings preserve the entire musical anchor. Canonical `effectiveAt`
 records when the changed settings take effect independently of that anchor;
 playbackSchedule consumes it. The field is optional only when reading legacy
 persisted snapshots (fallback: anchor.serverTime); new controller states emit it.
+
+Phase 3c verification (local production-v1; no push):
+- `npm run typecheck`: passed.
+- `npm test`: 67 tests passed, including deterministic injected-clock/fake-timer
+  recovery, 5000-snapshot isolation (<50 ms legitimate command), per-user budget,
+  ownership exclusion/loss, idle loop pause, end retry, timer/command ordering,
+  stale selection, revocation race, worker backfill/error mapping, exhausted
+  persistence lead and transaction-client release regressions.
+- `npm run test:integration`: 34 tests passed. Real Socket.IO lifecycle compares
+  full broadcasts, saved piece settings/revision before/after, foreign existing
+  piece rejection, commands without join, original duplicate acknowledgements,
+  unchecked pause, natural end, deletion and restart behavior.
+- `npm run build`: passed (also rebuilt by the final secret scan).
+- `npm run check:secrets`: passed; positive control detected and built client
+  artifacts clean, no public source maps.
+- `npm run test:browser`: passed in isolation (Phase 2b scenarios/theme matrix).
+  An earlier concurrent-build run timed out on landing-page Create account;
+  the isolated rerun passed without UI changes.
+- `npm run db:generate`: no schema changes after migration 0004; no drift.
+
+No player UI/audio integration or measured inter-device synchronization is
+claimed. Phase 3d remains as described above; no protocol review item is deferred.
+The ownership connection reserves one database-pool slot; keep enough remaining
+pool capacity for ordinary requests and command transactions.
