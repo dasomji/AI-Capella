@@ -12,12 +12,12 @@ it('integrates score tempo segments and reanchors tempo continuously at effectiv
     expect(secondsAt(6, t)).toBe(4);
     expect(beatAt(4, t)).toBe(6);
     const playing = run(s, { type: 'play' });
-    const changed = run(playing, { type: 'setTempo', bpm: 60 }, 2000);
-    expect(changed.anchor.beat).toBe(positionAt(playing, 2400, t));
+    const changed = run(playing, { type:'setTempo',pieceId:'piece',versionNo:1, bpm: 60 }, 2000);
+    expect(changed.anchor.beat).toBe(4);
     expect(positionAt(changed, 3400, t)).toBeCloseTo(4.5);
 });
 it('wraps loops in musical time and clamps natural end', () => {
-    let playing = run(s, { type: 'setLoop', enabled: true, startBeat: 2, endBeat: 6 });
+    let playing = run(s, { type:'setLoop',pieceId:'piece',versionNo:1, enabled: true, startBeat: 2, endBeat: 6 });
     playing = run(playing, { type: 'play', fromBeat: 2 });
     expect(positionAt(playing, 3900, t)).toBeCloseTo(3);
     const end = run(s, { type: 'play' });
@@ -36,12 +36,12 @@ it('freezes pre-roll and late joins discard expired pre-roll; restart pauses at 
     expect(paused.status).toBe('paused');
     expect(paused.revision).toBe(pre.revision + 1);
 });
-const commands: Command[] = [{ type: 'selectPiece', pieceId: 'piece', versionNo: 1 }, { type: 'play' }, { type: 'pause' }, { type: 'stop' }, { type: 'seek', beat: 2 }, { type: 'setTempo', bpm: 90 }, { type: 'setTransposition', semitones: 2 }, { type: 'setLoop', enabled: false }, { type: 'setMetronome', enabled: true }, { type: 'setCountIn', bars: 0 }, { type: 'setStartingTones', enabled: false }, { type: 'playStartingTones' }];
+const commands: Command[] = [{ type: 'selectPiece', pieceId: 'piece', versionNo: 1 }, { type: 'play' }, { type: 'pause' }, { type: 'stop' }, { type:'seek',pieceId:'piece',versionNo:1, beat: 2 }, { type:'setTempo',pieceId:'piece',versionNo:1, bpm: 90 }, { type:'setTransposition',pieceId:'piece',versionNo:1, semitones: 2 }, { type:'setLoop',pieceId:'piece',versionNo:1, enabled: false }, { type: 'setMetronome', enabled: true }, { type: 'setCountIn', bars: 0 }, { type: 'setStartingTones', enabled: false }, { type: 'playStartingTones' }];
 it.each(commands)('writes explicit pre-roll fields for $type and checks its revision policy', c => {
     const old = { ...s, revision: 2, status: 'playing' as const, countInUntil: 999, startingTonesUntil: 888 };
     const next = run(old, c);
     expect(Object.keys(next).sort()).toEqual(Object.keys(old).sort());
-    if (c.type !== 'play' && c.type !== 'playStartingTones') {
+    if (['pause','stop','seek','selectPiece','setLoop'].includes(c.type)) {
         expect(next.countInUntil).toBeNull();
         expect(next.startingTonesUntil).toBeNull();
     }
@@ -49,10 +49,10 @@ it.each(commands)('writes explicit pre-roll fields for $type and checks its revi
     expect('code' in stale ? stale.code : 'accepted').toBe(revisionChecked[c.type] ? 'stale' : 'accepted');
 });
 it('rejects invalid loop/beat, future revision and expired envelopes', () => {
-    expect(apply(s, envelope({ type: 'seek', beat: 17 }), { now: 0, leadTimeMs: 0, pieceTiming: t, userId: 'user' })).toEqual({ code: 'invalid' });
+    expect(run(s, {type:'seek',pieceId:'piece',versionNo:1,beat:17}).anchor.beat).toBe(16);
     expect(apply(s, envelope({ type: 'stop' }, 1), { now: 0, leadTimeMs: 0, pieceTiming: t, userId: 'user' })).toEqual({ code: 'stale' });
     expect(apply(s, envelope({ type: 'stop' }), { now: 6000, leadTimeMs: 0, pieceTiming: t, userId: 'user' })).toEqual({ code: 'expired' });
-    expect(commandSchema.safeParse({ type: 'setTempo', bpm: 0 }).success).toBe(false);
+    expect(commandSchema.safeParse({ type:'setTempo',pieceId:'piece',versionNo:1, bpm: 0 }).success).toBe(false);
 });
 it('uses lowest RTT samples and bounds unknowable asymmetry with jitter', () => {
     expect(estimateClock(Array(7).fill({ t0: 0, tServer: 0, t1: 0 }))).toBeNull();
@@ -107,7 +107,7 @@ it('plans future and late starts, skips expired pre-roll and preserves effective
  expect(playbackSchedule(playing,3400,t)).toMatchObject({musicAt:3400,beat:5,startingTones:null,countIn:null});
  const pre=run({...s,countIn:{bars:1},startingTones:{enabled:true}},{type:'play'});
  expect(playbackSchedule(pre,10000,t)).toMatchObject({startingTones:null,countIn:null});
- const tempo=run(playing,{type:'setTempo',bpm:60},3000);
+ const tempo=run(playing,{type:'setTempo',pieceId:'piece',versionNo:1,bpm:60},3000);
  expect(playbackSchedule(tempo,3000,t).beat).toBe(positionAt(playing,tempo.anchor.serverTime,t));
  expect(playbackSchedule(playing,400,t).secondsFromBeat(6)).toBe(4);
 });
@@ -124,4 +124,46 @@ it('refreshes the clock on join, periodic ticks, wake, online, reconnect and sle
   await clock.reconnect();expect(ping).toHaveBeenCalledTimes(40);
   now+=4000;await vi.advanceTimersByTimeAsync(1000);expect(ping).toHaveBeenCalledTimes(48);
  }finally{clock.dispose();vi.useRealTimers();vi.unstubAllGlobals();dom.window.close();}
+});
+it.each([
+ {type:'setMetronome',enabled:true}, {type:'setCountIn',bars:2},
+ {type:'setStartingTones',enabled:false}, {type:'setTransposition',pieceId:'piece',versionNo:1,semitones:3},
+] satisfies Command[])('preserves active pre-roll through $type', command=>{
+ const pre=run({...s,countIn:{bars:1},startingTones:{enabled:true}},{type:'play'});
+ const next=run(pre,command,1000);
+ expect(next).toMatchObject({status:'countingIn',countInUntil:4400,startingTonesUntil:2400,anchor:{beat:0}});
+ expect(positionAt(next,4400,t)).toBe(0);
+});
+it('rescales remaining count-in and preserves starting tones on tempo change',()=>{
+ const pre=run({...s,countIn:{bars:1},startingTones:{enabled:true}},{type:'play'});
+ const next=run(pre,{type:'setTempo',pieceId:'piece',versionNo:1,bpm:60},1000);
+ expect(next).toMatchObject({status:'countingIn',startingTonesUntil:2400,countInUntil:6400});
+ expect(positionAt(next,7400,t)).toBe(1);
+});
+it('makes repeated play a no-op, playing fromBeat a seek, and pause unchecked',()=>{
+ const playing=run({...s,countIn:{bars:1}},{type:'play'});
+ expect(run(playing,{type:'play'},1000)).toBe(playing);
+ const seek=run(playing,{type:'play',fromBeat:6},1000);
+ expect(seek).toMatchObject({status:'playing',countInUntil:null,anchor:{beat:6}});
+ expect(apply({...playing,revision:5},envelope({type:'pause'}),{now:0,leadTimeMs:0,pieceTiming:t,userId:'user'})).toMatchObject({status:'paused',revision:6});
+});
+it('clamps seek, restarts from end and stops after downtime beyond natural end',()=>{
+ const end=run(s,{type:'seek',pieceId:'piece',versionNo:1,beat:20});
+ expect(end).toMatchObject({status:'stopped',anchor:{beat:16}});
+ expect(run(end,{type:'play'}).anchor.beat).toBe(0);
+ expect(restartPaused(run(s,{type:'play'}),20000,t)).toMatchObject({status:'stopped',anchor:{beat:16}});
+});
+it('binds relative settings to selection and normalizes loop anchors',()=>{
+ for(const type of ['setTempo','setTransposition','seek','setLoop'] as const){
+  const c=commands.find(c=>c.type===type)!;
+  expect(apply(s,envelope({...c,pieceId:'old'} as Command),{now:0,leadTimeMs:0,pieceTiming:t,userId:'u'})).toEqual({code:'stale'});
+ }
+ const loop=run({...s,anchor:{serverTime:0,beat:8}},{type:'setLoop',pieceId:'piece',versionNo:1,enabled:true,startBeat:2,endBeat:6});
+ expect(loop.anchor.beat).toBe(2);
+ expect(run(loop,{type:'seek',pieceId:'piece',versionNo:1,beat:7}).loop.enabled).toBe(false);
+});
+it('normalizes against the first tempo-map entry without rounding sound tempo',()=>{
+ const timing=timingFromScore({tempo:90.4,totalBeats:16,measures:[],marks:[{kind:'tempo',beat:0,metronome:{unit:'quarter',dots:0,perMinute:'80'}}]} as any);
+ expect(timing.baseBpm).toBe(80); expect(timing.tempos[0].bpm).toBe(80);
+ expect(timingFromScore({tempo:90.4,totalBeats:16,measures:[],marks:[]} as any).baseBpm).toBe(90.4);
 });

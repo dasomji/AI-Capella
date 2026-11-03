@@ -1,15 +1,16 @@
 import { z } from 'zod';
 const n = z.number().finite();
 const beat = n.nonnegative();
+const selection = { pieceId: z.string().min(1).max(200), versionNo: n.int().positive() };
 const id = z.string().min(1).max(200);
 export const commandSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('selectPiece'), pieceId: id, versionNo: n.int().positive() }).strict(),
     z.object({ type: z.literal('play'), fromBeat: beat.optional() }).strict(),
     ...(['pause', 'stop', 'playStartingTones'] as const).map(type => z.object({ type: z.literal(type) }).strict()),
-    z.object({ type: z.literal('seek'), beat }).strict(),
-    z.object({ type: z.literal('setTempo'), bpm: n.min(1).max(1000) }).strict(),
-    z.object({ type: z.literal('setTransposition'), semitones: n.int().min(-48).max(48) }).strict(),
-    z.object({ type: z.literal('setLoop'), enabled: z.boolean(), startBeat: beat.optional(), endBeat: beat.optional() }).strict(),
+    z.object({ type: z.literal('seek'), ...selection, beat }).strict(),
+    z.object({ type: z.literal('setTempo'), ...selection, bpm: n.min(1).max(1000) }).strict(),
+    z.object({ type: z.literal('setTransposition'), ...selection, semitones: n.int().min(-48).max(48) }).strict(),
+    z.object({ type: z.literal('setLoop'), ...selection, enabled: z.boolean(), startBeat: beat.optional(), endBeat: beat.optional() }).strict(),
     z.object({ type: z.literal('setMetronome'), enabled: z.boolean() }).strict(),
     z.object({ type: z.literal('setCountIn'), bars: n.int().min(0).max(8) }).strict(),
     z.object({ type: z.literal('setStartingTones'), enabled: z.boolean() }).strict(),
@@ -23,9 +24,11 @@ export const stateSchema = z.object({
     metronome: z.boolean(), countIn: z.object({ bars: n.int().min(0).max(8) }), countInUntil: n.nullable(),
     startingTones: z.object({ enabled: z.boolean() }), startingTonesUntil: n.nullable(), endsAt: n.nullable(), updatedBy: id, updatedAt: n,
 }).strict();
-export const rejectionCodeSchema = z.enum(['duplicate', 'stale', 'expired', 'invalid', 'forbidden', 'not_found', 'rate_limited']);
+export const rejectionCodeSchema = z.enum(['duplicate', 'stale', 'expired', 'invalid', 'forbidden', 'not_found', 'rate_limited', 'unavailable', 'session_expired']);
 export const ackSchema = z.object({ commandId: z.string(), status: z.enum(['accepted', 'rejected']), revision: n.int().nonnegative().optional(), code: rejectionCodeSchema.optional() }).strict();
-export const joinSchema = z.object({ ensembleId: id }).strict();
+export const snapshotAckSchema = z.union([z.object({ state: stateSchema }).strict(), z.object({ code: rejectionCodeSchema }).strict()]);
+export const joinAckSchema = snapshotAckSchema;
+export const joinSchema = z.object({ ensembleId: z.uuid() }).strict();
 export type Command = z.infer<typeof commandSchema>;
 export type Envelope = z.infer<typeof envelopeSchema>;
 export type RehearsalState = z.infer<typeof stateSchema>;

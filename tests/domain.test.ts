@@ -1661,17 +1661,17 @@ test('authoritative rehearsal serializes ordinary members, snapshots, rejection 
   const env=(command:any,extra:any={})=>({ensembleId:e.id,commandId:crypto.randomUUID(),baseRevision:revision,clientSentAt:Date.now(),command,...extra});
   const selected=env({type:'selectPiece',pieceId:piece.id,versionNo:1});assert.equal((await emit(clients[0],'rehearsal:command',selected)).status,'accepted');revision++;
   assert.equal((await emit(clients[0],'rehearsal:command',selected)).code,'duplicate');
-  const results=await Promise.all(Array.from({length:6},(_,i)=>emit(clients[i%3],'rehearsal:command',env({type:'setTempo',bpm:120+i}))));
+  const results=await Promise.all(Array.from({length:6},(_,i)=>emit(clients[i%3],'rehearsal:command',env({type:'setTempo',pieceId:piece.id,versionNo:1,bpm:120+i}))));
   assert.deepEqual(results.map(r=>r.revision).sort((a,b)=>a-b),[2,3,4,5,6,7]);revision=7;
   assert.equal((await emit(clients[0],'rehearsal:command',env({type:'pause'},{baseRevision:0}))).code,'stale');
   assert.equal((await emit(clients[0],'rehearsal:command',env({type:'stop'},{clientSentAt:Date.now()-6000}))).code,'expired');
-  assert.equal((await emit(clients[0],'rehearsal:command',env({type:'setTempo',bpm:-1}))).code,'invalid');
+  assert.equal((await emit(clients[0],'rehearsal:command',env({type:'setTempo',pieceId:piece.id,versionNo:1,bpm:-1}))).code,'invalid');
   assert.equal((await emit(outsider,'rehearsal:command',env({type:'stop'}))).code,'forbidden');
   assert.equal((await emit(clients[1],'rehearsal:command',env({type:'selectPiece',pieceId:crypto.randomUUID(),versionNo:1}))).code,'not_found');
   const snapshot=(await emit(clients[2],'rehearsal:snapshot',{ensembleId:e.id})).state;assert.equal(snapshot.revision,7);
   const saved=await ok(path+'/pieces/'+piece.id,'GET',undefined,lead.cookie);assert.equal(saved.settings.bpm,undefined);
   const reconnected=await open(b.cookie);assert.equal((await emit(reconnected,'rehearsal:join',{ensembleId:e.id})).state.revision,7);
-  const limited=await Promise.all(Array.from({length:35},()=>emit(reconnected,'rehearsal:command',env({type:'setTempo',bpm:-1}))));assert.ok(limited.some(r=>r.code==='rate_limited'));
+  const limited=await Promise.all(Array.from({length:35},()=>emit(reconnected,'rehearsal:command',env({type:'setTempo',pieceId:piece.id,versionNo:1,bpm:-1}))));assert.ok(limited.some(r=>r.code==='rate_limited'));
   await delay(100);for(const sequence of sequences)assert.deepEqual(sequence,[1,2,3,4,5,6,7]);
   // Revoke one ordinary member. Another member/device continues without a reset.
   await ok(path+'/members/'+(await pool.query('select id from memberships where ensemble_id=$1 and user_id=$2',[e.id,b.id])).rows[0].id,'DELETE',undefined,lead.cookie);

@@ -1,6 +1,6 @@
 import type { Command, Envelope, RehearsalState as State, RejectionCode } from './contract';
 import { secondsAt, beatAt, type PieceTiming } from './timeline';
-export const revisionChecked: Record<Command['type'], boolean> = { selectPiece: false, play: true, pause: true, stop: false, seek: true, setTempo: false, setTransposition: false, setLoop: true, setMetronome: false, setCountIn: false, setStartingTones: false, playStartingTones: true };
+export const revisionChecked: Record<Command['type'], boolean> = { selectPiece: false, play: true, pause: false, stop: false, seek: true, setTempo: false, setTransposition: false, setLoop: true, setMetronome: false, setCountIn: false, setStartingTones: false, playStartingTones: true };
 export function initialState(ensembleId: string, userId: string, now: number): State {
     return { ensembleId, revision: 0, pieceId: null, versionNo: null, status: 'stopped', anchor: { serverTime: now, beat: 0 }, bpm: 100, transposition: 0, loop: { enabled: false, startBeat: null, endBeat: null }, metronome: false, countIn: { bars: 0 }, countInUntil: null, startingTones: { enabled: false }, startingTonesUntil: null, endsAt: null, updatedBy: userId, updatedAt: now };
 }
@@ -32,11 +32,14 @@ export function apply(s: State, e: Envelope, ctx: {
         return { code: 'expired' };
     if (!s.pieceId && !['selectPiece', 'stop', 'setTempo', 'setTransposition', 'setMetronome', 'setCountIn', 'setStartingTones'].includes(c.type))
         return { code: 'not_found' };
+    if ('pieceId' in c && c.type !== 'selectPiece' && (c.pieceId !== s.pieceId || c.versionNo !== s.versionNo)) return { code: 'stale' };
+    if (c.type === 'play' && c.fromBeat === undefined && (s.status === 'playing' || s.status === 'countingIn')) return s;
     let beat = positionAt(s, at, t);
-    let status: State['status'] = s.status === 'countingIn' ? 'playing' : s.status;
+    let status: State['status'] = s.status === 'countingIn' && (s.countInUntil ?? 0) <= at ? 'playing' : s.status;
     let pieceId = s.pieceId, versionNo = s.versionNo, bpm = s.bpm, transposition = s.transposition;
     let loop = { ...s.loop }, metronome = s.metronome, bars = s.countIn.bars, enabled = s.startingTones.enabled;
-    let countInUntil: number | null = null, startingTonesUntil: number | null = null;
+    const reset = ['play', 'pause', 'stop', 'seek', 'selectPiece', 'setLoop'].includes(c.type);
+    let countInUntil = reset ? null : s.countInUntil, startingTonesUntil = reset ? null : s.startingTonesUntil;
     if (c.type === 'selectPiece') {
         pieceId = c.pieceId;
         versionNo = c.versionNo;
@@ -50,10 +53,12 @@ export function apply(s: State, e: Envelope, ctx: {
     }
     if (c.type === 'play') {
         beat = c.fromBeat ?? beat;
+        if (!loop.enabled && beat >= t.totalBeats) beat = 0;
+        const wasPlaying = s.status === 'playing' || s.status === 'countingIn';
         status = 'playing';
-        if (enabled)
+        if (enabled && !wasPlaying)
             startingTonesUntil = at + 2000;
-        if (bars) {
+        if (bars && !wasPlaying) {
             const m = [...t.measures].reverse().find(m => m.startBeat <= beat);
             const localBpm = ([...t.tempos].reverse().find(p => p.beat <= beat)?.bpm ?? t.baseBpm) * bpm / t.baseBpm;
             const duration = bars * (m ? m.beats * 4 / m.beatType : 4) * 60000 / localBpm;
@@ -67,10 +72,18 @@ export function apply(s: State, e: Envelope, ctx: {
         status = 'stopped';
         beat = 0;
     }
-    if (c.type === 'seek')
-        beat = c.beat;
-    if (c.type === 'setTempo')
+    if (c.type === 'seek' || (c.type === 'play' && c.fromBeat !== undefined && (s.status === 'playing' || s.status === 'countingIn'))) {
+        beat = Math.min(t.totalBeats, c.type === 'seek' ? c.beat : c.fromBeat!);
+        if (loop.enabled && (beat < loop.startBeat! || beat >= loop.endBeat!)) loop = { enabled: false, startBeat: null, endBeat: null };
+        if (beat >= t.totalBeats) status = 'stopped';
+    }
+    if (c.type === 'setTempo') {
         bpm = c.bpm;
+        if (countInUntil !== null && countInUntil > at) {
+            const from = Math.max(at, startingTonesUntil ?? at);
+            countInUntil = from + (countInUntil - from) * s.bpm / bpm;
+        }
+    }
     if (c.type === 'setTransposition')
         transposition = c.semitones;
     if (c.type === 'setMetronome')
@@ -85,6 +98,7 @@ export function apply(s: State, e: Envelope, ctx: {
     }
     if (c.type === 'setLoop')
         loop = { enabled: c.enabled, startBeat: c.startBeat ?? null, endBeat: c.endBeat ?? null };
+    if (loop.enabled && (beat >= loop.endBeat! || (c.type === 'setLoop' && beat < loop.startBeat!))) beat = loop.startBeat!;
     if (beat > t.totalBeats || (loop.enabled && (loop.startBeat === null || loop.endBeat === null || loop.startBeat >= loop.endBeat || loop.endBeat > t.totalBeats)))
         return { code: 'invalid' };
     const start = countInUntil ?? startingTonesUntil ?? at;
@@ -92,7 +106,7 @@ export function apply(s: State, e: Envelope, ctx: {
     return { ensembleId: s.ensembleId, revision: s.revision + 1, pieceId, versionNo, status, anchor: { serverTime: at, beat }, bpm, transposition, loop, metronome, countIn: { bars }, countInUntil, startingTones: { enabled }, startingTonesUntil, endsAt, updatedBy: ctx.userId, updatedAt: now };
 }
 export function restartPaused(s: State, now: number, t: PieceTiming): State {
-    return { ...s, revision: s.revision + 1, status: 'paused', anchor: { serverTime: now, beat: positionAt(s, now, t) }, countInUntil: null, startingTonesUntil: null, endsAt: null, updatedAt: now };
+    return { ...s, revision: s.revision + 1, status: s.endsAt !== null && now >= s.endsAt ? 'stopped' : 'paused', anchor: { serverTime: now, beat: positionAt(s, now, t) }, countInUntil: null, startingTonesUntil: null, endsAt: null, updatedAt: now };
 }
 /** offset = server minus local clock. Client schedules remaining pre-roll only. */
 export function lateJoin(s: State, now: number, t: PieceTiming, offsetMs = 0) {
