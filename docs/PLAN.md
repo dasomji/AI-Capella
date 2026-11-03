@@ -110,3 +110,24 @@ No Phase 1 credential or product blocker. Before release, run the interactive
 musical smoke scenarios, triage retained dependency advisories, and configure
 verified production sender/HTTPS origins through an authorized operator. This
 phase deliberately provisions nothing.
+
+### Phase 1 fixes — 2026-11-03
+
+Review remediation is in progress on `production-v1`. Added migration 0001 rather
+than replacing 0000 because 0000 has been applied to local databases. Domain tables
+were empty; 0001 requires that precondition for new non-null tenant/version fields.
+The migration preserves user/auth data. No production migration was performed.
+
+Schema ownership: the current-version composite FK is SQL-managed and DEFERRABLE
+INITIALLY DEFERRED, allowing a piece/version pair to be created in one transaction.
+The SQL migration also owns `sort_key COLLATE "C"`, email-normalization triggers and
+updated-at triggers; retain those on future Drizzle migrations. Drizzle declarations
+provide equivalent ORM update hooks. Text IDs default to `gen_random_uuid()::text`.
+
+Phase 2 account closure MUST first pass last-lead protection. All lead removal,
+transfer, demotion and account closure paths must begin a transaction, lock the
+ensemble row (`SELECT id FROM ensembles WHERE id = $1 FOR UPDATE`), then check
+remaining lead memberships and mutate under that same lock. For closure spanning
+ensembles, acquire ensemble locks in sorted ID order. Membership/role cascades are
+storage semantics, not authorization to bypass this check. Originals/jobs remain
+owned by the ensemble when their initiating account is deleted.
