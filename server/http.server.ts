@@ -106,6 +106,21 @@ api.use("/app", async (c, next) => {
   if (!session?.user.emailVerified) return c.redirect("/?state=expired");
   await next();
 });
+// One process initially: reject overlapping password evaluations, never queue guesses.
+const passwordChecks = new Set<string>();
+api.use("/api/auth/*", async (c, next) => {
+  if (c.req.method !== "POST" || !/\/sign-in\/email\/*$/.test(decodeURIComponent(c.req.path))) return next();
+  const body = await c.req.raw.clone().json();
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const digest = createHash("sha256").update(email).digest("hex");
+  const keys = [digest, digest + ":" + c.req.header("x-lightscore-socket-ip")];
+  if (keys.some(key => passwordChecks.has(key))) {
+    c.header("Retry-After", "1");
+    return c.json({code:"TOO_MANY_ATTEMPTS"},429);
+  }
+  keys.forEach(key => passwordChecks.add(key));
+  try { await next(); } finally { keys.forEach(key => passwordChecks.delete(key)); }
+});
 api.on(["GET", "POST"], "/api/auth/*", async (c) => {
   const path = decodeURIComponent(c.req.path).replace(/\/+$/, "");
   if (!c.req.header("x-lightscore-socket-ip"))

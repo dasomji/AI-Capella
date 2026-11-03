@@ -1731,3 +1731,17 @@ test('early upload authorization failures retain readable JSON bodies',async()=>
     assert.ok((await r.json()).code);
   }
 });
+
+test('80 concurrent guesses cannot bypass password evaluation admission', {timeout:30000},async()=>{
+  const singer=await account();
+  const {api}=await import('../server/http.server');
+  const responses=await Promise.all(Array.from({length:80},()=>api.fetch(new Request(base+'/api/auth/sign-in/email',{
+    method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'198.51.100.88'},
+    body:JSON.stringify({email:singer.email,password:'parallel-incorrect-password'})
+  }))));
+  const evaluated=responses.filter(r=>r.status===401).length;
+  assert.ok(evaluated>=1 && evaluated<=10,`evaluated ${evaluated}`);
+  assert.equal(responses.filter(r=>r.status===429).length,80-evaluated);
+  const key='email:'+(await import('node:crypto')).createHash('sha256').update(singer.email).digest('hex')+':/api/auth/sign-in/email:198.51.100.88';
+  assert.equal((await pool.query('select count from rate_limit where key=$1',[key])).rows[0].count,evaluated);
+});
