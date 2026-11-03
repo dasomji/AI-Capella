@@ -49,3 +49,12 @@ BEGIN
 END $$;
 --> statement-breakpoint
 CREATE CONSTRAINT TRIGGER new_ensemble_requires_lead AFTER INSERT ON ensembles DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION ensure_new_ensemble_lead();
+--> statement-breakpoint
+-- Backfill legacy invitation history
+-- Old rows retain only the last send instant. Conservatively age their bounded
+-- count from that instant so upgrading cannot reset a recipient's send budget.
+INSERT INTO invitation_sends(ensemble_id,email,inviter_id,created_at)
+SELECT i.ensemble_id,i.email,coalesce(i.inviter_id,'deleted-inviter'),i.last_sent_at
+FROM invitations i CROSS JOIN LATERAL generate_series(1,least(i.send_count,5)) AS sends(n)
+WHERE i.last_sent_at > now() - interval '24 hours'
+AND NOT EXISTS (SELECT 1 FROM invitation_sends s WHERE s.ensemble_id=i.ensemble_id AND s.email=i.email);

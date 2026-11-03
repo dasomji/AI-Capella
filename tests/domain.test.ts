@@ -1147,6 +1147,9 @@ test(
   async () => {
     const u = await account();
     const e = await ok("ensembles", "POST", { name: "Sole" }, u.cookie);
+    const missingConfirmation=await request('account','DELETE',undefined,u.cookie);
+    assert.equal(missingConfirmation.status,409);
+    assert.deepEqual((await missingConfirmation.json()).current,[e.id]);
     let r = await request(
       "account",
       "DELETE",
@@ -1564,3 +1567,18 @@ test(
     );
   },
 );
+
+test('review: upgrade preserves legacy revoked invitation send budgets',async()=>{
+ const {readFile}=await import('node:fs/promises');const u=await account();
+ const e=await ok('ensembles','POST',{name:'Upgrade'},u.cookie),path=`ensembles/${e.id}`;
+ const input={email:'legacy-recipient@example.test',idempotencyKey:'legacy'};
+ const i=await ok(path+'/invitations','POST',input,u.cookie);
+ await ok(path+'/invitations/'+i.id,'DELETE',undefined,u.cookie);
+ await pool.query('delete from invitation_sends where ensemble_id=$1',[e.id]);
+ await pool.query('update invitations set send_count=5 where id=$1',[i.id]);
+ const migration=await readFile(new URL('../drizzle/0003_serious_machine_man.sql',import.meta.url),'utf8');
+ await pool.query(migration.split('-- Backfill legacy invitation history\n')[1]);
+ const response=await request(path+'/invitations','POST',{...input,idempotencyKey:'after-upgrade'},u.cookie);
+ assert.equal(response.status,429);
+ assert.equal((await pool.query('select count(*)::int as n from invitation_sends where ensemble_id=$1',[e.id])).rows[0].n,5);
+});

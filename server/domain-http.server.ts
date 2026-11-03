@@ -433,11 +433,14 @@ domain.delete("/account", async (c) => {
   const u = c.get("user");
   const input = z
     .object({
-      deleteEnsembleIds: z.array(z.string()).max(1000),
+      deleteEnsembleIds: z.array(z.string()).max(1000).optional(),
       password: z.string().max(1000).optional(),
     })
     .strict()
-    .parse(await readBody(c.req));
+    .parse(await readBody({json: async () => {
+      const text = await c.req.text();
+      return text ? JSON.parse(text) : {};
+    }}));
   const session = await currentSession(c.req.raw.headers);
   if (
     !session ||
@@ -486,6 +489,7 @@ domain.delete("/account", async (c) => {
     }
     if (last.length) throw new DomainError("last_lead", 409, last);
     if (
+      !input.deleteEnsembleIds ||
       JSON.stringify([...new Set(input.deleteEnsembleIds)].sort()) !==
         JSON.stringify(sole.sort()) ||
       new Set(input.deleteEnsembleIds).size !== input.deleteEnsembleIds.length
