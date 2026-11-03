@@ -4,6 +4,7 @@ export type Lang = 'en' | 'de';
 const LANG_KEY = 'ai-capella-lang';
 
 const en = {
+ accountArea: 'Account and devices', accountSignOut: 'Sign out', accountDevice: 'Device', accountRevoke: 'Revoke session',
   publicEnsemble: 'Public',
   powerHintTitle: 'Moving text hard to read?',
   powerHintIos: 'Your device is showing only 30 frames a second right now – usually because Low Power Mode is on (Settings → Battery). Moving lyrics are then harder to read.',
@@ -399,6 +400,7 @@ const en = {
 };
 
 const de: Record<keyof typeof en, string> = {
+ accountArea: 'Konto und Geräte', accountSignOut: 'Abmelden', accountDevice: 'Gerät', accountRevoke: 'Sitzung widerrufen',
   publicEnsemble: 'Öffentlich',
   powerHintTitle: 'Bewegter Text schwer lesbar?',
   powerHintIos: 'Dein Gerät zeigt gerade nur 30 Bilder pro Sekunde – meist, weil der Stromsparmodus an ist (Einstellungen → Batterie). Bewegter Text ist dann schwerer zu lesen.',
@@ -806,7 +808,7 @@ function detectLang(): Lang {
 }
 
 export const lang: Lang = detectLang();
-document.documentElement.lang = lang;
+if (typeof document !== 'undefined') document.documentElement.lang = lang;
 
 export function setLang(next: Lang) {
   try {
@@ -844,3 +846,8 @@ export function keyName(fifths: number, mode: 'major' | 'minor' = 'major'): stri
   }
   return t(mode === 'minor' ? 'keyMinor' : 'keyMajor', { k: base });
 }
+
+export const authMessages = {
+ en: { signin: 'Sign in', signup: 'Create account', forgot: 'Forgot password', reset: 'Reset password', email: 'Email', password: 'Password', name: 'Name', check: 'Check your email for the next step.', verified: 'Email verified. You can now sign in.', invalid: 'This link is invalid or expired. Request a new email.', expired: 'Your session expired or was revoked. Please sign in again.', signedout: 'You have signed out.', error: 'Unable to continue. Check your details or request a new link.', done: 'Password updated. Please sign in.', unverified: 'Please verify your email before signing in.' },
+ de: { signin: 'Anmelden', signup: 'Konto erstellen', forgot: 'Passwort vergessen', reset: 'Passwort zurücksetzen', email: 'E-Mail', password: 'Passwort', name: 'Name', check: 'Prüfe dein E-Mail-Postfach für den nächsten Schritt.', verified: 'E-Mail bestätigt. Du kannst dich jetzt anmelden.', invalid: 'Dieser Link ist ungültig oder abgelaufen. Fordere eine neue E-Mail an.', expired: 'Deine Sitzung ist abgelaufen oder wurde widerrufen. Bitte erneut anmelden.', signedout: 'Du wurdest abgemeldet.', error: 'Das hat nicht funktioniert. Prüfe deine Angaben oder fordere einen neuen Link an.', done: 'Passwort geändert. Bitte anmelden.', unverified: 'Bitte bestätige vor der Anmeldung deine E-Mail.' },
+};

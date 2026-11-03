@@ -1,4 +1,4 @@
-import { deleteDoc, doc, getDoc, getDocFromServer, serverTimestamp, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, getDocFromServer, serverTimestamp, setDoc } from './legacy-store';
 import { currentUid, db } from './firebase';
 import { t } from './i18n';
 

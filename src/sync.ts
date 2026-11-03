@@ -1,5 +1,5 @@
 import { localPlayback } from './playback-transport';
-import { doc, getDocFromServer, onSnapshot, serverTimestamp, setDoc, Timestamp, type Unsubscribe } from 'firebase/firestore';
+import { doc, getDocFromServer, onSnapshot, serverTimestamp, setDoc, Timestamp, type Unsubscribe } from './legacy-store';
 import { currentUid, db } from './firebase';
 import type { LoopRegion } from './pianoRoll';
 

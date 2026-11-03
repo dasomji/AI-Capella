@@ -8,7 +8,7 @@
 //
 // What can't be sent right away (offline, or the database refusing it) waits on the device and
 // goes out at the next start.
-import { addDoc, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, updateDoc, where, type Timestamp, type Unsubscribe } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, updateDoc, where, type Timestamp, type Unsubscribe } from './legacy-store';
 import { currentUid, db, ensureSignedIn } from './firebase';
 import { ensembleById, ensembleName, leads } from './ensembles';
 import { icon } from './icons';

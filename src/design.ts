@@ -106,6 +106,7 @@ const TYPE_CHOICE = deviceChoice('schrift', 'ai-capella-schrift', ['neu', 'bodon
 export const REVIVAL_TYPE = TYPE_CHOICE !== 'bodoni' && TYPE_CHOICE !== 'heute';
 
 document.documentElement.dataset.design = PAPER_DESIGN ? 'papier' : DESIGN;
+delete document.documentElement.dataset.ground;
 if (PARCHMENT) {
   document.documentElement.dataset.ground = 'pergament';
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#E8D9B8');

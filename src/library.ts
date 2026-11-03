@@ -13,7 +13,7 @@ import {
   where,
   writeBatch,
   type Unsubscribe,
-} from 'firebase/firestore';
+} from './legacy-store';
 import { db } from './firebase';
 
 // Firestore caps a document at 1 MiB (1,048,576 bytes) total, including field names and every

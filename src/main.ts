@@ -3056,6 +3056,7 @@ function openPlayerMenu(anchor: HTMLElement) {
   // The sheet music as a PDF, from the file (not offered for MIDI imports: no notation in them).
   if (currentSong && currentSong.format !== 'score') items.push({ label: t('exportItem'), icon: 'file', onSelect: () => openExportSheet(anchor) });
   items.push({ label: t('settings'), icon: 'gear', onSelect: () => openSettingsMenu(anchor) }, ...feedbackItems(anchor), ...languageItems(), ...introItems('player'));
+  items.push({ label: t('accountArea'), icon: 'users', onSelect: () => { void openAccountArea(anchor); } });
   openMenu(anchor, items, t('menu'));
 }
 
@@ -4327,3 +4328,19 @@ window.addEventListener('online', renderSongList);
 window.addEventListener('offline', renderSongList);
 
 // Private authenticated shell: offline caching policy arrives in Phase 5.
+
+async function openAccountArea(anchor: HTMLElement) {
+  const body = document.createElement('div');
+  const signout = document.createElement('button'); signout.textContent = t('accountSignOut');
+  signout.onclick = async () => { const r = await fetch('/api/auth/sign-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); if (r.ok) location.replace('/?state=signed-out'); };
+  body.append(signout);
+  openSheet(t('accountArea'), body, anchor);
+  const response = await fetch('/api/auth/list-sessions'); if (!response.ok) return;
+  const sessions = await response.json();
+  for (const session of sessions) {
+    const row = document.createElement('p'); row.textContent = session.userAgent || t('accountDevice');
+    const revoke = document.createElement('button'); revoke.textContent = t('accountRevoke');
+    revoke.onclick = async () => { const result = await fetch('/api/auth/revoke-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: session.token }) }); if (result.ok) row.remove(); };
+    row.append(revoke); body.append(row);
+  }
+}

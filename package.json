@@ -14,8 +14,9 @@
     "db:migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run tests/unit.test.ts",
-    "test:integration": "node --env-file-if-exists=.env --import tsx --test tests/integration.test.ts tests/hosting.test.ts",
-    "check:secrets": "node scripts/check-secrets.mjs"
+    "test:integration": "node scripts/integration.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "accounts:cleanup": "node --env-file-if-exists=.env --import tsx scripts/cleanup-accounts.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
@@ -41,7 +42,6 @@
     "better-auth": "^1.7.15",
     "drizzle-orm": "^0.45.4",
     "fflate": "^0.8.3",
-    "firebase": "^12.17.1",
     "hono": "^4.13.16",
     "jspdf": "^4.2.1",
     "nodemailer": "^10.3.1",
