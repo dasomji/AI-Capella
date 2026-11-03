@@ -2,8 +2,9 @@ import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { assertPlayerContrast } from "./browser-themes.mjs";
-const base = process.env.BROWSER_BASE || "http://localhost:3005",
-  evidence = process.env.BROWSER_EVIDENCE || "/tmp/aicap-p2b";
+const base = process.env.BROWSER_BASE || "http://localhost:3000",
+  evidence =
+    process.env.BROWSER_EVIDENCE || `${process.cwd()}/.review-evidence/browser`;
 fs.mkdirSync(`${evidence}/shots`, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
@@ -35,13 +36,17 @@ const shot = async (page, name) =>
 async function mailLink(email, contains = "") {
   for (let attempt = 0; attempt < 30; attempt++) {
     const list = await (
-      await fetch("http://127.0.0.1:28025/api/v1/messages")
+      await fetch(
+        `${process.env.MAILPIT_URL || "http://127.0.0.1:28025"}/api/v1/messages`,
+      )
     ).json();
     for (const mail of list.messages.filter((m) =>
       m.To.some((t) => t.Address === email),
     )) {
       const msg = await (
-        await fetch("http://127.0.0.1:28025/api/v1/message/" + mail.ID)
+        await fetch(
+          `${process.env.MAILPIT_URL || "http://127.0.0.1:28025"}/api/v1/message/${mail.ID}`,
+        )
       ).json();
       const link = msg.Text.match(/https?:\/\/[^\s<>]+/g)?.find((x) =>
         x.includes(contains),
@@ -239,6 +244,23 @@ try {
     .getByText("You are no longer a member of Browser Choir.", { exact: true })
     .waitFor();
   await p.getByRole("button", { name: "Sign out", exact: true }).click();
+  await p.waitForURL("**/?state=signed-out");
+  // Exercise the destructive account sheet after the sign-out scenario.
+  await signin(p, emailA);
+  await p.waitForURL("**/app");
+  await p.locator("#mode-solo-btn").waitFor({ state: "visible" });
+  await p.locator("#mode-solo-btn").click();
+  await p.locator("#lib-menu-btn").click();
+  await p.getByText("Account and devices", { exact: true }).click();
+  await p.getByRole("button", { name: "Delete account", exact: true }).click();
+  await p
+    .locator(".domain-sheet")
+    .getByText("Browser Choir", { exact: true })
+    .waitFor();
+  await p.getByLabel("Password", { exact: true }).fill(password);
+  await p
+    .getByRole("button", { name: "Permanently delete account", exact: true })
+    .click();
   await p.waitForURL("**/?state=signed-out");
   assert.deepEqual(errors, []);
   console.log("Phase 2b browser scenarios passed", evidence);

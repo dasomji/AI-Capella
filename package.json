@@ -17,7 +17,7 @@
     "test:integration": "node scripts/integration.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "accounts:cleanup": "node --env-file-if-exists=.env --import tsx scripts/cleanup-accounts.ts",
-    "test:browser": "node scripts/browser-phase2b.mjs",
+    "test:browser": "node scripts/browser-isolated.mjs",
     "test:browser:foundation": "node scripts/browser-smoke.mjs"
   },
   "devDependencies": {

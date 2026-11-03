@@ -28,3 +28,6 @@ dist-ssr
 .env.*
 !.env.example
 !**/.env.example
+
+.review-evidence/
+review-*.log

@@ -1,12 +1,11 @@
 const {chromium} = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-const evidence = fs.mkdtempSync(path.join(os.tmpdir(), 'aicap-smoke-'));
+const evidence = process.env.BROWSER_EVIDENCE || path.join(process.cwd(),'.review-evidence','foundation'); fs.mkdirSync(evidence,{recursive:true});
 console.log('Evidence:', evidence);
 import assert from 'node:assert/strict';
 import { checkPlayerThemes } from './browser-themes.mjs';
-const mode='start', base='http://localhost:3005'; fs.mkdirSync(`${evidence}/shots`,{recursive:true});
+const mode='start', base=process.env.BROWSER_BASE || 'http://localhost:3000'; fs.mkdirSync(`${evidence}/shots`,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH || undefined,headless:true,args:['--no-sandbox']});
 const context=await browser.newContext({colorScheme:'dark',viewport:{width:1440,height:1000},acceptDownloads:true});
 const page=await context.newPage(); const requests=[],errors=[];
@@ -21,7 +20,7 @@ await page.getByLabel('Language / Sprache').selectOption('de'); await page.getBy
 await page.getByLabel('Language / Sprache').selectOption('en');await page.locator('nav').getByRole('button',{name:'Create account',exact:true}).click();
 const email=`browser-${mode}-${Date.now()}@example.test`,password='Verify-singer-password-42'; fs.writeFileSync(`${evidence}/${mode}-account.json`,JSON.stringify({email,password,base}));
 await page.locator('[name=name]').fill('Browser Singer');await page.locator('[name=email]').fill(email);await page.locator('[name=password]').fill(password);await page.locator('form button').click();await page.getByRole('status').filter({hasText:'Check your email'}).waitFor();await shot('signup-mail');
-async function mailLink(){const list=await(await fetch('http://127.0.0.1:28025/api/v1/messages')).json();const mail=list.messages.find(m=>m.To.some(t=>t.Address===email));const msg=await(await fetch('http://127.0.0.1:28025/api/v1/message/'+mail.ID)).json();log('MAIL',mail.ID,msg.Subject); return msg.Text.match(/http[^\s]+/)[0];}
+async function mailLink(){const list=await(await fetch(`${process.env.MAILPIT_URL || 'http://127.0.0.1:28025'}/api/v1/messages`)).json();const mail=list.messages.find(m=>m.To.some(t=>t.Address===email));const msg=await(await fetch(`${process.env.MAILPIT_URL || 'http://127.0.0.1:28025'}/api/v1/message/${mail.ID}`)).json();log('MAIL',mail.ID,msg.Subject); return msg.Text.match(/http[^\s]+/)[0];}
 await page.goto(await mailLink());await page.getByRole('status').filter({hasText:'Email verified'}).waitFor();await shot('verified');
 await page.locator('[name=email]').fill(email);await page.locator('[name=password]').fill(password);await page.locator('form button').click();await page.waitForURL('**/app');await page.locator('#landing-samples').waitFor({state:'visible'});await page.locator('#landing-samples').click();await page.getByText('Evening Rise',{exact:true}).first().waitFor();await shot('client'); if(await page.getByRole('button',{name:'Skip',exact:true}).isVisible()) await page.getByRole('button',{name:'Skip',exact:true}).click();
 await page.getByText('Evening Rise',{exact:true}).first().click();await page.locator('.play-btn').waitFor({state:'visible'});await page.waitForTimeout(2500);if(await page.getByRole('button',{name:'Skip',exact:true}).isVisible())await page.getByRole('button',{name:'Skip',exact:true}).click();await shot('sample'); log('PALETTE', await page.evaluate(()=>({ground:document.documentElement.dataset.ground,ink:getComputedStyle(document.documentElement).getPropertyValue('--ink-0'),paper:getComputedStyle(document.documentElement).getPropertyValue('--paper')}))); assert.equal(await page.evaluate(()=>document.documentElement.dataset.ground),undefined);
