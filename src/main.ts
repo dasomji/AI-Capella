@@ -1,4 +1,6 @@
-import { localLibrary } from './local-library';
+import { api } from './domain-client';
+import { createEnsembleSheet, membersSheet, leaveEnsemble } from './ensemble-ui';
+import { pt } from './i18n';
 // Typefaces are bundled with the app rather than loaded from Google's servers: no visitor data goes
 // to a third party (German courts have fined sites for remotely loaded Google Fonts), and they keep
 // working on weak rehearsal-room Wi-Fi.
@@ -17,8 +19,9 @@ import { StaffView } from './staffView';
 import { OverviewStrip } from './overview';
 import { colorForPart } from './palette';
 import { measureAtBeat, playedBeat, type Score } from './score';
-import { deleteImportedSong, readScoreFile, saveSongOrder, songOrder, saveImportedSong, saveScanMarks, saveSongConfig, saveSongSections, subscribeToSongs, updateSongMetadata, type ScanMark, type SongFormat, type StoredSong, type VoiceClef } from './library';
-import { ensureSignedIn, isFirebaseConfigured } from './firebase';
+import { clearLibrary, scoreBody, deleteImportedSong, readScoreFile, saveSongOrder, songOrder, saveImportedSong, saveScanMarks, saveSongConfig, saveSongSections, subscribeToSongs, updateSongMetadata, type ScanMark, type SongFormat, type StoredSong, type VoiceClef } from './library';
+import { ensureSignedIn } from './firebase';
+const serverLibraryEnabled = true;
 import { animateRibbons, coverDataFromScore, drawCover, drawMark, prepareCanvas, type CoverData } from './artwork';
 import { icon } from './icons';
 import { countLabel, keyName, lang, setLang, t, type MessageKey } from './i18n';
@@ -41,27 +44,7 @@ import { canSwing, swingMap, swingScore } from './swing';
 import { loadScriptFont } from './goldInk';
 import { closeOverlay, confirmDialog, isNarrow, openMenu, openPopover, openSheet, promptDialog, toast } from './ui';
 import * as sync from './sync';
-import {
-  activeEnsemble,
-  ensembleById,
-  ensembleNeedsCode,
-  forgetEnsemble,
-  joinWithCode,
-  leads,
-  ensembleNeedsLeaderCode,
-  setLeaderCode,
-  MIN_CODE_LENGTH,
-  ensembleName,
-  ENSEMBLES,
-  FIRST_ENSEMBLE_ID,
-  PUBLIC_ID,
-  refreshEnsembleNames,
-  renameEnsemble,
-  setActiveEnsemble,
-  setEnsembleCode,
-  syncMemberships,
-  unlockedEnsembles,
-} from './ensembles';
+import { account, canEditPieces, canManageMembers, activeEnsemble, ensembleById, leads, ensembleName, PUBLIC_ID, refreshEnsembleNames, renameEnsemble, setActiveEnsemble, unlockedEnsembles } from './ensembles';
 import type { PlaybackState } from './sync';
 
 interface SongEntry {
@@ -71,6 +54,7 @@ interface SongEntry {
   xml?: string; // imported songs, already in memory
   format?: SongFormat; // only meaningful alongside `xml`; built-in songs are always MusicXML
   imported?: boolean;
+  localOnly?: boolean;
   partNameOverrides?: Record<string, string>;
   savedConfig?: StoredSong['savedConfig'];
   clefOverrides?: StoredSong['clefOverrides'];
@@ -79,6 +63,7 @@ interface SongEntry {
   splitParts?: string[];
   swing?: boolean;
   scanMarks?: ScanMark[]; // a scanned song's places to check (scan.ts)
+  contentHash?: string;
   order?: number; // imported songs: their place in the repertoire (songOrder)
 }
 
@@ -88,6 +73,7 @@ const BUILTIN_SONGS: SongEntry[] = [
   { id: 'evening-rise', title: 'Evening Rise', url: `${import.meta.env.BASE_URL}evening-rise.musicxml` },
 ];
 let importedSongs: SongEntry[] = [];
+let privateSongs:SongEntry[]=[];
 const ACCEPTED_EXTENSIONS = ['.musicxml', '.xml', '.mxl', '.mid', '.midi'];
 const MIDI_EXTENSIONS = ['.mid', '.midi'];
 
@@ -113,9 +99,10 @@ function modeName(mode: 'solo' | 'ensemble'): string {
 }
 // The ensemble whose folder is open (ensembles.ts). Chosen on the title screen and fixed once it is
 // left: switching to another ensemble reloads, like switching modes.
-let currentEnsemble: string = isFirebaseConfigured ? activeEnsemble() || PUBLIC_ID : PUBLIC_ID;
+let currentEnsemble: string = activeEnsemble() || PUBLIC_ID;
+const editable = () => canEditPieces(currentEnsemble);
 function inPublicFolder(): boolean {
-  return isFirebaseConfigured && currentEnsemble === PUBLIC_ID;
+  return serverLibraryEnabled && currentEnsemble === PUBLIC_ID;
 }
 /** The ensemble a new song is added to: the open one. */
 function importEnsemble(): string {
@@ -128,17 +115,12 @@ app.innerHTML = `
     <h1 class="landing-name" aria-label="LightScore"><span class="ls-l">Light</span>Score</h1>
     <div class="landing-choice">
       <p class="landing-dedication" id="landing-dedication" hidden></p>
-      <form class="landing-code" id="landing-code" hidden>
-        <input id="landing-code-input" class="code-line" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${t('codePlaceholder')}" aria-label="${t('codePlaceholder')}" />
-        <button type="submit" class="mode-btn code-open">${icon('key')}<span>${t('codeOpen')}</span></button>
-        <p class="landing-code-error" id="landing-code-error" role="alert"></p>
-        <button type="button" class="link-btn landing-aside" id="landing-code-aside"></button>
-      </form>
+      <div class="landing-empty" id="landing-empty" hidden><p>${pt('noEnsemble')}</p><p class="ctl-note">${pt('invitationNeeded')}</p><button class="link-btn" id="landing-samples">${pt('viewSamples')}</button></div>
       <div class="landing-modes">
         <button type="button" class="mode-btn" id="mode-solo-btn">${icon('user')}<span>${t('practiseAlone')}</span></button>
         <button type="button" class="mode-btn" id="mode-ensemble-btn">${icon('users')}<span>${t('rehearseTogether')}</span></button>
       </div>
-      <button type="button" class="link-btn landing-aside" id="landing-enter-code" hidden>${t('enterCode')}</button>
+      <button type="button" class="link-btn landing-aside" id="landing-create">${pt('createEnsemble')}</button>
     </div>
   </section>
 
@@ -347,7 +329,7 @@ let lastAppliedTiming: { playing: boolean; originBeat: number; originServerTimeM
 let lastAppliedMetronomeOn = false;
 
 type LibraryState = 'loading' | 'ready' | 'offline' | 'unconfigured' | 'locked';
-let libraryState: LibraryState = isFirebaseConfigured ? 'loading' : 'unconfigured';
+let libraryState: LibraryState = serverLibraryEnabled ? 'loading' : 'unconfigured';
 let libraryError = '';
 
 function updateCanvasRect() {
@@ -444,14 +426,14 @@ const MODE_STORAGE_KEY = 'ai-capella-mode-v2';
 // just reloads -- there's no in-place teardown of an active Firestore subscription.
 let sessionMode: 'solo' | 'ensemble' = 'solo';
 function syncEnabled(): boolean {
-  return isFirebaseConfigured && sessionMode === 'ensemble';
+  return serverLibraryEnabled && sessionMode === 'ensemble';
 }
 
 function renderModeControls() {
   document.querySelectorAll<HTMLButtonElement>('#mode-seg [data-mode]').forEach((b) => {
     b.setAttribute('aria-pressed', String(b.dataset.mode === sessionMode));
   });
-  document.querySelector<HTMLElement>('#mode-seg')!.hidden = !isFirebaseConfigured || inPublicFolder();
+  document.querySelector<HTMLElement>('#mode-seg')!.hidden = !serverLibraryEnabled || inPublicFolder();
   const leading = syncEnabled() && leaderId === myDeviceId;
   const following = isFollower();
   if (sessionMode === 'solo') modeBadge.innerHTML = `${icon('user')}<span>${modeName('solo')}</span>`;
@@ -461,7 +443,7 @@ function renderModeControls() {
   else modeBadge.innerHTML = `${icon('users')}<span>${modeName('ensemble')}</span><i class="live-dot" aria-hidden="true"></i>`;
   modeBadge.classList.toggle('is-leading', leading);
   modeBadge.title = following ? t('followingHint') : '';
-  modeBadge.hidden = !isFirebaseConfigured || inPublicFolder();
+  modeBadge.hidden = !serverLibraryEnabled || inPublicFolder();
   fillBindings(modeBadge);
   app.classList.toggle('following', following);
   const singAlong = isSingAlong();
@@ -588,204 +570,37 @@ document.querySelector<HTMLButtonElement>('#mode-ensemble-btn')!.addEventListene
 // ---------------------------------------------------------------------------------------------
 
 const dedicationEl = document.querySelector<HTMLParagraphElement>('#landing-dedication')!;
-const codeForm = document.querySelector<HTMLFormElement>('#landing-code')!;
-const codeInput = document.querySelector<HTMLInputElement>('#landing-code-input')!;
-const codeError = document.querySelector<HTMLParagraphElement>('#landing-code-error')!;
-const codeAside = document.querySelector<HTMLButtonElement>('#landing-code-aside')!;
-const enterCodeBtn = document.querySelector<HTMLButtonElement>('#landing-enter-code')!;
 const landingModesEl = document.querySelector<HTMLDivElement>('.landing-modes')!;
 const libTitleEl = document.querySelector<HTMLHeadingElement>('#lib-title')!;
-let askingCode = false;
-
-/** The title screen's choice: the code (no ensemble chosen yet, or another code asked for), or the
- *  dedication and the two modes. `now`: written at once (a choice made here), not after the title. */
-function renderLanding(now = false) {
-  const chosen = activeEnsemble();
-  const asking = askingCode || !chosen;
-  codeForm.hidden = !asking;
-  landingModesEl.hidden = asking;
-  enterCodeBtn.hidden = asking;
-  dedicationEl.hidden = asking || !chosen;
-  codeAside.textContent = chosen ? t('cancel') : t('codeWithout');
-  dedicationEl.style.setProperty('--ded-delay', now ? '0s' : '');
-  if (asking) {
-    // Not on the first start, where the keyboard would cover the title as it's written.
-    if (askingCode) requestAnimationFrame(() => codeInput.focus({ preventScroll: true }));
-    return;
-  }
-  currentEnsemble = chosen!;
-  document.querySelector<HTMLElement>('#mode-ensemble-btn')!.hidden = inPublicFolder();
-  // "für <name>" in gold, the device's other ensembles beside it in pencil, a tap away.
-  const others = unlockedEnsembles().filter((id) => id !== currentEnsemble);
-  const name = document.createElement('span');
-  name.className = 'ded-name';
-  name.textContent = ensembleName(currentEnsemble);
-  const parts: Node[] = [];
-  if (!inPublicFolder()) {
-    const pre = document.createElement('span');
-    pre.className = 'ded-for';
-    pre.textContent = t('dedicationFor');
-    parts.push(pre, document.createTextNode(' '));
-  }
-  parts.push(name);
-  for (const id of others) {
-    const other = document.createElement('button');
-    other.type = 'button';
-    other.className = 'ded-other';
-    other.textContent = ensembleName(id);
-    other.addEventListener('click', () => {
-      setActiveEnsemble(id);
-      renderLanding(true);
-    });
-    parts.push(other);
-  }
-  dedicationEl.replaceChildren(...parts);
-  // Written in again each time it changes.
-  dedicationEl.classList.remove('written');
-  void dedicationEl.offsetWidth;
-  dedicationEl.classList.add('written');
-  renderModeControls();
+function renderLanding(_now=false) {
+ const chosen=activeEnsemble();currentEnsemble=chosen ?? PUBLIC_ID;
+ const empty=!unlockedEnsembles().length && chosen!==PUBLIC_ID;
+ document.querySelector<HTMLElement>('#landing-empty')!.hidden=!empty;
+ landingModesEl.hidden=empty;dedicationEl.hidden=empty;
+ dedicationEl.replaceChildren();
+ const name=document.createElement('span');name.className='ded-name';name.textContent=(inPublicFolder()?'':t('dedicationFor')+' ')+ensembleName(currentEnsemble);dedicationEl.append(name);
+ for(const id of unlockedEnsembles().filter(id=>id!==currentEnsemble)){const b=document.createElement('button');b.className='ded-other';b.textContent=ensembleName(id);b.onclick=()=>{setActiveEnsemble(id);renderLanding(true);};dedicationEl.append(b);}
+ document.querySelector<HTMLElement>('#mode-ensemble-btn')!.hidden=inPublicFolder();dedicationEl.classList.add('written');renderModeControls();
 }
-
-codeForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const code = codeInput.value.trim();
-  if (!code) return;
-  codeError.textContent = '';
-  const submit = codeForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
-  submit.disabled = true;
-  try {
-    await ensureSignedIn();
-    const joined = await joinWithCode(code);
-    if (!joined) {
-      codeError.textContent = t('codeWrong');
-      codeInput.select();
-      return;
-    }
-    setActiveEnsemble(joined.id);
-    codeInput.value = '';
-    askingCode = false;
-    renderLanding(true);
-  } catch (err) {
-    codeError.textContent = t('codeFailed', { msg: errorText(err) });
-  } finally {
-    submit.disabled = false;
-  }
-});
-codeAside.addEventListener('click', () => {
-  if (!activeEnsemble()) setActiveEnsemble(PUBLIC_ID);
-  askingCode = false;
-  codeError.textContent = '';
-  renderLanding(true);
-});
-enterCodeBtn.addEventListener('click', () => {
-  askingCode = true;
-  renderLanding(true);
-});
-
-/** The repertoire's heading: the open ensemble's name, a menu to switch. */
+const createEnsemble=()=>createEnsembleSheet(id=>{setActiveEnsemble(id);sessionStorage.setItem(MODE_SWITCH_KEY,'solo');location.reload();});
+document.querySelector('#landing-create')!.addEventListener('click',createEnsemble);
+document.querySelector('#landing-samples')!.addEventListener('click',()=>{setActiveEnsemble(PUBLIC_ID);currentEnsemble=PUBLIC_ID;setViewMode('library');void runBootstrap();});
 function renderLibraryHead() {
-  if (!isFirebaseConfigured) { libTitleEl.textContent = lang === 'de' ? 'Lokal üben' : 'Local practice'; importBtn.hidden = false; return; }
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'ens-switch';
-  btn.setAttribute('aria-label', `${t('ensembleLabel')}: ${ensembleName(currentEnsemble)}`);
-  const name = document.createElement('span');
-  name.textContent = ensembleName(currentEnsemble);
-  btn.append(name);
-  btn.insertAdjacentHTML('beforeend', icon('chevronDown'));
-  btn.addEventListener('click', () => void openEnsembleMenu(btn));
-  libTitleEl.replaceChildren(btn);
-  libTitleEl.classList.add('ens-title');
-  importBtn.hidden = inPublicFolder();
-  document.querySelector<HTMLElement>('.lib-tip')!.hidden = inPublicFolder();
+ const btn=document.createElement('button');btn.className='ens-switch';btn.textContent=ensembleName(currentEnsemble);btn.insertAdjacentHTML('beforeend',icon('chevronDown'));btn.onclick=()=>void openEnsembleMenu(btn);libTitleEl.replaceChildren(btn);libTitleEl.classList.add('ens-title');
+ importBtn.hidden=inPublicFolder();importBtn.querySelector('span')!.textContent=editable()?t('addArrangement'):pt('openLocal');document.querySelector<HTMLElement>('.lib-tip')!.hidden=!editable();
 }
-
-async function openEnsembleMenu(anchor: HTMLElement) {
-  const items: Parameters<typeof openMenu>[1] = [];
-  for (const id of [...unlockedEnsembles(), PUBLIC_ID]) {
-    items.push({ label: ensembleName(id), icon: id === PUBLIC_ID ? 'globe' : 'users', checked: id === currentEnsemble, onSelect: () => switchEnsemble(id) });
-  }
-  items.push({ label: t('enterCode'), icon: 'key', onSelect: () => void enterCodeInApp() });
-  // Its leaders change the ensemble's name and codes; while it has no leaders' code yet, any member
-  // may set that (and leads it then).
-  if (!inPublicFolder()) {
-    const name = ensembleName(currentEnsemble);
-    if (leads(currentEnsemble)) {
-      if (feedbackOn(currentEnsemble)) items.push({ label: feedbackMenuLabel(), icon: 'chat', onSelect: () => openFeedbackInbox(anchor) });
-      items.push({ label: t('renameEnsemble'), icon: 'pencil', onSelect: () => void renameCurrentEnsemble() });
-      items.push({ label: t('changeCodeFor', { name }), icon: 'key', onSelect: () => void setCodeFor(currentEnsemble) });
-      items.push({ label: t('changeLeaderCodeFor', { name }), icon: 'crown', onSelect: () => void setLeaderCodeFor(currentEnsemble) });
-    } else if (await ensembleNeedsLeaderCode(currentEnsemble)) {
-      items.push({ label: t('setLeaderCodeFor', { name }), icon: 'crown', onSelect: () => void setLeaderCodeFor(currentEnsemble) });
-    }
-  }
-  // An ensemble nobody guards yet gets its first code here -- from the public folder too, which is
-  // where setting up the very first one starts.
-  const locked = ENSEMBLES.filter((e) => e.id !== PUBLIC_ID && !unlockedEnsembles().includes(e.id));
-  const withoutCode = await Promise.all(locked.map(async (e) => ((await ensureSignedIn().then(() => ensembleNeedsCode(e.id)).catch(() => false)) ? e.id : null)));
-  for (const id of withoutCode) if (id) items.push({ label: t('setCodeFor', { name: ensembleName(id) }), icon: 'key', onSelect: () => void setCodeFor(id) });
-  openMenu(anchor, items, t('ensembleLabel'));
+async function openEnsembleMenu(anchor:HTMLElement) {
+ const items:Parameters<typeof openMenu>[1]=[...unlockedEnsembles(),PUBLIC_ID].map(id=>({label:ensembleName(id),icon:'users',checked:id===currentEnsemble,onSelect:()=>void switchEnsemble(id)}));
+ items.push({label:pt('createEnsemble'),icon:'plus',onSelect:createEnsemble});
+ if(canManageMembers(currentEnsemble))items.push({label:pt('membersInvitations'),icon:'users',onSelect:()=>void membersSheet(currentEnsemble,anchor)});
+ if(leads(currentEnsemble))items.push({label:t('renameEnsemble'),icon:'pencil',onSelect:()=>void renameCurrentEnsemble()});
+ if(!inPublicFolder()) {
+ let last=false;if(leads(currentEnsemble)){const members=await api(`/ensembles/${currentEnsemble}/members`);last=members.filter((m:any)=>m.isLead).length===1;}
+ items.push({label:last?pt('leaveEnsemble')+' · '+pt('lastLead'):pt('leaveEnsemble'),disabled:last,icon:'users',onSelect:()=>void leaveEnsemble(currentEnsemble,()=>{localStorage.removeItem(`lightscore-ensemble:${account?.id}`);location.reload();})});
+ }
+ openMenu(anchor,items,t('ensembleLabel'));
 }
-
-/** Opens another ensemble's folder: like a mode switch, by reloading straight into the repertoire. */
-async function switchEnsemble(id: string) {
-  if (id === currentEnsemble) return;
-  stopPlayback();
-  if (syncEnabled() && leaderId === myDeviceId) await sync.publishPlaybackState({ leaderId: null }).catch(() => {});
-  setActiveEnsemble(id);
-  sessionStorage.setItem(MODE_SWITCH_KEY, localStorage.getItem(MODE_STORAGE_KEY) === 'ensemble' ? 'ensemble' : 'solo');
-  location.reload();
-}
-
-async function enterCodeInApp() {
-  const code = await promptDialog(t('enterCode'), '', t('codeOpen'));
-  if (!code) return;
-  try {
-    await ensureSignedIn();
-    const joined = await joinWithCode(code);
-    if (!joined) {
-      toast(t('codeWrong'), 'error');
-      return;
-    }
-    toast(t(joined.leader ? 'leaderWelcome' : 'codeWelcome', { name: ensembleName(joined.id) }));
-    await switchEnsemble(joined.id);
-  } catch (err) {
-    toast(t('codeFailed', { msg: errorText(err) }), 'error');
-  }
-}
-
-async function setCodeFor(id: string) {
-  const code = await promptDialog(t(unlockedEnsembles().includes(id) ? 'changeCodeFor' : 'setCodeFor', { name: ensembleName(id) }), '', t('save'));
-  if (!code) return;
-  try {
-    const result = await setEnsembleCode(id, code);
-    if (result !== 'ok') {
-      toast(result === 'short' ? t('codeShort', { n: MIN_CODE_LENGTH }) : t('codeTaken'), 'error');
-      return;
-    }
-    toast(t('codeSaved'));
-    // Set up from the public folder (the very first code): open it.
-    if (inPublicFolder()) await switchEnsemble(id);
-  } catch (err) {
-    toast(t('codeSaveFailed', { msg: errorText(err) }), 'error');
-  }
-}
-
-async function setLeaderCodeFor(id: string) {
-  const code = await promptDialog(t(leads(id) ? 'changeLeaderCodeFor' : 'setLeaderCodeFor', { name: ensembleName(id) }), '', t('save'));
-  if (!code) return;
-  try {
-    const result = await setLeaderCode(id, code);
-    if (result !== 'ok') {
-      toast(result === 'short' ? t('codeShort', { n: MIN_CODE_LENGTH }) : t('codeInUse'), 'error');
-      return;
-    }
-    toast(t('leaderCodeSaved', { name: ensembleName(id) }));
-  } catch (err) {
-    toast(t('codeSaveFailed', { msg: errorText(err) }), 'error');
-  }
-}
+async function switchEnsemble(id:string) {if(id===currentEnsemble)return;stopPlayback();clearLibrary();setActiveEnsemble(id);sessionStorage.setItem(MODE_SWITCH_KEY,'solo');location.reload();}
 
 async function renameCurrentEnsemble() {
   const id = currentEnsemble;
@@ -799,22 +614,7 @@ async function renameCurrentEnsemble() {
   }
 }
 
-/** A library song's menu: move it into another of this device's ensembles. */
-function moveItems(song: SongEntry): Parameters<typeof openMenu>[1] {
-  if (!song.imported) return [];
-  return unlockedEnsembles()
-    .filter((id) => id !== currentEnsemble)
-    .map((id) => ({
-      label: t('moveTo', { name: ensembleName(id) }),
-      icon: 'swap' as const,
-      onSelect: () => {
-        // The live list drops it once the write lands (it no longer belongs here).
-        updateSongMetadata(song.id, { ensemble: id })
-          .then(() => toast(t('movedTo', { name: ensembleName(id) })))
-          .catch((err) => toast(t('moveFailed', { msg: errorText(err) }), 'error'));
-      },
-    }));
-}
+function moveItems(_song:SongEntry):Parameters<typeof openMenu>[1] {return [];}
 
 // Playback sound, chosen per device (not synced -- each singer may prefer another).
 const SOUND_KEY = 'ai-capella-sound';
@@ -1114,7 +914,7 @@ function languageItems() {
 }
 document.querySelector<HTMLButtonElement>('#lib-menu-btn')!.addEventListener('click', (e) => {
   const anchor = e.currentTarget as HTMLElement;
-  openMenu(anchor, [...feedbackItems(anchor), ...appearanceItems(), ...paperItems(anchor), ...languageItems(), ...introItems('library')], t('language'));
+  openMenu(anchor, [...feedbackItems(anchor), ...appearanceItems(), ...paperItems(anchor), ...languageItems(), ...introItems('library'), {label:t('accountArea'),icon:'users',onSelect:()=>{void openAccountArea(anchor);}}], t('language'));
 });
 
 /** The paper design's paper, to choose on this device (paper.ts). */
@@ -1257,8 +1057,8 @@ function drawMarks() {
 
 function allSongs(): SongEntry[] {
   // The bundled samples belong to the public folder and to the first ensemble (which has everything).
-  const builtins = currentEnsemble === PUBLIC_ID || currentEnsemble === FIRST_ENSEMBLE_ID ? BUILTIN_SONGS : [];
-  return [...builtins, ...importedSongs];
+  const builtins = currentEnsemble === PUBLIC_ID ? BUILTIN_SONGS : [];
+  return [...builtins, ...importedSongs, ...privateSongs];
 }
 
 interface SongMeta {
@@ -1274,7 +1074,7 @@ const coverCanvases = new Map<HTMLCanvasElement, CoverData>();
 let metaQueue: Promise<unknown> = Promise.resolve();
 
 async function readSongText(song: SongEntry): Promise<string> {
-  return song.xml !== undefined ? song.xml : await fetch(song.url!).then((r) => r.text());
+  return song.xml ? song.xml : song.imported ? scoreBody(song.id) : await fetch(song.url!).then(r=>r.text());
 }
 
 function parseSong(song: SongEntry, text: string): Score {
@@ -1314,7 +1114,7 @@ function timeSignatureList(score: Score): string {
 
 /** Voices, bars, key, time signature and cover for a library card -- parsed once per song version, one at a time so a big library doesn't freeze the page. */
 function songMeta(song: SongEntry): Promise<SongMeta | null> {
-  const key = `${song.id}:${song.xml?.length ?? 0}`;
+  const key = `${song.id}:${song.contentHash ?? song.xml?.length ?? 0}`;
   let cached = metaCache.get(key);
   if (!cached) {
     cached = (metaQueue = metaQueue.then(
@@ -1394,17 +1194,17 @@ function songCard(song: SongEntry): HTMLLIElement {
   body.append(title, meta);
   open.append(cover, body);
   li.appendChild(open);
-  if (song.imported) {
+  if (song.imported && editable()) {
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'icon-btn song-more';
     more.setAttribute('aria-label', t('moreFor', { title: song.title }));
     more.innerHTML = icon('more');
     li.appendChild(more);
-  } else {
+  } else if(!song.imported) {
     const tag = document.createElement('span');
     tag.className = 'tag';
-    tag.textContent = t('sample');
+    tag.textContent = song.localOnly ? pt('privatePractice') : t('sample');
     li.appendChild(tag);
   }
   void songMeta(song).then((m) => {
@@ -1444,8 +1244,9 @@ function renderSongList() {
   }
   coverCanvases.clear();
   songGridEl.replaceChildren(...items);
+  if (!songs.length && libraryState === 'ready') {const empty=document.createElement('li');empty.className='empty-note';empty.textContent=pt(editable()?'emptyEditable':'emptyPieces');songGridEl.append(empty);}
   const count = countLabel(songs.length, 'arrangementsOne', 'arrangementsMany');
-  libCountEl.textContent = !isFirebaseConfigured ? t('onThisDevice', { count }) : inPublicFolder() ? t('publicCount', { count }) : libraryState === 'ready' ? t('sharedWithChoir', { count }) : t('onThisDevice', { count });
+  libCountEl.textContent = !serverLibraryEnabled ? t('onThisDevice', { count }) : inPublicFolder() ? t('publicCount', { count }) : libraryState === 'ready' ? t('sharedWithChoir', { count }) : t('onThisDevice', { count });
   renderLibraryBanner();
 }
 
@@ -1461,20 +1262,6 @@ function renderLibraryBanner() {
   }
   libBannerEl.classList.toggle('muted', libraryState !== 'offline' && libraryState !== 'locked');
   const text = document.createElement('div');
-  if (libraryState === 'locked') {
-    const b = document.createElement('b');
-    b.textContent = t('codeAgainTitle');
-    const p = document.createElement('span');
-    p.textContent = t('codeAgainBody', { name: ensembleName(currentEnsemble) });
-    text.append(b, p);
-    const again = document.createElement('button');
-    again.type = 'button';
-    again.className = 'btn';
-    again.textContent = t('enterCode');
-    again.addEventListener('click', () => void enterCodeInApp());
-    libBannerEl.append(text, again);
-    return;
-  }
   if (libraryState === 'loading') text.textContent = t('loadingLibrary');
   else if (libraryState === 'unconfigured') text.textContent = t('notConfigured');
   else {
@@ -1554,7 +1341,7 @@ function applySongTitle(songId: string, value: string, previousTitle: string) {
   };
   setLocal(value);
   void updateSongMetadata(songId, { title: value }).catch((err) => {
-    setLocal(previousTitle);
+    if((err as {status?:number}).status!==409)setLocal(previousTitle);
     toast(t('renameFailed', { msg: errorText(err) }), 'error');
   });
 }
@@ -1572,7 +1359,7 @@ function titleFromFileName(name: string): string {
 }
 
 async function importFiles(files: FileList | File[]) {
-  if (isFirebaseConfigured && inPublicFolder()) return; // look and listen only
+  if (serverLibraryEnabled && inPublicFolder()) return; // look and listen only
   // In the order of their names, numbers counted as numbers ("2." before "10."): a show's
   // numbered pieces arrive in the repertoire in running order.
   const list = Array.from(files)
@@ -1606,8 +1393,8 @@ async function importFiles(files: FileList | File[]) {
         format = 'musicxml';
       }
       const id = await saveImportedSong({ title, xml, format, ensemble: importEnsemble() });
-      lastImported = { id, title, xml, format, imported: true };
-      toast(t('added', { title }));
+      lastImported = { id, title, xml, format, imported: editable(),localOnly:!editable() };
+      if(!editable()){privateSongs.push(lastImported);toast(pt('privatePractice'));}else toast(t('added', { title }));
     } catch (err) {
       toast(t('addFailed', { name: file.name, msg: err instanceof Error ? err.message : 'invalid file' }), 'error');
     }
@@ -1622,7 +1409,7 @@ async function importFiles(files: FileList | File[]) {
 // is only part of the order, so nothing moves then.
 let songListStale = false;
 const reorder = attachReorder(songGridEl, document.querySelector<HTMLElement>('.lib-scroll')!, {
-  movable: (card) => !inPublicFolder() && leads(currentEnsemble) && libraryState === 'ready' && !searchInput.value.trim() && !!importedSongs.find((s) => s.id === card.dataset.id),
+  movable: (card) => !inPublicFolder() && editable() && libraryState === 'ready' && !searchInput.value.trim() && !!importedSongs.find((s) => s.id === card.dataset.id),
   onDrop: (ids, movedId) => {
     const at = (id: string | undefined) => importedSongs.find((s) => s.id === id)?.order ?? 0;
     const i = ids.indexOf(movedId);
@@ -1792,8 +1579,10 @@ async function loadSongLocally(song: SongEntry) {
   currentScore = score;
   currentSong = song;
   loadedSongId = song.id;
+  document.querySelector('#local-practice-note')?.remove();
+  if(song.localOnly){const note=document.createElement('p');note.id='local-practice-note';note.className='ctl-note';note.textContent=pt('privatePractice');songMetaEl.after(note);}
   // Saving tempo, key and sections as the song's default (laptop: beside the key; library songs only).
-  document.querySelector<HTMLElement>('.t-save')!.hidden = !song.imported;
+  document.querySelector<HTMLElement>('.t-save')!.hidden = !song.imported || !editable();
   notesByPart = new Map(score.parts.map((p) => [p.id, score.notes.filter((n) => n.partId === p.id).sort((a, b) => a.startBeat - b.startBeat)]));
   // Only relevant when the source has no rehearsal marks of its own (see renderSections) --
   // reloaded fresh from this song's saved config every time, never carried over from whatever the
@@ -1841,7 +1630,7 @@ async function loadSongLocally(song: SongEntry) {
   // with its own fresh, all-normal mix.
   partMix = new Map(score.parts.map((p) => [p.id, 'normal' as PartMixState]));
   songTitleEl.textContent = score.title;
-  songTitleEl.title = song.imported ? t('renameSong') : '';
+  songTitleEl.title = song.imported && editable() ? t('renameSong') : '';
   const first = score.measures[0];
   songMetaEl.textContent = first
     ? [song.format === 'score' ? '' : keyName(first.fifths, first.mode), timeSignatureList(score), countLabel(barCount(score), 'barsOne', 'barsMany')]
@@ -1898,7 +1687,7 @@ function pushState(patch: Partial<PlaybackState>, opts?: { leadershipChange?: bo
     return;
   }
   if (syncEnabled()) {
-    void sync.publishPlaybackState(patch).catch((err) => {
+    void sync.publishPlaybackState({...currentStateSnapshot(),...patch}).catch((err) => {
       toast(t('syncFailed', { msg: errorText(err) }), 'error');
     });
   } else {
@@ -1983,7 +1772,8 @@ async function applyPlaybackStateNow(state: PlaybackState) {
       if (arrivingAt?.mode === 'ensemble') endArrival();
       return;
     }
-    const song = allSongs().find((s) => s.id === state.songId);
+    let song = allSongs().find((s) => s.id === state.songId);
+    if(!song && !inPublicFolder()){try{await scoreBody(state.songId);song=allSongs().find(s=>s.id===state.songId);}catch{}}
     if (!song) {
       pendingSongId = state.songId;
       toast(t('waitingForSong'));
@@ -2195,7 +1985,7 @@ function voiceRow(partId: string, name: string, color: string): HTMLLIElement {
     b.setAttribute('aria-pressed', 'false');
     li.appendChild(b);
   }
-  if (currentSong?.imported) {
+  if (currentSong?.imported && editable()) {
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'icon-btn small voice-more';
@@ -2322,7 +2112,7 @@ function toggleMix(partId: string, action: PartMixState) {
 
 async function renameVoice(partId: string) {
   const part = currentScore?.parts.find((p) => p.id === partId);
-  if (!part || !currentSong?.imported) return;
+  if (!part || (!currentSong?.imported || !editable())) return;
   const songId = currentSong.id;
   const previousName = part.name;
   const value = await promptDialog(t('renameVoice'), previousName, t('save'));
@@ -2433,7 +2223,7 @@ function currentClef(partId: string): VoiceClef {
 
 function openVoiceMenu(anchor: HTMLElement, partId: string) {
   const part = currentScore?.parts.find((p) => p.id === partId);
-  if (!part || !currentSong?.imported) return;
+  if (!part || (!currentSong?.imported || !editable())) return;
   const items: Parameters<typeof openMenu>[1] = [{ label: t('renameVoice'), icon: 'pencil', onSelect: () => void renameVoice(partId) }];
   // Clefs only matter for the sheet music view, which MIDI imports don't have; a part on several
   // staves keeps theirs.
@@ -2471,7 +2261,7 @@ function openVoiceMenu(anchor: HTMLElement, partId: string) {
 /** Writes which parts' staves are voices of their own, for everyone, and reloads the open song. */
 async function setSplitParts(splitParts: string[]) {
   const song = currentSong;
-  if (!song?.imported) return;
+  if (!song?.imported || !editable()) return;
   const previous = song.splitParts;
   song.splitParts = splitParts;
   const entry = importedSongs.find((s) => s.id === song.id);
@@ -2491,7 +2281,7 @@ async function setSplitParts(splitParts: string[]) {
 /** Plays a voice as claps and stamps, or as notes again -- for everyone; the open song reloads. */
 async function setVoicePercussion(partId: string, on: boolean) {
   const song = currentSong;
-  if (!song?.imported) return;
+  if (!song?.imported || !editable()) return;
   const previous = { ...(song.percussion ?? {}) };
   song.percussion = { ...previous, [partId]: on };
   const entry = importedSongs.find((s) => s.id === song.id);
@@ -2527,7 +2317,7 @@ async function setVoiceClef(partId: string, clef: VoiceClef) {
 
 async function confirmRemoveVoice(partId: string) {
   const part = currentScore?.parts.find((p) => p.id === partId);
-  if (!part || !currentSong?.imported || !currentScore) return;
+  if (!part || (!currentSong?.imported || !editable()) || !currentScore) return;
   if (currentScore.parts.length <= 1) {
     toast(t('lastVoice'), 'error');
     return;
@@ -2540,7 +2330,7 @@ async function confirmRemoveVoice(partId: string) {
 /** Writes the song's removed-voice list for everyone and reloads the open song with it. */
 async function setRemovedParts(removedParts: string[]) {
   const song = currentSong;
-  if (!song?.imported) return;
+  if (!song?.imported || !editable()) return;
   const previous = song.removedParts;
   song.removedParts = removedParts;
   const entry = importedSongs.find((s) => s.id === song.id);
@@ -2930,7 +2720,7 @@ function sectionButton(label: string, index: number): HTMLButtonElement {
 
 /** Hand-set marks can be removed; marks printed in the source file can't. */
 function sectionsEditable(): boolean {
-  return !!currentSong?.imported && !currentScore?.rehearsalMarks.length;
+  return !(!currentSong?.imported || !editable()) && !currentScore?.rehearsalMarks.length;
 }
 
 /**
@@ -2944,7 +2734,7 @@ function sectionsChanged() {
   renderSections();
   renderNow();
   const song = currentSong;
-  if (!song?.imported) return;
+  if (!song?.imported || !editable()) return;
   const saved = manualSections.map((s) => ({ ...s }));
   song.savedConfig = { ...song.savedConfig, sections: saved, played: true };
   saveSongSections(song.id, saved).catch((err) => toast(t('saveDefaultsFailed', { msg: errorText(err) }), 'error'));
@@ -3038,12 +2828,12 @@ function renderSections() {
   );
   // Hand-adding marks only makes sense when the source didn't already provide a complete set --
   // and only for a song this device can write a saved default back to.
-  sectionAddBtn.hidden = !currentSong?.imported || (currentScore?.rehearsalMarks.length ?? 0) > 0;
+  sectionAddBtn.hidden = (!currentSong?.imported || !editable()) || (currentScore?.rehearsalMarks.length ?? 0) > 0;
 }
 
 function openPlayerMenu(anchor: HTMLElement) {
   const items: Parameters<typeof openMenu>[1] = [];
-  if (currentSong?.imported) {
+  if (currentSong?.imported && editable()) {
     items.push({ label: t('renameSong'), icon: 'pencil', onSelect: () => currentSong && void renameSong(currentSong) });
     const removed = currentSong.removedParts?.length ?? 0;
     if (removed) items.push({ label: t('restoreVoices', { n: removed }), icon: 'users', onSelect: () => void setRemovedParts([]) });
@@ -3065,7 +2855,7 @@ function openSettingsMenu(anchor: HTMLElement) {
   const items: Parameters<typeof openMenu>[1] = [];
   // Swing or straight, for this song (not in 6/8 and the like). In a rehearsal only the leader -- or
   // anyone, while nobody leads -- changes it for everyone.
-  if (currentSong && currentScore && canSwing(currentScore) && (currentSong.imported ? !isFollower() : true)) {
+  if (currentSong && currentScore && canSwing(currentScore) && (currentSong.imported ? editable() && !isFollower() : true)) {
     const on = swingChosen(currentSong);
     items.push({ label: t('swingItem'), icon: 'quarter', checked: on, onSelect: () => void setSwing(!on) });
   }
@@ -3074,7 +2864,7 @@ function openSettingsMenu(anchor: HTMLElement) {
 }
 
 function saveDefaults() {
-  if (!currentSong?.imported) return;
+  if ((!currentSong?.imported || !editable())) return;
   saveSongConfig(currentSong.id, { transpose, bpm, sections: manualSections })
     .then(() => toast(t('savedDefaults')))
     .catch((err) => toast(t('saveDefaultsFailed', { msg: errorText(err) }), 'error'));
@@ -3192,7 +2982,7 @@ document.addEventListener('click', (e) => {
       break;
     }
     case 'section-add':
-      if (currentSong?.imported && audioEngine) {
+      if (currentSong?.imported && editable() && audioEngine) {
         manualSections.push({ label: '', beat: engineBeat() });
         sectionsChanged();
       }
@@ -3204,7 +2994,7 @@ voiceListEl.addEventListener('dblclick', (e) => {
   const row = (e.target as HTMLElement).closest<HTMLElement>('.voice-row');
   if (row && (e.target as HTMLElement).closest('.voice-name')) void renameVoice(row.dataset.part!);
 });
-songTitleEl.addEventListener('dblclick', () => currentSong?.imported && void renameSong(currentSong));
+songTitleEl.addEventListener('dblclick', () => currentSong?.imported && editable() && void renameSong(currentSong));
 
 window.addEventListener('keydown', (e) => {
   if (!app.classList.contains('mode-player') || document.querySelector('.overlay')) return;
@@ -4032,13 +3822,6 @@ staffCanvas.addEventListener('pointercancel', endStaffDrag);
  * the shared playback session.
  */
 async function runBootstrap() {
-  if (!isFirebaseConfigured) {
-    importBtn.hidden = false;
-    libraryState = 'ready';
-    localLibrary.subscribe(songs => { importedSongs = songs.map(s => ({ ...s, imported: true })); renderSongList(); });
-    renderSongList();
-    return;
-  }
   if (inPublicFolder()) {
     // The bundled samples only: nothing to load, nothing to add, nobody to rehearse with.
     importBtn.hidden = true;
@@ -4076,6 +3859,7 @@ async function runBootstrap() {
           id: s.id,
           title: s.title,
           xml: s.xml,
+          contentHash:s.contentHash,
           format: s.format,
           imported: true,
           partNameOverrides: s.partNameOverrides,
@@ -4095,6 +3879,7 @@ async function runBootstrap() {
         const fresh = currentSong && importedSongs.find((s) => s.id === currentSong!.id);
         if (fresh && currentSong && voiceSetupKey(fresh) !== voiceSetupKey(currentSong) && !audioEngine?.isPlaying()) void reloadCurrentSong();
         // Places to check ticked off on another device.
+        if(fresh && currentSong){songTitleEl.textContent=fresh.title;currentSong.title=fresh.title;}
         if (fresh && currentSong && fresh.scanMarks !== currentSong.scanMarks) {
           currentSong.scanMarks = fresh.scanMarks;
           renderScanMarks();
@@ -4107,11 +3892,7 @@ async function runBootstrap() {
         }
       },
       (err) => {
-        // Refused by the rules: this device isn't in the ensemble (any more) -- ask for its code.
-        if ((err as { code?: string }).code === 'permission-denied') {
-          forgetEnsemble(currentEnsemble);
-          libraryState = 'locked';
-        } else libraryState = 'offline';
+        libraryState = 'offline';
         libraryError = errorText(err);
         renderSongList();
       },
@@ -4147,7 +3928,7 @@ async function runBootstrap() {
 // others at the same volume. Away counts from the last moment the app was on screen -- noted, with
 // where it was, every half minute while it is, and whenever it is left.
 const SEEN_KEY = 'ai-capella-seen';
-const PLACE_KEY = 'ai-capella-place';
+const PLACE_KEY = `lightscore-place:${account?.id}`;
 const TITLE_AFTER_MS = 30 * 60 * 1000;
 type Place = {
   ensemble: string;
@@ -4282,7 +4063,7 @@ const lastMode = storedMode === 'solo' || storedMode === 'ensemble' ? storedMode
 const comeBack = (chosen: 'solo' | 'ensemble') => {
   const mode = inPublicFolder() ? 'solo' : chosen; // (as chooseMode will have it)
   const place = recentlyHere && lastPlace?.ensemble === currentEnsemble && (lastPlace.mode ?? 'solo') === mode ? lastPlace : null;
-  if (place && (mode === 'solo' ? place.songId : isFirebaseConfigured && (place.songId || place.behind))) {
+  if (place && (mode === 'solo' ? place.songId : serverLibraryEnabled && (place.songId || place.behind))) {
     // Alone, the song is opened again (comeBackToPlace); together, it comes with the rehearsal's state.
     if (mode === 'solo') placeToRestore = place;
     else {
@@ -4298,19 +4079,12 @@ const comeBack = (chosen: 'solo' | 'ensemble') => {
   }
   chooseMode(mode);
 };
-if (isFirebaseConfigured && (switchedMode === 'solo' || switchedMode === 'ensemble') && activeEnsemble()) {
+if (serverLibraryEnabled && (switchedMode === 'solo' || switchedMode === 'ensemble') && activeEnsemble()) {
   comeBack(switchedMode);
-} else if (isFirebaseConfigured && recentlyHere && lastMode && activeEnsemble()) {
+} else if (serverLibraryEnabled && recentlyHere && lastMode && activeEnsemble()) {
   comeBack(lastMode);
-} else if (isFirebaseConfigured) {
+} else if (serverLibraryEnabled) {
   renderLanding();
-  // Ensembles opened on this device before the codes were checked in Firestore are dropped.
-  void ensureSignedIn()
-    .then(syncMemberships)
-    .then((changed) => {
-      if (changed && app.classList.contains('mode-landing') && !askingCode) renderLanding();
-    })
-    .catch(() => {});
   document.querySelector(storedMode === 'ensemble' ? '#mode-ensemble-btn' : '#mode-solo-btn')?.classList.toggle('last-used', storedMode === 'solo' || storedMode === 'ensemble');
   setViewMode('landing');
 } else {
@@ -4331,16 +4105,24 @@ window.addEventListener('offline', renderSongList);
 
 async function openAccountArea(anchor: HTMLElement) {
   const body = document.createElement('div');
+  const email=document.createElement('p');email.textContent=account?.email ?? '';body.append(email);
   const signout = document.createElement('button'); signout.textContent = t('accountSignOut');
-  signout.onclick = async () => { const r = await fetch('/api/auth/sign-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); if (r.ok) location.replace('/?state=signed-out'); };
+  signout.onclick = async () => { const r = await fetch('/api/auth/sign-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); if (r.ok) {clearLibrary();localStorage.removeItem(PLACE_KEY);sessionStorage.removeItem(MODE_SWITCH_KEY);location.replace('/?state=signed-out');} else toast(pt('errorGeneric'),'error'); };
   body.append(signout);
   openSheet(t('accountArea'), body, anchor);
-  const response = await fetch('/api/auth/list-sessions'); if (!response.ok) return;
+  const response = await fetch('/api/auth/list-sessions'); if (!response.ok) {toast(pt('errorGeneric'),'error');return;}
   const sessions = await response.json();
   for (const session of sessions) {
-    const row = document.createElement('p'); row.textContent = session.userAgent || t('accountDevice');
+    const row = document.createElement('p'); row.textContent = deviceLabel(session.userAgent) + (session.current ? ' · '+pt('thisDevice') : '');
     const revoke = document.createElement('button'); revoke.textContent = t('accountRevoke');
-    revoke.onclick = async () => { const result = await fetch('/api/auth/revoke-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: session.id }) }); if (result.ok) row.remove(); };
-    row.append(revoke); body.append(row);
+    revoke.onclick = async () => { const result = await fetch('/api/auth/revoke-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: session.id }) }); if (result.ok) row.remove(); else toast(pt('errorGeneric'),'error'); };
+    if(!session.current)row.append(revoke); body.append(row);
   }
 }
+
+function deviceLabel(ua:string='') { const browser=/Edg/.test(ua)?'Edge':/Firefox/.test(ua)?'Firefox':/Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':t('accountDevice'); const os=/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iOS':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':'';return [browser,os].filter(Boolean).join(' · '); }
+window.addEventListener('piece:conflict',()=>{toast(pt('conflict'));if(currentSong)void reloadCurrentSong();});
+let checkingMembership=false;
+setInterval(async()=>{if(checkingMembership)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(me.user.id!==account?.id){clearLibrary();location.reload();return;}await refreshEnsembleNames();if(!inPublicFolder()&&!ensembleById(currentEnsemble)){stopPlayback();clearLibrary();importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{}finally{checkingMembership=false;}},3000);
+
+window.addEventListener('domain:error', (event)=>{const status=(event as CustomEvent).detail.status;if(status===401){stopPlayback();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});

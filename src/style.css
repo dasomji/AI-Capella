@@ -4370,3 +4370,12 @@ body:has(#app.mode-landing)::after {
   font-size: 14px;
   color: var(--paper-dim);
 }
+
+.domain-sheet { display:grid; gap:1.2rem; }
+.domain-sheet form { display:grid; gap:1rem; }
+.domain-sheet label { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; }
+.domain-sheet input:not([type=checkbox]), .domain-sheet select { color:var(--paper); background:transparent; border:0; border-bottom:1px solid var(--hair-2); padding:.5rem; font:inherit; }
+.domain-sheet input[type=checkbox] { accent-color:var(--gold, #d4ad65); }
+.member-row { padding:1rem 0; border-bottom:1px solid var(--hair-2); display:grid; gap:.6rem; }
+.domain-gold { color:var(--gold, #d4ad65); }
+.landing-empty { border-top:1px solid var(--hair-2); padding-top:1rem; }

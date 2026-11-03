@@ -106,8 +106,8 @@ const TOURS: Record<TourId, Step[]> = {
       at: ['.ens-switch'],
       title: { de: 'Dein Ensemble', en: 'Your ensemble' },
       text: {
-        de: 'Hier sind die Stücke deines Chors. Mit einem Code öffnest du ein weiteres Ensemble.',
-        en: "Here are your choir's pieces. Open another ensemble with its code.",
+        de: 'Hier sind die Stücke deines Chors. Über die Überschrift wechselst du das Ensemble.',
+        en: "Here are your choir's pieces. Switch ensembles using the heading.",
       },
     },
     {

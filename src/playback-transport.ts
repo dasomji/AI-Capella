@@ -4,7 +4,9 @@ export interface PlaybackTransport {
  publish(patch: Partial<PlaybackState>): Promise<void>;
 }
 /** Phase 3 provides the authenticated Socket.IO transport. */
+let state:PlaybackState|null=null;
+const listeners=new Set<(state:PlaybackState|null)=>void>();
 export const localPlayback: PlaybackTransport = {
- subscribe(listener) { listener(null); return () => {}; },
- async publish() { /* Solo playback remains inside the existing audio controller. */ },
+ subscribe(listener) {listeners.add(listener);listener(state);return ()=>{listeners.delete(listener);};},
+ async publish(patch) {state={...state,...patch} as PlaybackState;listeners.forEach(listener=>listener(state));},
 };

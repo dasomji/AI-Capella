@@ -66,6 +66,7 @@ export interface MenuItem {
   // A sign from the music font (Bravura) shown in place of the icon: a clef, say.
   glyph?: { text: string; kind: string };
   danger?: boolean;
+  disabled?: boolean;
   checked?: boolean;
   onSelect: () => void;
   // A choice that opens in place: the item shows the chosen one (`value`) and, clicked, its
@@ -82,6 +83,7 @@ export function openMenu(anchor: HTMLElement, items: MenuItem[], title?: string)
   for (const item of items) {
     const btn = document.createElement('button');
     btn.type = 'button';
+    btn.disabled = !!item.disabled;
     btn.className = 'menu-item' + (item.danger ? ' danger' : '');
     btn.setAttribute('role', item.checked === undefined ? 'menuitem' : 'menuitemradio');
     if (item.checked !== undefined) btn.setAttribute('aria-checked', String(item.checked));
