@@ -182,3 +182,9 @@ it('cancels idle publication when the ownership connection is lost',async()=>{
  mocks.ownerError(Error('connection lost'));app.setNow(601000);await vi.advanceTimersByTimeAsync(600000);
  expect(stored.get(ensemble).revision).toBe(1);expect(app.broadcasts).toEqual([]);
 });
+it('commits a pre-roll setting against its effective time while preserving the musical anchor',async()=>{
+ const state={...initialState(ensemble,'u',0),revision:1,pieceId:'p',versionNo:1,status:'countingIn',bpm:120,countInUntil:5000,startingTonesUntil:3000,anchor:{serverTime:100,beat:0}};
+ stored.set(ensemble,state);const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ expect((await c.emit('rehearsal:command',command('setMetronome',{command:{type:'setMetronome',enabled:true}}))).status).toBe('accepted');
+ expect(stored.get(ensemble)).toMatchObject({effectiveAt:1400,anchor:state.anchor,countInUntil:5000});
+});
