@@ -449,7 +449,8 @@ function sharedReadiness(ready:boolean) {
 function sharedNotice(code:string) {
  if(code==='session_expired'){leavePlaybackSession();location.replace('/?state=expired');return;}
  if(code==='forbidden'){leavePlaybackSession();void checkMembership();return;}
- toast('✎ '+(lang==='de'?'Probe: ':'Rehearsal: ')+code);
+ const messages:Record<string,[string,string]>={stale:['Die Probe wurde inzwischen geändert.','The rehearsal has changed.'],unavailable:['Verbindung belegt – neuer Versuch…','Connection busy – retrying…'],rate_limited:['Zu viele Änderungen. Bitte kurz warten.','Too many changes. Please wait a moment.'],connecting:['verbinde…','connecting…']};
+ toast('✎ '+(messages[code]?.[lang==='de'?0:1]??domainError(code)));
 }
 let sharedVersion:number|null=null;
 let lastScheduledStartServerMs:number|null=null;
@@ -495,7 +496,7 @@ window.setInterval(()=>{
  const joined=lateJoin(sharedState,now,timing);
  if(joined.status==='playing' && audioEngine.context.state==='running'){
   lastSharedDrift=(secondsAt(positionAt(sharedState,now,timing),timing)-secondsAt(audioEngine.getCurrentBeat(),timing))*timing.baseBpm/sharedState.bpm*1000;
-  if(Math.abs(lastSharedDrift)>30)scheduleSharedAudio(now+80);
+  if(Math.abs(lastSharedDrift)>30){const beat=positionAt(sharedState,now,timing);const delta=(secondsAt(Math.ceil(beat+.01),timing)-secondsAt(beat,timing))*timing.baseBpm/sharedState.bpm*1000;scheduleSharedAudio(now+(delta>=80 && delta<=300?delta:80));}
  }
  if(joined.status==='stopped')syncPlayButtons(false);
  if(syncDebug){let el=document.querySelector<HTMLElement>('#sync-debug');if(!el){el=document.createElement('pre');el.id='sync-debug';el.style.cssText='position:fixed;bottom:0;left:0;z-index:10000;background:var(--bg,#16151c);color:var(--ink,#eee);padding:8px;pointer-events:none';document.body.append(el);}el.textContent=JSON.stringify({offset:playerSession.clock.diagnostics?.offsetMs,uncertainty:playerSession.clock.diagnostics?.uncertaintyMs,drift:lastSharedDrift,revision:sharedState.revision});}
@@ -3636,7 +3637,7 @@ for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'])
 
 /** "Tap for sound": shown while the music plays here but the browser holds its sound up. */
 function updateSoundPrompt() {
-  const held = !!audioEngine?.isHeldUp();
+  const held = !!audioEngine?.isHeldUp() || (syncEnabled() && sharedState?.pieceId!=null && audioEngine?.context.state==='suspended');
   heldUpSince = held ? heldUpSince || performance.now() : 0;
   let el = document.getElementById('sound-prompt');
   const show = held && performance.now() - heldUpSince > 700;
@@ -3657,7 +3658,7 @@ function updateSoundPrompt() {
     document.body.appendChild(button);
     el = button;
   }
-  el.querySelector('span')!.textContent = t('tapForSound');
+  el.querySelector('span')!.textContent = syncEnabled() ? (lang==='de'?'Tippen, um mitzuhören':'Tap to listen in') : t('tapForSound');
   el.classList.add('show');
 }
 onAudioStateChange(updateSoundPrompt);

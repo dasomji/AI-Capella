@@ -32,7 +32,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     for (const reject of this.pending) reject(new Error('disconnected'));
     this.pending.clear();
   };
-  private reconnect = () => { void this.join().catch(() => this.notice('connecting')); };
+  private reconnect = () => { void this.join().catch(error => this.notice(error instanceof Error ? error.message : 'connecting')); };
   private received = (raw: unknown) => { void this.apply(raw).catch(() => {this.setReady(false);this.notice('invalid');}); };
   private request(event: string, input?: unknown): Promise<any> {
     if (!this.socket.connected || this.closed) return Promise.reject(new Error('disconnected'));
@@ -66,7 +66,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     this.setReady(false); this.snapshotApplied = false;
     const epoch = this.epoch;
     const result = snapshotAckSchema.parse(await this.request('rehearsal:join', {ensembleId:this.ensembleId}));
-    if (!('state' in result)) throw new Error(result.code);
+    if (!('state' in result)) {this.notice(result.code);throw new Error(result.code);}
     await this.apply(result.state);
     if (epoch !== this.epoch || !this.socket.connected) throw new Error('disconnected');
     this.snapshotApplied = true; this.setReady(true);
@@ -77,7 +77,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     this.setReady(false); this.snapshotApplied = false;
     const epoch = this.epoch;
     const result = snapshotAckSchema.parse(await this.request('rehearsal:snapshot',{ensembleId}));
-    if (!('state' in result)) throw new Error(result.code);
+    if (!('state' in result)) {this.notice(result.code);throw new Error(result.code);}
     await this.apply(result.state);
     if (epoch !== this.epoch || !this.socket.connected) throw new Error('disconnected');
     this.snapshotApplied = true; this.setReady(true);
@@ -91,6 +91,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
       if(epoch!==this.epoch || !this.ready) throw new Error('disconnected');
       ack=ackSchema.parse(await this.request('rehearsal:command',envelope));
       if(ack.code!=='unavailable' || attempt===3) break;
+      this.notice('unavailable');
       await new Promise(resolve=>setTimeout(resolve,100*2**attempt));
     }
     if(!ack) throw new Error('unavailable');

@@ -224,3 +224,49 @@ it('prefers precise sound tempo over both the displayed tempo and beat-zero metr
  expect(timing.baseBpm).toBe(90.4);expect(timing.tempos[0]).toEqual({beat:0,bpm:90.4});
  expect(secondsAt(4,timing)).toBeCloseTo(240/90.4);
 });
+
+import { preferenceCommands, SeekCoalescer } from '../src/rehearsal/player-controls';
+import { AudioEngine } from '../src/audioEngine';
+it('binds player settings to accepted selection and keeps personal mix out of commands',()=>{
+ expect(preferenceCommands({bpm:90,transpose:2,loopEnabled:true,loopRegion:{start:2,end:6},metronomeOn:true,startTonesOn:true},s)).toEqual([
+ {type:'setTempo',pieceId:'piece',versionNo:1,bpm:90},
+ {type:'setTransposition',pieceId:'piece',versionNo:1,semitones:2},
+ {type:'setLoop',pieceId:'piece',versionNo:1,enabled:true,startBeat:2,endBeat:6},
+ {type:'setMetronome',enabled:true},{type:'setStartingTones',enabled:true}]);
+ expect(preferenceCommands({bpm:90},{...s,pieceId:null,versionNo:null})).toEqual([]);
+});
+it('coalesces seek drags and flushes latest bound value on release, cancels on leave',()=>{
+ vi.useFakeTimers();let now=0;const send=vi.fn();const seeks=new SeekCoalescer(send,()=>now);
+ seeks.seek(1,s);now=20;seeks.seek(2,s);now=40;seeks.seek(3,s);
+ expect(send).toHaveBeenCalledTimes(1);
+ now=150;vi.advanceTimersByTime(150);
+ expect(send).toHaveBeenLastCalledWith({type:'seek',pieceId:'piece',versionNo:1,beat:3});
+ now=160;seeks.seek(4,s,true);expect(send).toHaveBeenCalledTimes(3);
+ now=170;seeks.seek(5,s);seeks.cancel();vi.advanceTimersByTime(200);expect(send).toHaveBeenCalledTimes(3);
+ vi.useRealTimers();
+});
+/** Exercise the actual engine entry point with a fake output clock and voice factory. */
+function fakeSharedEngine(){
+ const engine=Object.create(AudioEngine.prototype) as AudioEngine;
+ const voice={sources:[],gain:{gain:{cancelAndHoldAtTime:vi.fn(),linearRampToValueAtTime:vi.fn()}}};
+ const note=vi.fn((..._args:any[])=>voice);
+ Object.assign(engine,{ctx:{currentTime:10,state:'running',baseLatency:0,outputLatency:0},score:{notes:[{partId:'a',startBeat:4,durationBeats:2,midi:60}],totalBeats:16},partGains:new Map([['a',{}]]),scheduledVoices:[],beatMarkers:[],idleTimer:null,lightOffsetSec:0,playNote:note,dynamicLevel:()=>1});
+ return {engine,note,voice};
+}
+it('engine schedules tempo-map notes at mapped future start and retains old voices until effective pause',()=>{
+ const {engine,note,voice}=fakeSharedEngine();
+ const now=performance.timeOrigin+performance.now();
+ const state={...s,status:'playing' as const,anchor:{beat:0,serverTime:now+400},effectiveAt:now+400};
+ const scheduled=engine.scheduleShared(state,t,now,0,[]);
+ expect(scheduled.serverTime).toBe(now+400);
+ expect(note.mock.calls[0][1]).toBeCloseTo(scheduled.audioTime+2,2);
+ expect(note.mock.calls[0][2]).toBeCloseTo(2);
+ engine.scheduleShared({...state,status:'paused',effectiveAt:now+800,anchor:{beat:.8,serverTime:now+800}},t,now,0,[]);
+ expect(voice.gain.gain.cancelAndHoldAtTime.mock.calls[0][0]).toBeGreaterThan(10.7);
+});
+it('engine late join skips expired pre-roll and schedules at integrated score position',()=>{
+ const {engine,note}=fakeSharedEngine();const now=performance.timeOrigin+performance.now();
+ engine.scheduleShared({...s,status:'countingIn',anchor:{beat:0,serverTime:now-3000},effectiveAt:now-3000,countInUntil:now-3000,startingTonesUntil:now-4000},t,now,0,[]);
+ expect(engine.getCurrentBeat()).toBeCloseTo(5,1);
+ expect(note).toHaveBeenCalledTimes(1);
+});
