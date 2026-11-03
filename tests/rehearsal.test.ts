@@ -94,3 +94,23 @@ it('socket transport drops disconnected commands, awaits application, and snapsh
  const before=emitted.length;await expect(transport.send({type:'play'})).rejects.toThrow('connecting');expect(emitted.length).toBe(before);
  transport.dispose();expect(transport.ready).toBe(false);
 });
+
+it('maps server instants through output timestamps with a latency fallback',async()=>{
+ const {serverToAudioTime}=await import('../src/rehearsal/client-clock');
+ expect(serverToAudioTime(102500,500,{currentTime:10,getOutputTimestamp:()=>({contextTime:9.9,performanceTime:1000})},1000,100000)).toBeCloseTo(10.9);
+ expect(serverToAudioTime(102500,500,{currentTime:10,outputLatency:.1},1000,100000)).toBeCloseTo(10.9);
+});
+it('refreshes the clock on join, periodic ticks, wake, online, reconnect and sleep',async()=>{
+ const {PlaybackClock}=await import('../src/rehearsal/client-clock');const {JSDOM}=await import('jsdom');const dom=new JSDOM('',{pretendToBeVisual:true});
+ vi.stubGlobal('window',dom.window);vi.stubGlobal('document',dom.window.document);vi.useFakeTimers();
+ let now=1000;const ping=vi.fn(async()=>now+500);const clock=new PlaybackClock(ping,()=>{},()=>now);
+ try {
+  clock.start();await clock.refresh();expect(ping).toHaveBeenCalledTimes(8);expect(clock.serverNow()).toBe(1500);
+  await vi.advanceTimersByTimeAsync(30000);expect(ping).toHaveBeenCalledTimes(8);
+  now+=30000;await vi.advanceTimersByTimeAsync(1000);expect(ping).toHaveBeenCalledTimes(16);
+  dom.window.document.dispatchEvent(new dom.window.Event('visibilitychange'));await clock.refresh();expect(ping).toHaveBeenCalledTimes(24);
+  dom.window.dispatchEvent(new dom.window.Event('online'));await clock.refresh();expect(ping).toHaveBeenCalledTimes(32);
+  await clock.reconnect();expect(ping).toHaveBeenCalledTimes(40);
+  now+=4000;await vi.advanceTimersByTimeAsync(1000);expect(ping).toHaveBeenCalledTimes(48);
+ }finally{clock.dispose();vi.useRealTimers();vi.unstubAllGlobals();dom.window.close();}
+});
