@@ -12,6 +12,8 @@ import { pool } from "./db/index.server";
 import { env } from "./env.server";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import { logError, withRequestLog } from "./logger.server";
+import { UploadSlots } from "./upload-slots.server";
+const uploadSlots = new UploadSlots(env.SCORE_UPLOAD_GLOBAL_MAX, env.SCORE_UPLOAD_USER_MAX);
 export const api = new Hono();
 api.onError((error, c) => {
   logError("http.error", error, c.res.headers.get("x-request-id") ?? undefined);
@@ -57,20 +59,27 @@ api.use("*", async (c, next) => {
 });
 api.use("/api/*", async (c, next) => {
   const scorePath = c.req.path.match(/^\/api\/ensembles\/([^/]+)\/pieces(?:\/[^/]+\/versions)?$/);
+  let release: (() => void) | undefined;
   if(c.req.method === "POST" && scorePath) {
     const session = await currentSession(c.req.raw.headers);
     if(!session?.user.emailVerified) {c.header("Connection","close");return c.json({code:"SESSION_EXPIRED"},401);}
     try {await authorize(pool,session.user.id,scorePath[1],"editPieces");}
     catch {c.header("Connection","close");return c.json({code:"forbidden"},403);}
+    const slot = uploadSlots.take(session.user.id);
+    if ("code" in slot) {
+      c.header("Retry-After", "2");
+      return c.json({code:"upload_busy"},slot.code);
+    }
+    release = slot.release;
   }
-  return bodyLimit({
+  try { return await bodyLimit({
     maxSize:
       c.req.method === "POST" &&
       /^\/api\/ensembles\/[^/]+\/pieces(?:\/[^/]+\/versions)?$/.test(c.req.path)
         ? env.SCORE_MAX_BYTES
         : 16384,
     onError: (c) => c.json({ code: "body_too_large" }, 413),
-  })(c, next);
+  })(c, next); } finally { release?.(); }
 });
 api.get("/healthz", (c) => c.json({ status: "ok" }));
 api.get("/readyz", async (c) => {

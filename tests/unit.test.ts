@@ -177,3 +177,14 @@ it('removes executable content from score-derived SVG', async () => {
     expect(svg.textContent).toBe('Choir');
   } finally {vi.unstubAllGlobals();}
 });
+
+it('bounds uploads globally and per user without queuing and releases exactly once', async()=>{
+  const {UploadSlots}=await import('../server/upload-slots.server');
+  const slots=new UploadSlots(2,1), a=slots.take('a'), b=slots.take('b');
+  expect(slots.take('a')).toEqual({code:429});
+  expect(slots.take('c')).toEqual({code:503});
+  if('release' in a){a.release();a.release();}
+  expect('release' in slots.take('c')).toBe(true);
+  expect(slots.take('d')).toEqual({code:503});
+  if('release' in b)b.release();
+});

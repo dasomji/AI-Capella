@@ -54,6 +54,8 @@ export function parseEnv(input: NodeJS.ProcessEnv) {
       .int()
       .positive()
       .default(20 * 1024 * 1024),
+    SCORE_UPLOAD_GLOBAL_MAX: z.coerce.number().int().positive().default(4),
+    SCORE_UPLOAD_USER_MAX: z.coerce.number().int().positive().default(1),
     DB_POOL_MAX: z.coerce.number().int().positive().default(10),
     INVITE_ENSEMBLE_DAILY_MAX: z.coerce.number().int().positive().default(50),
     INVITE_USER_DAILY_MAX: z.coerce.number().int().positive().default(100),

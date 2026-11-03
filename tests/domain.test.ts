@@ -1686,3 +1686,21 @@ test('authoritative rehearsal serializes ordinary members, snapshots, rejection 
   assert.equal((await emit(clients[2],'rehearsal:command',env({type:'selectPiece',pieceId:xmlPiece.id,versionNo:1}))).status,'accepted');
  }finally{for(const socket of sockets)socket.disconnect();}
 });
+
+test('upload admission precedes body reads and releases slots after success and failure', {timeout:30000}, async()=>{
+  const {api}=await import('../server/http.server');
+  const owner=await account();
+  const e=await ok('ensembles','POST',{name:'Upload admission'},owner.cookie);
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const pending=api.fetch(new Request(base+`/api/ensembles/${e.id}/pieces`,{
+    method:'POST',headers:{origin:base,cookie:owner.cookie,'content-type':'text/xml','x-score-title':'Pending'},
+    body:new ReadableStream<Uint8Array>({start(c){controller=c;}}),duplex:'half',
+  } as RequestInit));
+  await delay(100);
+  const blocked=await request(`ensembles/${e.id}/pieces`,'POST',{title:'Blocked',content:{format:'musicxml',body:xml}},owner.cookie);
+  assert.equal(blocked.status,429); assert.equal(blocked.headers.get('retry-after'),'2');
+  controller.enqueue(new TextEncoder().encode(xml));controller.close();
+  assert.equal((await pending).status,201);
+  assert.equal((await request(`ensembles/${e.id}/pieces`,'POST',{title:'Invalid',content:{format:'musicxml',body:'invalid'}},owner.cookie)).status,400);
+  assert.equal((await request(`ensembles/${e.id}/pieces`,'POST',{title:'Released',content:{format:'musicxml',body:xml}},owner.cookie)).status,201);
+});
