@@ -4,7 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { spawnSync } from 'node:child_process';
 import { io as connect, type Socket } from 'socket.io-client';
 process.env.NODE_ENV = 'test'; process.env.TZ = 'Pacific/Honolulu'; process.env.MAIL_TRANSPORT = 'capture';
-process.env.PORT = '23001'; process.env.BETTER_AUTH_URL = 'http://localhost:23001'; process.env.TRUSTED_ORIGINS = 'http://localhost:23001';
+process.env.PORT = (process.env.TEST_APP_PORT ?? '23001'); process.env.BETTER_AUTH_URL = `http://localhost:${process.env.PORT}`; process.env.TRUSTED_ORIGINS = `http://localhost:${process.env.PORT}`;
 const { server, io } = await import('../server/start');
 const { pool } = await import('../server/db/index.server');
 const { captureMail } = await import('../server/mail.server');

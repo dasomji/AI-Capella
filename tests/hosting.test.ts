@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { io } from 'socket.io-client';
 for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start, auth and Socket.IO on one HTTP origin`, { timeout: 30000 }, async () => {
  const port = mode === 'dev' ? 23002 : 23003; const base = `http://localhost:${port}`;
- const child = spawn('npm', mode === 'dev' ? ['run','dev','--','--port',String(port)] : ['start'], { detached: true, env: { ...process.env, NODE_ENV:'test', PORT:String(port), BETTER_AUTH_URL:base, TRUSTED_ORIGINS:base, MAIL_TRANSPORT:'smtp' }, stdio:'pipe' });
+ let child = spawn('npm', mode === 'dev' ? ['run','dev','--','--port',String(port)] : ['start'], { detached: true, env: { ...process.env, NODE_ENV:'test', PORT:String(port), BETTER_AUTH_URL:base, TRUSTED_ORIGINS:base, MAIL_TRANSPORT:'smtp' }, stdio:'pipe' });
  let logs = ''; child.stdout.on('data',v => { logs += v; }); child.stderr.on('data',v => { logs += v; });
  try {
   let ready = false;
@@ -25,6 +25,22 @@ for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start
   const signedIn = await post('sign-in/email',{ email,password }); assert.equal(signedIn.status,200,await signedIn.clone().text());
   const cookie = signedIn.headers.getSetCookie().map(v => v.split(';')[0]).join('; ');
   assert.equal((await fetch(`${base}/app`,{headers:{cookie}})).status,200);
+  if(mode==='start') {
+   const api=async(path:string,body:unknown)=>{const r=await fetch(base+'/api/'+path,{method:'POST',headers:{cookie,origin:base,'content-type':'application/json'},body:JSON.stringify(body)});assert.ok(r.ok,await r.clone().text());return r.json();};
+   const e=await api('ensembles',{name:'Restart fixture'});
+   const body={title:'Long',parts:[{id:'v',name:'Voice'}],notes:[{partId:'v',midi:60,startBeat:0,durationBeats:400,measureNumber:1}],measures:[{number:1,startBeat:0,beats:4,beatType:4,fifths:0}],slurs:[],totalBeats:400,rehearsalMarks:[],tempo:120};
+   const upload=await fetch(base+`/api/ensembles/${e.id}/pieces`,{method:'POST',headers:{cookie,origin:base,'content-type':'application/json','x-score-title':'Long'},body:JSON.stringify(body)});assert.ok(upload.ok,await upload.clone().text());const piece=await upload.json();
+   const open=async()=>{const c=io(base+'/rehearsal',{forceNew:true,extraHeaders:{cookie,origin:base},transports:['websocket'],reconnection:false});await new Promise<void>((r,j)=>{c.once('connect',r);c.once('connect_error',j);});return c;};
+   let c=await open();
+   const emit=(event:string,input:unknown)=>new Promise<any>((r,j)=>c.timeout(5000).emit(event,input,(err:any,v:any)=>err?j(err):r(v)));
+   await emit('rehearsal:join',{ensembleId:e.id});
+   for(const [i,command] of [{type:'selectPiece',pieceId:piece.id,versionNo:1},{type:'play'}].entries())assert.equal((await emit('rehearsal:command',{ensembleId:e.id,commandId:crypto.randomUUID(),clientSentAt:Date.now(),baseRevision:i,command})).status,'accepted');
+   const before=(await emit('rehearsal:snapshot',{ensembleId:e.id})).state;c.close();
+   process.kill(-child.pid!,'SIGTERM');await new Promise<void>(r=>child.once('exit',()=>r()));
+   child=spawn('npm',['start'],{detached:true,env:{...process.env,NODE_ENV:'test',PORT:String(port),BETTER_AUTH_URL:base,TRUSTED_ORIGINS:base,MAIL_TRANSPORT:'smtp'},stdio:'pipe'});child.stdout.on('data',v=>{logs+=v;});child.stderr.on('data',v=>{logs+=v;});
+   let restarted=false;for(let i=0;i<100;i++){try{restarted=(await fetch(base+'/readyz')).ok;}catch{}if(restarted)break;await delay(100);}assert.ok(restarted,logs);
+   c=await open();try{const after=(await emit('rehearsal:join',{ensembleId:e.id})).state;assert.equal(after.status,'paused');assert.equal(after.revision,before.revision+1);assert.ok(Math.abs(after.anchor.beat-Math.max(0,after.updatedAt-before.anchor.serverTime)/500)<0.01);assert.equal(after.endsAt,null);}finally{c.close();}
+  }
   const socket = io(`${base}/rehearsal`,{extraHeaders:{cookie,origin:base},transports:['polling'],reconnection:false,timeout:3000});
   try { await new Promise<void>((resolve,reject) => { socket.on('connect',resolve); socket.on('connect_error',reject); }); } finally { socket.close(); }
  } finally { process.kill(-child.pid!, 'SIGTERM'); await new Promise<void>(resolve => child.on('exit',()=>resolve())); }

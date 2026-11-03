@@ -10,9 +10,9 @@ import { setTimeout as delay } from "node:timers/promises";
 import { io as connect } from "socket.io-client";
 process.env.NODE_ENV = "test";
 process.env.MAIL_TRANSPORT = "capture";
-process.env.PORT = "23001";
-process.env.BETTER_AUTH_URL = "http://localhost:23001";
-process.env.TRUSTED_ORIGINS = "http://localhost:23001";
+process.env.PORT = (process.env.TEST_APP_PORT ?? "23001");
+process.env.BETTER_AUTH_URL = `http://localhost:${process.env.PORT}`;
+process.env.TRUSTED_ORIGINS = `http://localhost:${process.env.PORT}`;
 process.env.TZ = "America/New_York";
 const { server, io } = await import("../server/start");
 const { pool } = await import("../server/db/index.server");
@@ -1640,4 +1640,49 @@ test('distributed failed passwords do not lock out the correct password on a new
   }));
   for(let ip=0;ip<14;ip++) for(let n=0;n<9;n++) assert.equal((await attempt(`198.51.100.${ip+1}`,'wrong-password-for-budget')).status,401);
   assert.equal((await attempt('198.51.100.200','domain-fixture-password-42')).status,200);
+});
+
+test('authoritative rehearsal serializes ordinary members, snapshots, rejection and lifecycle', {timeout:60000}, async()=>{
+ const lead=await account(),a=await account(),b=await account(),outside=await account();
+ const e=await ok('ensembles','POST',{name:'Rehearsal'},lead.cookie);
+ const path=`ensembles/${e.id}`;
+ // Real authenticated accounts, ordinary membership rows (no edit capability).
+ for(const user of [a,b])await pool.query('insert into memberships(ensemble_id,user_id) values($1,$2)',[e.id,user.id]);
+ const piece=await ok(path+'/pieces','POST',{title:'Timing',content:{format:'score',schemaVersion:1,body:{title:'Timing',parts:[{id:'p',name:'Voice'}],notes:[{partId:'p',midi:60,startBeat:0,durationBeats:4,measureNumber:1}],measures:[{number:1,startBeat:0,beats:4,beatType:4,fifths:0}],slurs:[],totalBeats:4,rehearsalMarks:[],tempo:120}}},lead.cookie);
+ const sockets:ReturnType<typeof connect>[]=[];
+ const open=async(cookie:string)=>{const socket=connect(base+'/rehearsal',{forceNew:true,extraHeaders:{Cookie:cookie,Origin:base},transports:['websocket'],reconnection:false});sockets.push(socket);await new Promise<void>((r,j)=>{socket.once('connect',r);socket.once('connect_error',j);});return socket;};
+ const emit=(socket:ReturnType<typeof connect>,event:string,input?:unknown)=>new Promise<any>((r,j)=>{socket.timeout(5000).emit(event,input,(error:any,result:any)=>error?j(error):r(result));});
+ try {
+  const clients=await Promise.all([open(a.cookie),open(b.cookie),open(a.cookie)]),outsider=await open(outside.cookie);
+  assert.equal((await emit(outsider,'rehearsal:join',{ensembleId:e.id})).code,'forbidden');
+  const sequences:number[][]=clients.map(()=>[]);clients.forEach((c,i)=>c.on('playback:state',s=>sequences[i].push(s.revision)));
+  for(const c of clients){const joined=await emit(c,'rehearsal:join',{ensembleId:e.id});assert.ok(joined.state,JSON.stringify(joined));assert.equal(joined.state.revision,0);}
+  let revision=0;
+  const env=(command:any,extra:any={})=>({ensembleId:e.id,commandId:crypto.randomUUID(),baseRevision:revision,clientSentAt:Date.now(),command,...extra});
+  const selected=env({type:'selectPiece',pieceId:piece.id,versionNo:1});assert.equal((await emit(clients[0],'rehearsal:command',selected)).status,'accepted');revision++;
+  assert.equal((await emit(clients[0],'rehearsal:command',selected)).code,'duplicate');
+  const results=await Promise.all(Array.from({length:6},(_,i)=>emit(clients[i%3],'rehearsal:command',env({type:'setTempo',bpm:120+i}))));
+  assert.deepEqual(results.map(r=>r.revision).sort((a,b)=>a-b),[2,3,4,5,6,7]);revision=7;
+  assert.equal((await emit(clients[0],'rehearsal:command',env({type:'pause'},{baseRevision:0}))).code,'stale');
+  assert.equal((await emit(clients[0],'rehearsal:command',env({type:'stop'},{clientSentAt:Date.now()-6000}))).code,'expired');
+  assert.equal((await emit(clients[0],'rehearsal:command',env({type:'setTempo',bpm:-1}))).code,'invalid');
+  assert.equal((await emit(outsider,'rehearsal:command',env({type:'stop'}))).code,'forbidden');
+  assert.equal((await emit(clients[1],'rehearsal:command',env({type:'selectPiece',pieceId:crypto.randomUUID(),versionNo:1}))).code,'not_found');
+  const snapshot=(await emit(clients[2],'rehearsal:snapshot',{ensembleId:e.id})).state;assert.equal(snapshot.revision,7);
+  const saved=await ok(path+'/pieces/'+piece.id,'GET',undefined,lead.cookie);assert.equal(saved.settings.bpm,undefined);
+  const reconnected=await open(b.cookie);assert.equal((await emit(reconnected,'rehearsal:join',{ensembleId:e.id})).state.revision,7);
+  const limited=await Promise.all(Array.from({length:35},()=>emit(reconnected,'rehearsal:command',env({type:'setTempo',bpm:-1}))));assert.ok(limited.some(r=>r.code==='rate_limited'));
+  await delay(100);for(const sequence of sequences)assert.deepEqual(sequence,[1,2,3,4,5,6,7]);
+  // Revoke one ordinary member. Another member/device continues without a reset.
+  await ok(path+'/members/'+(await pool.query('select id from memberships where ensemble_id=$1 and user_id=$2',[e.id,b.id])).rows[0].id,'DELETE',undefined,lead.cookie);
+  assert.equal((await emit(clients[1],'rehearsal:command',env({type:'stop'}))).code,'forbidden');
+  assert.equal((await emit(clients[2],'rehearsal:command',env({type:'play',fromBeat:3.9}))).status,'accepted');revision++;
+  await delay(800);const ended=(await emit(clients[2],'rehearsal:snapshot',{ensembleId:e.id})).state;assert.equal(ended.status,'stopped');assert.equal(ended.revision,++revision);
+  assert.equal((await emit(clients[2],'rehearsal:command',env({type:'play'}))).status,'accepted');revision++;
+  await ok(path+'/pieces/'+piece.id,'DELETE',undefined,lead.cookie);
+  await delay(150);const deleted=(await emit(clients[2],'rehearsal:snapshot',{ensembleId:e.id})).state;assert.equal(deleted.pieceId,null);assert.equal(deleted.status,'stopped');assert.equal(deleted.revision,++revision);
+  await delay(50);assert.deepEqual(sequences[0],sequences[2]);assert.equal(sequences[1].at(-1),7);
+  const xmlPiece=await ok(path+'/pieces','POST',{title:'XML timing',content:{format:'musicxml',schemaVersion:1,body:xml}},lead.cookie);
+  assert.equal((await emit(clients[2],'rehearsal:command',env({type:'selectPiece',pieceId:xmlPiece.id,versionNo:1}))).status,'accepted');
+ }finally{for(const socket of sockets)socket.disconnect();}
 });
