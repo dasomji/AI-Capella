@@ -14,6 +14,7 @@ export default defineConfig({
       server.httpServer.on('close', () => { void io.close(); });
       const listener = getRequestListener(api.fetch);
       server.middlewares.use((req, res, next) => {
+        req.headers['x-lightscore-socket-ip'] = req.socket.remoteAddress ?? '';
         if (/^\/(api\/|healthz(?:\?|$)|readyz(?:\?|$))/.test(req.url ?? '')) { void listener(req, res); return; }
         const headers = new Headers(); for (const [key, value] of Object.entries(req.headers)) if (value) headers.set(key, Array.isArray(value) ? value.join(',') : value);
         void Promise.resolve(api.fetch(new Request(`http://localhost${req.url}`, { method: req.method, headers }))).then(response => {

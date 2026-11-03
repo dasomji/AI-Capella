@@ -24,7 +24,7 @@ export function AuthPage() {
    try {
      const response = await fetch(`/api/auth/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
      const result = await response.json();
-     if (!response.ok) { setStatus(result.code === 'EMAIL_NOT_VERIFIED' ? 'unverified' : 'error'); return; }
+     if (!response.ok) { setStatus(response.status === 429 ? 'limited' : result.code === 'EMAIL_NOT_VERIFIED' ? 'unverified' : 'error'); return; }
      if (mode === 'signin') location.assign('/app');
      else if (mode === 'reset') { history.replaceState(null, '', '/'); setMode('signin'); setStatus('done'); }
      else setStatus('check');

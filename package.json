@@ -16,7 +16,8 @@
     "test": "vitest run tests/unit.test.ts",
     "test:integration": "node scripts/integration.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
-    "accounts:cleanup": "node --env-file-if-exists=.env --import tsx scripts/cleanup-accounts.ts"
+    "accounts:cleanup": "node --env-file-if-exists=.env --import tsx scripts/cleanup-accounts.ts",
+    "test:browser": "node scripts/browser-smoke.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
@@ -41,6 +42,7 @@
     "@tanstack/react-start": "^1.169.4",
     "better-auth": "^1.7.15",
     "drizzle-orm": "^0.45.4",
+    "fast-xml-parser": "^5.12.0",
     "fflate": "^0.8.3",
     "hono": "^4.13.16",
     "jspdf": "^4.2.1",

@@ -38,6 +38,7 @@ export function attachSockets(server: ServerType) {
     finally { busy = false; }
   }, 15000);
   timer.unref();
-  io.engine.on('close', () => { clearInterval(timer); unsubscribe(); });
+  const close = io.close.bind(io);
+  io.close = ((callback?: () => void) => { clearInterval(timer); unsubscribe(); return close(callback); }) as typeof io.close;
   return io;
 }

@@ -7,4 +7,5 @@ const key = Symbol.for('lightscore.database');
 const globals = globalThis as typeof globalThis & { [key]?: pg.Pool };
 export const pool = globals[key] ??= new pg.Pool({ connectionString: env.DATABASE_URL, connectionTimeoutMillis: 5000 });
 if (pool.listenerCount('error') === 0) pool.on('error', error => logError('database.pool', error));
+if (pool.listenerCount('connect') === 0) pool.on('connect', client => client.on('error', error => logError('database.client', error)));
 export const db = drizzle(pool, { schema });

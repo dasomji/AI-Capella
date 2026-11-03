@@ -4340,7 +4340,7 @@ async function openAccountArea(anchor: HTMLElement) {
   for (const session of sessions) {
     const row = document.createElement('p'); row.textContent = session.userAgent || t('accountDevice');
     const revoke = document.createElement('button'); revoke.textContent = t('accountRevoke');
-    revoke.onclick = async () => { const result = await fetch('/api/auth/revoke-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: session.token }) }); if (result.ok) row.remove(); };
+    revoke.onclick = async () => { const result = await fetch('/api/auth/revoke-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: session.id }) }); if (result.ok) row.remove(); };
     row.append(revoke); body.append(row);
   }
 }

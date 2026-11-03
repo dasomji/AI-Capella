@@ -1,21 +1,25 @@
 const {chromium} = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+const evidence = fs.mkdtempSync(path.join(os.tmpdir(), 'aicap-smoke-'));
+console.log('Evidence:', evidence);
 import assert from 'node:assert/strict';
 import { checkPlayerThemes } from './browser-themes.mjs';
-const mode='start', base='http://localhost:3005'; fs.mkdirSync('/tmp/aicap-p1-fix/shots',{recursive:true});
-const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+const mode='start', base='http://localhost:3005'; fs.mkdirSync(`${evidence}/shots`,{recursive:true});
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH || undefined,headless:true,args:['--no-sandbox']});
 const context=await browser.newContext({colorScheme:'dark',viewport:{width:1440,height:1000},acceptDownloads:true});
 const page=await context.newPage(); const requests=[],errors=[];
 page.on('request',r=>requests.push(r.url())); page.on('pageerror',e=>errors.push(e.message)); page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
 await page.addInitScript(()=>{localStorage.setItem('ai-capella-intro-off','1');const A=window.AudioContext; window.__audio=[]; window.AudioContext=class extends A{constructor(...a){super(...a);window.__audio.push(this)}}});
-const shot=async n=>page.screenshot({path:`/tmp/aicap-p1-fix/shots/${mode}-${n}.png`,fullPage:true});
+const shot=async n=>page.screenshot({path:`${evidence}/shots/${mode}-${n}.png`,fullPage:true});
 const log=(...a)=>console.log(...a);
 try{
 await page.goto(base+'/?state=__proto__'); await page.getByRole('heading',{name:'Sign in',exact:true}).waitFor();await page.waitForTimeout(2000);await shot('auth-en');
 log('STYLE',await page.locator('body').evaluate(el=>({bg:getComputedStyle(el).backgroundColor,color:getComputedStyle(el).color,font:getComputedStyle(el).fontFamily}))); 
 await page.getByLabel('Language / Sprache').selectOption('de'); await page.getByRole('heading',{name:'Anmelden',exact:true}).waitFor();await shot('auth-de');
 await page.getByLabel('Language / Sprache').selectOption('en');await page.locator('nav').getByRole('button',{name:'Create account',exact:true}).click();
-const email=`browser-${mode}-${Date.now()}@example.test`,password='Verify-singer-password-42'; fs.writeFileSync(`/tmp/aicap-p1-fix/${mode}-account.json`,JSON.stringify({email,password,base}));
+const email=`browser-${mode}-${Date.now()}@example.test`,password='Verify-singer-password-42'; fs.writeFileSync(`${evidence}/${mode}-account.json`,JSON.stringify({email,password,base}));
 await page.locator('[name=name]').fill('Browser Singer');await page.locator('[name=email]').fill(email);await page.locator('[name=password]').fill(password);await page.locator('form button').click();await page.getByRole('status').filter({hasText:'Check your email'}).waitFor();await shot('signup-mail');
 async function mailLink(){const list=await(await fetch('http://127.0.0.1:28025/api/v1/messages')).json();const mail=list.messages.find(m=>m.To.some(t=>t.Address===email));const msg=await(await fetch('http://127.0.0.1:28025/api/v1/message/'+mail.ID)).json();log('MAIL',mail.ID,msg.Subject); return msg.Text.match(/http[^\s]+/)[0];}
 await page.goto(await mailLink());await page.getByRole('status').filter({hasText:'Email verified'}).waitFor();await shot('verified');
@@ -23,10 +27,10 @@ await page.locator('[name=email]').fill(email);await page.locator('[name=passwor
 await page.getByText('Evening Rise',{exact:true}).first().click();await page.locator('.play-btn').waitFor({state:'visible'});await page.waitForTimeout(2500);if(await page.getByRole('button',{name:'Skip',exact:true}).isVisible())await page.getByRole('button',{name:'Skip',exact:true}).click();await shot('sample'); log('PALETTE', await page.evaluate(()=>({ground:document.documentElement.dataset.ground,ink:getComputedStyle(document.documentElement).getPropertyValue('--ink-0'),paper:getComputedStyle(document.documentElement).getPropertyValue('--paper')}))); assert.equal(await page.evaluate(()=>document.documentElement.dataset.ground),undefined);
 await page.locator('.play-btn').click();await page.waitForTimeout(2000);log('PLAYBACK',await page.evaluate(()=>({audio:window.__audio.map(a=>({state:a.state,time:a.currentTime})),button:document.querySelector('.play-btn').outerHTML,position:document.querySelector('.pos').textContent})));await shot('playing');await page.locator('.play-btn').click();
 await page.locator('[data-view=staff]').click();await page.waitForTimeout(3000);log('STAFF',await page.locator('#player svg').count());await shot('staff');
-log('MENU-HIT',await page.locator('#player-menu-btn').evaluate(el=>{const r=el.getBoundingClientRect();return {rect:r.toJSON(),hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML}}));await page.locator('#player-menu-btn').click();await page.getByText('Export as PDF',{exact:true}).click();const download=page.waitForEvent('download',{timeout:60000});await page.getByRole('button',{name:'Create PDF',exact:true}).click();const d=await download;await d.saveAs(`/tmp/aicap-p1-fix/${mode}-export.pdf`);log('PDF',d.suggestedFilename(),fs.statSync(`/tmp/aicap-p1-fix/${mode}-export.pdf`).size);
+log('MENU-HIT',await page.locator('#player-menu-btn').evaluate(el=>{const r=el.getBoundingClientRect();return {rect:r.toJSON(),hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML}}));await page.locator('#player-menu-btn').click();await page.getByText('Export as PDF',{exact:true}).click();const download=page.waitForEvent('download',{timeout:60000});await page.getByRole('button',{name:'Create PDF',exact:true}).click();const d=await download;await d.saveAs(`${evidence}/${mode}-export.pdf`);log('PDF',d.suggestedFilename(),fs.statSync(`${evidence}/${mode}-export.pdf`).size);
 await page.locator('#player-menu-btn').click(); await page.getByText('Account and devices',{exact:true}).click();
 await page.getByRole('button',{name:'Sign out',exact:true}).click();await page.waitForURL('**/?state=signed-out');await page.goto(base+'/app');log('LOGOUT',page.url());
 await page.locator('nav').getByRole('button',{name:'Forgot password',exact:true}).click();await page.locator('[name=email]').fill(email);await page.locator('form button').click();await page.getByRole('status').filter({hasText:'Check your email'}).waitFor();await page.waitForTimeout(500);await page.goto(await mailLink());await page.getByRole('heading',{name:'Reset password',exact:true}).waitFor();assert.equal(new URL(page.url()).search,'');await shot('reset');await page.locator('[name=password]').fill('Reset-singer-password-43');await page.locator('form button').click();await page.getByRole('status').filter({hasText:'Password updated'}).waitFor();await page.locator('[name=email]').fill(email);await page.locator('[name=password]').fill('Reset-singer-password-43');await page.locator('form button').click();await page.waitForURL('**/app');log('RESET','new password reaches /app');await shot('reset-signed-in'); await page.emulateMedia({colorScheme:'light'}); await page.waitForTimeout(3000); await page.getByText('Evening Rise',{exact:true}).first().click(); await page.locator('.play-btn').waitFor({state:'visible'}); await shot('light-sample'); assert.equal(await page.evaluate(()=>document.documentElement.dataset.ground),'pergament'); await page.evaluate(()=>localStorage.setItem('ai-capella-design','papier')); await page.reload(); await page.getByText('Evening Rise',{exact:true}).first().click(); await page.locator('.play-btn').waitFor({state:'visible'}); await shot('stored-papier'); assert.equal(await page.evaluate(()=>document.documentElement.dataset.ground),undefined);
 await checkPlayerThemes(page, base, shot);
 }catch(e){log('FAIL',e.stack); await shot('failure');log('BODY',await page.locator('body').innerText());process.exitCode=1;}
-finally{fs.writeFileSync(`/tmp/aicap-p1-fix/${mode}-requests.json`,JSON.stringify(requests,null,2));log('ERRORS',JSON.stringify(errors)); if(errors.length)process.exitCode=1;log('FORBIDDEN',requests.filter(u=>/firebase|googleapis|firestore/i.test(new URL(u).hostname)));await browser.close();}
+finally{fs.writeFileSync(`${evidence}/${mode}-requests.json`,JSON.stringify(requests,null,2));log('ERRORS',JSON.stringify(errors)); if(errors.length)process.exitCode=1;log('FORBIDDEN',requests.filter(u=>/firebase|googleapis|firestore/i.test(new URL(u).hostname)));await browser.close();}

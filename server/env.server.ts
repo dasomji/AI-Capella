@@ -22,6 +22,7 @@ export function parseEnv(input: NodeJS.ProcessEnv) {
   if (env.NODE_ENV === 'production' && /replace-with|change-me/i.test(env.BETTER_AUTH_SECRET)) throw new Error('Production requires a generated authentication secret');
   if (env.NODE_ENV === 'production' && (env.MAIL_TRANSPORT !== 'resend' || !env.RESEND_API_KEY || !env.BETTER_AUTH_URL.startsWith('https://') || env.TRUSTED_ORIGINS.some(o => !o.startsWith('https://')))) throw new Error('Production requires HTTPS and Resend configuration');
   if (env.NODE_ENV === 'test' && !['localhost', '127.0.0.1', '[::1]'].includes(new URL(env.BETTER_AUTH_URL).hostname)) throw new Error('Test auth URL must be loopback');
+  if (env.NODE_ENV === 'production' && Boolean(env.AUTH_IP_HEADERS.trim()) !== Boolean(env.AUTH_TRUSTED_PROXIES.trim())) throw new Error('Proxy IP headers and trusted proxies must be configured together');
   return env;
 }
 export const env = parseEnv(process.env);
