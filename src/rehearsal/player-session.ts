@@ -8,9 +8,9 @@ export class PlayerSession {
   readonly clock: PlaybackClock;
   private socket = io('/rehearsal', {autoConnect:false,forceNew:true,withCredentials:true,transports:['websocket']});
   private closed = false;
-  constructor(ensembleId:string, apply:(state:RehearsalState)=>Promise<void>, ready:(value:boolean)=>void, notice:(code:string)=>void) {
+  constructor(ensembleId:string, apply:(state:RehearsalState)=>Promise<void>, ready:(value:boolean)=>void, notice:(code:string)=>void, recalibrated:()=>void=()=>{}) {
     this.transport = new SocketPlaybackTransport(this.socket,ensembleId,()=>this.clock.serverNow(),value=>ready(value && this.clock.usable),notice);
-    this.clock = new PlaybackClock(async()=>{await new Promise(resolve=>setTimeout(resolve,5));return this.transport.ping();},()=>ready(this.transport.ready && this.clock.usable));
+    this.clock = new PlaybackClock(async()=>{await new Promise(resolve=>setTimeout(resolve,5));return this.transport.ping();},()=>{ready(this.transport.ready && this.clock.usable);if(this.transport.ready && this.clock.usable)recalibrated();});
     this.transport.subscribe(async state=>{
       if(!this.clock.usable) await this.clock.reconnect();
       if(!this.clock.usable) await this.clock.refresh();

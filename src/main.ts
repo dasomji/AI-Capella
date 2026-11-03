@@ -1588,6 +1588,7 @@ libraryEl.addEventListener('drop', (e) => {
 async function selectSong(song: SongEntry, at?: { beat: number; bpm: number; transpose: number }) {
   if(syncEnabled()){
     if(!sharedReady)return;
+    if(song.id===loadedSongId && currentScore){setViewMode('player');renderNow();return;}
     const piece=await api(`/ensembles/${currentEnsemble}/pieces/${song.id}`);
     sendShared({type:'selectPiece',pieceId:piece.id,versionNo:piece.versionNo});return;
   }
@@ -1951,6 +1952,7 @@ function signed(n: number): string {
 
 /** Pushes the current tempo/key/loop/metronome state into every control bound to it (transport, dock, sheets, popovers). */
 function refreshBindings() {
+  document.querySelectorAll('[data-bind="count-in"]').forEach(el=>el.textContent=(lang==='de'?'Einzählen: ':'Count in: ')+(sharedState?.countIn.bars??0));
   document.querySelectorAll('[data-bind="bpm"]').forEach((el) => (el.textContent = String(bpm)));
   document.querySelectorAll('[data-bind="transpose"]').forEach((el) => (el.textContent = signed(transpose)));
   const keyNow = transposedKeyName();
@@ -2570,7 +2572,7 @@ function openControlsSheet(opener: HTMLElement) {
   const body = document.createElement('div');
   body.className = 'sheet-body';
   body.append(tempoBlock(), keyBlock(), metronomeBlock(), startTonesBlock());
-  if(syncEnabled()){const count=document.createElement('button');count.className='mode-btn';count.textContent=(lang==='de'?'Einzählen: ':'Count in: ')+(sharedState?.countIn.bars??0);count.onclick=()=>sendShared({type:'setCountIn',bars:sharedState?.countIn.bars?0:1});body.append(count);}
+  if(syncEnabled()){const count=document.createElement('button');count.className='mode-btn';count.dataset.bind='count-in';count.textContent=(lang==='de'?'Einzählen: ':'Count in: ')+(sharedState?.countIn.bars??0);count.onclick=()=>sendShared({type:'setCountIn',bars:sharedState?.countIn.bars?0:1});body.append(count);}
   const sections = sectionsBlock();
   if (sections) body.appendChild(sections);
   body.appendChild(gotoBlock());
@@ -3972,7 +3974,7 @@ async function runBootstrap() {
     );
     if (syncEnabled() && !playerSession) {
       sharedReadiness(false);
-      playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice);
+      playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice,()=>scheduleSharedAudio());
     }
   } catch (err) {
     libraryState = 'offline';
