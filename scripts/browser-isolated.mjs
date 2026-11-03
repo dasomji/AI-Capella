@@ -107,7 +107,7 @@ try {
     env.PLAYWRIGHT_BROWSERS_PATH = `${process.cwd()}/.review-evidence/browsers`;
     await run(["node_modules/playwright/cli.js", "install", "chromium"], env);
   }
-  await run(["scripts/browser-phase2b.mjs"], env);
+  await run([process.env.BROWSER_SCRIPT || "scripts/browser-phase2b.mjs"], env);
 } finally {
   for (const c of children)
     if (c.exitCode === null) {

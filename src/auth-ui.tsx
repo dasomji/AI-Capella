@@ -112,7 +112,7 @@ export function AuthPage() {
       setBusy(false);
     }
   }
-  function changeMode(next: typeof mode) { setMode(next); setStatus(""); setShowPassword(false); }
+  function changeMode(next: typeof mode) { setMode(next); setVerification(false); setToken(null); setStatus(""); setShowPassword(false); }
   async function resend() {
     if (busy || Date.now() < resendAt) return;
     setBusy(true);
@@ -147,6 +147,7 @@ export function AuthPage() {
       </form>
       {status === "unverified" && <nav className="account-links"><button type="button" disabled={busy || clock < resendAt} onClick={() => void resend()}>{m.resend}</button></nav>}
       <nav className="account-links">
+        {verification && <><button type="button" onClick={() => changeMode('forgot')}>{m.forgot}</button><span aria-hidden="true"> · </span></>}
         {mode === "signin" ? <><button type="button" onClick={() => changeMode('signup')}>{m.signup}</button><span aria-hidden="true"> · </span><button type="button" onClick={() => changeMode('forgot')}>{m.forgot}</button></> : <button type="button" onClick={() => changeMode('signin')}>{mode === "signup" ? m.haveAccount + ' ' : ''}{m.signin}</button>}
       </nav>
     </>}
