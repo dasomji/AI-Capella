@@ -12,7 +12,7 @@ function makeAuth() { return betterAuth({
   database: drizzleAdapter(db, { provider: 'pg', schema, transaction: true }),
   secret: env.BETTER_AUTH_SECRET, baseURL: env.BETTER_AUTH_URL, trustedOrigins: env.TRUSTED_ORIGINS,
   verification: { storeIdentifier: 'hashed' },
-  rateLimit: { enabled: true, storage: 'database', window: 60, max: 600, customRules: { '/sign-in/email': { window: 60, max: 60 }, '/sign-up/email': { window: 60, max: 60 }, '/request-password-reset': { window: 60, max: 5 }, '/send-verification-email': { window: 60, max: 5 } } },
+  rateLimit: { enabled: true, storage: 'database', window: 60, max: 100, customRules: { '/sign-in/email': { window: 60, max: 60 }, '/sign-up/email': { window: 60, max: 60 }, '/request-password-reset': { window: 60, max: 5 }, '/send-verification-email': { window: 60, max: 5 } } },
   databaseHooks: { session: { delete: { after: async session => { revoked(session.token); } } }, user: { create: { before: async user => ({ data: { ...user, email: user.email.trim().toLowerCase() } }) } } },
   emailAndPassword: { enabled: true, onExistingUserSignUp: async ({ user }) => {
       if (!user.emailVerified) await auth.api.sendVerificationEmail({ body: { email: user.email, callbackURL: `${env.BETTER_AUTH_URL}/?state=verified` } });
@@ -28,7 +28,7 @@ function makeAuth() { return betterAuth({
   },
   user: { additionalFields: { language: { type: ['en', 'de'], required: false, defaultValue: 'en', input: true } } },
   session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24, cookieCache: { enabled: false } },
-  advanced: { disableOriginCheck: false, ipAddress: { ipAddressHeaders: env.AUTH_IP_HEADERS ? env.AUTH_IP_HEADERS.split(',').map(v => v.trim()) : ['x-lightscore-socket-ip'], trustedProxies: env.AUTH_TRUSTED_PROXIES.split(',').filter(Boolean) }, backgroundTasks: { handler: trackBackground }, useSecureCookies: env.NODE_ENV === 'production', defaultCookieAttributes: { httpOnly: true, sameSite: 'lax', secure: env.NODE_ENV === 'production' } },
+  advanced: { disableOriginCheck: false, ipAddress: { ipAddressHeaders: ['x-lightscore-socket-ip'] }, backgroundTasks: { handler: trackBackground }, useSecureCookies: env.NODE_ENV === 'production', defaultCookieAttributes: { httpOnly: true, sameSite: 'lax', secure: env.NODE_ENV === 'production' } },
   onAPIError: { onError: error => { logError('auth.api', error); } },
   logger: { level: 'error', log: () => logError('auth.error') },
 }); }

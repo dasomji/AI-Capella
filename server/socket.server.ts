@@ -1,3 +1,4 @@
+import { authorize, onMembershipChange, onLibraryChange } from './domain.server';
 import { Server as HttpServer } from 'node:http';
 import type { ServerType } from '@hono/node-server';
 import { Server, type Socket } from 'socket.io';
@@ -16,6 +17,7 @@ export function attachSockets(server: ServerType) {
       const headers = new Headers({ cookie: socket.handshake.headers.cookie ?? '' });
       const session = await currentSession(headers);
       if (!session?.user.emailVerified) return next(new Error('Sign in again'));
+      socket.data.userId = session.user.id;
       socket.data.token = session.session.token;
       socket.data.expiresAt = new Date(session.session.expiresAt).getTime();
       next();
@@ -23,8 +25,24 @@ export function attachSockets(server: ServerType) {
   };
   for (const namespace of [io.of('/'), io.of('/rehearsal')]) {
     namespace.use(authenticate);
-    namespace.on('connection', socket => { connected.add(socket); socket.on('disconnect', () => connected.delete(socket)); });
+    namespace.on('connection', socket => { connected.add(socket);
+      socket.on('ensemble:join', async (ensembleId: unknown, ack?: (result: unknown) => void) => {
+        try { if (typeof ensembleId !== 'string') throw Error(); await currentSocketMembership(socket, ensembleId); await socket.join(`ensemble:${ensembleId}`); ack?.({ok:true}); }
+        catch { ack?.({code:'not_found'}); }
+      }); socket.on('disconnect', () => connected.delete(socket)); });
   }
+  const unsubscribeMembership = onMembershipChange((ensemble, user) => {
+    for (const socket of connected) if (!user || socket.data.userId === user) {
+      if (!ensemble) socket.disconnect(true); else void socket.leave(`ensemble:${ensemble}`);
+    }
+  });
+  const unsubscribeLibrary = onLibraryChange(async (ensemble, changes) => {
+    // Revalidate every recipient against the database; rooms alone never confer rights.
+    for (const socket of connected) if (socket.rooms.has(`ensemble:${ensemble}`)) {
+      try { await currentSocketMembership(socket,ensemble); socket.emit('library:changed',{ensembleId:ensemble,changes:changes.map((c:any)=>({pieceId:c.pieceId??c.id,revision:c.revision,versionNo:c.versionNo,contentHash:c.contentHash,...(c.deleted?{deleted:true}:{})}))}); }
+      catch { await socket.leave(`ensemble:${ensemble}`); }
+    }
+  });
   const unsubscribe = onRevoked(token => { for (const socket of connected) if (socket.data.token === token) socket.disconnect(true); });
   let failures = 0, busy = false;
   const timer = setInterval(async () => {
@@ -39,6 +57,12 @@ export function attachSockets(server: ServerType) {
   }, 15000);
   timer.unref();
   const close = io.close.bind(io);
-  io.close = ((callback?: () => void) => { clearInterval(timer); unsubscribe(); return close(callback); }) as typeof io.close;
+  io.close = ((callback?: () => void) => { clearInterval(timer); unsubscribe(); unsubscribeMembership(); unsubscribeLibrary(); return close(callback); }) as typeof io.close;
   return io;
+}
+
+export async function currentSocketMembership(socket: Socket, ensembleId: string) {
+ const session = await currentSession(new Headers({cookie:socket.handshake.headers.cookie??''}));
+ if(!session?.user.emailVerified) throw new Error('Sign in again');
+ return authorize(pool,session.user.id,ensembleId);
 }

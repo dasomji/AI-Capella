@@ -1,3 +1,4 @@
+import { domain } from './domain-http.server';
 import { createHash } from 'node:crypto';
 import { revoked } from './revocation.server';
 import { Hono } from 'hono';
@@ -38,6 +39,7 @@ api.use('/app', async (c, next) => {
 });
 api.on(['GET', 'POST'], '/api/auth/*', async c => {
   const path = c.req.path;
+  if (!c.req.header('x-lightscore-socket-ip')) return c.json({code:'client_ip_unavailable'},503);
   if (path.endsWith('/list-sessions') || path.endsWith('/revoke-session')) {
     const session = await currentSession(c.req.raw.headers);
     if (!session) return c.json({code:'SESSION_EXPIRED'},401);
@@ -69,3 +71,5 @@ api.get('/api/me', async c => {
   if (!session || !session.user.emailVerified) return c.json({ error: 'Sign in again', code: 'SESSION_EXPIRED' }, 401);
   return c.json({ user: { id: session.user.id, name: session.user.name, email: session.user.email } });
 });
+
+api.route('/api', domain);

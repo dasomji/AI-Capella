@@ -1,3 +1,4 @@
+import {BlockList, isIP} from 'node:net';
 import { z } from 'zod';
 export function parseEnv(input: NodeJS.ProcessEnv) {
   if (!['development', 'test'].includes(input.NODE_ENV ?? '') && Object.entries(input).some(([key, value]) => /(?:BYPASS|SKIP_AUTH|DISABLE_AUTH)/i.test(key) && value && value !== 'false' && value !== '0')) {
@@ -14,6 +15,7 @@ export function parseEnv(input: NodeJS.ProcessEnv) {
     S3_ACCESS_KEY_ID: z.string().optional(), S3_SECRET_ACCESS_KEY: z.string().optional(), OPENAI_API_KEY: z.string().optional(),
     APP_TIME_ZONE: z.string().default('UTC').refine(v => { try { new Intl.DateTimeFormat('en', { timeZone: v }); return true; } catch { return false; } }),
     AUTH_IP_HEADERS: z.string().default(''), AUTH_TRUSTED_PROXIES: z.string().default(''),
+    SCORE_MAX_BYTES: z.coerce.number().int().positive().default(20 * 1024 * 1024),
     PORT: z.coerce.number().default(3000),
   });
   const result = schema.safeParse(input);
@@ -23,6 +25,13 @@ export function parseEnv(input: NodeJS.ProcessEnv) {
   if (env.NODE_ENV === 'production' && (env.MAIL_TRANSPORT !== 'resend' || !env.RESEND_API_KEY || !env.BETTER_AUTH_URL.startsWith('https://') || env.TRUSTED_ORIGINS.some(o => !o.startsWith('https://')))) throw new Error('Production requires HTTPS and Resend configuration');
   if (env.NODE_ENV === 'test' && !['localhost', '127.0.0.1', '[::1]'].includes(new URL(env.BETTER_AUTH_URL).hostname)) throw new Error('Test auth URL must be loopback');
   if (env.NODE_ENV === 'production' && Boolean(env.AUTH_IP_HEADERS.trim()) !== Boolean(env.AUTH_TRUSTED_PROXIES.trim())) throw new Error('Proxy IP headers and trusted proxies must be configured together');
+  for (const value of env.AUTH_TRUSTED_PROXIES.split(',').filter(Boolean)) {
+    const [network,prefix] = value.trim().split('/');
+    if (!isIP(network)) throw new Error('Invalid trusted proxy address');
+    const list=new BlockList();
+    if(prefix) list.addSubnet(network,Number(prefix),isIP(network)===6?'ipv6':'ipv4');
+  }
+  if(env.AUTH_IP_HEADERS.split(',').some(h=>h && !/^[a-z0-9-]+$/i.test(h.trim()))) throw new Error('Invalid IP header');
   return env;
 }
 export const env = parseEnv(process.env);

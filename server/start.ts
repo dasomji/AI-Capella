@@ -17,6 +17,6 @@ app.use('*', serveStatic({ root: './dist/client' }));
 const entryPath = '../dist/server/server.js';
 const { default: start } = await import(entryPath);
 app.all('*', c => start.fetch(c.req.raw));
-export const server = serve({ fetch: (request, bindings) => { setSocketAddress(bindings.incoming); const headers = new Headers(request.headers); headers.set('x-lightscore-socket-ip', bindings.incoming.socket.remoteAddress ?? ''); return app.fetch(new Request(request, {headers}), bindings); }, port: env.PORT });
+export const server = serve({ fetch: (request, bindings) => { setSocketAddress(bindings.incoming); const headers = new Headers(request.headers); headers.set('x-lightscore-socket-ip', String(bindings.incoming.headers['x-lightscore-socket-ip'] ?? '')); return app.fetch(new Request(request, {headers}), bindings); }, port: env.PORT });
 export const io = attachSockets(server);
 for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => { const deadline = setTimeout(() => process.exit(1), 10000); deadline.unref(); void io.close(() => { server.close(); void flushBackground().then(() => pool.end()).then(() => process.exit(0)); }); });
