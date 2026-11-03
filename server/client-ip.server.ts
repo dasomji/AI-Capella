@@ -13,6 +13,23 @@ function trusted(address: string) {
       return list.check(ip, isIP(ip) === 6 ? "ipv6" : "ipv4");
     });
 }
+export function rateLimitAddress(value: string) {
+  const ip = value.replace(/^::ffff:/, "");
+  if (isIP(ip) !== 6) return ip;
+  const canonical = new URL("http://[" + ip + "]/").hostname.slice(1, -1);
+  const halves = canonical.split("::"),
+    left = halves[0].split(":").filter(Boolean),
+    right = (halves[1] ?? "").split(":").filter(Boolean);
+  return (
+    [
+      ...left,
+      ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"),
+      ...right,
+    ]
+      .slice(0, 4)
+      .join(":") + "::"
+  );
+}
 // Always overwrite this private header at the Node boundary, never accept it from clients.
 export function setSocketAddress(req: {
   headers: Record<string, unknown>;
@@ -31,5 +48,5 @@ export function setSocketAddress(req: {
       if (address) break;
     }
   }
-  req.headers["x-lightscore-socket-ip"] = address;
+  req.headers["x-lightscore-socket-ip"] = rateLimitAddress(address);
 }

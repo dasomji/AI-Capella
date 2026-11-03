@@ -26,7 +26,7 @@ test('real HTTP accounts, mail capture, cookies, revocation and Socket.IO', { ti
  assert.equal((await post('sign-up/email', { name:'Singer', email, password, language:'de', callbackURL: `${base}/?state=verified` })).status,200);
  await waitMail(0); assert.match(mailLink().mail.subject,/bestätigen/);
  assert.equal((await post('sign-in/email', { email,password })).status,403);
- await waitMail(1); const verifyLink = mailLink().link; await fetch(verifyLink, { redirect:'manual' });
+ const verifyLink = mailLink().link; await fetch(verifyLink, { redirect:'manual' });
  assert.equal((await fetch(verifyLink, { redirect: 'manual' })).status, 302); // verification replay is idempotent, no session issued
  const cookie = await signIn(email,password); const secondDevice = await signIn(email,password);
  assert.equal((await fetch(`${base}/api/me`,{ headers:{cookie} })).status,200);
@@ -57,7 +57,7 @@ test('real HTTP accounts, mail capture, cookies, revocation and Socket.IO', { ti
  const types = await pool.query("select data_type from information_schema.columns where table_schema='public' and column_name ~ '_at$'");
  assert.ok(types.rowCount! > 15); assert.ok(types.rows.every(r => r.data_type === 'timestamp with time zone'));
  const stamp = '2026-11-01T01:30:00-04:00';
- const time = await pool.query('insert into ensembles (id,name,created_at) values ($1,$2,$3) returning created_at',[crypto.randomUUID(),'Time fixture',stamp]);
+ const time = await pool.query('with e as(insert into ensembles (id,name,created_at) values ($1,$2,$3) returning id,created_at), m as(insert into memberships(ensemble_id,user_id,is_lead) select e.id,u.id,true from e cross join "user" u where u.email=$4) select created_at from e',[crypto.randomUUID(),'Time fixture',stamp,email]);
  const { formatInstant } = await import('../server/time.server'); assert.match(formatInstant(stamp), /05:30:00/); assert.throws(() => formatInstant('2026-11-01T01:30:00'));
  assert.equal(time.rows[0].created_at.toISOString(),'2026-11-01T05:30:00.000Z');
 });
@@ -75,7 +75,7 @@ test('origin, redirect, duplicate signup, cleanup, rate limits and database outa
  assert.equal((await post('sign-up/email',{email,password,name:'Singer'})).status,200); await waitMail(count);
  count = captureMail.messages.length;
  assert.equal((await post('sign-up/email',{email,password,name:'Other'})).status,200); await waitMail(count);
- const verify = mailLink().link; await fetch(verify, {redirect:'manual'});
+ const recovery = mailLink().link; const recoveryToken=new URL(recovery).pathname.split('/').at(-1)!; assert.equal((await post('reset-password',{token:recoveryToken,newPassword:password})).status,200);
  count = captureMail.messages.length;
  assert.equal((await post('sign-up/email',{email,password,name:'Other'})).status,200); await waitMail(count);
  assert.match(captureMail.messages[count].subject,/already/);
@@ -126,7 +126,9 @@ test('production configuration, secure cookies and module instance guard', async
 
 test('tenant foreign keys, version identity, normalized invitations and deletion retention', async () => {
  const a=crypto.randomUUID(), b=crypto.randomUUID(), u=crypto.randomUUID(), piece=crypto.randomUUID(), version=crypto.randomUUID(), object=crypto.randomUUID(), job=crypto.randomUUID();
- await pool.query('insert into ensembles(id,name) values ($1,$1),($2,$2)',[a,b]);
+ const keeper=crypto.randomUUID();
+ await pool.query('insert into "user"(id,name,email) values($1,$1,$2)',[keeper,keeper+'@example.test']);
+ await pool.query('with e as(insert into ensembles(id,name) values ($1,$1),($2,$2) returning id) insert into memberships(ensemble_id,user_id,is_lead) select id,$3,true from e',[a,b,keeper]);
  await pool.query('insert into "user"(id,name,email) values ($1,$1,$2)',[u,` ${u.toUpperCase()}@EXAMPLE.TEST `]);
  assert.equal((await pool.query('select email from "user" where id=$1',[u])).rows[0].email,`${u}@example.test`);
  await pool.query("insert into music_pieces(id,ensemble_id,title,sort_key,format) values ($1,$2,'Piece','A','musicxml')",[piece,a]);
@@ -150,7 +152,7 @@ test('tenant foreign keys, version identity, normalized invitations and deletion
 });
 
 test('production proxy headers give distinct rate buckets and readiness accepts migration suffixes', async()=>{
- const script=`const {server,io}=await import('./server/start.ts'); const {pool}=await import('./server/db/index.server.ts'); try { for(const ip of ['198.51.100.10','198.51.100.20']) {const r=await fetch('http://127.0.0.1:23008/api/auth/sign-in/email',{method:'POST',headers:{origin:'https://lightscore.test','content-type':'application/json','x-forwarded-for':ip,'x-lightscore-socket-ip':'spoof'},body:JSON.stringify({email:ip+'@example.test',password:'invalid-password-42'})});if(r.status!==401)throw Error('Unexpected status '+r.status);} const rows=await pool.query("select key from rate_limit where key like '%198.51.100.%'");if(!rows.rows.some(r=>r.key.includes('198.51.100.10'))||!rows.rows.some(r=>r.key.includes('198.51.100.20')))throw Error('Shared client bucket');}finally {await new Promise(r=>io.close(r));server.close();await pool.end();}`;
+ const script=`const {server,io}=await import('./server/start.ts'); const {pool}=await import('./server/db/index.server.ts'); try { for(const ip of ['198.51.100.10','198.51.100.20']) {const r=await fetch('http://127.0.0.1:23008/api/auth/sign-in/email',{method:'POST',headers:{origin:'https://lightscore.test','content-type':'application/json','x-forwarded-for':ip,'x-lightscore-socket-ip':'spoof'},body:JSON.stringify({email:ip+'@example.test',password:'invalid-password-42'})});if(r.status!==401)throw Error('Unexpected status '+r.status);} for(let i=0;i<11;i++){const r=await fetch('http://127.0.0.1:23008/api/auth/sign-in/email',{method:'POST',headers:{origin:'https://lightscore.test','content-type':'application/json','x-forwarded-for':'198.51.100.30'},body:JSON.stringify({email:'victim@example.test',password:'wrong-password-42'})});if(r.status!==(i<10?401:429))throw Error('Failure throttle '+r.status);}const victim=await fetch('http://127.0.0.1:23008/api/auth/sign-in/email',{method:'POST',headers:{origin:'https://lightscore.test','content-type':'application/json','x-forwarded-for':'198.51.100.40'},body:JSON.stringify({email:'victim@example.test',password:'wrong-password-42'})});if(victim.status!==401)throw Error('Victim email locked globally'); const rows=await pool.query("select key from rate_limit where key like '%198.51.100.%'");if(!rows.rows.some(r=>r.key.includes('198.51.100.10'))||!rows.rows.some(r=>r.key.includes('198.51.100.20')))throw Error('Shared client bucket');}finally {await new Promise(r=>io.close(r));server.close();await pool.end();}`;
  const result=spawnSync(process.execPath,['--import','tsx','--input-type=module','-e',script],{encoding:'utf8',timeout:15000,env:{...process.env,NODE_ENV:'production',PORT:'23008',BETTER_AUTH_URL:'https://lightscore.test',TRUSTED_ORIGINS:'https://lightscore.test',MAIL_TRANSPORT:'resend',RESEND_API_KEY:'stub-never-send',AUTH_IP_HEADERS:'x-forwarded-for',AUTH_TRUSTED_PROXIES:'127.0.0.1/32'}});
  assert.equal(result.status,0,result.stderr);
  await pool.query("insert into drizzle.__drizzle_migrations(hash,created_at) values('future-suffix',9999999999999)");
