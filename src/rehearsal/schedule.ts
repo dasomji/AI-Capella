@@ -12,7 +12,7 @@ export function playbackSchedule(state: RehearsalState, now: number, timing: Pie
     revision:state.revision, effectiveAt, musicAt, beat,
     playing:joined.status==='playing'||joined.status==='countingIn',
     tempoFactor:state.bpm/timing.baseBpm, transposition:state.transposition,
-    countIn:joined.countInUntil===null ? null : {from:Math.max(now,state.startingTonesUntil ?? state.anchor.serverTime),until:joined.countInUntil},
+    countIn:joined.countInUntil===null ? null : {from:Math.max(effectiveAt,state.startingTonesUntil ?? state.anchor.serverTime),until:joined.countInUntil},
     startingTones:joined.startingTonesUntil===null ? null : {from:effectiveAt,until:joined.startingTonesUntil},
     // Each note's scheduled offset must integrate the source tempo map, not divide beats by one BPM.
     secondsFromBeat:(targetBeat:number)=>(secondsAt(targetBeat,timing)-secondsAt(beat,timing))*timing.baseBpm/state.bpm,
