@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import type { Namespace, Socket } from 'socket.io';
 import { performance } from 'node:perf_hooks';
 import { pool } from './db/index.server';
@@ -10,27 +11,50 @@ import type { PieceTiming } from '../src/rehearsal/timeline';
 import { validateScore } from './score-validation.server';
 export const serverNow = () => performance.timeOrigin + performance.now();
 const empty: PieceTiming = { baseBpm: 100, totalBeats: 0, tempos: [{ beat: 0, bpm: 100 }], measures: [] };
-export function installRehearsal(ns: Namespace) {
+export function installRehearsal(ns: Namespace, options: { now?: () => number; idleMs?: number } = {}) {
+    const now = options.now ?? serverNow;
+    let owner: PoolClient | undefined;
+    const committed = new Map<string, RehearsalState>();
+    const depths = new Map<string, number>();
+    const idle = new Map<string, ReturnType<typeof setTimeout>>();
+    const buckets = new Map<string, {tokens:number; at:number}>();
+    function admit(key:string, rate=5, burst=20) {
+        const time=now(), b=buckets.get(key) ?? {tokens:burst,at:time};
+        b.tokens=Math.min(burst,b.tokens+(time-b.at)*rate/1000); b.at=time;
+        buckets.delete(key); buckets.set(key,b);
+        if(buckets.size>10000) buckets.delete(buckets.keys().next().value!);
+        if(b.tokens<1)return false; b.tokens--; return true;
+    }
+    const errorCode = (error:any): Ack['code'] => ['forbidden','session_expired','not_found','rate_limited','invalid'].includes(error?.code ?? error?.message) ? (error.code ?? error.message) : 'unavailable';
     const queues = new Map<string, Promise<unknown>>(), timers = new Map<string, ReturnType<typeof setTimeout>>();
-    const seen = new Map<string, Map<string, number>>(), timings = new Map<string, Promise<PieceTiming>>();
+    const versions = new Map<string, {content_hash:string;format:'score'|'musicxml';timing:PieceTiming|null}>();
+    const seen = new Map<string, Map<string, {at:number; ack:Ack}>>(), timings = new Map<string, Promise<PieceTiming>>();
     const membership = new Map<Socket, Set<string>>();
     let generation = 0, closed = false;
-    function serial<T>(id: string, fn: () => Promise<T>): Promise<T> { const result = (queues.get(id) ?? Promise.resolve()).catch(() => { }).then(fn); queues.set(id, result); void result.finally(() => { if (queues.get(id) === result)
-        queues.delete(id); }).catch(() => { }); return result; }
+    function serial<T>(id: string, fn: () => Promise<T>): Promise<T> {
+        if ((depths.get(id) ?? 0) >= 32) return Promise.reject(Error('rate_limited'));
+        depths.set(id,(depths.get(id) ?? 0)+1);
+        const result = (queues.get(id) ?? Promise.resolve()).catch(() => { }).then(fn); queues.set(id, result); void result.finally(() => { depths.set(id,depths.get(id)!-1); if (queues.get(id) === result)
+        { queues.delete(id); depths.delete(id); } }).catch(() => { }); return result; }
     async function timing(e: string, p: string | null, v: number | null): Promise<PieceTiming> {
         if (!p)
             return empty;
-        const { rows } = await pool.query('select content_hash,format from score_versions where ensemble_id=$1 and piece_id=$2 and version_no=$3', [e, p, v]);
-        const row = rows[0];
+        const key=JSON.stringify([e,p,v]);
+        let row=versions.get(key);
+        if(!row) { row=(await pool.query('select content_hash,format,timing from score_versions where ensemble_id=$1 and piece_id=$2 and version_no=$3', [e,p,v])).rows[0];
+            if(row) { versions.set(key,row); if(versions.size>100) versions.delete(versions.keys().next().value!); } }
         if (!row)
             throw Error('not_found');
+        if (row.timing) return row.timing;
         let value = timings.get(row.content_hash);
         if (!value) {
             value = (async () => {
                 // Read native JSON as text: parsing/stringifying a large body belongs in the worker.
                 const body = await pool.query('select native_score::text,musicxml from score_versions where ensemble_id=$1 and piece_id=$2 and version_no=$3', [e,p,v]);
                 if (!body.rows[0]) throw Error('not_found');
-                return (await validateScore(row.format === 'score' ? body.rows[0].native_score : body.rows[0].musicxml, row.format, true)).timing!;
+                const derived = (await validateScore(row.format === 'score' ? body.rows[0].native_score : body.rows[0].musicxml, row.format, true)).timing!;
+                await pool.query('update score_versions set timing=$4 where ensemble_id=$1 and piece_id=$2 and version_no=$3 and timing is null',[e,p,v,JSON.stringify(derived)]);
+                return derived;
             })();
             timings.set(row.content_hash, value);
             void value.catch(() => timings.delete(row.content_hash));
@@ -39,31 +63,74 @@ export function installRehearsal(ns: Namespace) {
         }
         return value;
     }
-    async function load(e: string, u = 'server') { const { rows } = await pool.query('select state from rehearsal_sessions where ensemble_id=$1', [e]); return rows.length ? stateSchema.parse(rows[0].state) : initialState(e, u, serverNow()); }
-    async function persist(s: RehearsalState) { await pool.query('insert into rehearsal_sessions(ensemble_id,revision,state) values($1,$2,$3) on conflict(ensemble_id) do update set revision=$2,state=$3,updated_at=now()', [s.ensembleId, s.revision, JSON.stringify(s)]); }
-    async function publish(s: RehearsalState) { await persist(s); if (closed)
-        return; ns.to(`rehearsal:${s.ensembleId}`).emit('playback:state', s); schedule(s); }
-    function schedule(s: RehearsalState) {
+    async function load(e: string, u = 'server') {
+        if (committed.has(e)) return committed.get(e)!;
+        const { rows } = await pool.query('select state from rehearsal_sessions where ensemble_id=$1', [e]);
+        const state = rows.length ? stateSchema.parse(rows[0].state) : initialState(e,u,now());
+        if (!committed.has(e)) committed.set(e,state);
+        return committed.get(e)!;
+    }
+    async function persist(s: RehearsalState, checkLead = false) {
+        const db = checkLead ? await pool.connect() : pool;
+        if(checkLead) await db.query('begin');
+        try {
+        const result = await db.query('insert into rehearsal_sessions(ensemble_id,revision,state) values($1,$2,$3) on conflict(ensemble_id) do update set revision=excluded.revision,state=excluded.state,updated_at=now() where rehearsal_sessions.revision < excluded.revision returning revision', [s.ensembleId,s.revision,JSON.stringify(s)]);
+        if (!result.rowCount) { committed.delete(s.ensembleId); throw Error('unavailable'); }
+        if(checkLead && s.anchor.serverTime-now()<Math.min(50,env.PLAYBACK_LEAD_MS)) throw Error('unavailable');
+        if(checkLead) await db.query('commit');
+        committed.set(s.ensembleId,s);
+        } catch(error) { if(checkLead) await db.query('rollback'); if(!committed.has(s.ensembleId)) await load(s.ensembleId); throw error; }
+        finally { if(checkLead) (db as PoolClient).release(); }
+    }
+    async function publish(s: RehearsalState, checkLead = false) {
+        await persist(s,checkLead);
+        if (closed) return;
+        ns.to(`rehearsal:${s.ensembleId}`).emit('playback:state',s); schedule(s);
+    }
+    function schedule(s: RehearsalState, failures=0) {
         clearTimeout(timers.get(s.ensembleId));
         timers.delete(s.ensembleId);
         if (s.endsAt === null || closed)
             return;
         const timer = setTimeout(() => { void serial(s.ensembleId, async () => { const current = await load(s.ensembleId); if (current.revision !== s.revision)
-            return; if (current.endsAt !== null && serverNow() < current.endsAt) {
+            return; if (current.endsAt !== null && now() < current.endsAt) {
             schedule(current);
             return;
-        } await publish({ ...current, revision: current.revision + 1, status: 'stopped', anchor: { serverTime: current.endsAt!, beat: (await timing(current.ensembleId, current.pieceId, current.versionNo)).totalBeats }, countInUntil: null, startingTonesUntil: null, endsAt: null, updatedAt: serverNow() }); }).catch(error => logError('rehearsal.end', error)); }, Math.min(2147483647, Math.max(0, s.endsAt - serverNow())));
+        } await publish({ ...current, revision: current.revision + 1, status: 'stopped', anchor: { serverTime: current.endsAt!, beat: (await timing(current.ensembleId, current.pieceId, current.versionNo)).totalBeats }, countInUntil: null, startingTonesUntil: null, endsAt: null, updatedAt: now() }); }).catch(error => { logError('rehearsal.end', error); if (!closed) { const retry=setTimeout(()=>schedule(committed.get(s.ensembleId) ?? s,failures+1),Math.min(30000,250*2**failures)); retry.unref(); timers.set(s.ensembleId,retry); } }); }, Math.min(2147483647, Math.max(0, s.endsAt - now())));
         timer.unref();
         timers.set(s.ensembleId, timer);
     }
-    const ready = (async () => { const { rows } = await pool.query('select state from rehearsal_sessions'); for (const row of rows) {
-        const s = stateSchema.parse(row.state);
-        if (s.status === 'playing' || s.status === 'countingIn')
-            await persist(restartPaused(s, serverNow(), await timing(s.ensembleId, s.pieceId, s.versionNo)));
-    } })();
-    void ready.catch(error => logError('rehearsal.recovery', error));
+    const ready = (async () => {
+        owner = await pool.connect();
+        const lock = await owner.query('select pg_try_advisory_lock(714083, 1) as locked');
+        if (!lock.rows[0].locked) { owner.release(); owner=undefined; throw Error('unavailable'); }
+        owner.on('error', () => { closed=true; for(const timer of timers.values()) clearTimeout(timer); });
+        const {rows} = await pool.query('select ensemble_id,revision,state from rehearsal_sessions');
+        for(const row of rows) {
+            let s: RehearsalState;
+            try { s=stateSchema.parse(row.state); }
+            catch {
+                // Preserve JSON shape and numeric diagnostics; redact every string (including IDs).
+                const bad=JSON.parse(JSON.stringify(row.state),(_key,value)=>typeof value==='string'?'[redacted]':value);
+                console.error(JSON.stringify({timestamp:new Date().toISOString(),event:'rehearsal.recovery.invalid',ensembleId:row.ensemble_id,badState:bad}));
+                try { await persist({...initialState(row.ensemble_id,'server',now()),revision:row.revision+1}); } catch(error) { logError('rehearsal.recovery.row',error); }
+                continue;
+            }
+            if(s.status!=='playing' && s.status!=='countingIn') { committed.set(s.ensembleId,s); continue; }
+            let recovered: RehearsalState;
+            try { recovered=restartPaused(s,now(),await timing(s.ensembleId,s.pieceId,s.versionNo)); }
+            catch(error) {
+                logError('rehearsal.recovery.timing',error);
+                recovered={...s,revision:Math.max(row.revision,s.revision)+1,status:'paused',anchor:{...s.anchor,serverTime:now()},countInUntil:null,startingTonesUntil:null,endsAt:null,updatedAt:now()};
+            }
+            try { await persist(recovered); } catch(error) { logError('rehearsal.recovery.row',error); }
+        }
+    })();
+    void ready.catch(error => logError('rehearsal.recovery',error));
     async function member(socket: Socket, e: string) {
-        if (!socket.connected || socket.data.expiresAt <= serverNow())
+        if (closed) throw Error('unavailable');
+        if (socket.data.expiresAt <= now()) throw Error('session_expired');
+        if (!socket.connected)
             throw Error('forbidden');
         let set = membership.get(socket);
         if (!set) {
@@ -87,13 +154,14 @@ export function installRehearsal(ns: Namespace) {
         if (removed)
             void socket.leave(`rehearsal:${e}`);
     } });
-    const offLibrary = onLibraryChange(async (e, changes) => { if (!changes.some((c: any) => c.deleted))
+    const offLibrary = onLibraryChange(async (e, changes) => { versions.clear(); if (!changes.some((c: any) => c.deleted))
         return; await ready; await serial(e, async () => { const s = await load(e); if (!changes.some((c: any) => c.deleted && c.pieceId === s.pieceId))
-        return; const next = initialState(e, s.updatedBy, serverNow()); await publish({ ...next, revision: s.revision + 1 }); }); });
+        return; const next = initialState(e, s.updatedBy, now()); await publish({ ...next, revision: s.revision + 1 }); }); });
     ns.on('connection', socket => {
-        let tokens = 20, last = serverNow();
+        if ([...ns.sockets.values()].filter(s=>s.data.userId===socket.data.userId).length>10) { socket.disconnect(true); return; }
+        let inFlight=0;
         socket.on('clock:ping', (ack: unknown) => { if (typeof ack === 'function')
-            ack({ serverTime: serverNow() }); });
+            ack({ serverTime: now() }); });
         for (const event of ['rehearsal:join', 'rehearsal:snapshot'])
             socket.on(event, async (input: unknown, ack: unknown) => {
                 if (typeof ack !== 'function')
@@ -101,67 +169,75 @@ export function installRehearsal(ns: Namespace) {
                 const parsed = joinSchema.safeParse(input);
                 if (!parsed.success)
                     return ack({ code: 'invalid' });
+                const e=parsed.data.ensembleId;
+                if(inFlight>=4 || !admit('read:socket:'+socket.id) || !admit('read:user:'+socket.data.userId) || !admit('read:ensemble:'+e,50,100)) return ack({code:'rate_limited'});
+                inFlight++;
                 try {
                     await ready;
-                    await serial(parsed.data.ensembleId, async () => { await member(socket, parsed.data.ensembleId); const state = await load(parsed.data.ensembleId, socket.data.userId); await member(socket, parsed.data.ensembleId); await socket.join(`rehearsal:${parsed.data.ensembleId}`); ack({ state }); });
+                    await member(socket,e);
+                    await socket.join(`rehearsal:${e}`);
+                    clearTimeout(idle.get(e)); idle.delete(e);
+                    const state=await load(e,socket.data.userId);
+                    await member(socket,e); ack({state});
                 }
                 catch (error) {
                     logError('rehearsal.join', error);
-                    ack({ code: 'forbidden' });
-                }
+                    ack({ code: errorCode(error) });
+                } finally { inFlight--; }
             });
         socket.on('rehearsal:command', async (input: unknown, callback: unknown) => {
             const ack = typeof callback === 'function' ? callback : () => { };
             const parsed = envelopeSchema.safeParse(input);
             const commandId = typeof (input as any)?.commandId === 'string' ? (input as any).commandId : '';
             const reject = (code: Ack['code']) => ack({ commandId, status: 'rejected', code });
-            const now = serverNow();
-            tokens = Math.min(20, tokens + (now - last) * .02);
-            last = now;
-            if (tokens < 1)
-                return reject('rate_limited');
-            tokens--;
+            const receivedAt=now();
+            if(inFlight>=4 || !admit('cmd:socket:'+socket.id) || !admit('cmd:user:'+socket.data.userId)) return reject('rate_limited');
             if (!parsed.success)
                 return reject('invalid');
             const e = parsed.data;
+            if(!admit('cmd:ensemble:'+e.ensembleId,50,100)) return reject('rate_limited');
+            inFlight++;
             try {
                 await ready;
                 await serial(e.ensembleId, async () => {
                     try {
+                        if (!socket.rooms.has(`rehearsal:${e.ensembleId}`)) throw Error('forbidden');
                         await member(socket, e.ensembleId);
                     }
-                    catch {
-                        return reject('forbidden');
+                    catch(error) {
+                        return reject(errorCode(error));
                     }
                     let ids = seen.get(e.ensembleId);
                     if (!ids) {
                         ids = new Map();
                         seen.set(e.ensembleId, ids);
                     }
-                    for (const [id, time] of ids)
-                        if (now - time > 600000)
+                    for (const [id, entry] of ids)
+                        if (receivedAt - entry.at > 600000)
                             ids.delete(id);
                     if (ids.has(e.commandId))
-                        return reject('duplicate');
+                        return ack(ids.get(e.commandId)!.ack);
                     const s = await load(e.ensembleId, socket.data.userId);
                     let t: PieceTiming;
                     try {
                         t = await timing(e.ensembleId, e.command.type === 'selectPiece' ? e.command.pieceId : s.pieceId, e.command.type === 'selectPiece' ? e.command.versionNo : s.versionNo);
                     }
-                    catch {
-                        return reject('not_found');
+                    catch(error) {
+                        return reject(errorCode(error));
                     }
-                    const next = apply(s, e, { now: serverNow(), leadTimeMs: env.PLAYBACK_LEAD_MS, pieceTiming: t, userId: socket.data.userId });
+                    const next = apply(s, e, { now: now(), leadTimeMs: env.PLAYBACK_LEAD_MS, pieceTiming: t, userId: socket.data.userId });
                     if ('code' in next)
-                        return reject(next.code);
+                        return ack({commandId,status:'rejected',code:next.code,revision:s.revision,state:s});
                     try {
+                        if (!socket.rooms.has(`rehearsal:${e.ensembleId}`)) throw Error('forbidden');
                         await member(socket, e.ensembleId);
                     }
-                    catch {
-                        return reject('forbidden');
+                    catch(error) {
+                        return reject(errorCode(error));
                     }
-                    await publish(next);
-                    ids.set(e.commandId, serverNow());
+                    if (next !== s) await publish(next,true);
+                    const original:Ack={commandId:e.commandId,status:'accepted',revision:next.revision};
+                    ids.set(e.commandId, {at:now(),ack:original});
                     if (ids.size > 1000)
                         ids.delete(ids.keys().next().value!);
                     ack({ commandId: e.commandId, status: 'accepted', revision: next.revision });
@@ -169,11 +245,23 @@ export function installRehearsal(ns: Namespace) {
             }
             catch (error) {
                 logError('rehearsal.command', error);
-                reject('invalid');
+                reject(errorCode(error));
+            } finally { inFlight--; }
+        });
+        socket.on('disconnect', () => {
+            const ensembles=membership.get(socket); membership.delete(socket);
+            for(const e of ensembles ?? []) {
+                if(ns.adapter.rooms.get(`rehearsal:${e}`)?.size) continue;
+                const timer=setTimeout(()=>{ idle.delete(e); seen.delete(e); void serial(e,async()=>{
+                    if(ns.adapter.rooms.get(`rehearsal:${e}`)?.size) return;
+                    const s=await load(e);
+                    if(s.status==='playing'||s.status==='countingIn') await publish(restartPaused(s,now(),await timing(e,s.pieceId,s.versionNo)));
+                }).catch(error=>logError('rehearsal.idle',error)); },options.idleMs ?? 600000);
+                timer.unref(); idle.set(e,timer);
             }
         });
-        socket.on('disconnect', () => membership.delete(socket));
     });
-    return () => { closed = true; offMember(); offLibrary(); for (const timer of timers.values())
+    return () => { closed = true; offMember(); offLibrary(); for(const timer of idle.values()) clearTimeout(timer);
+        void ready.finally(async()=>{ if(owner) { await owner.query('select pg_advisory_unlock(714083,1)'); owner.release(); owner=undefined; } }).catch(error=>logError('rehearsal.close',error)); for (const timer of timers.values())
         clearTimeout(timer); };
 }

@@ -854,7 +854,7 @@ async function metadata(db: Pick<PoolClient, "query">, e: string, id: string) {
 }
 async function content(input: { format: "score" | "musicxml"; body: string }) {
   if (Buffer.byteLength(input.body) > env.SCORE_MAX_BYTES) throw new DomainError("score_too_large", 413);
-  return validateScore(input.body, input.format);
+  return validateScore(input.body, input.format, true);
 }
 async function upload(req: { header: (name: string) => string | undefined; text: () => Promise<string> }) {
   const type = req.header("content-type")?.split(";")[0];
@@ -872,7 +872,7 @@ async function insertVersion(
 ) {
   const v = (
     await db.query(
-      "insert into score_versions(ensemble_id,piece_id,version_no,created_by,format,schema_version,musicxml,native_score,content_hash,size) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id",
+      "insert into score_versions(ensemble_id,piece_id,version_no,created_by,format,schema_version,musicxml,native_score,content_hash,size,timing) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning id",
       [
         e,
         p,
@@ -884,6 +884,7 @@ async function insertVersion(
         input.format === "score" ? data.raw : null,
         data.hash,
         data.size,
+        JSON.stringify(data.timing),
       ],
     )
   ).rows[0];

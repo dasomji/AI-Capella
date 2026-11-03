@@ -134,13 +134,14 @@ export function attachSockets(server: ServerType) {
     busy = true;
     try {
       const result = await pool.query(
-        "select token from session where token = ANY($1::text[]) and expires_at > now()",
+        "select token, expires_at from session where token = ANY($1::text[]) and expires_at > now()",
         [[...new Set([...connected].map((s) => s.data.token))]],
       );
       const valid = new Set(result.rows.map((row) => row.token));
       failures = 0;
       for (const socket of connected)
         if (!valid.has(socket.data.token)) socket.disconnect(true);
+        else socket.data.expiresAt = new Date(result.rows.find(row=>row.token===socket.data.token)!.expires_at).getTime();
     } catch (error) {
       logError("socket.session_check", error);
       if (++failures >= 3)
