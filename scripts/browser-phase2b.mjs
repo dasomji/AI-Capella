@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { captureDesign } from "./browser-design.mjs";
 import { assertPlayerContrast } from "./browser-themes.mjs";
 const base = process.env.BROWSER_BASE || "http://localhost:3000",
   evidence =
@@ -31,8 +32,14 @@ const suffix = Date.now(),
   emailA = `lead-${suffix}@example.test`,
   emailB = `member-${suffix}@example.test`,
   password = "Browser-fixture-password-42";
-const shot = async (page, name) =>
-  page.screenshot({ path: `${evidence}/shots/${name}.png`, fullPage: true });
+const shot = async (page, name) => {
+  await page.evaluate(() => document.fonts.ready);
+  if (await page.locator('#app.mode-landing #landing').count()) {
+    await page.waitForFunction(() => !document.querySelector('.ls-name') || document.querySelector('.ls-name.light-settled'));
+    await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => {}))));
+  }
+  return page.screenshot({ path: `${evidence}/shots/${name}.png`, fullPage: true });
+};
 async function mailLink(email, contains = "") {
   for (let attempt = 0; attempt < 30; attempt++) {
     const list = await (
@@ -61,7 +68,7 @@ async function signup(page, email, name) {
   await page.locator("[name=name]").fill(name);
   await page.locator("[name=email]").fill(email);
   await page.locator("[name=password]").fill(password);
-  await page.locator("form button").click();
+  await page.locator("form button[type=submit]").click();
   await page
     .getByRole("status")
     .filter({ hasText: "Check your email" })
@@ -69,9 +76,10 @@ async function signup(page, email, name) {
   await page.goto(await mailLink(email, "verify-email"));
 }
 async function signin(page, email) {
+  if (new URL(page.url()).searchParams.get("state") === "verified") await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.locator("[name=email]").fill(email);
   await page.locator("[name=password]").fill(password);
-  await page.locator("form button").click();
+  await page.locator("form button[type=submit]").click();
 }
 async function request(page, path, method = "GET", body) {
   return page.evaluate(
@@ -98,12 +106,9 @@ try {
   await p.waitForURL("**/app");
   await p.getByText("Not in an ensemble yet", { exact: true }).waitFor();
   await shot(p, "title-empty-dark");
-  await p.emulateMedia({ colorScheme: "light" });
-  await shot(p, "title-empty-light");
-  await p.emulateMedia({ colorScheme: "dark" });
   await p.getByRole("button", { name: "Create ensemble", exact: true }).click();
   await p.getByLabel("Name", { exact: true }).fill("Browser Choir");
-  await p.locator(".domain-sheet button").click();
+  await p.locator(".domain-sheet button.primary").click();
   await p.locator(".ens-switch").waitFor();
   const ensembles = (await request(p, "/ensembles")).body,
     e = ensembles[0].id;
@@ -111,9 +116,6 @@ try {
   await p.reload();
   await p.locator("#mode-solo-btn").waitFor({ state: "visible" });
   await shot(p, "title-ensemble-dark");
-  await p.emulateMedia({ colorScheme: "light" });
-  await shot(p, "title-ensemble-light");
-  await p.emulateMedia({ colorScheme: "dark" });
   await p.locator("#mode-solo-btn").click();
   await p
     .locator("#import-input")
@@ -126,8 +128,7 @@ try {
   await p.getByRole("button", { name: "Invite", exact: true }).click();
   await p.getByText(emailB, { exact: true }).waitFor();
   await shot(p, "members-dark");
-  await p.emulateMedia({ colorScheme: "light" });
-  await shot(p, "members-light");
+  // Full theme matrix reloads with persisted design in captureDesign.
   console.log("invite member");
   const invite = await mailLink(emailB, "/invite/");
   await q.goto(invite);
@@ -135,8 +136,7 @@ try {
     .getByRole("heading", { name: "Invitation to Browser Choir" })
     .waitFor();
   await shot(q, "invite-dark");
-  await q.emulateMedia({ colorScheme: "light" });
-  await shot(q, "invite-light");
+  // Invitation theme matrix is captured separately.
   await q.getByRole("button", { name: "Create account", exact: true }).click();
   await signup(q, emailB, "Member Singer");
   await q.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -153,10 +153,6 @@ try {
   await q.waitForTimeout(800);
   await q.locator(".play-btn").click();
   await assertPlayerContrast(q);
-  await q.emulateMedia({ colorScheme: "light" });
-  await assertPlayerContrast(q);
-  await shot(q, "player-light");
-  await q.emulateMedia({ colorScheme: "dark" });
   await shot(q, "player-dark");
   await q
     .locator("#import-input")
@@ -209,6 +205,9 @@ try {
     "Voice A",
   );
 
+  await request(p, `/ensembles/${e}/members/${member.id}`, "PATCH", { manageMembers: true });
+  await captureDesign(browser, p, q, base, evidence);
+  await request(p, `/ensembles/${e}/members/${member.id}`, "PATCH", { manageMembers: false });
   console.log("invitation errors");
   const emailC = `other-${suffix}@example.test`;
   const pending = await request(p, `/ensembles/${e}/invitations`, "POST", {
@@ -233,6 +232,8 @@ try {
     .waitFor();
   await shot(r, "invite-revoked");
   await r.close();
+  await p.goto(base);
+  await p.evaluate(() => { localStorage.removeItem("ai-capella-seen"); sessionStorage.removeItem("ai-capella-mode-switch"); });
   await p.goto(base + "/app");
   await p.locator("#mode-solo-btn").waitFor({ state: "visible" });
   await p.locator("#mode-solo-btn").click();
@@ -265,9 +266,9 @@ try {
   assert.deepEqual(errors, []);
   console.log("Phase 2b browser scenarios passed", evidence);
 } catch (error) {
-  await shot(p, "failure-lead");
-  await shot(q, "failure-member");
   console.error(error);
+  await p.screenshot({path:`${evidence}/shots/failure-lead.png`,fullPage:true}).catch(e => console.error(e.message));
+  await q.screenshot({path:`${evidence}/shots/failure-member.png`,fullPage:true}).catch(e => console.error(e.message));
   console.error("LEAD", await p.locator("body").innerText());
   console.error("MEMBER", await q.locator("body").innerText());
   throw error;

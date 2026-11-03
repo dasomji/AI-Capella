@@ -9,8 +9,8 @@ export const themeCases = [
   { name: 'samt', scheme: 'light', design: 'samt' },
 ];
 
-export async function assertPlayerContrast(page) {
-  const results = await page.evaluate(() => {
+export async function assertPlayerContrast(page, selectors = ['#song-title', '.voice-name', '.pos'], requireAll = true) {
+  const results = await page.evaluate(({ selectors, requireAll }) => {
     const rgba = value => value.match(/[\d.]+/g).map(Number);
     const over = (front, back) => {
       const a = front[3] ?? 1;
@@ -20,9 +20,9 @@ export async function assertPlayerContrast(page) {
       v /= 255;
       return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
     }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
-    return ['#song-title', '.voice-name', '.pos'].map(selector => {
-      const el = document.querySelector(selector);
-      if (!el) throw new Error(`Missing player text: ${selector}`);
+    if (requireAll) for (const selector of selectors) if (!document.querySelector(selector)) throw new Error(`Missing text: ${selector}`);
+    return selectors.flatMap(selector => Array.from(document.querySelectorAll(selector)).filter(el => el.getBoundingClientRect().width && el.textContent.trim()).map(el => {
+
       const ancestors = [];
       for (let node = el; node; node = node.parentElement) ancestors.unshift(node);
       // Composite translucent panels over their ancestor grounds rather than treating
@@ -31,8 +31,8 @@ export async function assertPlayerContrast(page) {
       const foreground = over(rgba(getComputedStyle(el).color), background);
       const a = luminance(foreground), b = luminance(background);
       return { selector, foreground, background, ratio: (Math.max(a, b) + .05) / (Math.min(a, b) + .05) };
-    });
-  });
+    }));
+  }, { selectors, requireAll });
   for (const result of results) assert.ok(result.ratio >= 4.5, `${result.selector}: contrast ${result.ratio.toFixed(2)} < 4.5 (${JSON.stringify(result)})`);
   return results;
 }

@@ -409,3 +409,38 @@ UTC durations rather than calendar-day rules; new stored instants use timestampt
 Implementation commits: a1655aa (auth/HTTP), 14981de (domain/schema), 2b200a6
 (upgrade budgets and confirmation), ad935a4 (client), 76a817c (browser harness).
 All commits remain on production-v1; no push or PR.
+
+### Phase 2 design pass — 2026-11-03
+
+AICAP-24: account and invitation routes now share the title's ink wordmark and
+voice ribbons on the selected ground, without a form card. Added Bodoni/Atkinson
+form typography, ruled fields, password visibility controls, persistent DE/EN
+buttons, quiet secondary navigation, email acknowledgement/resend controls and
+masked invitation-address guidance. The wordmark stays mounted across auth modes;
+its animation resources are disposed when the stage unmounts.
+
+Members sheets now separate members, invitations and invite form; use compact
+row menus, lead tags and accessible capability switches; and omit forbidden
+controls. The last lead sees one explanatory line. Manager capability states are
+read-only. Title empty-state actions are centered; device controls use the sheet's
+visual language. Toasts sit above the sheet.
+
+Browser evidence: `/tmp/aicap-p2-design/shots/index.html`. The harness uses fresh
+contexts with persisted design/language choices, asserts light/dark computed
+background differences and checks AA text contrast. Matrix covers DE/EN, 390/1440,
+auto dark/light, Papier, explicit parchment and Samt. Edge-state invitations and
+auth mail acknowledgements, empty-ensemble responses and ordinary-member UI
+capabilities use explicitly labeled visual fixtures; real isolated
+accounts exercise acceptance, role editing, playback and device/account actions.
+Title captures wait for the written wordmark and finite entrance animations.
+Ordinary members cannot fetch the member list under the existing server contract;
+the matrix verifies their menu omits that sheet and captures their title, library
+and devices instead. No server permissions were broadened.
+
+Validation: `npm run typecheck` passed; `npm test` passed (6 tests);
+`npm run build` passed; `npm run test:integration` passed (20 scenarios);
+`npm run check:secrets` passed (positive control plus clean browser artifacts);
+`BROWSER_EVIDENCE=/tmp/aicap-p2-design npm run test:browser` passed, including
+contrast/theme assertions and the full visual matrix. Integration/build checks
+were run sequentially after browser capture to avoid replacing active chunks.
+The contact sheet indexes 567 screenshots. No push or infrastructure changes.
