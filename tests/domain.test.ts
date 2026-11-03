@@ -1802,3 +1802,25 @@ test('raw native score JSON rejects escaped surrogates before jsonb',async()=>{
    assert.equal(r.status,422);assert.equal((await r.json()).code,'invalid_text');
  }
 });
+
+test('global score admission rejects a fifth account before buffering its body', {timeout:30000},async()=>{
+ const {api}=await import('../server/http.server');
+ const controllers:ReadableStreamDefaultController<Uint8Array>[]=[];const pending:Promise<Response>[]=[];
+ try {
+  for(let n=0;n<5;n++) {
+   const owner=await account(), e=await ok('ensembles','POST',{name:'Global upload'},owner.cookie);
+   if(n===4) {
+    const r=await request(`ensembles/${e.id}/pieces`,'POST',{title:'Full',content:{format:'musicxml',body:xml}},owner.cookie);
+    assert.equal(r.status,503);assert.equal(r.headers.get('retry-after'),'2');break;
+   }
+   pending.push(Promise.resolve(api.fetch(new Request(base+`/api/ensembles/${e.id}/pieces`,{
+    method:'POST',headers:{origin:base,cookie:owner.cookie,'content-type':'text/xml','x-score-title':'Global'},
+    body:new ReadableStream<Uint8Array>({start(c){controllers.push(c);}}),duplex:'half',
+   } as RequestInit))));
+   await delay(100);
+  }
+ }finally {
+  for(const controller of controllers){controller.enqueue(new TextEncoder().encode(xml));controller.close();}
+  for(const response of await Promise.all(pending))assert.equal(response.status,201);
+ }
+});
