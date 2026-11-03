@@ -32,7 +32,19 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     for (const reject of this.pending) reject(new Error('disconnected'));
     this.pending.clear();
   };
-  private reconnect = () => { void this.join().catch(error => this.notice(error instanceof Error ? error.message : 'connecting')); };
+  private reconnect = () => {
+    const epoch=this.epoch;
+    void (async()=>{
+      for(let attempt=0;attempt<4;attempt++){
+        if(this.closed || epoch!==this.epoch || !this.socket.connected)return;
+        try{await this.join();return;}catch(error){
+          const code=error instanceof Error?error.message:'connecting';
+          if(code!=='unavailable' || attempt===3){this.notice(code);return;}
+          await new Promise(resolve=>setTimeout(resolve,100*2**attempt));
+        }
+      }
+    })();
+  };
   private received = (raw: unknown) => { void this.apply(raw).catch(() => {this.setReady(false);this.notice('invalid');}); };
   private request(event: string, input?: unknown): Promise<any> {
     if (!this.socket.connected || this.closed) return Promise.reject(new Error('disconnected'));
