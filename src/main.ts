@@ -446,6 +446,10 @@ function sharedReadiness(ready:boolean) {
  app.classList.toggle('sync-connecting',syncEnabled() && !ready);
  document.querySelectorAll<HTMLButtonElement>('.transport button, [data-action=play], [data-action=stop]').forEach(b=>{b.disabled=syncEnabled() && !ready;});
  modeBadge.title=syncEnabled() && !ready ? t('syncConnecting') : '';
+ let status=document.querySelector<HTMLElement>('#sync-status');
+ if(!status){status=document.createElement('span');status.id='sync-status';status.className='ctl-note';status.setAttribute('role','status');document.querySelector('#mode-seg')?.after(status);}
+ status.textContent=t('syncConnecting');status.hidden=!syncEnabled() || ready;
+ if(syncEnabled() && !ready)modeBadge.innerHTML=`${icon('users')}<span>${t('syncConnecting')}</span>`;else renderModeControls();
 }
 function sharedNotice(code:string) {
  if(code==='session_expired'){leavePlaybackSession();location.replace('/?state=expired');return;}
