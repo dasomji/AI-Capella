@@ -149,7 +149,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
       const email = element('span', i.email); email.className = 'member-email member-identity'; head.append(email);
       const state = element('span', pt(i.deliveryState === 'not_sent' && i.state === 'pending' ? 'notSent' : i.state as 'pending')); state.className = 'invitation-state'; head.append(state); row.append(head);
       if (i.state === 'pending') menu(head, [
-        { label: pt('resend'), run: async () => { try { await api(`${base}/invitations/${i.id}/resend`, 'POST', { idempotencyKey: crypto.randomUUID() }); } catch (e) { row.append(element('p', domainError((e as Error).message))); throw e; } } },
+        { label: pt('resend'), run: async () => { try { await api(`${base}/invitations/${i.id}/resend`, 'POST', { idempotencyKey: crypto.randomUUID() }); } catch (e) { const note = element('p', domainError((e as Error).message)); note.className = 'ctl-note'; row.append(note); throw e; } } },
         { label: pt('revoke'), run: async () => { await api(`${base}/invitations/${i.id}`, 'DELETE'); } },
       ]);
       body.append(row);
