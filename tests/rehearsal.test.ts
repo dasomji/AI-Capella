@@ -100,6 +100,17 @@ it('maps server instants through output timestamps with a latency fallback',asyn
  expect(serverToAudioTime(102500,500,{currentTime:10,getOutputTimestamp:()=>({contextTime:9.9,performanceTime:1000})},1000,100000)).toBeCloseTo(10.9);
  expect(serverToAudioTime(102500,500,{currentTime:10,outputLatency:.1},1000,100000)).toBeCloseTo(10.9);
 });
+it('plans future and late starts, skips expired pre-roll and preserves effective-time tempo position',async()=>{
+ const {playbackSchedule}=await import('../src/rehearsal/schedule');
+ const playing=run(s,{type:'play'});
+ expect(playbackSchedule(playing,0,t)).toMatchObject({musicAt:400,beat:0,playing:true});
+ expect(playbackSchedule(playing,3400,t)).toMatchObject({musicAt:3400,beat:5,startingTones:null,countIn:null});
+ const pre=run({...s,countIn:{bars:1},startingTones:{enabled:true}},{type:'play'});
+ expect(playbackSchedule(pre,10000,t)).toMatchObject({startingTones:null,countIn:null});
+ const tempo=run(playing,{type:'setTempo',bpm:60},3000);
+ expect(playbackSchedule(tempo,3000,t).beat).toBe(positionAt(playing,tempo.anchor.serverTime,t));
+ expect(playbackSchedule(playing,400,t).secondsFromBeat(6)).toBe(4);
+});
 it('refreshes the clock on join, periodic ticks, wake, online, reconnect and sleep',async()=>{
  const {PlaybackClock}=await import('../src/rehearsal/client-clock');const {JSDOM}=await import('jsdom');const dom=new JSDOM('',{pretendToBeVisual:true});
  vi.stubGlobal('window',dom.window);vi.stubGlobal('document',dom.window.document);vi.useFakeTimers();
