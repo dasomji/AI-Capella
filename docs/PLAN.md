@@ -551,3 +551,121 @@ Final Part A checks: `npm run build` passed; `npm run check:secrets` passed
 `npm run test:browser` passed; `npm run typecheck` and `npm test` passed (8 tests);
 `npm run test:integration` passed (23/23); `npm run db:generate` reported no schema
 changes. Foundation browser smoke additionally passed as described above.
+
+### Phase 3a — authoritative playback server and pure controller (2026-11-03)
+
+One session per ensemble; every current member controls it, independent of
+editPieces. No conductor lock. Saved piece configuration is never written by
+playback. Mute/solo/view/zoom stay local. Client/audio/UI migration is Phase 3b;
+`src/sync.ts` remains because `main.ts` still imports its legacy state seam.
+
+Shared contracts: `src/rehearsal/contract.ts` exports strict Zod command,
+envelope, canonical-state, acknowledgement and join schemas and inferred types.
+Commands are nested under `command` with a `type` discriminator. Envelope also
+contains ensembleId, UUID commandId, baseRevision and clientSentAt (estimated
+server epoch milliseconds). All canonical fields are present on every update.
+BPM matches the current UI; internally it scales the tempo map by bpm/baseBpm.
+Selecting a piece resets transient BPM to the source tempo, transpose to zero,
+loop and pre-roll preferences. Saved defaults remain an independent library API.
+
+| Commands | Requires current revision | Reason |
+| --- | --- | --- |
+| play, pause, seek | yes | Depend on selected piece, position and transport state |
+| setLoop, playStartingTones | yes | Depend on selected piece/range |
+| selectPiece | no | Absolute piece and version selection |
+| stop | no | Unconditional stop and rewind |
+| setTempo, setTransposition | no | Absolute transient setting |
+| setMetronome, setCountIn, setStartingTones | no | Absolute preference |
+
+A future baseRevision is always stale. Checked commands require equality;
+unchecked commands accept older revisions. Expiry is 5 seconds (also rejects
+client timestamps over 5 seconds ahead). Accepted command IDs are remembered per
+ensemble for 10 minutes, capped at 1000, in process memory; restart clears that
+window, so reconnect MUST discard pending commands. Per-socket token bucket:
+20 command burst, refill 20/second, including invalid inputs.
+
+Authenticated `/rehearsal` events (callback acknowledgements):
+- `rehearsal:join {ensembleId}` and `rehearsal:snapshot {ensembleId}` return
+  `{state}` or `{code}` and subscribe to `rehearsal:<ensembleId>`.
+- `rehearsal:command <Envelope>` returns `{commandId,status,revision? ,code?}`.
+  Accepted state commits to rehearsal_sessions before `playback:state` fanout to
+  every room subscriber, including the sender. Concurrent commands share one
+  per-ensemble promise queue; snapshots, deletion and end transitions use it too.
+- `clock:ping` takes just a callback, returning `{serverTime}` from
+  performance.timeOrigin + performance.now().
+
+Membership is cached on each socket, invalidated by existing membership events;
+removal leaves the playback room and rejects subsequent controls. Auth revocation
+continues to disconnect sockets immediately through the existing hook. Session
+expiry is checked locally for every control; the existing batched session poll
+remains a fallback. A command does not reload the auth session from Postgres.
+Piece/version tenant ownership is checked server-side. Score parsing and timing
+metadata extraction reuse the bounded two-worker/eight-waiter validation pool,
+with a 30-second timeout. Derived timing promises are cached by content hash
+(maximum 100). MusicXML uses the existing parser in worker-local JSDOM; the
+controller/timeline/clock modules themselves have no DOM or Node dependencies.
+
+**Timing:** PLAYBACK_LEAD_MS defaults to 400 (configurable 0–5000). New anchors
+and settings take effect at server now + lead. Clients retain their previous
+schedule up to that instant; a snapshot describes the schedule from its anchor
+onward, not historical playback before that anchor. Tempo changes sample position
+at the effective time and re-anchor there, avoiding a lead-time jump. Score tempo
+marks use the shared quarter-unit metronome conversion extracted from the parser;
+MusicXML sound-tempo changes are preserved too. The existing AudioEngine uses
+constant-BPM math, not a tempo-map converter: 3b must use this timeline in its
+scheduler. No existing tempo-map converter was available to reuse.
+
+Loop wrap integrates score time within [startBeat,endBeat). Play optionally
+schedules 2 seconds of starting tones followed by configured count-in bars at the
+anchor's local tempo/time signature. Active count-in/starting-tone timestamps
+reset on every other transition; preference fields remain explicit. Standalone
+playStartingTones pauses and schedules tones without starting music. End timers
+persist a stopped state at the final beat with a new revision and broadcast;
+stop rewinds to zero. Piece deletion clears the selection and stops with a new
+revision. All protocol times are numeric epoch-ms instants per this contract;
+DB row timestamps retain timestamptz and logs UTC (the numeric transport is the
+explicit exception to the engineering rule preferring ISO text boundaries).
+
+**Restart:** startup gates joins/commands on recovery. Persisted playing or
+countingIn sessions become paused at positionAt(state, recovery time), with
+revision bumped and active pre-roll/end timestamps cleared. No auto-resume.
+Nonmoving states retain their revision. A failed recovery fails closed and logs
+an error. Snapshot after reconnect is the durable truth; broadcasts are not a
+durable event log, and a crash between commit and fanout is repaired by snapshot.
+
+**Phase 3b must wire:**
+- Implement RehearsalTransport (snapshot, command, subscribe, ping) using these
+  events, fresh authenticated connections per account, UUIDs and latest revisions.
+  Await join/snapshot before enabling controls; drop disconnected buffered commands.
+- `estimateClock(samples)` needs at least 8 valid {t0,tServer,t1} samples; it uses
+  the lowest RTT quartile (minimum 3), returns offsetMs, uncertaintyMs, sampleCount
+  or null. Offset is server minus client. Refresh periodically and on wake;
+  keep shared controls disabled if unavailable or uncertainty exceeds 100 ms.
+  Asymmetry cannot be measured away: uncertainty conservatively covers RTT half
+  plus observed scatter; do not promise sample accuracy across output devices.
+- `timingFromScore`, `secondsAt`, `beatAt`, `positionAt(state,serverTime,timing)`
+  are the musical timeline. `apply(state,envelope,{now,leadTimeMs,pieceTiming,
+  userId})` is the deterministic controller, returning complete state or {code}.
+  Use `lateJoin(state,now,timing,offsetMs)` for beat, localTime and remaining
+  pre-roll timestamps; skip expired pre-roll. `restartPaused` is server recovery.
+- Map canonical piece/version, BPM, transpose, loop, metronome and pre-roll
+  preferences into the existing UI. Replace legacy sync and transport imports
+  only after the controller/audio wiring compiles. Fetch the selected immutable
+  version, schedule at accepted anchors, apply output-latency compensation, and
+  preserve the previous audio schedule until a future effective anchor.
+- Wire actual tempo-map note/metronome scheduling, starting-tone pitches from the
+  selected score, AudioContext resume, uncertainty handling, offline/sleep recovery,
+  ensemble/account switching, local mute/solo and error feedback.
+- Browser tests with multiple contexts must measure sync tolerance, suspended
+  audio, sleep/reconnect and account isolation; 3a makes no browser timing claim.
+
+**Scaling beyond one server (not implemented):** sticky sessions for transport,
+Socket.IO fanout adapter, and per-ensemble ownership/serialization across replicas.
+Shared dedupe and restart/recovery ownership must move with that serialization;
+adding an adapter alone does not serialize writes or make timers single-owner.
+
+Validation results will be recorded after the sequential full-check run. The
+first combined run exposed fixed-port collision and concurrent dist rebuilds;
+the integration harness now allocates its app port and can filter scenarios via
+AICAP_TEST_PATTERN. New socket fixtures force fresh managers to isolate cookies.
+Targeted real Postgres/socket and real process-restart checks passed. No push.
