@@ -1,3 +1,4 @@
+import { withMailRequester } from "./auth-guards.server";
 import { jwtVerify } from "jose";
 import { verifyPassword } from "better-auth/crypto";
 import { transaction } from "./domain.server";
@@ -219,7 +220,7 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
   }
   const response = await withRequestLog(
     c.res.headers.get("x-request-id") ?? crypto.randomUUID(),
-    () => auth.handler(c.req.raw),
+    () => withMailRequester(c.req.header("x-lightscore-socket-ip") ?? "internal", () => auth.handler(c.req.raw)),
   );
   if (emailFailureKey && response.status === 401)
     for(const key of [emailFailureKey, globalFailureKey!]) await pool.query(

@@ -133,7 +133,7 @@ export function AuthPage() {
       <p role="status">{m[status as keyof typeof m]}</p>
       {checking && <p className="account-email">{email}</p>}
       <nav className="account-links">
-        {checking ? <><button type="button" disabled={busy || clock < resendAt} onClick={() => void resend()}>{m.resend}</button><span aria-hidden="true"> · </span><button type="button" onClick={() => setStatus("")}>{m.otherEmail}</button></> : <button type="button" onClick={() => changeMode(status === "invalid" ? "forgot" : "signin")}>{status === "invalid" ? m.forgot : m.signin}</button>}
+        {checking ? <><button type="button" disabled={busy || clock < resendAt} onClick={() => void resend()}>{m.resend}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)} s)` : ""}</button><span aria-hidden="true"> · </span><button type="button" onClick={() => setStatus("")}>{m.otherEmail}</button></> : <button type="button" onClick={() => changeMode(status === "invalid" ? "forgot" : "signin")}>{status === "invalid" ? m.forgot : m.signin}</button>}
       </nav>
     </> : <>
       {mode === "signup" && maskedEmail && <p className="account-hint">{m.inviteHint.replace('{email}', maskedEmail)}</p>}
@@ -145,7 +145,7 @@ export function AuthPage() {
         <p role="status" className={status && !['signedout', 'expired'].includes(status) ? 'account-error' : ''}>{m[status as keyof typeof m] ?? ""}</p>
         <button className="btn primary" type="submit" disabled={busy}>{verification ? m.verifyEmail : m[mode]}</button>
       </form>
-      {status === "unverified" && <nav className="account-links"><button type="button" disabled={busy || clock < resendAt} onClick={() => void resend()}>{m.resend}</button></nav>}
+      {status === "unverified" && <nav className="account-links"><button type="button" disabled={busy || clock < resendAt} onClick={() => void resend()}>{m.resend}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)} s)` : ""}</button></nav>}
       <nav className="account-links">
         {verification && <><button type="button" onClick={() => changeMode('forgot')}>{m.forgot}</button><span aria-hidden="true"> · </span></>}
         {mode === "signin" ? <><button type="button" onClick={() => changeMode('signup')}>{m.signup}</button><span aria-hidden="true"> · </span><button type="button" onClick={() => changeMode('forgot')}>{m.forgot}</button></> : <button type="button" onClick={() => changeMode('signin')}>{mode === "signup" ? m.haveAccount + ' ' : ''}{m.signin}</button>}

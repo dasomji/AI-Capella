@@ -1745,3 +1745,20 @@ test('80 concurrent guesses cannot bypass password evaluation admission', {timeo
   const key='email:'+(await import('node:crypto')).createHash('sha256').update(singer.email).digest('hex')+':/api/auth/sign-in/email:198.51.100.88';
   assert.equal((await pool.query('select count from rate_limit where key=$1',[key])).rows[0].count,evaluated);
 });
+
+test('three requests cannot silence recovery and requester share preserves recipient budget', {timeout:30000},async()=>{
+  const victim=await register();const {api}=await import('../server/http.server');
+  const reset=(ip:string)=>api.fetch(new Request(base+'/api/auth/request-password-reset',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':ip},body:JSON.stringify({email:victim.email,redirectTo:base+'/'})}));
+  const flush=async()=>{await (await import('../server/background.server')).flushBackground();};
+  const count=()=>captureMail.messages.filter(m=>m.to===victim.email && m.text.includes('/reset-password/')).length;
+  for(let n=0;n<3;n++)assert.equal((await reset('198.51.100.70')).status,200);
+  await flush();assert.equal(count(),1);
+  const prefix='account-mail:'+(await import('node:crypto')).createHash('sha256').update(victim.email).digest('hex')+':reset';
+  const age=()=>pool.query('update rate_limit set last_request=$1 where key=$2',[Date.now()-61000,prefix+':interval']);
+  await age();assert.equal((await reset('198.51.100.71')).status,200);await flush();assert.equal(count(),2);
+  // Simulate the attacker's entire daily share, leaving the recipient's generous budget.
+  const ipKey=prefix+':ip:'+(await import('node:crypto')).createHash('sha256').update('198.51.100.70').digest('hex');
+  await pool.query('update rate_limit set count=5 where key=$1',[ipKey]);await age();
+  assert.equal((await reset('198.51.100.70')).status,200);await flush();assert.equal(count(),2);
+  assert.equal((await reset('198.51.100.72')).status,200);await flush();assert.equal(count(),3);
+});

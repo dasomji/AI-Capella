@@ -59,8 +59,8 @@ function makeAuth() {
           .set({ emailVerified: true })
           .where(eq(schema.user.id, user.id));
       },
-      sendResetPassword: async ({ user, url }) =>
-        (await allowAccountMail(user.email)) ? mailer.send(
+      sendResetPassword: async ({ user, url }, request) =>
+        (await allowAccountMail(user.email, "reset", request)) ? mailer.send(
           accountMail(user.email, url, await userLanguage(user.id), "reset"),
         ) : undefined,
     },
@@ -68,8 +68,8 @@ function makeAuth() {
       sendOnSignUp: true,
       sendOnSignIn: false,
       autoSignInAfterVerification: false,
-      sendVerificationEmail: async ({ user, url }) =>
-        (await allowAccountMail(user.email)) ? mailer.send(
+      sendVerificationEmail: async ({ user, url }, request) =>
+        (await allowAccountMail(user.email, "verify", request)) ? mailer.send(
           accountMail(user.email, url, await userLanguage(user.id), "verify"),
         ) : undefined,
     },
