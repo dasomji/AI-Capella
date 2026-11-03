@@ -56,6 +56,7 @@ const caps = (m: Record<string, unknown>) => ({
 const memberView = (m: Record<string, unknown>) => ({
   id: m.id,
   userId: m.user_id,
+  ensembleId: m.ensemble_id,
   name: m.name,
   email: m.email,
   isLead: m.is_lead,

@@ -4,13 +4,13 @@ export const Route = createFileRoute('/app')({ component: Rehearsal });
 function Rehearsal() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    let active = true;
+    let active = true; let mounted = false;
     const check = async () => {
       let response: Response;
       try { response = await fetch('/api/me'); } catch { return; }
       if (response.status === 401) { location.replace('/?state=expired'); return; }
       if (!response.ok) return;
-      if (active) { setReady(true); await import('../main'); }
+      if (active && !mounted) { const { initializeEnsembles } = await import('../ensembles'); await initializeEnsembles(); mounted = true; setReady(true); await import('../main'); }
     };
     void check();
     const timer = setInterval(() => { void check(); }, 30_000);

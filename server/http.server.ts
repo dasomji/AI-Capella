@@ -45,7 +45,7 @@ api.on(['GET', 'POST'], '/api/auth/*', async c => {
     if (!session) return c.json({code:'SESSION_EXPIRED'},401);
     if (c.req.method === 'GET' && path.endsWith('/list-sessions')) {
       const rows = await pool.query('select id, user_agent as "userAgent", created_at as "createdAt", expires_at as "expiresAt" from session where user_id=$1 and expires_at>now()', [session.user.id]);
-      return c.json(rows.rows);
+      return c.json(rows.rows.map(row => ({...row, current: row.id === session.session.id})));
     }
     const body = await c.req.json();
     const rows = await pool.query('delete from session where id=$1 and user_id=$2 returning token', [body.id,session.user.id]);

@@ -12,15 +12,13 @@ describe('preserved musical import boundaries', () => {
 });
 
 it('keeps imported source and independent part edits in the local library', async () => {
- const { saveImportedSong, updateSongMetadata, deleteImportedSong } = await import('../src/library');
  const { localLibrary } = await import('../src/local-library');
  const xml = readFileSync('public/evening-rise.musicxml','utf8');
- const id = await saveImportedSong({ title:'Local rehearsal',xml,format:'musicxml' });
- await updateSongMetadata(id,{partName:{partId:'soprano',name:'Soprano'}});
- await updateSongMetadata(id,{partName:{partId:'bass',name:'Bass'}});
+ const id = await localLibrary.add({ title:'Local rehearsal',xml,format:'musicxml' });
+ await localLibrary.update(id,{partNameOverrides:{soprano:'Soprano',bass:'Bass'}});
  expect(localLibrary.get(id)?.xml).toBe(xml);
  expect(localLibrary.get(id)?.partNameOverrides).toEqual({soprano:'Soprano',bass:'Bass'});
- await deleteImportedSong(id); expect(localLibrary.get(id)).toBeUndefined();
+ await localLibrary.remove(id); expect(localLibrary.get(id)).toBeUndefined();
 });
 
 it('redacts untrusted errors instead of serializing secret-bearing dependency messages', async () => {

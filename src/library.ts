@@ -1,25 +1,9 @@
+import { unzipSync, strFromU8 } from 'fflate';
+import { api, ApiError } from './domain-client';
 import { localLibrary } from './local-library';
-import { unzipSync, strFromU8, strToU8, gzipSync, gunzipSync } from 'fflate';
-import {
-  addDoc,
-  Bytes,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-  writeBatch,
-  type Unsubscribe,
-} from './legacy-store';
-import { db } from './firebase';
-
-// Firestore caps a document at 1 MiB (1,048,576 bytes) total, including field names and every
-// other field on the doc -- leave headroom below that rather than cutting it exactly at the limit.
-const MAX_COMPRESSED_XML_BYTES = 900_000;
-
+import { activeEnsemble, canEditPieces, PUBLIC_ID } from './ensembles';
+import { io } from 'socket.io-client';
+import type { PieceMetadata } from './api/domain';
 export type SongFormat = 'musicxml' | 'score';
 
 export interface StoredSong {
@@ -75,198 +59,59 @@ export interface ScanMark {
 
 export type VoiceClef = 'treble' | 'treble8' | 'bass';
 
-const SONGS_COLLECTION = 'songs';
 
-function parseSongDoc(id: string, data: Record<string, unknown>): StoredSong {
-  // xmlGz (gzip-compressed bytes) is the current format; xml (raw string) is a fallback for
-  // documents written before compression was added. Decompression is the expensive part of
-  // this (below), which is exactly why subscribeToSongs only calls this for docs that actually
-  // changed rather than on every doc on every snapshot.
-  const xml = data.xmlGz ? strFromU8(gunzipSync((data.xmlGz as Bytes).toUint8Array())) : ((data.xml as string) ?? '');
-  return {
-    id,
-    title: data.title as string,
-    xml,
-    // Documents written before MIDI import existed have no format field; they're always MusicXML.
-    format: ((data.format as SongFormat | undefined) ?? 'musicxml') as SongFormat,
-    importedAt: (data.importedAt as number) ?? 0,
-    sortKey: typeof data.sortKey === 'number' ? data.sortKey : undefined,
-    partNameOverrides: data.partNameOverrides as Record<string, string> | undefined,
-    savedConfig: data.savedConfig as StoredSong['savedConfig'],
-    clefOverrides: data.clefOverrides as StoredSong['clefOverrides'],
-    percussion: data.percussion && typeof data.percussion === 'object' ? (data.percussion as Record<string, boolean>) : undefined,
-    removedParts: Array.isArray(data.removedParts) ? (data.removedParts as string[]) : undefined,
-    splitParts: Array.isArray(data.splitParts) ? (data.splitParts as string[]) : undefined,
-    swing: data.swing === true ? true : undefined,
-    scanMarks: Array.isArray(data.scanMarks) ? (data.scanMarks as Record<string, unknown>[]).map(readScanMark) : undefined,
-  };
+const metadata = new Map<string, PieceMetadata>();
+const bodies = new Map<string, Promise<string>>();
+let notify: (()=>void) | undefined;
+const base = () => `/ensembles/${activeEnsemble()}/pieces`;
+function stored(m:PieceMetadata): StoredSong {
+ const s = m.settings as any;
+ return {id:m.id,title:m.title,xml:'',format:m.format,importedAt:Date.parse(m.updatedAt),sortKey:Number(m.sortKey),partNameOverrides:s.partNames,clefOverrides:s.clefOverrides,removedParts:Object.keys(s.removedParts ?? {}).filter(k=>s.removedParts[k]),splitParts:Object.keys(s.splitParts ?? {}).filter(k=>s.splitParts[k]),swing:s.swing,savedConfig:s.savedConfig};
 }
-
-function readScanMark(d: Record<string, unknown>): ScanMark {
-  return {
-    m: Number(d.m) || 0,
-    measure: String(d.measure ?? ''),
-    part: String(d.part ?? ''),
-    note: String(d.note ?? ''),
-    img: d.img instanceof Bytes ? d.img.toUint8Array() : undefined,
-  };
+export async function scoreBody(id:string):Promise<string> {
+ let m = metadata.get(id);
+ if(!m) { m = await api<PieceMetadata>(`${base()}/${id}`); metadata.set(id,m); notify?.(); }
+ let body = bodies.get(m.contentHash);
+ if(!body) { body = fetch(`/api/ensembles/${m.ensembleId}/pieces/${id}/versions/${m.contentHash}`).then(async r=>{ if(!r.ok) throw new ApiError('not_found',r.status); const text=await r.text(); return text; }); bodies.set(m.contentHash,body); body.catch(()=>bodies.delete(m!.contentHash)); }
+ return body;
 }
-
-const writeScanMarks = (marks: ScanMark[]) => marks.map(({ img, ...rest }) => (img ? { ...rest, img: Bytes.fromUint8Array(img) } : rest));
-
-/** Live-subscribes to an ensemble's songs (the only query the Firestore rules allow); the callback
- *  fires immediately and again on every change from any device. */
-export function subscribeToSongs(
-  callback: (songs: StoredSong[], fromCache: boolean) => void,
-  onError: (err: unknown) => void,
-  ensemble: string,
-): Unsubscribe {
-  if (!db) return localLibrary.subscribe(songs => callback(songs, false));
-  // Filtered by ensemble, sorted here: ordering by another field in the query would need a
-  // composite index set up in the Firebase console.
-  const q = query(collection(db, SONGS_COLLECTION), where('ensemble', '==', ensemble));
-  // A collection onSnapshot fires (with the FULL current result set) on every change to ANY doc
-  // in it -- one voice's rename, a new import, anything. Re-gunzipping and re-decoding every
-  // song's XML from scratch on every single one of those events (as this used to do) means a
-  // roomful of devices all simultaneously doing that work for the *entire* library every time
-  // any one of them touches it -- a real, repeatable cause of a synced-rehearsal-wide stutter/
-  // freeze that gets worse the more songs (and the more people editing) there are. Firestore's
-  // docChanges() says exactly which docs were added/modified/removed since the last snapshot, so
-  // a per-doc cache lets every unchanged song's already-decompressed StoredSong be reused as-is.
-  const cache = new Map<string, StoredSong>();
-  return onSnapshot(
-    q,
-    // Metadata changes too, so the app learns when the list switches between the offline copy and
-    // the live server data (fromCache), not only when documents change.
-    { includeMetadataChanges: true },
-    (snapshot) => {
-      for (const change of snapshot.docChanges()) {
-        if (change.type === 'removed') cache.delete(change.doc.id);
-        else cache.set(change.doc.id, parseSongDoc(change.doc.id, change.doc.data()));
-      }
-      const songs = snapshot.docs.map((d) => cache.get(d.id)).filter((s): s is StoredSong => s != null);
-      songs.sort((a, b) => songOrder(a) - songOrder(b));
-      callback(songs, snapshot.metadata.fromCache);
-    },
-    onError,
-  );
+export function clearLibrary() { metadata.clear(); bodies.clear(); notify=undefined; }
+export function subscribeToSongs(callback:(songs:StoredSong[],fromCache:boolean)=>void,onError:(e:unknown)=>void,ensemble:string):()=>void {
+ clearLibrary(); let closed=false;
+ const emit=()=>{if(!closed)callback([...metadata.values()].sort((a,b)=>a.sortKey.localeCompare(b.sortKey)).map(stored),false);}; notify=emit;
+ const refresh=async()=>{const rows=await api<PieceMetadata[]>(`/ensembles/${ensemble}/pieces`); if(closed)return;metadata.clear();rows.forEach(m=>metadata.set(m.id,m));emit();};
+ const socket=io({withCredentials:true});
+ socket.on('connect',()=>{socket.emit('ensemble:join',ensemble);void refresh().catch(onError);});
+ socket.on('library:changed',async event=>{if(event.ensembleId!==ensemble)return;try {await Promise.all(event.changes.map(async(c:any)=>{if(c.deleted)metadata.delete(c.pieceId);else {const m=await api<PieceMetadata>(`/ensembles/${ensemble}/pieces/${c.pieceId}`);if(!closed)metadata.set(m.id,m);}}));emit();}catch(e){onError(e);}});
+ const rejoin=()=>socket.emit('ensemble:join',ensemble);window.addEventListener('membership:changed',rejoin);
+ void refresh().catch(onError);
+ return ()=>{closed=true;socket.disconnect();window.removeEventListener('membership:changed',rejoin);clearLibrary();};
 }
-
-/** A song's place in the repertoire: where it was moved by hand, else when it was added. */
-export function songOrder(song: { importedAt: number; sortKey?: number }): number {
-  return song.sortKey ?? song.importedAt;
+export const songOrder = (s:{sortKey?:number;importedAt:number}) => s.sortKey ?? s.importedAt;
+export async function saveSongOrder(places:{id:string;sortKey:number}[]) { await api(`/ensembles/${activeEnsemble()}/reorder`,'POST',{pieceIds:[...places].sort((a,b)=>a.sortKey-b.sortKey).map(p=>p.id)}); }
+export async function saveImportedSong(song:{title:string;xml:string;format:SongFormat;ensemble?:string;scanMarks?:ScanMark[]}) {
+ if(!canEditPieces(activeEnsemble() ?? PUBLIC_ID))return localLibrary.add(song);
+ const m=await api<PieceMetadata>(base(),'POST',{title:song.title,content:{format:song.format,schemaVersion:1,body:song.format==='score'?JSON.parse(song.xml):song.xml},idempotencyKey:crypto.randomUUID()});metadata.set(m.id,m);notify?.();return m.id;
 }
-
-/** Moves songs in the repertoire (for everyone in the ensemble): their new places, in one write. */
-export async function saveSongOrder(places: { id: string; sortKey: number }[]): Promise<void> {
-  if (!db) { await Promise.all(places.map(place => localLibrary.update(place.id, { sortKey: place.sortKey }))); return; }
-  if (!places.length) return;
-  const batch = writeBatch(db);
-  for (const { id, sortKey } of places) batch.update(doc(db, SONGS_COLLECTION, id), { sortKey });
-  await batch.commit();
+async function update(id:string,op:string,value:unknown,key?:string) {
+ if(!canEditPieces(activeEnsemble() ?? PUBLIC_ID))throw new ApiError('forbidden',403);
+ try { const m=await api<PieceMetadata>(`${base()}/${id}`,'PATCH',{op,value,...(key?{key}:{}),expectedRevision:metadata.get(id)?.revision});metadata.set(id,m);notify?.(); }
+ catch(e) {if(e instanceof ApiError && e.status===409){const m=await api<PieceMetadata>(`${base()}/${id}`);metadata.set(id,m);notify?.();window.dispatchEvent(new Event('piece:conflict'));}throw e;}
 }
-
-/** Returns the new song's id (available immediately from Firestore's optimistic local write). */
-export async function saveImportedSong(song: { title: string; xml: string; format: SongFormat; ensemble?: string; scanMarks?: ScanMark[] }): Promise<string> {
-  if (!db) return localLibrary.add(song);
-  const compressed = gzipSync(strToU8(song.xml));
-  if (compressed.byteLength > MAX_COMPRESSED_XML_BYTES) {
-    throw new Error(
-      `This score is too large (${Math.round(compressed.byteLength / 1024)} KB compressed) -- Firestore caps documents at 1 MB.`,
-    );
-  }
-  // The scan's pictures of its doubtful bars only as far as they fit beside the score.
-  let room = MAX_COMPRESSED_XML_BYTES - compressed.byteLength;
-  const marks = (song.scanMarks ?? []).map((mk) => {
-    room -= 200 + mk.note.length;
-    if (!mk.img) return mk;
-    if (mk.img.byteLength > room) return { ...mk, img: undefined };
-    room -= mk.img.byteLength;
-    return mk;
-  });
-  const docRef = await addDoc(collection(db, SONGS_COLLECTION), {
-    title: song.title,
-    xmlGz: Bytes.fromUint8Array(compressed),
-    format: song.format,
-    importedAt: Date.now(),
-    createdAt: serverTimestamp(),
-    ...(song.ensemble ? { ensemble: song.ensemble } : {}),
-    ...(marks.length ? { scanMarks: writeScanMarks(marks) } : {}),
-  });
-  return docRef.id;
+export async function updateSongMetadata(id:string,patch:{title?:string;ensemble?:string;swing?:boolean;partName?:{partId:string;name:string};clef?:{partId:string;clef:VoiceClef};percussion?:{partId:string;on:boolean};removedParts?:string[];splitParts?:string[]}) {
+ if(patch.title!==undefined)await update(id,'title',patch.title);
+ if(patch.swing!==undefined)await update(id,'swing',patch.swing);
+ if(patch.partName)await update(id,'partName',patch.partName.name,patch.partName.partId);
+ if(patch.clef)await update(id,'clef',patch.clef.clef,patch.clef.partId);
+ for(const [field,op] of [['removedParts','removed'],['splitParts','split']] as const)if(patch[field]) {
+ const previous=(metadata.get(id)?.settings[field]??{}) as Record<string,unknown>;
+ for(const key of new Set([...Object.keys(previous),...patch[field]!]))if(!!previous[key]!==patch[field]!.includes(key))await update(id,op,patch[field]!.includes(key)?true:null,key);
+ }
 }
-
-/** The scan's places to check that are left (one was found fine and taken off the list). */
-export async function saveScanMarks(id: string, marks: ScanMark[]): Promise<void> {
-  if (!db) return localLibrary.update(id, { scanMarks: marks });
-  await updateDoc(doc(db, SONGS_COLLECTION, id), { scanMarks: writeScanMarks(marks) });
-}
-
-export async function deleteImportedSong(id: string): Promise<void> {
-  if (!db) return localLibrary.remove(id);
-  await deleteDoc(doc(db, SONGS_COLLECTION, id));
-}
-
-/**
- * Renames a song's title and/or one voice's displayed name, written immediately (no
- * confirmation step, matching this app's existing "any device can change shared state" trust
- * model already used for playback/library changes elsewhere).
- *
- * The part-name field is written via a dot-path key (`partNameOverrides.${partId}`), NOT as a
- * nested object value (`{ partNameOverrides: { [partId]: name } }`) -- Firestore's updateDoc only
- * merges at the top level of the fields object; a plain nested object there *replaces* the whole
- * map wholesale. With a real object value, renaming a second voice would silently wipe out every
- * other voice's already-saved rename the next time this ran. The dot-path form updates just that
- * one nested key, leaving the rest of the map untouched.
- */
-export async function updateSongMetadata(
-  id: string,
-  patch: { title?: string; ensemble?: string; swing?: boolean; partName?: { partId: string; name: string }; clef?: { partId: string; clef: VoiceClef }; percussion?: { partId: string; on: boolean }; removedParts?: string[]; splitParts?: string[] },
-): Promise<void> {
-  if (!db) {
-    const song = localLibrary.get(id);
-    const { partName, clef, percussion, ensemble: _ensemble, ...plain } = patch;
-    return localLibrary.update(id, { ...plain,
-      ...(partName ? { partNameOverrides: { ...song?.partNameOverrides, [partName.partId]: partName.name } } : {}),
-      ...(clef ? { clefOverrides: { ...song?.clefOverrides, [clef.partId]: clef.clef } } : {}),
-      ...(percussion ? { percussion: { ...song?.percussion, [percussion.partId]: percussion.on } } : {}),
-    });
-  }
-  const fields: Record<string, unknown> = {};
-  if (patch.title !== undefined) fields.title = patch.title;
-  if (patch.ensemble !== undefined) fields.ensemble = patch.ensemble;
-  if (patch.swing !== undefined) fields.swing = patch.swing; // moved to another ensemble's folder
-  if (patch.partName) fields[`partNameOverrides.${patch.partName.partId}`] = patch.partName.name;
-  // Dot-path for the same reason as partNameOverrides: only this one voice's entry changes.
-  if (patch.clef) fields[`clefOverrides.${patch.clef.partId}`] = patch.clef.clef;
-  if (patch.percussion) fields[`percussion.${patch.percussion.partId}`] = patch.percussion.on;
-  if (patch.removedParts) fields.removedParts = patch.removedParts;
-  if (patch.splitParts) fields.splitParts = patch.splitParts;
-  await updateDoc(doc(db, SONGS_COLLECTION, id), fields);
-}
-
-/**
- * Saves the current transpose/BPM/section-marker setup as this song's default, applied the next
- * time it's freshly selected (see main.ts's selectSong/loadSongLocally). A deliberate, explicit
- * snapshot -- unlike renames, this is never written automatically on every tweak, only when the
- * user actually asks to remember the current one. Replaces the whole `savedConfig` object at once
- * (not a dot-path partial update like updateSongMetadata's partName case) since it's always
- * written as one complete, internally-consistent snapshot, never a single field in isolation.
- */
-export async function saveSongConfig(id: string, config: { transpose: number; bpm: number; sections: { label: string; beat: number }[] }): Promise<void> {
-  if (!db) return localLibrary.update(id, { savedConfig: { ...config, played: true } });
-  await updateDoc(doc(db, SONGS_COLLECTION, id), { savedConfig: { ...config, played: true } });
-}
-
-/**
- * Saves just the hand-set section marks (the A/B/C bookmarks), right when one is added or removed
- * -- they're bookmarks, not a setting to snapshot. Leaves the rest of savedConfig as it is.
- */
-export async function saveSongSections(id: string, sections: { label: string; beat: number }[]): Promise<void> {
-  if (!db) return localLibrary.update(id, { savedConfig: { ...localLibrary.get(id)?.savedConfig, sections, played: true } });
-  await updateDoc(doc(db, SONGS_COLLECTION, id), { 'savedConfig.sections': sections, 'savedConfig.played': true });
-}
-
+export async function deleteImportedSong(id:string) {await api(`${base()}/${id}`,'DELETE');metadata.delete(id);notify?.();}
+export async function saveSongConfig(id:string,config:{transpose:number;bpm:number;sections:{label:string;beat:number}[]}) { await update(id,'replace',{...config,played:true}); }
+export async function saveSongSections(id:string,sections:{label:string;beat:number}[]) {await update(id,'saved',sections,'sections');await update(id,'saved',true,'played');}
+export async function saveScanMarks(_id:string,_marks:ScanMark[]) { /* Phase 4 owns scan annotations. */ }
 /** Reads a .musicxml/.xml file as-is, or unzips a compressed .mxl (MuseScore's default export format). */
 export async function readScoreFile(file: File): Promise<string> {
   const isCompressed = file.name.toLowerCase().endsWith('.mxl');
