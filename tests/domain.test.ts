@@ -1773,3 +1773,24 @@ test('manager refresh retry preserves original idempotency input',async()=>{
  const first=await ok(path,'POST',input,manager.cookie), retry=await ok(path,'POST',input,manager.cookie);
  assert.equal(first.id,retry.id);assert.equal(retry.capabilities.editPieces,true);assert.equal(retry.sendCount,2);
 });
+
+test('connected account sockets acquire newly created ensemble rooms and lose removed rooms', {timeout:30000},async()=>{
+ const owner=await account(), member=await account();
+ const socket=connect(base,{forceNew:true,transports:['websocket'],extraHeaders:{origin:base,cookie:member.cookie}});
+ await new Promise<void>((resolve,reject)=>{socket.once('connect',resolve);socket.once('connect_error',reject);});
+ const changed=()=>new Promise<any>(resolve=>socket.once('membership:changed',resolve));
+ try {
+   let event=changed();const e=await ok('ensembles','POST',{name:'Live rooms'},member.cookie);await event;
+   const serverSocket=io.of('/').sockets.get(socket.id!)!;
+   assert.ok(serverSocket.rooms.has('ensemble:'+e.id));
+   // A new member receives the post-join library fanout without reconnecting or joining manually.
+   const update=new Promise<any>(resolve=>socket.once('library:changed',resolve));
+   await ok(`ensembles/${e.id}/pieces`,'POST',{title:'Immediate',content:{format:'musicxml',body:xml}},member.cookie);
+   assert.equal((await update).ensembleId,e.id);
+   const {membershipChanged}=await import('../server/domain.server');
+   await pool.query('insert into memberships(ensemble_id,user_id,is_lead) values($1,$2,true)',[e.id,owner.id]);
+   await pool.query('delete from memberships where ensemble_id=$1 and user_id=$2',[e.id,member.id]);
+   event=changed();membershipChanged(e.id,member.id,true);await event;
+   assert.equal(serverSocket.rooms.has('ensemble:'+e.id),false);
+ }finally{socket.disconnect();}
+});

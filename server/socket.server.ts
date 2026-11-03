@@ -63,14 +63,29 @@ export function attachSockets(server: ServerType) {
       socket.on("disconnect", () => connected.delete(socket));
     });
   }
+  // Refresh the account room set after additions as well as removals. Serialize per socket
+  // so a slower membership query cannot rejoin a room after a later removal.
+  const roomUpdates = new Map<Socket, Promise<void>>();
+  function refreshRooms(socket: Socket, ensemble: string) {
+    const update = (roomUpdates.get(socket) ?? Promise.resolve()).catch(() => {}).then(async () => {
+      const {rows} = await pool.query("select ensemble_id from memberships where user_id=$1",[socket.data.userId]);
+      if (!socket.connected) return;
+      const wanted = new Set(rows.map(row => `ensemble:${row.ensemble_id}`));
+      for (const room of socket.rooms) if (room.startsWith("ensemble:") && !wanted.has(room)) await socket.leave(room);
+      for (const room of wanted) await socket.join(room);
+      socket.emit("membership:changed", {ensembleId: ensemble});
+    });
+    roomUpdates.set(socket,update);
+    void update.catch(error=>logError("socket.membership_rooms",error)).finally(()=>{if(roomUpdates.get(socket)===update)roomUpdates.delete(socket);});
+  }
   const unsubscribeMembership = onMembershipChange(
     (ensemble, user, removed) => {
       for (const socket of connected)
         if (user ? socket.data.userId === user : socket.rooms.has(`ensemble:${ensemble}`)) {
           if (!ensemble) socket.disconnect(true);
           else {
-            socket.emit("membership:changed", { ensembleId: ensemble });
             if (removed) void socket.leave(`ensemble:${ensemble}`);
+            refreshRooms(socket, ensemble);
           }
         }
     },

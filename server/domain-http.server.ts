@@ -298,6 +298,7 @@ domain.post("/ensembles", async (c) => {
     const m = await authorize(db, u.id, e.id);
     return { ...e, membershipId: m.id, isLead: true, capabilities: caps(m) };
   });
+  membershipChanged(result.id, u.id);
   return c.json(result, 201);
 });
 domain.patch("/ensembles/:ensemble", async (c) => {
@@ -761,8 +762,7 @@ domain.delete("/ensembles/:ensemble/invitations/:invitation", async (c) => {
 });
 domain.post("/invitations/:token/accept", async (c) => {
   const u = c.get("user");
-  return c.json(
-    await transaction(async (db) => {
+  const result = await transaction(async (db) => {
       await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
         u.id,
       ]);
@@ -840,8 +840,9 @@ domain.post("/invitations/:token/accept", async (c) => {
       );
       await audit(db, i.ensemble_id, u.id, "invitation.accept", i.id);
       return memberView(m);
-    }),
-  );
+    });
+  membershipChanged(String(result.ensembleId), u.id);
+  return c.json(result);
 });
 const metadataSQL = `select p.id,p.ensemble_id as "ensembleId",p.title,p.sort_key as "sortKey",p.format,p.revision,v.version_no as "versionNo",v.content_hash as "contentHash",v.size::float8 as size,p.updated_at as "updatedAt",jsonb_build_object('partNames',p.part_names,'clefOverrides',p.clef_overrides,'removedParts',p.removed_parts,'splitParts',p.split_parts,'swing',p.swing,'savedConfig',p.saved_config,'formatDefaults',p.format_defaults) as settings from music_pieces p join score_versions v on v.id=p.current_version_id`;
 async function metadata(db: Pick<PoolClient, "query">, e: string, id: string) {
