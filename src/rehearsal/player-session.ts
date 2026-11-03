@@ -10,15 +10,16 @@ export class PlayerSession {
   private closed = false;
   constructor(ensembleId:string, apply:(state:RehearsalState)=>Promise<void>, ready:(value:boolean)=>void, notice:(code:string)=>void) {
     this.transport = new SocketPlaybackTransport(this.socket,ensembleId,()=>this.clock.serverNow(),value=>ready(value && this.clock.usable),notice);
-    this.clock = new PlaybackClock(()=>this.transport.ping(),()=>ready(this.transport.ready && this.clock.usable));
+    this.clock = new PlaybackClock(async()=>{await new Promise(resolve=>setTimeout(resolve,5));return this.transport.ping();},()=>ready(this.transport.ready && this.clock.usable));
     this.transport.subscribe(async state=>{
       if(!this.clock.usable) await this.clock.reconnect();
+      if(!this.clock.usable) await this.clock.refresh();
       if(!this.clock.usable) throw new Error('clock_unavailable');
       if(!this.closed) await apply(state);
     });
     this.socket.on('connect',()=>{void this.clock.reconnect();});
     this.socket.connect();
-    this.clock.start();
+    this.socket.once('connect',()=>this.clock.start());
   }
   send(command:Command) {
     if(!this.clock.usable) return Promise.reject(new Error('connecting'));

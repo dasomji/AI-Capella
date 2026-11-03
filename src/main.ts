@@ -464,7 +464,7 @@ async function receiveSharedState(state:RehearsalState) {
     const response=await fetch(`/api/ensembles/${currentEnsemble}/pieces/${state.pieceId}/versions/${state.versionNo}`);
     if(!response.ok)throw new Error('not_found');
     const xml=await response.text();
-    await loadSongLocally({id:state.pieceId,title:meta.title,format:meta.format,xml,imported:true});
+    await loadSongLocally({id:state.pieceId,title:meta.title,format:meta.format,xml,imported:true},state.effectiveAt);
     sharedVersion=state.versionNo;
   }
   sharedState=state;
@@ -477,7 +477,7 @@ async function receiveSharedState(state:RehearsalState) {
   const moving=lateJoin(state,playerSession!.clock.serverNow(),timingFromScore(currentScore!)).status;
   syncPlayButtons(moving==='playing'||moving==='countingIn');
   startRenderLoop();
-  if(arriveDirectly){viewOffsetBeats=0;if(arrivingAt)restoreSongSettings(arrivingAt);endArrival();}
+  if(arriveDirectly){viewOffsetBeats=0;if(arrivingAt && (arrivingAt.songId??arrivingAt.behind)===loadedSongId)restoreSongSettings(arrivingAt);endArrival();}
   renderNow();
 }
 function scheduleSharedAudio(at?:number){
@@ -488,7 +488,7 @@ function scheduleSharedAudio(at?:number){
 }
 const syncDebug=new URLSearchParams(location.search).get('debug')==='sync';
 if(syncDebug || import.meta.env.MODE==='test'){
- Object.defineProperty(window,'__lightscoreSync',{configurable:true,get:()=>({offsetMs:playerSession?.clock.diagnostics?.offsetMs??null,uncertaintyMs:playerSession?.clock.diagnostics?.uncertaintyMs??null,lastScheduledStartServerMs,lastScheduledStartAudioTime,revision:sharedState?.revision??null,position:audioEngine?.getCurrentBeat()??0,status:sharedState?.status??null,ready:sharedReady})});
+ Object.defineProperty(window,'__lightscoreSync',{configurable:true,get:()=>({offsetMs:playerSession?.clock.diagnostics?.offsetMs??null,uncertaintyMs:playerSession?.clock.diagnostics?.uncertaintyMs??null,lastScheduledStartServerMs,lastScheduledStartAudioTime,revision:sharedState?.revision??null,position:audioEngine?.getCurrentBeat()??0,status:sharedState?.status??null,contextState:audioEngine?.context.state??null,ready:sharedReady})});
 }
 window.setInterval(()=>{
  if(!syncEnabled() || !sharedState || !currentScore || !playerSession?.clock.usable || !audioEngine)return;
@@ -1624,7 +1624,7 @@ async function selectSong(song: SongEntry, at?: { beat: number; bpm: number; tra
 const fontsReady = canvasFontsReady();
 
 /** Does the actual work of loading a song locally. Only ever called from applyPlaybackState(). */
-async function loadSongLocally(song: SongEntry) {
+async function loadSongLocally(song: SongEntry, replaceAt?:number) {
   stopRenderLoop();
   const score = parseSong(song, await readSongText(song));
   if (song.splitParts?.length) splitStaves(score, song.splitParts);
@@ -1639,6 +1639,7 @@ async function loadSongLocally(song: SongEntry) {
     }
   }
   applyVoiceSetup(score, song);
+  if(replaceAt && playerSession?.clock.usable){const delay=replaceAt-playerSession.clock.serverNow();if(delay>0)await new Promise(resolve=>setTimeout(resolve,delay));}
   // The library title wins over the title embedded in the file -- it's what the repertoire shows,
   // and the only one a rename changes.
   if (song.title) score.title = song.title;
@@ -1753,7 +1754,7 @@ function pushState(patch: Partial<PlaybackState>, opts?: { leadershipChange?: bo
     return;
   }
   if (syncEnabled()) {
-    if(sharedState) for(const command of preferenceCommands(patch,sharedState)) sendShared(command);
+    if(sharedState) for(const command of preferenceCommands(patch,sharedState,currentScore?.totalBeats)) sendShared(command);
   } else {
     // The sync-buffer skip below only applies when there's no count-in or starting tones: those
     // need real scheduling room even with nobody else to sync with, so they keep a real future
@@ -1773,7 +1774,7 @@ function pushState(patch: Partial<PlaybackState>, opts?: { leadershipChange?: bo
  * to play before it -- see sync.computeFutureOriginServerTimeMs's doc comment.
  */
 async function publishPlayingAt(originBeat: number, extra: Partial<PlaybackState> = {}, extraLeadMs = 0) {
-  if(syncEnabled()){if(sharedState)for(const command of preferenceCommands(extra,sharedState))sendShared(command);return;}
+  if(syncEnabled()){if(sharedState)for(const command of preferenceCommands(extra,sharedState,currentScore?.totalBeats))sendShared(command);return;}
   if (isFollower()) {
     toast(t('followingHint'));
     return;
@@ -1959,7 +1960,7 @@ function refreshBindings() {
   // Skipped while a field has focus -- otherwise a remote BPM change (another device's preset
   // click, in Ensemble mode) would overwrite whatever this device is still mid-typing.
   document.querySelectorAll<HTMLInputElement>('.bpm-input').forEach((input) => {
-    if (document.activeElement !== input) input.value = String(bpm);
+    if (document.activeElement !== input || syncEnabled()) input.value = String(bpm);
   });
   document.querySelectorAll<HTMLElement>('[data-action="metronome"]').forEach((el) => {
     el.setAttribute(el.getAttribute('role') === 'switch' ? 'aria-checked' : 'aria-pressed', String(metronomeOn));
@@ -4293,12 +4294,12 @@ async function openAccountArea(anchor: HTMLElement) {
 function deviceLabel(ua:string='') { const browser=/Edg/.test(ua)?'Edge':/Firefox/.test(ua)?'Firefox':/Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':t('accountDevice'); const os=/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iOS':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':'';return [browser,os].filter(Boolean).join(' · '); }
 window.addEventListener('piece:conflict',()=>{toast(pt('conflict'));if(currentSong)void reloadCurrentSong();});
 let checkingMembership=false;
-async function checkMembership(){if(checkingMembership || leavingAccount)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(leavingAccount)return;if(me.user.id!==account?.id){clearLibrary();location.reload();return;}await refreshEnsembleNames();window.dispatchEvent(new Event('membership:changed'));if(!inPublicFolder()&&!ensembleById(currentEnsemble)){stopPlayback();clearLibrary();importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{}finally{checkingMembership=false;}}
+async function checkMembership(){if(checkingMembership || leavingAccount)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(leavingAccount)return;if(me.user.id!==account?.id){clearLibrary();location.reload();return;}await refreshEnsembleNames();window.dispatchEvent(new Event('membership:changed'));if(!inPublicFolder()&&!ensembleById(currentEnsemble)){leavePlaybackSession();audioEngine?.stop();clearLibrary();importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{}finally{checkingMembership=false;}}
 setInterval(()=>void checkMembership(),60000);
 window.addEventListener('membership:refresh',()=>void checkMembership());
 
 window.addEventListener('pagehide',leavePlaybackSession);
-window.addEventListener('domain:error', (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED' && !leavingAccount){stopPlayback();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
+window.addEventListener('domain:error', (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED' && !leavingAccount){leavePlaybackSession();audioEngine?.stop();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
 
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void checkMembership();});
 

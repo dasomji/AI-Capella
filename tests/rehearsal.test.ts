@@ -270,3 +270,15 @@ it('engine late join skips expired pre-roll and schedules at integrated score po
  expect(engine.getCurrentBeat()).toBeCloseTo(5,1);
  expect(note).toHaveBeenCalledTimes(1);
 });
+it('engine fills repeated tempo-map loop windows and avoids retriggering held notes on refill',()=>{
+ const {engine,note}=fakeSharedEngine();const now=performance.timeOrigin+performance.now();
+ engine.scheduleShared({...s,status:'playing',anchor:{beat:2,serverTime:now+400},effectiveAt:now+400,loop:{enabled:true,startBeat:2,endBeat:6}},t,now,0,[]);
+ expect(note.mock.calls.length).toBeGreaterThanOrEqual(2);
+ const first=note.mock.calls[0][1],second=note.mock.calls[1][1];
+ expect(second-first).toBeCloseTo(3,2);
+ const before=note.mock.calls.length;
+ engine.tick();expect(note.mock.calls.length).toBe(before);
+});
+it('whole-piece loop sends explicit bounds required by the existing controller',()=>{
+ expect(preferenceCommands({loopEnabled:true},s,16)).toEqual([{type:'setLoop',pieceId:'piece',versionNo:1,enabled:true,startBeat:0,endBeat:16}]);
+});

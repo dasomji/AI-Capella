@@ -108,6 +108,7 @@ try {
     await run(["node_modules/playwright/cli.js", "install", "chromium"], env);
   }
   await run([process.env.BROWSER_SCRIPT || "scripts/browser-phase2b.mjs"], env);
+  if(!process.env.BROWSER_SCRIPT) await run(["scripts/browser-sync.mjs"],env);
 } finally {
   for (const c of children)
     if (c.exitCode === null) {
