@@ -20,13 +20,18 @@ export function installRehearsal(ns: Namespace) {
     async function timing(e: string, p: string | null, v: number | null): Promise<PieceTiming> {
         if (!p)
             return empty;
-        const { rows } = await pool.query('select content_hash,format,native_score,musicxml from score_versions where ensemble_id=$1 and piece_id=$2 and version_no=$3', [e, p, v]);
+        const { rows } = await pool.query('select content_hash,format from score_versions where ensemble_id=$1 and piece_id=$2 and version_no=$3', [e, p, v]);
         const row = rows[0];
         if (!row)
             throw Error('not_found');
         let value = timings.get(row.content_hash);
         if (!value) {
-            value = validateScore(row.format === 'score' ? JSON.stringify(row.native_score) : row.musicxml, row.format, true).then(r => r.timing!);
+            value = (async () => {
+                // Read native JSON as text: parsing/stringifying a large body belongs in the worker.
+                const body = await pool.query('select native_score::text,musicxml from score_versions where ensemble_id=$1 and piece_id=$2 and version_no=$3', [e,p,v]);
+                if (!body.rows[0]) throw Error('not_found');
+                return (await validateScore(row.format === 'score' ? body.rows[0].native_score : body.rows[0].musicxml, row.format, true)).timing!;
+            })();
             timings.set(row.content_hash, value);
             void value.catch(() => timings.delete(row.content_hash));
             if (timings.size > 100)
