@@ -1,3 +1,4 @@
+import { playbackDriftMs } from './rehearsal/schedule';
 import { timingFromScore, secondsAt } from './rehearsal/timeline';
 import { positionAt, lateJoin } from './rehearsal/controller';
 import { PlayerSession } from './rehearsal/player-session';
@@ -496,7 +497,7 @@ window.setInterval(()=>{
  const timing=timingFromScore(currentScore),now=playerSession.clock.serverNow();
  const joined=lateJoin(sharedState,now,timing);
  if(joined.status==='playing' && audioEngine.context.state==='running'){
-  lastSharedDrift=(secondsAt(positionAt(sharedState,now,timing),timing)-secondsAt(audioEngine.getCurrentBeat(),timing))*timing.baseBpm/sharedState.bpm*1000;
+  lastSharedDrift=playbackDriftMs(sharedState,now,audioEngine.getCurrentBeat(),timing);
   if(Math.abs(lastSharedDrift)>30){const beat=positionAt(sharedState,now,timing);const delta=(secondsAt(Math.ceil(beat+.01),timing)-secondsAt(beat,timing))*timing.baseBpm/sharedState.bpm*1000;scheduleSharedAudio(now+(delta>=80 && delta<=300?delta:80));}
  }
  if(joined.status==='stopped')syncPlayButtons(false);

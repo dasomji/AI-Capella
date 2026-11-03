@@ -282,3 +282,9 @@ it('engine fills repeated tempo-map loop windows and avoids retriggering held no
 it('whole-piece loop sends explicit bounds required by the existing controller',()=>{
  expect(preferenceCommands({loopEnabled:true},s,16)).toEqual([{type:'setLoop',pieceId:'piece',versionNo:1,enabled:true,startBeat:0,endBeat:16}]);
 });
+it('drift uses musical milliseconds and the shortest distance over a loop wrap',async()=>{
+ const {playbackDriftMs}=await import('../src/rehearsal/schedule');
+ const state={...s,status:'playing' as const,anchor:{beat:2,serverTime:0},loop:{enabled:true,startBeat:2,endBeat:6}};
+ expect(playbackDriftMs(state,3010,5.99,t)).toBeCloseTo(20);
+ expect(playbackDriftMs({...state,loop:{enabled:false,startBeat:null,endBeat:null}},1000,3.9,t)).toBeCloseTo(50);
+});

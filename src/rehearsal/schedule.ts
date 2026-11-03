@@ -18,3 +18,13 @@ export function playbackSchedule(state: RehearsalState, now: number, timing: Pie
     secondsFromBeat:(targetBeat:number)=>(secondsAt(targetBeat,timing)-secondsAt(beat,timing))*timing.baseBpm/state.bpm,
   };
 }
+/** Compare score-time positions, taking the shortest distance across a loop wrap. */
+export function playbackDriftMs(state:RehearsalState,now:number,actualBeat:number,timing:PieceTiming){
+ const factor=timing.baseBpm/state.bpm*1000;
+ let delta=(secondsAt(positionAt(state,now,timing),timing)-secondsAt(actualBeat,timing))*factor;
+ if(state.loop.enabled && state.loop.startBeat!==null && state.loop.endBeat!==null){
+  const span=(secondsAt(state.loop.endBeat,timing)-secondsAt(state.loop.startBeat,timing))*factor;
+  if(span>0)delta=((delta+span/2)%span+span)%span-span/2;
+ }
+ return delta;
+}
