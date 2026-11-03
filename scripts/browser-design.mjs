@@ -86,9 +86,10 @@ export async function captureDesign(browser, lead, member, base, evidence) {
         const track=page.locator('.capability-switch input').first();
         if(await track.count()) {
           const states=await track.evaluate(async input=>{
-            const style=()=>{const background=getComputedStyle(input.nextElementSibling).backgroundColor;const knob=getComputedStyle(input.nextElementSibling,'::after');return {checked:input.checked,track:background,knob:knob.backgroundColor,transform:knob.transform,animations:input.nextElementSibling.getAnimations().map(a=>({playState:a.playState,currentTime:a.currentTime}))};};
+            const style=()=>{const background=getComputedStyle(input.nextElementSibling).backgroundColor;const knob=getComputedStyle(input.nextElementSibling,'::after');return {checked:input.checked,track:background,knob:knob.backgroundColor,transform:knob.transform};};
             const frame=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-            const before=input.checked;input.checked=false;await frame();const off=style();input.checked=true;await frame();const on=style();input.checked=before;return {off,on};
+            const settled=()=>{style();for(const a of input.nextElementSibling.getAnimations()) if(a.effect?.getComputedTiming().iterations!==Infinity)a.finish();return style();};
+            const before=input.checked;input.checked=false;await frame();const off=settled();input.checked=true;await frame();const on=settled();input.checked=before;return {off,on};
           });
           assert.notEqual(states.on.track,states.off.track,`${prefix}: ${JSON.stringify(states)}`);
           assert.notEqual(states.on.transform,states.off.transform);

@@ -427,6 +427,7 @@ const MODE_STORAGE_KEY = 'ai-capella-mode-v2';
 // is gated by this choice. Resolved once at startup and changed only via the mode switch, which
 // just reloads -- there's no in-place teardown of an active Firestore subscription.
 let sessionMode: 'solo' | 'ensemble' = 'solo';
+let leavingAccount = false;
 function syncEnabled(): boolean {
   return serverLibraryEnabled && sessionMode === 'ensemble';
 }
@@ -4107,7 +4108,11 @@ async function openAccountArea(anchor: HTMLElement) {
   signout.className = "btn primary";
   signout.textContent = t("accountSignOut");
   signout.onclick = async () => {
+    if(leavingAccount)return;
     sessionStorage.removeItem("lightscore-invite");
+    leavingAccount = true;
+    accountEvents.disconnect();
+    try {
     const r = await fetch("/api/auth/sign-out", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4118,7 +4123,8 @@ async function openAccountArea(anchor: HTMLElement) {
       localStorage.removeItem(PLACE_KEY);
       sessionStorage.removeItem(MODE_SWITCH_KEY);
       location.replace("/?state=signed-out");
-    } else toast(pt("errorGeneric"), "error");
+    } else {leavingAccount=false;accountEvents.connect();toast(pt("errorGeneric"), "error");}
+    } catch {leavingAccount=false;accountEvents.connect();toast(pt("errorGeneric"), "error");}
   };
   body.append(signout);
   const remove = document.createElement("button");
@@ -4156,7 +4162,10 @@ async function openAccountArea(anchor: HTMLElement) {
     confirm.textContent = t("accountDeleteConfirm");
     confirm.disabled = !!plan.lastLead.length;
     confirm.onclick = async () => {
+      if(leavingAccount)return;
       inlineError.textContent="";
+      leavingAccount=true;
+      accountEvents.disconnect();
       try {
         await api("/account", "DELETE", {
           deleteEnsembleIds: plan.deleteEnsembles.map((e: any) => e.id),
@@ -4165,6 +4174,9 @@ async function openAccountArea(anchor: HTMLElement) {
         clearLibrary();
         location.replace("/?state=signed-out");
       } catch (e) {
+        leavingAccount=false;
+        if((e as Error).message === "SESSION_EXPIRED") {location.replace("/?state=expired");return;}
+        accountEvents.connect();
         inlineError.textContent = (e as Error).message === "recent_auth_required" ? t("accountPasswordInvalid") : domainError((e as Error).message);
       }
     };
@@ -4208,11 +4220,11 @@ async function openAccountArea(anchor: HTMLElement) {
 function deviceLabel(ua:string='') { const browser=/Edg/.test(ua)?'Edge':/Firefox/.test(ua)?'Firefox':/Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':t('accountDevice'); const os=/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iOS':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':'';return [browser,os].filter(Boolean).join(' · '); }
 window.addEventListener('piece:conflict',()=>{toast(pt('conflict'));if(currentSong)void reloadCurrentSong();});
 let checkingMembership=false;
-async function checkMembership(){if(checkingMembership)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(me.user.id!==account?.id){clearLibrary();location.reload();return;}await refreshEnsembleNames();window.dispatchEvent(new Event('membership:changed'));if(!inPublicFolder()&&!ensembleById(currentEnsemble)){stopPlayback();clearLibrary();importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{}finally{checkingMembership=false;}}
+async function checkMembership(){if(checkingMembership || leavingAccount)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(leavingAccount)return;if(me.user.id!==account?.id){clearLibrary();location.reload();return;}await refreshEnsembleNames();window.dispatchEvent(new Event('membership:changed'));if(!inPublicFolder()&&!ensembleById(currentEnsemble)){stopPlayback();clearLibrary();importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{}finally{checkingMembership=false;}}
 setInterval(()=>void checkMembership(),60000);
 window.addEventListener('membership:refresh',()=>void checkMembership());
 
-window.addEventListener('domain:error', (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED'){stopPlayback();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
+window.addEventListener('domain:error', (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED' && !leavingAccount){stopPlayback();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
 
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void checkMembership();});
 
