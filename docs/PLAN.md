@@ -168,3 +168,102 @@ idempotent and creates no session. Reset tokens are hashed, expiring and single
 use. Cleanup scheduling and production rollout remain operator work; neither
 was deployed. Phase 2 still supplies durable library persistence and ensemble
 permissions; local imports remain intentionally ephemeral.
+
+### Phase 2a — 2026-11-03 (server)
+
+Domain API uses Hono `/api` routes, shared Zod input contracts in
+`src/api/domain.ts`, and one DB-backed authorization helper (also used by socket
+commands). Platform sysadmins receive no implicit ensemble privileges. Every
+multi-row write uses a transaction; ensemble rows serialize lead protection,
+invitation lifecycle and library mutations. Importing a transcription result in
+Phase 4 **requires editPieces**, independently of transcribe.
+
+| Method | Path (under `/api`) | Required capability |
+| --- | --- | --- |
+| GET / POST | `/ensembles` | verified account (create becomes lead) |
+| PATCH | `/ensembles/:ensemble` | lead |
+| GET | `/ensembles/:ensemble/members` | manageMembers |
+| PATCH | `/ensembles/:ensemble/members/:member` | lead |
+| DELETE | `/ensembles/:ensemble/members/:member` | self, or manageMembers (lead targets require lead) |
+| DELETE | `/account` | own account; last-lead guard |
+| GET / POST | `/ensembles/:ensemble/invitations` | manageMembers (grants require lead) |
+| POST | `/ensembles/:ensemble/invitations/:invitation/resend` | manageMembers |
+| DELETE | `/ensembles/:ensemble/invitations/:invitation` | manageMembers |
+| GET | `/invitations/:token` | public, masked preview |
+| POST | `/invitations/:token/accept` | verified intended email |
+| GET / POST | `/ensembles/:ensemble/pieces` | member / editPieces |
+| GET / PATCH / DELETE | `/ensembles/:ensemble/pieces/:piece` | member / editPieces / editPieces |
+| GET | `/ensembles/:ensemble/pieces/:piece/versions/:numberOrHash` | member |
+| POST | `/ensembles/:ensemble/pieces/:piece/versions` | editPieces, expectedRevision |
+| POST | `/ensembles/:ensemble/reorder` | editPieces |
+
+Capabilities in the public API are manageMembers/editPieces/transcribe; storage
+retains the Phase 1 column names. Transfers use a member PATCH with
+`isLead: true, stepDown: true`. Invitations require a per-attempt idempotencyKey;
+retries reuse it, new sends use a new key. Expiry is exactly 336 elapsed hours,
+not local calendar arithmetic. Send intent commits as not_sent before email delivery; failures remain visible
+with rotated retry links. No recoverable raw token is persisted. Native score schemaVersion
+is 1; MusicXML preserves raw input and rejects entity declarations. Default score
+limit is 20 MiB (`SCORE_MAX_BYTES`). Reorder accepts the complete ID list and
+assigns padded integer keys under the ensemble lock. `replace` replaces saved
+configuration only and requires expectedRevision; other settings update individual
+JSONB paths. Null removes a path. Versioned bodies use private immutable caching.
+
+Socket namespaces support authenticated `ensemble:join` with acknowledgement;
+`library:changed` events contain only changed IDs/revisions/version hashes. Each
+recipient is rechecked against the session and membership before emission;
+permission changes remove room subscriptions immediately (clients rejoin).
+
+Phase 1 leftovers: host derives IP from the socket by default; trusted proxy
+headers are interpreted only from a configured trusted peer. Production rejects
+partial proxy configuration. Session listing/revocation uses opaque IDs. Signup
+returns the same acknowledgement for new/existing accounts. Per-IP sign-in/signup
+limit is 60/minute plus hashed per-email 10/minute. Auth errors and checked-out
+Postgres clients use the redacting logger; socket close cleans up listeners;
+shutdown awaits background tasks for up to 5 seconds. Readiness accepts newer
+migration suffixes and has a bounded query. CSP restricts connect/form to self.
+Inline scripts remain required by Start hydration and inline styles by the legacy
+renderer; replace script unsafe-inline with a per-response Start-compatible nonce
+when the shell/renderer move in Phase 2b (do not blindly remove hydration scripts).
+Browser smoke supports CHROMIUM_PATH or Playwright default and writes os.tmpdir()
+evidence via `npm run test:browser`.
+
+Rules-test invariants ported: anonymous/nonmember denial, membership-dependent
+library access, guessed cross-ensemble piece/body/member/invitation denial,
+no platform-role escalation through capability input, session-authenticated socket
+isolation, revoked membership loses access. The legacy broad member edit success
+is deliberately replaced by default edit denial. Firebase-only reusable code,
+leader-code/session-write semantics are superseded by invitations and the future
+Phase 3 playback protocol; rules-test remains unchanged.
+
+Phase 2a open questions: ensemble deletion is intentionally absent. Account
+closure preserves ensemble-owned original/job rows. The invitation accept page
+and auth/client routing belong to Phase 2b; the server supplies a trusted-origin
+callbackURL preserving `/invite/:token` through verification. A process crash after intent commit leaves a visible not_sent invitation;
+retry rotates the hash and link. Automatic retry cannot reconstruct the raw token
+by design. A crash after provider acceptance may leave an ambiguous not_sent
+status; explicit retry safely rotates the link. No real mail or infrastructure changes were made.
+
+Additional implementation choices: the 0002 migration and snapshot were generated
+before any persistent database applied them; only disposable fixture databases
+were migrated here. User-scoped advisory transaction locks serialize account
+closure with new ensemble creation/invitation acceptance, before sorted ensemble
+locks. Native JSON uses deterministic key ordering for hashing and body delivery.
+Invitation send attempts retain all request keys (maximum five), and Resend receives
+a per-attempt idempotency key. Existing recipients' stored language is the default
+when the inviter supplies none. List responses include the caller's membershipId
+so ordinary members can leave without member-list privileges. Reordering and new
+piece keys use serialized numeric ordering; no client-provided sort keys are accepted.
+
+Verification: `npm run typecheck`, `npm test` (4 unit cases), `npm run build`,
+`npm run test:integration` (13 passing scenarios with real sessions/Postgres),
+`npm run check:secrets` (positive control and clean browser-artifact scan), and
+`npm run db:generate` (no schema drift). Production tests use real forwarded headers
+and separate local socket source addresses, with spoofed private headers overwritten.
+Integration coverage includes simultaneous granular edits, concurrent lead demotions,
+full verification callback retention, exact native/XML body hashes, delivery failure,
+re-invitation, older retry keys, and member removal stopping live events. Tests use
+an injected clock across DST and midnight under a non-UTC process zone. No new
+interactive browser smoke run in Phase 2a; the browser script is portable and the
+Phase 1 musical behavior checks remain intact. Parent review/verification and the
+Phase 2b client migration remain separate work.

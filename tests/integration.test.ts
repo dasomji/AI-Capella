@@ -87,8 +87,8 @@ test('origin, redirect, duplicate signup, cleanup, rate limits and database outa
  const sessions = await (await fetch(`${base}/api/auth/list-sessions`,{headers:{cookie}})).json(); assert.equal(sessions.length,2);
  const live = await accepted(other); const disconnected = new Promise<void>(resolve => live.once('disconnect', () => resolve()));
  const current = await (await fetch(`${base}/api/auth/get-session`,{headers:{cookie}})).json();
- const target = sessions.find((s: {token: string}) => s.token !== current.session.token);
- assert.equal((await post('revoke-session',{token:target.token},cookie)).status,200); await disconnected;
+ const target = sessions.find((s: {id: string}) => s.id !== current.session.id);
+ assert.equal((await post('revoke-session',{id:target.id},cookie)).status,200); await disconnected;
  await pool.query(`insert into "user" (name,email,created_at) values ('old','old@example.test',now()-interval '8 days'), ('new','new@example.test',now())`);
  const { cleanupUnverifiedAccounts } = await import('../server/cleanup.server'); assert.equal(await cleanupUnverifiedAccounts(),1);
  assert.equal((await pool.query(`select id from "user" where email='new@example.test'`)).rowCount,1);
@@ -118,7 +118,7 @@ test('production configuration, secure cookies and module instance guard', async
  const { parseEnv } = await import('../server/env.server');
  const good = { ...process.env, NODE_ENV: 'production', BETTER_AUTH_SECRET: 'generated-fixture-secret-0123456789abcdef', BETTER_AUTH_URL: 'https://lightscore.test', TRUSTED_ORIGINS: 'https://lightscore.test/path/', MAIL_TRANSPORT: 'resend', RESEND_API_KEY: 'stub-never-send' };
  assert.deepEqual(parseEnv(good).TRUSTED_ORIGINS, ['https://lightscore.test']);
- for (const bad of [{BETTER_AUTH_URL:'http://lightscore.test'}, {MAIL_TRANSPORT:'capture'}, {BETTER_AUTH_SECRET:'replace-with-at-least-32-random-characters'}, {NODE_ENV:'staging'}, {NODE_ENV:'test',BETTER_AUTH_URL:'https://lightscore.test'}]) assert.throws(() => parseEnv({...good,...bad}));
+ for (const bad of [{AUTH_IP_HEADERS:'x-forwarded-for',AUTH_TRUSTED_PROXIES:''},{AUTH_IP_HEADERS:'',AUTH_TRUSTED_PROXIES:'127.0.0.1'},{BETTER_AUTH_URL:'http://lightscore.test'}, {MAIL_TRANSPORT:'capture'}, {BETTER_AUTH_SECRET:'replace-with-at-least-32-random-characters'}, {NODE_ENV:'staging'}, {NODE_ENV:'test',BETTER_AUTH_URL:'https://lightscore.test'}]) assert.throws(() => parseEnv({...good,...bad}));
  const script = `const {auth}=await import('./server/auth.server.ts'); const c=await auth.$context; const a=c.authCookies.sessionToken.attributes; if(!a.secure||!a.httpOnly||a.sameSite!=='lax')throw Error('Cookie flags'); const x=await import('./server/auth.server.ts?second'); if(x.auth!==auth)throw Error('Duplicate auth'); const d=await import('./server/db/index.server.ts'); const e=await import('./server/db/index.server.ts?second'); if(d.pool!==e.pool)throw Error('Duplicate pool'); const {createServer}=await import('vite'); const vite=await createServer({configFile:false,server:{middlewareMode:true},optimizeDeps:{noDiscovery:true,include:[]}}); try { const sa=await vite.ssrLoadModule('/server/auth.server.ts'); const sd=await vite.ssrLoadModule('/server/db/index.server.ts'); if(sa.auth!==auth || sd.pool!==d.pool) throw Error('Duplicate Vite/native instance'); } finally { await vite.close(); } await d.pool.end();`;
  const result = spawnSync(process.execPath,['--import','tsx','--input-type=module','-e',script],{env:good,encoding:'utf8'});
  assert.equal(result.status,0,result.stderr);
@@ -147,4 +147,17 @@ test('tenant foreign keys, version identity, normalized invitations and deletion
  assert.equal((await pool.query('select user_id from stored_objects where id=$1',[object])).rows[0].user_id,null);
  assert.equal((await pool.query('select user_id from transcription_jobs where id=$1',[job])).rows[0].user_id,null);
  assert.equal((await pool.query('select created_by from score_versions where id=$1',[version])).rows[0].created_by,null);
+});
+
+test('production proxy headers give distinct rate buckets and readiness accepts migration suffixes', async()=>{
+ const script=`const {server,io}=await import('./server/start.ts'); const {pool}=await import('./server/db/index.server.ts'); try { for(const ip of ['198.51.100.10','198.51.100.20']) {const r=await fetch('http://127.0.0.1:23008/api/auth/sign-in/email',{method:'POST',headers:{origin:'https://lightscore.test','content-type':'application/json','x-forwarded-for':ip,'x-lightscore-socket-ip':'spoof'},body:JSON.stringify({email:ip+'@example.test',password:'invalid-password-42'})});if(r.status!==401)throw Error('Unexpected status '+r.status);} const rows=await pool.query("select key from rate_limit where key like '%198.51.100.%'");if(!rows.rows.some(r=>r.key.includes('198.51.100.10'))||!rows.rows.some(r=>r.key.includes('198.51.100.20')))throw Error('Shared client bucket');}finally {await new Promise(r=>io.close(r));server.close();await pool.end();}`;
+ const result=spawnSync(process.execPath,['--import','tsx','--input-type=module','-e',script],{encoding:'utf8',timeout:15000,env:{...process.env,NODE_ENV:'production',PORT:'23008',BETTER_AUTH_URL:'https://lightscore.test',TRUSTED_ORIGINS:'https://lightscore.test',MAIL_TRANSPORT:'resend',RESEND_API_KEY:'stub-never-send',AUTH_IP_HEADERS:'x-forwarded-for',AUTH_TRUSTED_PROXIES:'127.0.0.1/32'}});
+ assert.equal(result.status,0,result.stderr);
+ await pool.query("insert into drizzle.__drizzle_migrations(hash,created_at) values('future-suffix',9999999999999)");
+ try{assert.equal((await fetch(base+'/readyz')).status,200);}finally{await pool.query("delete from drizzle.__drizzle_migrations where hash='future-suffix'");}
+});
+
+test('production without proxy configuration derives separate clients from real sockets',()=>{
+ const script=`const {server,io}=await import('./server/start.ts');const {pool}=await import('./server/db/index.server.ts');const {request}=await import('node:http');try{for(const ip of ['127.0.0.2','127.0.0.3'])await new Promise((resolve,reject)=>{const r=request({hostname:'127.0.0.1',port:23008,path:'/api/auth/sign-in/email',method:'POST',localAddress:ip,headers:{origin:'https://lightscore.test','content-type':'application/json','x-forwarded-for':'203.0.113.1','x-lightscore-socket-ip':'spoof'}},res=>{res.resume();res.on('end',()=>res.statusCode===401?resolve():reject(Error('Status '+res.statusCode)));});r.on('error',reject);r.end(JSON.stringify({email:ip+'@example.test',password:'invalid-password-42'}));});const rows=await pool.query("select key from rate_limit where key like '127.0.0.%'");for(const ip of ['127.0.0.2','127.0.0.3'])if(!rows.rows.some(r=>r.key.startsWith(ip+'|')))throw Error('Missing socket bucket');}finally{await new Promise(r=>io.close(r));server.close();await pool.end();}`;
+ const result=spawnSync(process.execPath,['--import','tsx','--input-type=module','-e',script],{encoding:'utf8',timeout:15000,env:{...process.env,NODE_ENV:'production',PORT:'23008',BETTER_AUTH_URL:'https://lightscore.test',TRUSTED_ORIGINS:'https://lightscore.test',MAIL_TRANSPORT:'resend',RESEND_API_KEY:'stub-never-send',AUTH_IP_HEADERS:'',AUTH_TRUSTED_PROXIES:''}});assert.equal(result.status,0,result.stderr);
 });

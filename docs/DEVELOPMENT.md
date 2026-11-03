@@ -86,13 +86,12 @@ later phase; this application does not call it.
 
 
 Auth rate limits use PostgreSQL (`rate_limit`), enabled in all modes: sign-in and
-signup allow 10/minute; password reset and verification resend allow 5/minute.
-The general limit is 100/minute. Without trusted client-IP configuration, buckets
-are deliberately shared by path. For Railway, configure `AUTH_IP_HEADERS` (for
+signup allow 60/minute plus 10/minute per normalized email; password reset and verification resend allow 5/minute.
+The general limit is 100/minute. Without proxy configuration, the Node socket supplies the client IP. For Railway, configure `AUTH_IP_HEADERS` (for
 example `x-forwarded-for`) and `AUTH_TRUSTED_PROXIES` (comma-separated actual proxy
 IPs/CIDRs). Only trust headers overwritten by the ingress; restrict direct origin
-access to that ingress. Better Auth interprets the chain, but cannot authenticate
-the sender of the header. Do not trust broad client-accessible private ranges.
+access to that ingress. The Node host checks the immediate socket peer against those proxies before
+interpreting the header chain; missing client headers from a trusted peer fail closed. Do not trust broad client-accessible private ranges.
 Tests keep origin checks and rate limiting enabled. NODE_ENV=test requires a
 loopback Better Auth URL; unset/unknown environments do not relax production
 safety. There is one process-global pool and auth instance across native/Vite
@@ -111,7 +110,6 @@ Built-mode browser smoke: create a disposable database on loopback port 25435,
 migrate it, then start with NODE_ENV=test, PORT=3005, BETTER_AUTH_URL and
 TRUSTED_ORIGINS=http://localhost:3005, and MAIL_TRANSPORT=smtp. Run
 `PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs node scripts/browser-smoke.mjs`.
-The script uses installed `/usr/bin/google-chrome`, writes evidence under
-`/tmp/aicap-p1-fix/`, and exercises the production CSP (also enforced in test mode).
+Run `npm run test:browser` (optionally `CHROMIUM_PATH=/path/to/chromium`). The script uses Playwright Chromium by default, writes evidence in a temporary directory, and exercises the production CSP (also enforced in test mode).
 Remove the fixture container with `docker rm -fv` when finished. Never point this
 script at an existing account or real mail service.
