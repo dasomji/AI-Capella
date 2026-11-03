@@ -47,12 +47,8 @@ function makeAuth() {
     emailAndPassword: {
       enabled: true,
       onExistingUserSignUp: async ({ user }) => {
-        if (!user.emailVerified)
-          await auth.api.requestPasswordReset({
-            body: { email: user.email, redirectTo: `${env.BETTER_AUTH_URL}/` },
-          });
-        else await auth.api.requestPasswordReset({
-          body: {email:user.email,redirectTo:`${env.BETTER_AUTH_URL}/`},
+        await auth.api.requestPasswordReset({
+          body: { email: user.email, redirectTo: `${env.BETTER_AUTH_URL}/` },
         });
       },
       requireEmailVerification: true,

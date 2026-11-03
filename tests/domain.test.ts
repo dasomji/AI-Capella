@@ -1722,3 +1722,12 @@ test('JSON lone surrogates in values and keys fail before jsonb insertion',async
   const r=await request(`ensembles/${e.id}`,'PATCH',{name:'Valid',['\ud800']:true},owner.cookie);
   assert.equal(r.status,422);
 });
+
+test('early upload authorization failures retain readable JSON bodies',async()=>{
+  const owner=await account(), stranger=await account(), e=await ok('ensembles','POST',{name:'Early JSON'},owner.cookie);
+  for(const [cookie,status] of [['',401],[stranger.cookie,403]] as const) {
+    const r=await request(`ensembles/${e.id}/pieces`,'POST',{title:'Denied',content:{format:'musicxml',body:xml}},cookie);
+    assert.equal(r.status,status);assert.notEqual(r.headers.get('connection'),'close');
+    assert.ok((await r.json()).code);
+  }
+});

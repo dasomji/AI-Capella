@@ -62,9 +62,9 @@ api.use("/api/*", async (c, next) => {
   let release: (() => void) | undefined;
   if(c.req.method === "POST" && scorePath) {
     const session = await currentSession(c.req.raw.headers);
-    if(!session?.user.emailVerified) {c.header("Connection","close");return c.json({code:"SESSION_EXPIRED"},401);}
+    if(!session?.user.emailVerified) {return c.json({code:"SESSION_EXPIRED"},401);}
     try {await authorize(pool,session.user.id,scorePath[1],"editPieces");}
-    catch {c.header("Connection","close");return c.json({code:"forbidden"},403);}
+    catch {return c.json({code:"forbidden"},403);}
     const slot = uploadSlots.take(session.user.id);
     if ("code" in slot) {
       c.header("Retry-After", "2");
