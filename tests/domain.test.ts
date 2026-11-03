@@ -1704,3 +1704,11 @@ test('upload admission precedes body reads and releases slots after success and 
   assert.equal((await request(`ensembles/${e.id}/pieces`,'POST',{title:'Invalid',content:{format:'musicxml',body:'invalid'}},owner.cookie)).status,400);
   assert.equal((await request(`ensembles/${e.id}/pieces`,'POST',{title:'Released',content:{format:'musicxml',body:xml}},owner.cookie)).status,201);
 });
+
+test('malformed percent-encoded score title returns validation error',async()=>{
+  const owner=await account(), e=await ok('ensembles','POST',{name:'Title validation'},owner.cookie);
+  for(const title of ['%','%ED%A0%80']) {
+    const r=await fetch(base+`/api/ensembles/${e.id}/pieces`,{method:'POST',headers:{origin:base,cookie:owner.cookie,'content-type':'text/xml','x-score-title':title},body:xml});
+    assert.equal(r.status,422);assert.equal((await r.json()).code,'invalid_text');
+  }
+});

@@ -51,6 +51,10 @@ function canonicalJSON(value: unknown, depth = 0): string {
     );
   return JSON.stringify(value);
 }
+function scoreTitle(raw: string) {
+  try { return decodeURIComponent(raw); }
+  catch { throw new DomainError("invalid_text", 422); }
+}
 async function readBody(req: { json: () => Promise<unknown> }) {
   const value = await req.json();
   const stack: [unknown, number][] = [[value, 0]];
@@ -944,7 +948,7 @@ domain.get(
 domain.post("/ensembles/:ensemble/pieces", async (c) => {
   const e = c.req.param("ensemble"), u = c.get("user");
   await authorize(pool, u.id, e, "editPieces");
-  const meta = createPieceInput.omit({content:true}).parse({title: decodeURIComponent(c.req.header("x-score-title") ?? ""), idempotencyKey:c.req.header("idempotency-key")});
+  const meta = createPieceInput.omit({content:true}).parse({title: scoreTitle(c.req.header("x-score-title") ?? ""), idempotencyKey:c.req.header("idempotency-key")});
   if(meta.title.includes("\0")) throw new DomainError("invalid_text",422);
   const input = {...meta, content: await upload(c.req)};
   const data = await content(input.content);
