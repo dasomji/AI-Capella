@@ -1794,3 +1794,11 @@ test('connected account sockets acquire newly created ensemble rooms and lose re
    assert.equal(serverSocket.rooms.has('ensemble:'+e.id),false);
  }finally{socket.disconnect();}
 });
+
+test('raw native score JSON rejects escaped surrogates before jsonb',async()=>{
+ const owner=await account(), e=await ok('ensembles','POST',{name:'Native Unicode'},owner.cookie);
+ for(const body of [{title:'\ud800'},{['\udfff']:true}]) {
+   const r=await request(`ensembles/${e.id}/pieces`,'POST',{title:'Native',content:{format:'score',body}},owner.cookie);
+   assert.equal(r.status,422);assert.equal((await r.json()).code,'invalid_text');
+ }
+});

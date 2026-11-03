@@ -6,8 +6,8 @@ const { timingFromScore } = await tsImport('../src/rehearsal/timeline.ts', impor
 const { contentInput } = await tsImport('../src/api/domain.ts', import.meta.url);
 function canonical(value, depth=0) {
   if(depth>64) throw Error('nesting_limit');
-  if(typeof value==='string' && value.includes('\0')) throw Error('invalid_text');
-  if(value && typeof value==='object' && Object.keys(value).some(k=>k.includes('\0'))) throw Error('invalid_text');
+  if(typeof value==='string' && (value.includes('\0') || !value.isWellFormed())) throw Error('invalid_text');
+  if(value && typeof value==='object' && Object.keys(value).some(k=>k.includes('\0') || !k.isWellFormed())) throw Error('invalid_text');
   if(Array.isArray(value)) return '['+value.map(v=>canonical(v,depth+1)).join(',')+']';
   if(value && typeof value==='object') return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k],depth+1)).join(',')+'}';
   return JSON.stringify(value);
