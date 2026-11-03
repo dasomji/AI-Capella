@@ -204,3 +204,17 @@ it('accepts pause without a selected piece and repeated pause preserves the revi
  expect(paused.status).toBe('paused');
  expect(run(paused,{type:'pause'},1000)).toBe(paused);
 });
+it('clears elapsed pre-roll on setting changes without pulling natural end earlier',()=>{
+ const pre=run({...s,countIn:{bars:1},startingTones:{enabled:true}},{type:'play'});
+ const changed=run(pre,{type:'setMetronome',enabled:true},5000);
+ expect(changed).toMatchObject({countInUntil:null,startingTonesUntil:null,status:'playing',anchor:{beat:2}});
+ expect(changed.endsAt).toBe(pre.endsAt);
+ const tempo=run(pre,{type:'setTempo',pieceId:'piece',versionNo:1,bpm:60},3000);
+ expect(tempo.countInUntil).toBe(5400);expect(tempo.startingTonesUntil).toBeNull();
+ expect(positionAt(tempo,6400,t)).toBe(1);
+});
+it('prefers precise sound tempo over both the displayed tempo and beat-zero metronome',()=>{
+ const timing=timingFromScore({tempo:90,totalBeats:16,measures:[],marks:[{kind:'tempo',beat:0,tempoBpm:90.4,metronome:{unit:'quarter',dots:0,perMinute:'120'}}]} as any);
+ expect(timing.baseBpm).toBe(90.4);expect(timing.tempos[0]).toEqual({beat:0,bpm:90.4});
+ expect(secondsAt(4,timing)).toBeCloseTo(240/90.4);
+});

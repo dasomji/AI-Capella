@@ -129,3 +129,26 @@ it('looks up precomputed timing without using the worker',async()=>{
  expect((await c.emit('rehearsal:command',command('selectPiece',{command:{type:'selectPiece',pieceId:'p',versionNo:1}}))).status).toBe('accepted');
  expect(mocks.validate).not.toHaveBeenCalled();
 });
+it('shares the user command budget across sockets and refills at five per second',async()=>{
+ const app=setup(),a=app.socket('a','same'),b=app.socket('b','same');
+ await a.emit('rehearsal:join',{ensembleId:ensemble});await b.emit('rehearsal:join',{ensembleId:ensemble});
+ for(let i=0;i<20;i++)expect((await (i%2?a:b).emit('rehearsal:command',command())).status).toBe('accepted');
+ expect((await b.emit('rehearsal:command',command())).code).toBe('rate_limited');
+ app.setNow(1200);expect((await a.emit('rehearsal:command',command())).status).toBe('accepted');
+});
+it('lazily backfills legacy timing once through the bounded worker',async()=>{
+ const normal=mocks.query.getMockImplementation()!;
+ mocks.query.mockImplementation(async(sql,args)=>{
+  if(sql.startsWith('select content_hash'))return {rows:[{content_hash:'legacy',format:'score',timing:null}]};
+  if(sql.startsWith('select native_score'))return {rows:[{native_score:'{}'}]};
+  if(sql.startsWith('update score_versions'))return {rowCount:1,rows:[]};
+  return normal(sql,args);
+ });
+ mocks.validate.mockReset();mocks.validate.mockResolvedValue({timing});
+ const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ const selection={type:'selectPiece',pieceId:'p',versionNo:1};
+ await c.emit('rehearsal:command',command('selectPiece',{command:selection}));
+ await c.emit('rehearsal:command',command('selectPiece',{command:selection}));
+ expect(mocks.validate).toHaveBeenCalledTimes(1);
+ expect(mocks.query.mock.calls.find(([sql])=>sql.startsWith('update score_versions'))?.[1]).toEqual([ensemble,'p',1,JSON.stringify(timing)]);
+});

@@ -41,7 +41,7 @@ export function apply(s: State, e: Envelope, ctx: {
     let loop = { ...s.loop }, metronome = s.metronome, bars = s.countIn.bars, enabled = s.startingTones.enabled;
     const reset = ['play', 'pause', 'stop', 'seek', 'selectPiece', 'setLoop'].includes(c.type);
     if(reset && status==='countingIn') status='playing';
-    let countInUntil = reset ? null : s.countInUntil, startingTonesUntil = reset ? null : s.startingTonesUntil;
+    let countInUntil = reset || (s.countInUntil ?? 0) <= at ? null : s.countInUntil, startingTonesUntil = reset || (s.startingTonesUntil ?? 0) <= at ? null : s.startingTonesUntil;
     if (c.type === 'selectPiece') {
         pieceId = c.pieceId;
         versionNo = c.versionNo;
