@@ -1619,6 +1619,10 @@ test('raw large score validation does not block health and rejects unauthorized 
 test('verification links require knowledge of the account password and mail has a recipient budget', {timeout:30000},async()=>{
   const victim=await register();
   assert.equal((await fetch(victim.link,{redirect:'manual'})).status,302);
+  const trailing=new URL(victim.link);trailing.pathname += '/';
+  assert.equal((await fetch(trailing,{redirect:'manual'})).status,302);
+  const encoded=new URL(victim.link);encoded.pathname=encoded.pathname.replace('verify-email','%76erify-email');
+  assert.equal((await fetch(encoded,{redirect:'manual'})).status,302);
   assert.equal((await request('auth/verify-email-password','POST',{token:new URL(victim.link).searchParams.get('token'),password:'victim-does-not-know-attacker-password'})).status,401);
   assert.equal((await request('auth/sign-in/email','POST',victim)).status,403);
   const before=captureMail.messages.filter(m=>m.to===victim.email).length;

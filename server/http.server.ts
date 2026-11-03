@@ -98,7 +98,7 @@ api.use("/app", async (c, next) => {
   await next();
 });
 api.on(["GET", "POST"], "/api/auth/*", async (c) => {
-  const path = c.req.path;
+  const path = decodeURIComponent(c.req.path).replace(/\/+$/, "");
   if (!c.req.header("x-lightscore-socket-ip"))
     return c.json({ code: "client_ip_unavailable" }, 503);
   if (path.endsWith("/list-sessions") || path.endsWith("/revoke-session")) {
