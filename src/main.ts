@@ -1,3 +1,5 @@
+import { PlayerSession } from './rehearsal/player-session';
+import type { RehearsalState } from './rehearsal/contract';
 import { io as accountSocket } from "socket.io-client";
 import { api } from './domain-client';
 import { createEnsembleSheet, membersSheet, leaveEnsemble } from './ensemble-ui';
@@ -428,6 +430,22 @@ const MODE_STORAGE_KEY = 'ai-capella-mode-v2';
 // just reloads -- there's no in-place teardown of an active Firestore subscription.
 let sessionMode: 'solo' | 'ensemble' = 'solo';
 let leavingAccount = false;
+let playerSession: PlayerSession | null = null;
+let sharedState: RehearsalState | null = null;
+let sharedReady = false;
+function leavePlaybackSession() { playerSession?.dispose(); playerSession=null; sharedState=null; sharedReady=false; }
+function sharedReadiness(ready:boolean) {
+ sharedReady=ready;
+ app.classList.toggle('sync-connecting',syncEnabled() && !ready);
+ document.querySelectorAll<HTMLButtonElement>('.transport button, [data-action=play], [data-action=stop]').forEach(b=>{b.disabled=syncEnabled() && !ready;});
+ modeBadge.title=syncEnabled() && !ready ? (lang==='de'?'verbinde…':'connecting…') : '';
+}
+function sharedNotice(code:string) {
+ if(code==='session_expired'){leavePlaybackSession();location.replace('/?state=expired');return;}
+ if(code==='forbidden'){leavePlaybackSession();void checkMembership();return;}
+ toast('✎ '+(lang==='de'?'Probe: ':'Rehearsal: ')+code);
+}
+async function receiveSharedState(state:RehearsalState) {sharedState=state;}
 function syncEnabled(): boolean {
   return serverLibraryEnabled && sessionMode === 'ensemble';
 }
@@ -518,7 +536,8 @@ async function requestModeSwitch(mode: 'solo' | 'ensemble') {
     confirmLabel: t('switchAction'),
   });
   if (!ok) return;
-  stopPlayback();
+  leavePlaybackSession();
+  audioEngine?.stop();
   if (leaderId === myDeviceId) await sync.publishPlaybackState({ leaderId: null }).catch(() => {});
   localStorage.setItem(MODE_STORAGE_KEY, mode);
   // After an explicit switch, go straight on in the new mode (not the title screen).
@@ -532,14 +551,6 @@ modeBadge.addEventListener('click', () => {
     return;
   }
   const items: Parameters<typeof openMenu>[1] = [];
-  if (leaderId === myDeviceId) items.push({ label: t('releaseLead'), icon: 'crown', onSelect: () => pushState({ leaderId: null }, { leadershipChange: true }) });
-  else if (leaderId) items.push({ label: t('takeOverLead'), icon: 'crown', onSelect: () => void takeOverLead() });
-  else items.push({ label: t('leadRehearsal'), icon: 'crown', onSelect: () => takeLead() });
-  if (isFollower()) {
-    items.push(fullViewChosen
-      ? { label: t('singAlongView'), icon: 'users', onSelect: () => setFullView(false) }
-      : { label: t('fullView'), icon: 'mixer', onSelect: () => setFullView(true) });
-  }
   items.push({ label: t('practiseAlone'), icon: 'user', onSelect: () => void requestModeSwitch('solo') });
   openMenu(modeBadge, items, modeName('ensemble'));
 });
@@ -606,7 +617,7 @@ async function openEnsembleMenu(anchor:HTMLElement) {
  }
  openMenu(anchor,items,t('ensembleLabel'));
 }
-async function switchEnsemble(id:string) {if(id===currentEnsemble)return;stopPlayback();clearLibrary();setActiveEnsemble(id);sessionStorage.setItem(MODE_SWITCH_KEY,'solo');location.reload();}
+async function switchEnsemble(id:string) {if(id===currentEnsemble)return;leavePlaybackSession();audioEngine?.stop();clearLibrary();setActiveEnsemble(id);sessionStorage.setItem(MODE_SWITCH_KEY,'solo');location.reload();}
 
 async function renameCurrentEnsemble() {
   const id = currentEnsemble;
@@ -1713,7 +1724,7 @@ async function publishPlayingAt(originBeat: number, extra: Partial<PlaybackState
 }
 
 function isFollower(): boolean {
-  return syncEnabled() && leaderId != null && leaderId !== myDeviceId;
+  return false;
 }
 
 // Development builds only: lets automated tests show this device as following someone else's lead
@@ -3892,19 +3903,9 @@ async function runBootstrap() {
       },
       currentEnsemble,
     );
-    if (syncEnabled()) {
-      sync.startPeriodicCalibration();
-      sync.subscribePlaybackState(
-        (state) => {
-          if (!state) {
-            if (arrivingAt?.mode === 'ensemble') endArrival();
-            return;
-          }
-          lastReceivedPlaybackState = state;
-          void applyPlaybackState(state);
-        },
-        (err) => toast(t('syncFailed', { msg: errorText(err) }), 'error'),
-      );
+    if (syncEnabled() && !playerSession) {
+      sharedReadiness(false);
+      playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice);
     }
   } catch (err) {
     libraryState = 'offline';
@@ -4111,6 +4112,8 @@ async function openAccountArea(anchor: HTMLElement) {
     if(leavingAccount)return;
     sessionStorage.removeItem("lightscore-invite");
     leavingAccount = true;
+    leavePlaybackSession();
+    audioEngine?.stop();
     accountEvents.disconnect();
     try {
     const r = await fetch("/api/auth/sign-out", {
@@ -4165,7 +4168,9 @@ async function openAccountArea(anchor: HTMLElement) {
       if(leavingAccount)return;
       inlineError.textContent="";
       leavingAccount=true;
-      accountEvents.disconnect();
+      leavePlaybackSession();
+    audioEngine?.stop();
+    accountEvents.disconnect();
       try {
         await api("/account", "DELETE", {
           deleteEnsembleIds: plan.deleteEnsembles.map((e: any) => e.id),
@@ -4224,6 +4229,7 @@ async function checkMembership(){if(checkingMembership || leavingAccount)return;
 setInterval(()=>void checkMembership(),60000);
 window.addEventListener('membership:refresh',()=>void checkMembership());
 
+window.addEventListener('pagehide',leavePlaybackSession);
 window.addEventListener('domain:error', (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED' && !leavingAccount){stopPlayback();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
 
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void checkMembership();});
