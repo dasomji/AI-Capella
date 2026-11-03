@@ -357,6 +357,11 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
       if (clock.now().getTime() - new Date(old.last_sent_at).getTime() < 60000)
         throw new DomainError("send_cooldown", 429);
     }
+    const recipient = (
+      await db.query('select language from "user" where email=$1', [
+        input.email,
+      ])
+    ).rows[0];
     const raw = randomBytes(32).toString("base64url"),
       expiry = new Date(clock.now().getTime() + 14 * 86400000);
     const i = (
@@ -371,7 +376,7 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
           cap.manageMembers,
           cap.editPieces,
           cap.transcribe,
-          input.language ?? "en",
+          input.language ?? recipient?.language ?? "en",
           JSON.stringify([
             ...(old ? requestKeys(old) : []),
             input.idempotencyKey,
@@ -552,9 +557,13 @@ async function content(input: z.infer<typeof contentInput>) {
       !!v &&
       typeof v === "object" &&
       Object.entries(v).some(([k, v]) => k === "note" || hasNote(v));
-    const partWithNotes = (value: unknown): boolean => !!value && typeof value==='object' && Object.entries(value).some(([key,value])=>key==='part' ? hasNote(value) : partWithNotes(value));
-    if (!root || !partWithNotes(root))
-      throw new DomainError("empty_score");
+    const partWithNotes = (value: unknown): boolean =>
+      !!value &&
+      typeof value === "object" &&
+      Object.entries(value).some(([key, value]) =>
+        key === "part" ? hasNote(value) : partWithNotes(value),
+      );
+    if (!root || !partWithNotes(root)) throw new DomainError("empty_score");
   }
   return { raw, hash: hash(raw), size: Buffer.byteLength(raw) };
 }
