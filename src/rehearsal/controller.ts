@@ -30,10 +30,11 @@ export function apply(s: State, e: Envelope, ctx: {
         return { code: 'stale' };
     if (now - e.clientSentAt > 5000 || e.clientSentAt > now + 5000)
         return { code: 'expired' };
-    if (!s.pieceId && !['selectPiece', 'stop', 'setTempo', 'setTransposition', 'setMetronome', 'setCountIn', 'setStartingTones'].includes(c.type))
+    if (!s.pieceId && !['selectPiece', 'pause', 'stop', 'setTempo', 'setTransposition', 'setMetronome', 'setCountIn', 'setStartingTones'].includes(c.type))
         return { code: 'not_found' };
     if ('pieceId' in c && c.type !== 'selectPiece' && (c.pieceId !== s.pieceId || c.versionNo !== s.versionNo)) return { code: 'stale' };
-    if (c.type === 'play' && c.fromBeat === undefined && (s.status === 'playing' || s.status === 'countingIn')) return s;
+    if (c.type === 'play' && c.fromBeat === undefined && (s.status === 'playing' || s.status === 'countingIn') && (s.loop.enabled || positionAt(s,at,t) < t.totalBeats)) return s;
+    if (c.type === 'pause' && s.status === 'paused' && s.countInUntil === null && s.startingTonesUntil === null) return s;
     let beat = positionAt(s, at, t);
     let status: State['status'] = s.status === 'countingIn' && (s.countInUntil ?? 0) <= at ? 'playing' : s.status;
     let pieceId = s.pieceId, versionNo = s.versionNo, bpm = s.bpm, transposition = s.transposition;

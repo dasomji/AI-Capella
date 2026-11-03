@@ -151,6 +151,7 @@ it('clamps seek, restarts from end and stops after downtime beyond natural end',
  const end=run(s,{type:'seek',pieceId:'piece',versionNo:1,beat:20});
  expect(end).toMatchObject({status:'stopped',anchor:{beat:16}});
  expect(run(end,{type:'play'}).anchor.beat).toBe(0);
+ expect(run(run(s,{type:'play'}),{type:'play'},20000).anchor.beat).toBe(0);
  expect(restartPaused(run(s,{type:'play'}),20000,t)).toMatchObject({status:'stopped',anchor:{beat:16}});
 });
 it('binds relative settings to selection and normalizes loop anchors',()=>{
@@ -197,4 +198,9 @@ it('schedules an idle pause, normalizes loop start and skips completed count-in'
  const pre=run({...s,countIn:{bars:1}},{type:'play'});
  expect(restartPaused(pre,1000,t)).toMatchObject({status:'paused',anchor:{beat:0},countInUntil:null});
  expect(playbackSchedule(pre,2500,t)).toMatchObject({playing:true,countIn:null,beat:.2});
+});
+it('accepts pause without a selected piece and repeated pause preserves the revision',()=>{
+ const paused=run(initialState('ensemble','user',0),{type:'pause'});
+ expect(paused.status).toBe('paused');
+ expect(run(paused,{type:'pause'},1000)).toBe(paused);
 });
