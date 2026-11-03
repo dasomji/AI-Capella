@@ -892,3 +892,84 @@ No player UI/audio integration or measured inter-device synchronization is
 claimed. Phase 3d remains as described above; no protocol review item is deferred.
 The ownership connection reserves one database-pool slot; keep enough remaining
 pool capacity for ordinary requests and command transactions.
+
+### Phase 3d — player integration (2026-11-03)
+
+Together now owns an authenticated `PlayerSession` (SocketPlaybackTransport plus
+PlaybackClock) for the active account/ensemble. Solo constructs no rehearsal
+socket and keeps the existing local transport. Mode/title/badge choices retain
+the prototype's reload/arrival behavior; the obsolete conductor menu is hidden
+because every current member controls the canonical session. Leaving the mode,
+ensemble, page or account disposes the socket/clock; membership/session expiry
+uses the existing removal/expiry flows.
+
+Piece selection sends the selected immutable version; play/pause/stop, all seek
+entry points, loop ranges/whole-piece loops, tempo, transposition, metronome,
+count-in bars and starting-tone preference send typed commands. Piece-dependent
+commands bind to the accepted pieceId/versionNo. Seek gestures retain one latest
+target, emit at most once per 150 ms and flush on pointer release. No command is
+sent while unready/offline. Only canonical state mutates shared transport UI;
+local voices, duck volume, zoom and view stay local. Stale applies the included
+state and a pencil notice; unavailable retries with the same command envelope at
+100/200/400 ms, rate_limited drops with a notice. Temporarily unavailable joins
+also retry with bounded backoff. New copy uses the existing bilingual dictionary.
+
+Canonical application fetches the exact version body and uses `lateJoin`,
+`positionAt` and `playbackSchedule`. A separate AudioEngine scheduling entry
+point is necessary because the preserved Solo scheduler assumes constant BPM.
+It reuses existing note/voice factories, mixer, output and fade cancellation;
+notes and clicks integrate the shared tempo map, including loop wraps. Old voices
+remain until effectiveAt, independently of the musical anchor. Future pause,
+stop, seek and tempo/key replacements cancel at the mapped AudioContext instant.
+Late states start from the current musical offset; expired pre-roll is skipped.
+Count-in uses the measure's denominator; starting tones use score pitches within
+the canonical two-second window. Solo's scheduling path remains intact.
+
+Clock readiness gates controls until the post-connect snapshot has applied.
+Calibration starts on connection, spaces volatile pings and retries an unusable
+round (a real browser run exposed join/ping contention). Existing clock triggers
+cover visible/online/reconnect and detected sleep; a usable recalibration relays
+the schedule. The existing sound banner has bilingual Together copy, resumes on
+a gesture, recalibrates and snapshots before relaying at the current position.
+Together arrival hides the repertoire until canonical selection is loaded (8 s
+maximum fallback), restores only local settings for the matching piece and never
+calls Solo's comeBackToPlace to publish a stored transport position.
+
+Drift checks every two seconds compare actual audible AudioContext position with
+positionAt in integrated musical milliseconds. Loop comparisons use the shortest
+wrapped distance. Errors over 30 ms schedule a replacement 80 ms ahead, preferring
+the next beat if it is 80–300 ms away; the existing 10 ms fade bounds discontinuity.
+`?debug=sync` exposes offset, uncertainty, drift and revision plus the read-only
+`window.__lightscoreSync` diagnostic getter (also available in test builds), with
+last scheduled server/audio start times and current position. This uses the
+existing explicit numeric epoch-ms protocol exception; no calendar/DB semantics
+or server protocol were redesigned.
+
+Minimal measured browser result: two separate authenticated accounts/contexts in
+one ensemble, A selects and plays while B is already Together, both scheduled
+starts differ by **0 ms in server time**; A's pause reaches B; B's subsequent Solo
+play emits no rehearsal command. This is one scheduled-start measurement, not an
+acoustic/device-output or ten-run tolerance claim. The default browser harness
+now includes `scripts/browser-sync.mjs`; fake-output-clock unit regressions cover
+actual engine scheduling, tempo-map offsets, future cancellation, late pre-roll,
+loop refill and drift, alongside command bindings and seek coalescing.
+
+Validation (all passed): `npm run typecheck`; `npm test` (74 tests, also
+under TZ=America/New_York); `npm run build`; `npm run test:integration` (34/34);
+`npm run check:secrets` (sentinel positive control and clean browser artifacts);
+`npm run test:browser` (existing full design/capability matrix and the new
+Together scenario); `npm run db:generate` (no schema changes); `git diff --check`.
+The final focused `BROWSER_SCRIPT=scripts/browser-sync.mjs npm run test:browser`
+rerun again measured 0 ms with both AudioContexts running. Solo musical smoke via
+`BROWSER_SCRIPT=scripts/browser-smoke.mjs npm run test:browser` passed real audio,
+staff rendering, PDF export (121432 bytes), reset/sign-in and player themes,
+with zero browser errors or Firebase requests. Evidence and preserved initial
+readiness-failure logs are ignored under `.review-evidence/phase3d-*.log`; the
+measured timestamps are in `.review-evidence/browser/sync-starts.json`.
+No schema, deployment or external infrastructure changes.
+
+Phase 3e still owns removal of the retained legacy sync code/imports and the full
+multi-client timing browser suite: repeated tolerance measurements, mobile sleep,
+offline/reconnect races, autoplay suspension, pre-roll, live tempo/key/loop edits,
+account isolation and physical output uncertainty. No push, PR, external
+provisioning, paid AI or real email was performed.
