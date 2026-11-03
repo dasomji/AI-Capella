@@ -962,11 +962,13 @@ export class AudioEngine {
 
   /** True while the starting tones of the most recent play() are still sounding. */
   isPlayingStartTones(): boolean {
+    if(this.canonical){const c=this.canonical,now=this.sharedServerNow(c);return now>=c.server && (c.state.startingTonesUntil??0)>now;}
     return this.playing && !this.waiting && this.heardTime() < this.startTonesEndCtxTime;
   }
 
   /** True while a count-in (or starting tones) scheduled by the most recent play() is still sounding, before the actual music starts. */
   isCountingIn(): boolean {
+    if(this.canonical){const c=this.canonical,now=this.sharedServerNow(c);return now>=c.server && Math.max(c.state.countInUntil??0,c.state.startingTonesUntil??0)>now;}
     return this.playing && !this.waiting && this.lastCountInBeats > 0 && this.heardTime() < this.playStartCtxTime;
   }
 
