@@ -107,6 +107,8 @@ it('plans future and late starts, skips expired pre-roll and preserves effective
  expect(playbackSchedule(playing,3400,t)).toMatchObject({musicAt:3400,beat:5,startingTones:null,countIn:null});
  const pre=run({...s,countIn:{bars:1},startingTones:{enabled:true}},{type:'play'});
  expect(playbackSchedule(pre,10000,t)).toMatchObject({startingTones:null,countIn:null});
+ const setting=run(pre,{type:'setMetronome',enabled:true},1000);
+ expect(playbackSchedule(setting,1000,t)).toMatchObject({effectiveAt:1400,musicAt:4400,beat:0});
  const tempo=run(playing,{type:'setTempo',pieceId:'piece',versionNo:1,bpm:60},3000);
  expect(playbackSchedule(tempo,3000,t).beat).toBe(positionAt(playing,tempo.anchor.serverTime,t));
  expect(playbackSchedule(playing,400,t).secondsFromBeat(6)).toBe(4);
