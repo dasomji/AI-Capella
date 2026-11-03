@@ -913,7 +913,8 @@ export class AudioEngine {
       for(const pitch of pitches)this.scheduledVoices.push(playDuNote(this.ctx,this.masterGain,start,Math.max(.02,(until-Math.max(now,from))/1000),pitch+state.transposition,1/Math.sqrt(Math.max(1,pitches.length))));
     }
     if(decision.countIn){
-      const pulse=60000/state.bpm;
+      const measure=timing.measures.findLast(m=>m.startBeat<=state.anchor.beat)??timing.measures[0];
+      const pulse=60000/state.bpm*4/(measure?.beatType??4);
       for(let time=decision.countIn.until-pulse;time>=decision.countIn.from;time-=pulse)
         if(time>=now)this.scheduledVoices.push(playClick(this.ctx,this.metronomeGain,audioAt(time),time===decision.countIn.from));
     }
@@ -1077,6 +1078,12 @@ export class AudioEngine {
   }
 
   isPlaying() {
+    if(this.canonical){
+      const c=this.canonical,now=this.sharedServerNow(c);
+      if(c.state.status==='playing'||c.state.status==='countingIn')return c.state.endsAt===null || now<c.state.endsAt;
+      const previous=this.previousCanonical;
+      return !!previous && now<c.server && (previous.state.status==='playing'||previous.state.status==='countingIn');
+    }
     return this.playing;
   }
 

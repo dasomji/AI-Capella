@@ -477,6 +477,7 @@ async function receiveSharedState(state:RehearsalState) {
   const moving=lateJoin(state,playerSession!.clock.serverNow(),timingFromScore(currentScore!)).status;
   syncPlayButtons(moving==='playing'||moving==='countingIn');
   startRenderLoop();
+  if(state.status==='paused'||state.status==='stopped')setTimeout(()=>{if(sharedState===state){syncPlayButtons(false);renderNow();}},Math.max(0,(state.effectiveAt??state.anchor.serverTime)-playerSession!.clock.serverNow())+20);
   if(arriveDirectly){viewOffsetBeats=0;if(arrivingAt && (arrivingAt.songId??arrivingAt.behind)===loadedSongId)restoreSongSettings(arrivingAt);endArrival();}
   renderNow();
 }
