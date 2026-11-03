@@ -215,7 +215,7 @@ it('SVG boundary rejects 18 executable payloads and retains real Verovio notatio
         const raw=toolkit.renderToSVG(i), original=new dom.window.DOMParser().parseFromString(raw,'image/svg+xml').documentElement;
         expect(safeSvg(raw).outerHTML).toBe(dom.window.document.importNode(original,true).outerHTML);
       }
-    }finally{toolkit.destroy();}
+    }finally{(toolkit as unknown as {destroy():void}).destroy();}
   }finally{vi.unstubAllGlobals();}
 },30000);
 
