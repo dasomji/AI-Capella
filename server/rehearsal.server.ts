@@ -77,8 +77,8 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
     }
     async function persist(s: RehearsalState, checkLead = false) {
         const db = checkLead ? await pool.connect() : pool;
-        if(checkLead) await db.query('begin');
         try {
+        if(checkLead) await db.query('begin');
         const result = await db.query('insert into rehearsal_sessions(ensemble_id,revision,state) values($1,$2,$3) on conflict(ensemble_id) do update set revision=excluded.revision,state=excluded.state,updated_at=now() where rehearsal_sessions.revision < excluded.revision returning revision', [s.ensembleId,s.revision,JSON.stringify(s)]);
         if (!result.rowCount) { committed.delete(s.ensembleId); throw Error('unavailable'); }
         if(checkLead && env.PLAYBACK_LEAD_MS>0 && (s.effectiveAt ?? s.anchor.serverTime)-now()<Math.min(50,env.PLAYBACK_LEAD_MS)) throw Error('unavailable');
