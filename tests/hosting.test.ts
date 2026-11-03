@@ -21,6 +21,7 @@ for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start
   const mail = list.messages.find((m: {To: {Address: string}[]}) => m.To.some(to => to.Address === email)); assert.ok(mail);
   const message = await (await fetch(`http://127.0.0.1:28025/api/v1/message/${mail.ID}`)).json();
   const link = message.Text.match(/http[^\s]+/)[0]; await fetch(link,{redirect:'manual'});
+  assert.equal((await post('verify-email-password',{token:new URL(link).searchParams.get('token'),password})).status,200);
   const signedIn = await post('sign-in/email',{ email,password }); assert.equal(signedIn.status,200,await signedIn.clone().text());
   const cookie = signedIn.headers.getSetCookie().map(v => v.split(';')[0]).join('; ');
   assert.equal((await fetch(`${base}/app`,{headers:{cookie}})).status,200);

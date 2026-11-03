@@ -1,3 +1,7 @@
+import { jwtVerify } from "jose";
+import { verifyPassword } from "better-auth/crypto";
+import { transaction } from "./domain.server";
+import { authorize } from "./domain.server";
 import { bodyLimit } from "hono/body-limit";
 import { domain } from "./domain-http.server";
 import { createHash } from "node:crypto";
@@ -51,16 +55,23 @@ api.use("*", async (c, next) => {
   if (c.res.headers.get("Content-Type")?.includes("text/html"))
     c.header("Cache-Control", "no-store");
 });
-api.use("/api/*", async (c, next) =>
-  bodyLimit({
+api.use("/api/*", async (c, next) => {
+  const scorePath = c.req.path.match(/^\/api\/ensembles\/([^/]+)\/pieces(?:\/[^/]+\/versions)?$/);
+  if(c.req.method === "POST" && scorePath) {
+    const session = await currentSession(c.req.raw.headers);
+    if(!session?.user.emailVerified) {c.header("Connection","close");return c.json({code:"SESSION_EXPIRED"},401);}
+    try {await authorize(pool,session.user.id,scorePath[1],"editPieces");}
+    catch {c.header("Connection","close");return c.json({code:"forbidden"},403);}
+  }
+  return bodyLimit({
     maxSize:
       c.req.method === "POST" &&
       /^\/api\/ensembles\/[^/]+\/pieces(?:\/[^/]+\/versions)?$/.test(c.req.path)
-        ? env.SCORE_MAX_BYTES + 65536
+        ? env.SCORE_MAX_BYTES
         : 16384,
     onError: (c) => c.json({ code: "body_too_large" }, 413),
-  })(c, next),
-);
+  })(c, next);
+});
 api.get("/healthz", (c) => c.json({ status: "ok" }));
 api.get("/readyz", async (c) => {
   try {
@@ -113,7 +124,39 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
     for (const row of rows.rows) revoked(row.token);
     return c.json({ status: true });
   }
+  if(path.endsWith("/verify-email") && c.req.method === "GET") {
+    const target = new URL("/",env.BETTER_AUTH_URL);
+    target.searchParams.set("verify",c.req.query("token") ?? "");
+    const callback = c.req.query("callbackURL");
+    if(callback) {try {const url=new URL(callback,env.BETTER_AUTH_URL);if(url.origin===new URL(env.BETTER_AUTH_URL).origin && url.pathname.startsWith("/invite/")) target.searchParams.set("invite",url.pathname.slice(8));} catch {}}
+    return c.redirect(target.toString());
+  }
+  if(path.endsWith("/verify-email-password") && c.req.method === "POST") {
+    const body = await c.req.json();
+    try {
+      if(typeof body.token!=="string" || typeof body.password!=="string" || body.password.length>128) return c.json({code:"INVALID_INPUT"},422);
+      const {payload}=await jwtVerify(body.token,new TextEncoder().encode(env.BETTER_AUTH_SECRET),{algorithms:["HS256"]});
+      if(typeof payload.email!=="string" || payload.updateTo) return c.json({code:"INVALID_TOKEN"},400);
+      const tokens = await transaction(async db=>{
+        const user=(await db.query('select id from "user" where email=$1 for update',[payload.email])).rows[0];
+        if(!user) throw Error("invalid");
+        const key="verify-password:"+user.id+":"+c.req.header("x-lightscore-socket-ip");
+        const failure=(await db.query('select count,last_request from rate_limit where key=$1',[key])).rows[0];
+        if(failure && failure.count>=5 && Number(failure.last_request)>Date.now()-900000) return null;
+        const credential=(await db.query("select password from account where user_id=$1 and provider_id='credential'",[user.id])).rows[0];
+        if(!credential || !(await verifyPassword({hash:credential.password,password:body.password}))) {
+          await db.query(`insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request<$2-900000 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request<$2-900000 then $2 else rate_limit.last_request end`,[key,Date.now()]);return null;
+        }
+        await db.query('update "user" set email_verified=true where id=$1',[user.id]);
+        return (await db.query('delete from session where user_id=$1 returning token',[user.id])).rows;
+      });
+      if(!tokens) return c.json({code:"INVALID_PASSWORD"},401);
+      for(const row of tokens) revoked(row.token);
+      return c.json({status:true});
+    } catch {return c.json({code:"INVALID_TOKEN"},400);}
+  }
   let emailFailureKey: string | undefined;
+  let globalFailureKey: string | undefined;
   if (c.req.method === "POST" && /\/(sign-in|sign-up)\/email$/.test(path)) {
     const body = await c.req.raw.clone().json();
     const email =
@@ -125,6 +168,9 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
     const now = Date.now();
     if (path.endsWith("/sign-in/email")) {
       emailFailureKey = emailKey + ":" + group;
+      globalFailureKey = emailKey;
+      const globalFailures = (await pool.query("select count,last_request from rate_limit where key=$1",[emailKey])).rows[0];
+      if(globalFailures && Number(globalFailures.last_request)>now-60000) await new Promise(resolve=>setTimeout(resolve,Math.min(1000,Math.max(0,globalFailures.count-10)*10)));
       const failures = (
         await pool.query(
           "select count,last_request from rate_limit where key=$1",
@@ -138,7 +184,7 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
       )
         return c.json({ code: "TOO_MANY_ATTEMPTS" }, 429);
     }
-    for (const [key, max] of [[emailKey, 100]] as const) {
+    for (const [key, max] of (path.endsWith("/sign-up/email") ? [[emailKey, 100] as const] : [])) {
       const result = await pool.query(
         `insert into rate_limit(key,count,last_request) values ($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request < $2-60000 then 1 else rate_limit.count+1 end, last_request=case when rate_limit.last_request < $2-60000 then $2 else rate_limit.last_request end returning count`,
         [key, now],
@@ -152,9 +198,9 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
     () => auth.handler(c.req.raw),
   );
   if (emailFailureKey && response.status === 401)
-    await pool.query(
+    for(const key of [emailFailureKey, globalFailureKey!]) await pool.query(
       `insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request < $2-60000 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request < $2-60000 then $2 else rate_limit.last_request end`,
-      [emailFailureKey, Date.now()],
+      [key, Date.now()],
     );
   if (response.ok && path.endsWith("/sign-up/email"))
     return c.json({ status: true });

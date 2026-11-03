@@ -6,6 +6,7 @@ export function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">(
     "signin",
   );
+  const [verification, setVerification] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [invite, setInvite] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -37,6 +38,7 @@ export function AuthPage() {
       sessionStorage.setItem("lightscore-invite", invitation);
       if (params.get("mode") === "signup") setMode("signup");
     }
+    if(params.has("verify")){setToken(params.get("verify"));setVerification(true);setMode("reset");history.replaceState(null,"","/");}
     if (params.has("token")) {
       setToken(params.get("token"));
       setMode("reset");
@@ -56,7 +58,8 @@ export function AuthPage() {
     const data = new FormData(event.currentTarget);
     const email = String(data.get("email") ?? "");
     const password = String(data.get("password") ?? "");
-    const endpoint = {
+    if(verification && password !== String(data.get("confirm"))){setStatus("error");setBusy(false);return;}
+    const endpoint = verification ? "verify-email-password" : {
       signin: "sign-in/email",
       signup: "sign-up/email",
       forgot: "request-password-reset",
@@ -64,7 +67,7 @@ export function AuthPage() {
     }[mode];
     const body =
       mode === "reset"
-        ? { newPassword: password, token }
+        ? (verification ? {password,token} : { newPassword: password, token })
         : mode === "forgot"
           ? { email, redirectTo: `${location.origin}/` }
           : {
@@ -100,7 +103,8 @@ export function AuthPage() {
       else if (mode === "reset") {
         history.replaceState(null, "", "/");
         setMode("signin");
-        setStatus("done");
+        setVerification(false);
+        setStatus(verification ? "verified" : "done");
       } else { setStatus("check"); setResendAt(Date.now() + 60000); }
     } catch {
       setStatus("error");
@@ -124,7 +128,7 @@ export function AuthPage() {
   const checking = status === "check";
   const result = ["verified", "invalid", "done"].includes(status);
   return <AccountStage language={language} onLanguage={setLanguage}>
-    <h2>{checking ? m.checkTitle : result ? m.resultTitle : m[mode]}</h2>
+    <h2>{checking ? m.checkTitle : result ? m.resultTitle : verification ? (language === "de" ? "Passwort bestätigen" : "Confirm password") : m[mode]}</h2>
     {checking || result ? <>
       <p role="status">{m[status as keyof typeof m]}</p>
       {checking && <p className="account-email">{email}</p>}
@@ -136,9 +140,10 @@ export function AuthPage() {
       <form onSubmit={submit}>
         {mode === "signup" && <label>{m.name}<input name="name" autoComplete="name" required /></label>}
         {mode !== "reset" && <label>{m.email}<input type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required /></label>}
-        {mode !== "forgot" && <label>{m.password}<span className="password-line"><input aria-label={m.password} name="password" type={showPassword ? "text" : "password"} minLength={8} maxLength={128} autoComplete={mode === "signin" ? "current-password" : "new-password"} required /><button className="password-toggle" type="button" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? m.hide : m.show}</button></span></label>}
+        {mode !== "forgot" && <label>{m.password}<span className="password-line"><input aria-label={m.password} name="password" type={showPassword ? "text" : "password"} minLength={8} maxLength={128} autoComplete={mode === "signin" || verification ? "current-password" : "new-password"} required /><button className="password-toggle" type="button" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? m.hide : m.show}</button></span></label>}
+        {verification && <><p>{language === "de" ? "Bestätige dein selbst gewähltes Kontopasswort. Kennst du es nicht, fordere einen Link zum Zurücksetzen an." : "Confirm the account password you chose. If you do not know it, request a password reset link."}</p><label>{language === "de" ? "Passwort wiederholen" : "Repeat password"}<input name="confirm" type="password" autoComplete="current-password" required /></label></>}
         <p role="status" className={status && !['signedout', 'expired'].includes(status) ? 'account-error' : ''}>{m[status as keyof typeof m] ?? ""}</p>
-        <button className="btn primary" type="submit" disabled={busy}>{m[mode]}</button>
+        <button className="btn primary" type="submit" disabled={busy}>{verification ? (language === "de" ? "E-Mail bestätigen" : "Verify email") : m[mode]}</button>
       </form>
       {status === "unverified" && <nav className="account-links"><button type="button" disabled={busy || clock < resendAt} onClick={() => void resend()}>{m.resend}</button></nav>}
       <nav className="account-links">

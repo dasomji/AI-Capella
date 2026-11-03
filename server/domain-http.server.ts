@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { createHash, randomBytes } from "node:crypto";
-import { XMLParser, XMLValidator } from "fast-xml-parser";
+import { validateScore } from "./score-validation.server";
 import { verifyPassword } from "better-auth/crypto";
 import { currentSession } from "./auth.server";
 import { pool } from "./db/index.server";
@@ -23,7 +23,6 @@ import {
   versionInput,
   settingsInput,
   reorderInput,
-  contentInput,
 } from "../src/api/domain";
 import { mailer } from "./mail.server";
 import { env } from "./env.server";
@@ -58,8 +57,9 @@ async function readBody(req: { json: () => Promise<unknown> }) {
   while (stack.length) {
     const [v, depth] = stack.pop()!;
     if (depth > 64) throw new DomainError("nesting_limit", 422);
+    if (typeof v === "string" && v.includes("\0")) throw new DomainError("invalid_text", 422);
     if (v && typeof v === "object")
-      for (const child of Object.values(v)) stack.push([child, depth + 1]);
+      for (const [key,child] of Object.entries(v)) {if(key.includes("\0")) throw new DomainError("invalid_text",422);stack.push([child, depth + 1]);}
   }
   return value;
 }
@@ -165,6 +165,7 @@ const caps = (m: Record<string, unknown>) => ({
   editPieces: !!(m.is_lead || m.edit_music_pieces),
   transcribe: !!(m.is_lead || m.ai_transcription),
 });
+const grantedCaps = (m: Record<string, unknown>) => ({manageMembers: !!m.manage_members, editPieces: !!m.edit_music_pieces, transcribe: !!m.ai_transcription});
 const memberView = (m: Record<string, unknown>) => ({
   id: m.id,
   userId: m.user_id,
@@ -299,8 +300,7 @@ domain.patch("/ensembles/:ensemble", async (c) => {
   const input = ensembleInput.pick({ name: true }).parse(await readBody(c.req)),
     e = c.req.param("ensemble"),
     u = c.get("user");
-  return c.json(
-    await transaction(async (db) => {
+  const response = await transaction(async (db) => {
       await lockEnsemble(db, e);
       await authorize(db, u.id, e, "lead");
       const result = await db.query(
@@ -315,8 +315,9 @@ domain.patch("/ensembles/:ensemble", async (c) => {
         isLead: m.is_lead,
         capabilities: caps(m),
       };
-    }),
-  );
+    });
+  membershipChanged(e);
+  return c.json(response);
 });
 domain.get("/ensembles/:ensemble/members", async (c) => {
   const e = c.req.param("ensemble");
@@ -367,6 +368,7 @@ domain.patch("/ensembles/:ensemble/members/:member", async (c) => {
       await db.query("update memberships set is_lead=false where id=$1", [
         actor.id,
       ]);
+      await audit(db,e,u.id,"membership.permissions",actor.id,{old:{isLead:actor.is_lead,capabilities:grantedCaps(actor)},new:{isLead:false,capabilities:grantedCaps(actor)}});
     }
     if (
       (m.is_lead && input.isLead === false) ||
@@ -374,7 +376,7 @@ domain.patch("/ensembles/:ensemble/members/:member", async (c) => {
     )
       await revokeIssued(db, e, m.user_id);
     if (input.stepDown) await revokeIssued(db, e, u.id);
-    await audit(db, e, u.id, "membership.permissions", id);
+    await audit(db, e, u.id, "membership.permissions", id, { old: { isLead: m.is_lead, capabilities: grantedCaps(m) }, new: { isLead: result.is_lead, capabilities: grantedCaps(result) } });
     return memberView(result);
   });
   membershipChanged(e, String(result.userId));
@@ -447,6 +449,9 @@ domain.delete("/account", async (c) => {
     clock.now().getTime() - new Date(session.session.createdAt).getTime() >
       600000
   ) {
+    const failureKey = "account-password:" + u.id;
+    const failures = (await pool.query("select count,last_request from rate_limit where key=$1", [failureKey])).rows[0];
+    if (failures && failures.count >= 5 && Number(failures.last_request) > clock.now().getTime()-900000) throw new DomainError("rate_limited", 429);
     const credential = (
       await pool.query(
         "select password from account where user_id=$1 and provider_id='credential'",
@@ -461,7 +466,8 @@ domain.delete("/account", async (c) => {
         password: input.password,
       }))
     )
-      throw new DomainError("recent_auth_required", 401);
+      { await limit(pool, failureKey, 5, 900000); throw new DomainError("recent_auth_required", 401); }
+    await pool.query("delete from rate_limit where key=$1", [failureKey]);
   }
   await transaction(async (db) => {
     await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
@@ -524,6 +530,8 @@ domain.delete("/account", async (c) => {
         await db.query("delete from ensembles where id=$1", [e]);
       }
     }
+    await db.query("delete from idempotency_records where user_id=$1", [u.id]);
+    await db.query("delete from invitation_sends where inviter_id=$1 or email=$2", [u.id, u.email]);
     await db.query('delete from "user" where id=$1', [u.id]);
   });
   membershipChanged("", u.id, true);
@@ -635,7 +643,7 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
         [
           e,
           input.email,
-          u.id,
+          old && !actor.is_lead ? old.inviter_id : u.id,
           hash(raw),
           expiry,
           cap.manageMembers,
@@ -754,6 +762,7 @@ domain.post("/invitations/:token/accept", async (c) => {
       await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
         u.id,
       ]);
+      if (!(await db.query('select id from "user" where id=$1', [u.id])).rowCount) throw new DomainError("SESSION_EXPIRED", 401);
       const initial = (
         await db.query(
           "select ensemble_id from invitations where token_hash=$1",
@@ -838,36 +847,14 @@ async function metadata(db: Pick<PoolClient, "query">, e: string, id: string) {
   if (!row) throw new DomainError("not_found", 404);
   return row;
 }
-async function content(input: z.infer<typeof contentInput>) {
-  const raw =
-    input.format === "musicxml" ? input.body : canonicalJSON(input.body);
-  if (Buffer.byteLength(raw) > env.SCORE_MAX_BYTES)
-    throw new DomainError("score_too_large", 413);
-  if (input.format === "musicxml") {
-    if (/<!ENTITY/i.test(raw) || XMLValidator.validate(raw) !== true)
-      throw new DomainError("invalid_xml");
-    const parsed = new XMLParser({
-      ignoreAttributes: false,
-      processEntities: false,
-    }).parse(raw);
-    const roots = Object.keys(parsed).filter(
-      (key) => !key.startsWith("?") && key !== "!DOCTYPE",
-    );
-    if (roots.length !== 1) throw new DomainError("invalid_xml");
-    const root = parsed["score-partwise"] ?? parsed["score-timewise"];
-    const hasNote = (v: unknown): boolean =>
-      !!v &&
-      typeof v === "object" &&
-      Object.entries(v).some(([k, v]) => k === "note" || hasNote(v));
-    const partWithNotes = (value: unknown): boolean =>
-      !!value &&
-      typeof value === "object" &&
-      Object.entries(value).some(([key, value]) =>
-        key === "part" ? hasNote(value) : partWithNotes(value),
-      );
-    if (!root || !partWithNotes(root)) throw new DomainError("empty_score");
-  }
-  return { raw, hash: hash(raw), size: Buffer.byteLength(raw) };
+async function content(input: { format: "score" | "musicxml"; body: string }) {
+  if (Buffer.byteLength(input.body) > env.SCORE_MAX_BYTES) throw new DomainError("score_too_large", 413);
+  return validateScore(input.body, input.format);
+}
+async function upload(req: { header: (name: string) => string | undefined; text: () => Promise<string> }) {
+  const type = req.header("content-type")?.split(";")[0];
+  if (type !== "text/xml" && type !== "application/json") throw new DomainError("unsupported_score_type", 415);
+  return {format: type === "text/xml" ? "musicxml" as const : "score" as const, schemaVersion: 1 as const, body: await req.text()};
 }
 async function insertVersion(
   db: PoolClient,
@@ -875,7 +862,7 @@ async function insertVersion(
   p: string,
   u: string,
   n: number,
-  input: z.infer<typeof contentInput>,
+  input: { format: "score" | "musicxml"; schemaVersion: 1 },
   data: Awaited<ReturnType<typeof content>>,
 ) {
   const v = (
@@ -955,9 +942,11 @@ domain.get(
   },
 );
 domain.post("/ensembles/:ensemble/pieces", async (c) => {
-  const input = createPieceInput.parse(await readBody(c.req)),
-    e = c.req.param("ensemble"),
-    u = c.get("user");
+  const e = c.req.param("ensemble"), u = c.get("user");
+  await authorize(pool, u.id, e, "editPieces");
+  const meta = createPieceInput.omit({content:true}).parse({title: decodeURIComponent(c.req.header("x-score-title") ?? ""), idempotencyKey:c.req.header("idempotency-key")});
+  if(meta.title.includes("\0")) throw new DomainError("invalid_text",422);
+  const input = {...meta, content: await upload(c.req)};
   const data = await content(input.content);
   const result = await transaction(async (db) => {
     await lockEnsemble(db, e);
@@ -968,7 +957,7 @@ domain.post("/ensembles/:ensemble/pieces", async (c) => {
       u.id,
       "piece",
       input.idempotencyKey,
-      input,
+      {...input,content:{format:input.content.format,hash:data.hash}},
     );
     if (cached) return cached;
     const n = (
@@ -992,17 +981,17 @@ domain.post("/ensembles/:ensemble/pieces", async (c) => {
     await insertVersion(db, e, p.id, u.id, 1, input.content, data);
     await audit(db, e, u.id, "piece.create", p.id);
     const response = await metadata(db, e, p.id);
-    await remember(db, e, u.id, "piece", input.idempotencyKey, input, response);
+    await remember(db, e, u.id, "piece", input.idempotencyKey, {...input,content:{format:input.content.format,hash:data.hash}}, response);
     return response;
   });
   await libraryChanged(e, [result]);
   return c.json(result, 201);
 });
 domain.post("/ensembles/:ensemble/pieces/:piece/versions", async (c) => {
-  const input = versionInput.parse(await readBody(c.req)),
-    e = c.req.param("ensemble"),
-    p = c.req.param("piece"),
-    u = c.get("user");
+  const e = c.req.param("ensemble"), p = c.req.param("piece"), u = c.get("user");
+  await authorize(pool, u.id, e, "editPieces");
+  const meta = versionInput.omit({content:true}).parse({expectedRevision: Number(c.req.header("x-expected-revision"))});
+  const input = {...meta, content:await upload(c.req)};
   const data = await content(input.content);
   const result = await transaction(async (db) => {
     await lockEnsemble(db, e);

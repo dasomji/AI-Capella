@@ -1,3 +1,4 @@
+import { allowAccountMail } from "./auth-guards.server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "./env.server";
@@ -50,22 +51,9 @@ function makeAuth() {
           await auth.api.requestPasswordReset({
             body: { email: user.email, redirectTo: `${env.BETTER_AUTH_URL}/` },
           });
-        else {
-          await mailer.send({
-            to: user.email,
-            subject:
-              (await userLanguage(user.id)) === "de"
-                ? "LightScore – Konto bereits vorhanden"
-                : "LightScore – You already have an account",
-            text:
-              (await userLanguage(user.id)) === "de"
-                ? "Dein Konto existiert bereits. Du erhältst einen Link zum Zurücksetzen."
-                : "You already have an account. A password reset link will follow.",
-          });
-          await auth.api.requestPasswordReset({
-            body: { email: user.email, redirectTo: `${env.BETTER_AUTH_URL}/` },
-          });
-        }
+        else await auth.api.requestPasswordReset({
+          body: {email:user.email,redirectTo:`${env.BETTER_AUTH_URL}/`},
+        });
       },
       requireEmailVerification: true,
       revokeSessionsOnPasswordReset: true,
@@ -76,18 +64,18 @@ function makeAuth() {
           .where(eq(schema.user.id, user.id));
       },
       sendResetPassword: async ({ user, url }) =>
-        mailer.send(
+        (await allowAccountMail(user.email)) ? mailer.send(
           accountMail(user.email, url, await userLanguage(user.id), "reset"),
-        ),
+        ) : undefined,
     },
     emailVerification: {
       sendOnSignUp: true,
       sendOnSignIn: false,
       autoSignInAfterVerification: false,
       sendVerificationEmail: async ({ user, url }) =>
-        mailer.send(
+        (await allowAccountMail(user.email)) ? mailer.send(
           accountMail(user.email, url, await userLanguage(user.id), "verify"),
-        ),
+        ) : undefined,
     },
     user: {
       additionalFields: {

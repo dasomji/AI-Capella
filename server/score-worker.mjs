@@ -1,0 +1,37 @@
+import { parentPort } from 'node:worker_threads';
+import { createHash } from 'node:crypto';
+import { XMLParser, XMLValidator } from 'fast-xml-parser';
+import { tsImport } from 'tsx/esm/api';
+const { contentInput } = await tsImport('../src/api/domain.ts', import.meta.url);
+function canonical(value, depth=0) {
+  if(depth>64) throw Error('nesting_limit');
+  if(typeof value==='string' && value.includes('\0')) throw Error('invalid_text');
+  if(value && typeof value==='object' && Object.keys(value).some(k=>k.includes('\0'))) throw Error('invalid_text');
+  if(Array.isArray(value)) return '['+value.map(v=>canonical(v,depth+1)).join(',')+']';
+  if(value && typeof value==='object') return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k],depth+1)).join(',')+'}';
+  return JSON.stringify(value);
+}
+parentPort.on('message', ({raw,format})=>{
+  try {
+    if(raw.includes('\0')) throw Error('invalid_text');
+    let body=raw;
+    if(format==='score') {
+      body=JSON.parse(raw);
+      canonical(body); // Bound nesting before schema traversal.
+      contentInput.parse({format,schemaVersion:1,body});
+      raw=canonical(body);
+
+    } else {
+      if(/<!ENTITY/i.test(raw) || XMLValidator.validate(raw)!==true) throw Error('invalid_xml');
+      const parsed=new XMLParser({ignoreAttributes:false,processEntities:false}).parse(raw);
+      const roots=Object.keys(parsed).filter(k=>!k.startsWith('?') && k!=='!DOCTYPE');
+      if(roots.length!==1 || !(parsed['score-partwise'] || parsed['score-timewise'])) throw Error('invalid_xml');
+      const visit=(v,part=false,depth=0)=>{
+        if(depth>256) throw Error('nesting_limit');
+        return !!v && typeof v==='object' && Object.entries(v).some(([k,c])=>(part && k==='note') || visit(c,part || k==='part',depth+1));
+      };
+      if(!visit(parsed)) throw Error('empty_score');
+    }
+    parentPort.postMessage({raw,hash:createHash('sha256').update(raw).digest('hex'),size:Buffer.byteLength(raw)});
+  } catch(error) { parentPort.postMessage({error:['invalid_text','invalid_xml','empty_score','nesting_limit'].includes(error.message)?error.message:'invalid_score'}); }
+});

@@ -173,7 +173,7 @@ export const settingsInput = z
         schema = savedSchema;
         break;
       case "saved":
-        schema = savedValues[v.key as keyof typeof savedValues] ?? z.never();
+        schema = Object.hasOwn(savedValues, v.key ?? "") ? savedValues[v.key as keyof typeof savedValues] : z.never();
         break;
       case "defaults":
         schema =

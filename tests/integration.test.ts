@@ -28,6 +28,7 @@ test('real HTTP accounts, mail capture, cookies, revocation and Socket.IO', { ti
  assert.equal((await post('sign-in/email', { email,password })).status,403);
  const verifyLink = mailLink().link; await fetch(verifyLink, { redirect:'manual' });
  assert.equal((await fetch(verifyLink, { redirect: 'manual' })).status, 302); // verification replay is idempotent, no session issued
+ assert.equal((await post('verify-email-password',{token:new URL(verifyLink).searchParams.get('token'),password})).status,200);
  const cookie = await signIn(email,password); const secondDevice = await signIn(email,password);
  assert.equal((await fetch(`${base}/api/me`,{ headers:{cookie} })).status,200);
  assert.equal((await fetch(`${base}/app`,{ headers:{cookie} })).status,200);
@@ -78,8 +79,7 @@ test('origin, redirect, duplicate signup, cleanup, rate limits and database outa
  const recovery = mailLink().link; const recoveryToken=new URL(recovery).pathname.split('/').at(-1)!; assert.equal((await post('reset-password',{token:recoveryToken,newPassword:password})).status,200);
  count = captureMail.messages.length;
  assert.equal((await post('sign-up/email',{email,password,name:'Other'})).status,200); await waitMail(count);
- assert.match(captureMail.messages[count].subject,/already/);
- await waitMail(count+1);
+ assert.match(captureMail.messages[count].subject,/reset/i);
  const token = new URL(mailLink().link).pathname.split('/').at(-1)!;
  await pool.query("update verification set expires_at = now() - interval '1 hour'");
  assert.equal((await post('reset-password',{token,newPassword:password})).status,400);

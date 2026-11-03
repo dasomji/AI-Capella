@@ -83,10 +83,11 @@ export async function audit(
   actor: string,
   action: string,
   target: string,
+  metadata: unknown = {},
 ) {
   await db.query(
-    "insert into audit_events(ensemble_id,actor_id,action,target_id,outcome) values ($1,$2,$3,$4,'ok')",
-    [ensemble, actor, action, target],
+    "insert into audit_events(ensemble_id,actor_id,action,target_id,outcome,metadata) values ($1,$2,$3,$4,'ok',$5)",
+    [ensemble, actor, action, target, JSON.stringify(metadata)],
   );
 }
 const listeners = new Set<

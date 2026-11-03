@@ -30,10 +30,15 @@ async function request(
   body?: unknown,
   cookie = "",
 ) {
+  const input = body as any;
+  const upload = method === "POST" && /\/pieces(?:\/[^/]+\/versions)?$/.test(path) && input?.content;
   return fetch(base + "/api/" + path, {
     method,
-    headers: { origin: base, cookie, "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: { origin: base, cookie, "Content-Type": upload && input.content.format === "musicxml" ? "text/xml" : "application/json",
+      ...(upload && input.title ? {"x-score-title":encodeURIComponent(input.title)} : {}),
+      ...(upload && input.idempotencyKey ? {"idempotency-key":input.idempotencyKey} : {}),
+      ...(upload && input.expectedRevision ? {"x-expected-revision":String(input.expectedRevision)} : {}) },
+    body: upload ? (input.content.format === "musicxml" ? input.content.body : JSON.stringify(input.content.body)) : body === undefined ? undefined : JSON.stringify(body),
   });
 }
 async function ok(path: string, method = "GET", body?: unknown, cookie = "") {
@@ -61,12 +66,12 @@ async function register(
   });
   for (
     let n = 0;
-    n < 100 && !captureMail.messages.some((m) => m.to === email);
+    n < 100 && !captureMail.messages.some((m) => m.to === email && m.text.includes("/api/auth/verify-email?"));
     n++
   )
     await delay(10);
   const link = captureMail.messages
-    .filter((m) => m.to === email)
+    .filter((m) => m.to === email && m.text.includes("/api/auth/verify-email?"))
     .at(-1)!
     .text.match(/https?:\/\/\S+/)![0];
   return { email, password, response, link };
@@ -83,7 +88,7 @@ async function signin(a: { email: string; password: string }) {
 }
 async function account() {
   const a = await register();
-  await fetch(a.link, { redirect: "manual" });
+  await ok("auth/verify-email-password", "POST", {token:new URL(a.link).searchParams.get("token"),password:a.password});
   return signin(a);
 }
 const xml =
@@ -522,7 +527,8 @@ test(
     });
     assert.deepEqual(duplicate, newUser.response);
     const verify = await fetch(newUser.link, { redirect: "manual" });
-    assert.equal(verify.headers.get("location"), preview.callbackURL);
+    assert.equal(new URL(verify.headers.get("location")!).searchParams.get("invite"),token);
+    await ok("auth/verify-email-password", "POST", {token:new URL(newUser.link).searchParams.get("token"),password:newUser.password});
     const signed = await signin(newUser);
     await ok("invitations/" + token + "/accept", "POST", {}, signed.cookie);
     assert.ok(
@@ -1103,7 +1109,8 @@ test(
         {},
         victim.cookie,
       );
-      assert.equal((await revoked.json()).code, "revoked");
+      assert.equal(revoked.status, 200);
+      assert.equal((await revoked.json()).capabilities.editPieces, true);
       // Co-leads may demote equals; deferred database guard rejects removing the remaining lead.
       await ok(
         path + "/members/" + mm.id,
@@ -1169,12 +1176,19 @@ test(
       u.cookie,
     );
     assert.equal(r.status, 401);
+    for(let n=0;n<4;n++) assert.equal((await request('account','DELETE',{deleteEnsembleIds:[e.id],password:'incorrect-account-password'},u.cookie)).status,401);
+    assert.equal((await request('account','DELETE',{deleteEnsembleIds:[e.id],password:'domain-fixture-password-42'},u.cookie)).status,429);
+    await pool.query('delete from rate_limit where key=$1',['account-password:'+u.id]);
+    await pool.query("insert into idempotency_records(ensemble_id,user_id,operation,request_key,request_hash,response) values($1,$2,'piece','closure-test','hash','{}')",[e.id,u.id]);
+    await pool.query('insert into invitation_sends(ensemble_id,email,inviter_id) values($1,$2,$3)',[e.id,u.email,u.id]);
     await ok(
       "account",
       "DELETE",
       { deleteEnsembleIds: [e.id], password: "domain-fixture-password-42" },
       u.cookie,
     );
+    assert.equal((await pool.query("select 1 from idempotency_records where user_id=$1",[u.id])).rowCount,0);
+    assert.equal((await pool.query("select 1 from invitation_sends where inviter_id=$1 or email=$2",[u.id,u.email])).rowCount,0);
     assert.equal(
       (await pool.query("select 1 from ensembles where id=$1", [e.id]))
         .rowCount,
@@ -1581,4 +1595,45 @@ test('review: upgrade preserves legacy revoked invitation send budgets',async()=
  const response=await request(path+'/invitations','POST',{...input,idempotencyKey:'after-upgrade'},u.cookie);
  assert.equal(response.status,429);
  assert.equal((await pool.query('select count(*)::int as n from invitation_sends where ensemble_id=$1',[e.id])).rows[0].n,5);
+});
+
+test('raw large score validation does not block health and rejects unauthorized or NUL input', {timeout:60000}, async()=>{
+  const owner=await account();
+  const ensemble=await ok('ensembles','POST',{name:'Worker validation'},owner.cookie);
+  const path=`ensembles/${ensemble.id}/pieces`;
+  const raw=xml.replace('<part id=', '<!--'+'x'.repeat(20*1024*1024-Buffer.byteLength(xml)-7)+'--><part id=');
+  let complete=false;
+  const upload=request(path,'POST',{title:'Large',content:{format:'musicxml',schemaVersion:1,body:raw}},owner.cookie).then(async r=>{assert.equal(r.status,201,await r.text());}).finally(()=>{complete=true;});
+  const latencies:number[]=[];
+  while(!complete) {
+    const start=performance.now();assert.equal((await fetch(base+'/healthz')).status,200);latencies.push(performance.now()-start);await delay(10);
+  }
+  await upload;
+  console.log(`20 MiB upload: max health latency ${Math.max(...latencies).toFixed(1)} ms, ${latencies.length} probes`);
+  assert.ok(Math.max(...latencies)<500,`health latency ${Math.max(...latencies)} ms`);
+  const stranger=await account();
+  assert.equal((await request(path,'POST',{title:'Denied',content:{format:'musicxml',schemaVersion:1,body:'invalid'}},stranger.cookie)).status,403);
+  assert.equal((await request(path,'POST',{title:'NUL',content:{format:'musicxml',schemaVersion:1,body:xml+'\0'}},owner.cookie)).status,422);
+});
+
+test('verification links require knowledge of the account password and mail has a recipient budget', {timeout:30000},async()=>{
+  const victim=await register();
+  assert.equal((await fetch(victim.link,{redirect:'manual'})).status,302);
+  assert.equal((await request('auth/verify-email-password','POST',{token:new URL(victim.link).searchParams.get('token'),password:'victim-does-not-know-attacker-password'})).status,401);
+  assert.equal((await request('auth/sign-in/email','POST',victim)).status,403);
+  const before=captureMail.messages.filter(m=>m.to===victim.email).length;
+  for(let n=0;n<6;n++) await request('auth/sign-up/email','POST',{email:victim.email,password:victim.password,name:'Duplicate'});
+  await delay(500);
+  assert.ok(captureMail.messages.filter(m=>m.to===victim.email).length<=3);
+  assert.equal(before,1);
+});
+
+test('distributed failed passwords do not lock out the correct password on a new IP', {timeout:90000},async()=>{
+  const singer=await account();
+  const {api}=await import('../server/http.server');
+  const attempt=(ip:string,password:string)=>api.fetch(new Request(base+'/api/auth/sign-in/email',{
+    method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':ip},body:JSON.stringify({email:singer.email,password})
+  }));
+  for(let ip=0;ip<14;ip++) for(let n=0;n<9;n++) assert.equal((await attempt(`198.51.100.${ip+1}`,'wrong-password-for-budget')).status,401);
+  assert.equal((await attempt('198.51.100.200','domain-fixture-password-42')).status,200);
 });
