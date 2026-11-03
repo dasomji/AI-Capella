@@ -172,7 +172,7 @@ it('removes executable content from score-derived SVG', async () => {
     const svg=safeSvg('<svg xmlns="http://www.w3.org/2000/svg" onload="evil()"><script>evil()</script><foreignObject/><a href="javascript:evil()"/><use href="#note"/><text>Choir</text></svg>');
     expect(svg.querySelector('script,foreignObject')).toBeNull();
     expect(svg.hasAttribute('onload')).toBe(false);
-    expect(svg.querySelector('a')?.hasAttribute('href')).toBe(false);
+    expect(svg.querySelector('a[href]')).toBeNull();
     expect(svg.querySelector('use')?.getAttribute('href')).toBe('#note');
     expect(svg.textContent).toBe('Choir');
   } finally {vi.unstubAllGlobals();}
@@ -188,3 +188,33 @@ it('bounds uploads globally and per user without queuing and releases exactly on
   expect(slots.take('d')).toEqual({code:503});
   if('release' in b)b.release();
 });
+
+it('SVG boundary rejects 18 executable payloads and retains real Verovio notation', async()=>{
+  const {JSDOM}=await import('jsdom'); const {vi}=await import('vitest');
+  const dom=new JSDOM('');vi.stubGlobal('DOMParser',dom.window.DOMParser);vi.stubGlobal('document',dom.window.document);
+  try {
+    const {safeSvg}=await import('../src/safe-svg');
+    const payloads=[
+      '<meta xmlns="http://www.w3.org/1999/xhtml" http-equiv="refresh" content="0;url=https://evil.test"/>',
+      '<style>@import "https://evil.test";</style>','<style>text {fill:red}</style>',
+      '<g style="fill:u\\72l(https://evil.test)"/>','<g fill="u\\000072 l(https://evil.test)"/>',
+      '<foreignObject><p xmlns="http://www.w3.org/1999/xhtml">bad</p></foreignObject>',
+      '<use href="https://evil.test/a.svg#x"/>','<use href="javascript:evil()"/>',
+      '<animate href="#x" attributeName="href" to="javascript:evil()"/>','<set href="#x" attributeName="href" to="https://evil.test"/>',
+      '<a href="javascript:evil()"><text>link</text></a>','<image href="data:image/svg+xml,bad"/>',
+      '<script>evil()</script>','<g onload="evil()"/>','<g xmlns="https://evil.test"/>',
+      '<g fill="url(https://evil.test)"/>','<use href="&#106;avascript:evil()"/>','<g xml:base="https://evil.test"><use href="#glyph"/></g>',
+    ];
+    for(const payload of payloads){const svg=safeSvg(`<svg xmlns="http://www.w3.org/2000/svg">${payload}</svg>`);expect(svg.outerHTML).not.toMatch(/evil|foreignObject|<style|<animate|<set|onload|xml:base/);}
+    expect(()=>safeSvg('<!DOCTYPE svg [<!ENTITY x "evil">]><svg xmlns="http://www.w3.org/2000/svg">&x;</svg>')).toThrow();
+    const [{default:create},{VerovioToolkit}]=await Promise.all([import('verovio/wasm'),import('verovio/esm')]);
+    const toolkit=new VerovioToolkit(await create());
+    try {
+      toolkit.setOptions({svgViewBox:true});toolkit.loadData(readFileSync('public/evening-rise.musicxml','utf8'));
+      for(let i=1;i<=toolkit.getPageCount();i++) {
+        const raw=toolkit.renderToSVG(i), original=new dom.window.DOMParser().parseFromString(raw,'image/svg+xml').documentElement;
+        expect(safeSvg(raw).outerHTML).toBe(dom.window.document.importNode(original,true).outerHTML);
+      }
+    }finally{toolkit.destroy();}
+  }finally{vi.unstubAllGlobals();}
+},30000);
