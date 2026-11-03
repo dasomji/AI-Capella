@@ -1,5 +1,6 @@
 import { PlayerSession } from './rehearsal/player-session';
-import type { RehearsalState } from './rehearsal/contract';
+import { preferenceCommands, SeekCoalescer } from './rehearsal/player-controls';
+import type { Command, RehearsalState } from './rehearsal/contract';
 import { io as accountSocket } from "socket.io-client";
 import { api } from './domain-client';
 import { createEnsembleSheet, membersSheet, leaveEnsemble } from './ensemble-ui';
@@ -433,7 +434,10 @@ let leavingAccount = false;
 let playerSession: PlayerSession | null = null;
 let sharedState: RehearsalState | null = null;
 let sharedReady = false;
-function leavePlaybackSession() { playerSession?.dispose(); playerSession=null; sharedState=null; sharedReady=false; }
+function sendShared(command:Command) {if(!sharedReady || !playerSession)return;void playerSession.send(command).catch(e=>sharedNotice(errorText(e)));}
+const sharedSeeks=new SeekCoalescer(sendShared);
+document.addEventListener('pointerup',()=>sharedSeeks.flush());
+function leavePlaybackSession() {sharedSeeks.cancel(); playerSession?.dispose(); playerSession=null; sharedState=null; sharedReady=false; }
 function sharedReadiness(ready:boolean) {
  sharedReady=ready;
  app.classList.toggle('sync-connecting',syncEnabled() && !ready);
@@ -1530,6 +1534,11 @@ libraryEl.addEventListener('drop', (e) => {
  */
 /** Opens a song at its start -- or, `at`, where it was left (back after a reload: see notePlace). */
 async function selectSong(song: SongEntry, at?: { beat: number; bpm: number; transpose: number }) {
+  if(syncEnabled()){
+    if(!sharedReady)return;
+    const piece=await api(`/ensembles/${currentEnsemble}/pieces/${song.id}`);
+    sendShared({type:'selectPiece',pieceId:piece.id,versionNo:piece.versionNo});return;
+  }
   // The piece already open (the repertoire was only looked at): back to it as it was. The shared
   // state wouldn't change, so going through it wouldn't bring the player back.
   if (song.id === loadedSongId && currentScore) {
@@ -1692,9 +1701,7 @@ function pushState(patch: Partial<PlaybackState>, opts?: { leadershipChange?: bo
     return;
   }
   if (syncEnabled()) {
-    void sync.publishPlaybackState({...currentStateSnapshot(),...patch}).catch((err) => {
-      toast(t('syncFailed', { msg: errorText(err) }), 'error');
-    });
+    if(sharedState) for(const command of preferenceCommands(patch,sharedState)) sendShared(command);
   } else {
     // The sync-buffer skip below only applies when there's no count-in or starting tones: those
     // need real scheduling room even with nobody else to sync with, so they keep a real future
@@ -1714,6 +1721,7 @@ function pushState(patch: Partial<PlaybackState>, opts?: { leadershipChange?: bo
  * to play before it -- see sync.computeFutureOriginServerTimeMs's doc comment.
  */
 async function publishPlayingAt(originBeat: number, extra: Partial<PlaybackState> = {}, extraLeadMs = 0) {
+  if(syncEnabled()){if(sharedState)for(const command of preferenceCommands(extra,sharedState))sendShared(command);return;}
   if (isFollower()) {
     toast(t('followingHint'));
     return;
@@ -2509,6 +2517,7 @@ function openControlsSheet(opener: HTMLElement) {
   const body = document.createElement('div');
   body.className = 'sheet-body';
   body.append(tempoBlock(), keyBlock(), metronomeBlock(), startTonesBlock());
+  if(syncEnabled()){const count=document.createElement('button');count.className='mode-btn';count.textContent=(lang==='de'?'Einzählen: ':'Count in: ')+(sharedState?.countIn.bars??0);count.onclick=()=>sendShared({type:'setCountIn',bars:sharedState?.countIn.bars?0:1});body.append(count);}
   const sections = sectionsBlock();
   if (sections) body.appendChild(sections);
   body.appendChild(gotoBlock());
@@ -2521,6 +2530,7 @@ function openControlsSheet(opener: HTMLElement) {
 // ---------------------------------------------------------------------------------------------
 
 function togglePlay() {
+  if(syncEnabled()){sendShared({type:sharedState?.status==='playing'||sharedState?.status==='countingIn'?'pause':'play'});return;}
   if (!audioEngine || !currentScore) return;
   if (audioEngine.isPlaying()) {
     // A plain Pause -- resuming from here later should NOT count in, only a genuinely fresh start
@@ -2573,6 +2583,7 @@ function startingPitches(beat: number): number[] {
 
 /** Stops playback and resets to the loop region's start, the last ruler-set start point, or the beginning. */
 function stopPlayback() {
+  if(syncEnabled()){sendShared({type:'stop'});return;}
   if (!audioEngine || !currentScore) return;
   const wasPlaying = audioEngine.isPlaying();
   const priorPausedBeat = audioEngine.getPausedBeat();
@@ -3093,6 +3104,7 @@ function panByBeats(deltaBeats: number) {
  * there from wherever it is (see applyPlaybackState).
  */
 function seekToBeat(beat: number) {
+  if(syncEnabled()){if(sharedReady && sharedState)sharedSeeks.seek(Math.max(0,Math.min(currentScore?.totalBeats??0,beat)),sharedState);return;}
   if (!audioEngine || !currentScore) return;
   const clamped = Math.max(0, Math.min(currentScore.totalBeats, beat));
   if (audioEngine.isPlaying()) {
