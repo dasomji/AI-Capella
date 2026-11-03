@@ -54,6 +54,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
                 if (!body.rows[0]) throw Error('not_found');
                 const derived = (await validateScore(row.format === 'score' ? body.rows[0].native_score : body.rows[0].musicxml, row.format, true)).timing!;
                 await pool.query('update score_versions set timing=$4 where ensemble_id=$1 and piece_id=$2 and version_no=$3 and timing is null',[e,p,v,JSON.stringify(derived)]);
+                row.timing=derived;
                 return derived;
             })();
             timings.set(row.content_hash, value);
@@ -108,7 +109,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         const {rows} = await pool.query('select ensemble_id,revision,state from rehearsal_sessions');
         for(const row of rows) {
             let s: RehearsalState;
-            try { s=stateSchema.parse(row.state); }
+            try { s=stateSchema.parse(row.state); if(s.ensembleId!==row.ensemble_id || s.revision!==row.revision) throw Error('invalid'); }
             catch {
                 // Preserve JSON shape and numeric diagnostics; redact every string (including IDs).
                 const bad=JSON.parse(JSON.stringify(row.state),(_key,value)=>typeof value==='string'?'[redacted]':value);
@@ -155,7 +156,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
                     if(ns.adapter.rooms.get(`rehearsal:${e}`)?.size) return;
                     const s=await load(e);
                     if(s.status==='playing'||s.status==='countingIn') await publish(restartPaused(s,now(),await timing(e,s.pieceId,s.versionNo)));
-                }).catch(error=>logError('rehearsal.idle',error)); },options.idleMs ?? 600000);
+                }).catch(error=>logError('rehearsal.idle',error)); },options.idleMs ?? env.PLAYBACK_IDLE_MS ?? 600000);
                 timer.unref(); idle.set(e,timer);
             }
     }
@@ -266,6 +267,6 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         });
     });
     return () => { closed = true; offMember(); offLibrary(); for(const timer of idle.values()) clearTimeout(timer);
-        void ready.finally(async()=>{ if(owner) { await owner.query('select pg_advisory_unlock(714083,1)'); owner.release(); owner=undefined; } }).catch(error=>logError('rehearsal.close',error)); for (const timer of timers.values())
+        void ready.finally(async()=>{ if(owner) { const client=owner; owner=undefined; try { await client.query('select pg_advisory_unlock(714083,1)'); } finally { client.release(); } } }).catch(error=>logError('rehearsal.close',error)); for (const timer of timers.values())
         clearTimeout(timer); };
 }

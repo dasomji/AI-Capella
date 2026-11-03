@@ -110,3 +110,22 @@ it('maps DB failures and revision conflicts to unavailable without broadcasting'
  expect((await c.emit('rehearsal:command',command())).code).toBe('unavailable');
  expect(app.broadcasts).toEqual([]);
 });
+it('backs off validation_busy during recovery by pausing at the persisted anchor',async()=>{
+ const state={...initialState(ensemble,'u',0),revision:3,pieceId:'p',versionNo:1,status:'countingIn',countInUntil:9000,anchor:{serverTime:1000,beat:5}};
+ recovery=[{ensemble_id:ensemble,revision:3,state}];
+ const normal=mocks.query.getMockImplementation()!;
+ mocks.query.mockImplementation(async(sql,args)=>{
+  if(sql.startsWith('select content_hash'))return {rows:[{content_hash:'legacy',format:'score',timing:null}]};
+  if(sql.startsWith('select native_score'))return {rows:[{native_score:'{}'}]};
+  return normal(sql,args);
+ });
+ mocks.validate.mockRejectedValue({code:'validation_busy'});
+ const app=setup(),c=app.socket('one');
+ expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).state).toMatchObject({status:'paused',revision:4,anchor:{beat:5},countInUntil:null});
+});
+it('looks up precomputed timing without using the worker',async()=>{
+ const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ mocks.validate.mockClear();
+ expect((await c.emit('rehearsal:command',command('selectPiece',{command:{type:'selectPiece',pieceId:'p',versionNo:1}}))).status).toBe('accepted');
+ expect(mocks.validate).not.toHaveBeenCalled();
+});

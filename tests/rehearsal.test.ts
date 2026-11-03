@@ -18,7 +18,7 @@ it('integrates score tempo segments and reanchors tempo continuously at effectiv
 });
 it('wraps loops in musical time and clamps natural end', () => {
     let playing = run(s, { type:'setLoop',pieceId:'piece',versionNo:1, enabled: true, startBeat: 2, endBeat: 6 });
-    playing = run(playing, { type: 'play', fromBeat: 2 });
+    playing = run(playing, { type:'play',pieceId:'piece',versionNo:1,fromBeat: 2 });
     expect(positionAt(playing, 3900, t)).toBeCloseTo(3);
     const end = run(s, { type: 'play' });
     expect(end.endsAt).toBe(14400);
@@ -67,7 +67,7 @@ it('derives tempo-map marks in quarter units from existing score model', () => {
 });
 it('counts in at the local tempo after a tempo-map change and reports elapsed natural end', () => {
     const configured = run(s, { type: 'setCountIn', bars: 1 });
-    const pre = run(configured, { type: 'play', fromBeat: 6 });
+    const pre = run(configured, { type:'play',pieceId:'piece',versionNo:1,fromBeat: 6 });
     expect(pre.countInUntil).toBe(4400);
     const playing = run(s, { type: 'play' });
     expect(lateJoin(playing, 99999, t).status).toBe('stopped');
@@ -143,7 +143,7 @@ it('rescales remaining count-in and preserves starting tones on tempo change',()
 it('makes repeated play a no-op, playing fromBeat a seek, and pause unchecked',()=>{
  const playing=run({...s,countIn:{bars:1}},{type:'play'});
  expect(run(playing,{type:'play'},1000)).toBe(playing);
- const seek=run(playing,{type:'play',fromBeat:6},1000);
+ const seek=run(playing,{type:'play',pieceId:'piece',versionNo:1,fromBeat:6},1000);
  expect(seek).toMatchObject({status:'playing',countInUntil:null,anchor:{beat:6}});
  expect(apply({...playing,revision:5},envelope({type:'pause'}),{now:0,leadTimeMs:0,pieceTiming:t,userId:'user'})).toMatchObject({status:'paused',revision:6});
 });
@@ -166,4 +166,35 @@ it('normalizes against the first tempo-map entry without rounding sound tempo',(
  const timing=timingFromScore({tempo:90.4,totalBeats:16,measures:[],marks:[{kind:'tempo',beat:0,metronome:{unit:'quarter',dots:0,perMinute:'80'}}]} as any);
  expect(timing.baseBpm).toBe(80); expect(timing.tempos[0].bpm).toBe(80);
  expect(timingFromScore({tempo:90.4,totalBeats:16,measures:[],marks:[]} as any).baseBpm).toBe(90.4);
+});
+it('retries unavailable with backoff and the same command ID, applies stale state, and gates expired sessions',async()=>{
+ vi.useFakeTimers();
+ const {SocketPlaybackTransport}=await import('../src/rehearsal/socket-transport');
+ const sent:any[]=[];let mode='unavailable',attempt=0;
+ const socket={connected:true,on:()=>{},off:()=>{},disconnect:()=>{},volatile:{emit:(event:string,...args:any[])=>{
+  const ack=args.at(-1);
+  if(event!=='rehearsal:command')return ack({state:s});
+  sent.push(args[0]);attempt++;
+  if(mode==='unavailable')return ack(attempt<3?{commandId:args[0].commandId,status:'rejected',code:'unavailable'}:{commandId:args[0].commandId,status:'accepted',revision:1});
+  if(mode==='stale')return ack({commandId:args[0].commandId,status:'rejected',code:'stale',revision:4,state:{...s,revision:4}});
+  ack({commandId:args[0].commandId,status:'rejected',code:'session_expired'});
+ }}};
+ const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000);const applied:number[]=[];
+ transport.subscribe(state=>{applied.push(state.revision);});
+ try {
+  await transport.join();const pending=transport.send({type:'pause'});
+  await vi.advanceTimersByTimeAsync(99);expect(sent).toHaveLength(1);
+  await vi.advanceTimersByTimeAsync(201);expect((await pending).status).toBe('accepted');
+  expect(sent).toHaveLength(3);expect(new Set(sent.map(s=>s.commandId)).size).toBe(1);
+  mode='stale';await transport.send({type:'stop'});expect(applied).toEqual([0,4]);
+  mode='expired';await transport.send({type:'pause'});expect(transport.ready).toBe(false);
+ }finally{transport.dispose();vi.useRealTimers();}
+});
+it('schedules an idle pause, normalizes loop start and skips completed count-in',async()=>{
+ const {playbackSchedule}=await import('../src/rehearsal/schedule');
+ const loop=run(s,{type:'setLoop',pieceId:'piece',versionNo:1,enabled:true,startBeat:2,endBeat:6});
+ expect(playbackSchedule(loop,1000,t)).toMatchObject({playing:false,beat:2});
+ const pre=run({...s,countIn:{bars:1}},{type:'play'});
+ expect(restartPaused(pre,1000,t)).toMatchObject({status:'paused',anchor:{beat:0},countInUntil:null});
+ expect(playbackSchedule(pre,2500,t)).toMatchObject({playing:true,countIn:null,beat:.2});
 });

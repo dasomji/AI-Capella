@@ -5,7 +5,7 @@ const selection = { pieceId: z.string().min(1).max(200), versionNo: n.int().posi
 const id = z.string().min(1).max(200);
 export const commandSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('selectPiece'), pieceId: id, versionNo: n.int().positive() }).strict(),
-    z.object({ type: z.literal('play'), fromBeat: beat.optional() }).strict(),
+    z.object({ type: z.literal('play'), fromBeat: beat.optional(), pieceId: id.optional(), versionNo: n.int().positive().optional() }).strict().refine(c => c.fromBeat === undefined || (c.pieceId !== undefined && c.versionNo !== undefined)),
     ...(['pause', 'stop', 'playStartingTones'] as const).map(type => z.object({ type: z.literal(type) }).strict()),
     z.object({ type: z.literal('seek'), ...selection, beat }).strict(),
     z.object({ type: z.literal('setTempo'), ...selection, bpm: n.min(1).max(1000) }).strict(),
@@ -25,7 +25,7 @@ export const stateSchema = z.object({
     startingTones: z.object({ enabled: z.boolean() }), startingTonesUntil: n.nullable(), endsAt: n.nullable(), updatedBy: id, updatedAt: n,
 }).strict();
 export const rejectionCodeSchema = z.enum(['duplicate', 'stale', 'expired', 'invalid', 'forbidden', 'not_found', 'rate_limited', 'unavailable', 'session_expired']);
-export const ackSchema = z.object({ commandId: z.string(), status: z.enum(['accepted', 'rejected']), revision: n.int().nonnegative().optional(), code: rejectionCodeSchema.optional() }).strict();
+export const ackSchema = z.object({ commandId: z.string(), status: z.enum(['accepted', 'rejected']), revision: n.int().nonnegative().optional(), code: rejectionCodeSchema.optional(), state: stateSchema.optional() }).strict();
 export const snapshotAckSchema = z.union([z.object({ state: stateSchema }).strict(), z.object({ code: rejectionCodeSchema }).strict()]);
 export const joinAckSchema = snapshotAckSchema;
 export const joinSchema = z.object({ ensembleId: z.uuid() }).strict();

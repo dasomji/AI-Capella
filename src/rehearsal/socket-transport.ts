@@ -1,4 +1,4 @@
-import { stateSchema, ackSchema, type Ack, type Command, type Envelope, type RehearsalState, type RehearsalTransport } from './contract';
+import { stateSchema, ackSchema, snapshotAckSchema, type Ack, type Command, type Envelope, type RehearsalState, type RehearsalTransport } from './contract';
 /** A small socket boundary supports real Socket.IO and deterministic client tests. */
 export interface PlaybackSocket {
   connected: boolean;
@@ -65,8 +65,8 @@ export class SocketPlaybackTransport implements RehearsalTransport {
   async join() {
     this.setReady(false); this.snapshotApplied = false;
     const epoch = this.epoch;
-    const result = await this.request('rehearsal:join', {ensembleId:this.ensembleId});
-    if (!result.state) throw new Error(result.code ?? 'invalid');
+    const result = snapshotAckSchema.parse(await this.request('rehearsal:join', {ensembleId:this.ensembleId}));
+    if (!('state' in result)) throw new Error(result.code);
     await this.apply(result.state);
     if (epoch !== this.epoch || !this.socket.connected) throw new Error('disconnected');
     this.snapshotApplied = true; this.setReady(true);
@@ -76,8 +76,8 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     if (ensembleId !== this.ensembleId) throw new Error('forbidden');
     this.setReady(false); this.snapshotApplied = false;
     const epoch = this.epoch;
-    const result = await this.request('rehearsal:snapshot',{ensembleId});
-    if (!result.state) throw new Error(result.code ?? 'invalid');
+    const result = snapshotAckSchema.parse(await this.request('rehearsal:snapshot',{ensembleId}));
+    if (!('state' in result)) throw new Error(result.code);
     await this.apply(result.state);
     if (epoch !== this.epoch || !this.socket.connected) throw new Error('disconnected');
     this.snapshotApplied = true; this.setReady(true);
@@ -85,10 +85,19 @@ export class SocketPlaybackTransport implements RehearsalTransport {
   }
   async command(envelope: Envelope): Promise<Ack> {
     if (!this.ready || !this.snapshotApplied || !this.socket.connected || envelope.ensembleId !== this.ensembleId) throw new Error('connecting');
-    const ack = ackSchema.parse(await this.request('rehearsal:command',envelope));
+    let ack: Ack | undefined;
+    const epoch=this.epoch;
+    for(let attempt=0;attempt<4;attempt++) {
+      if(epoch!==this.epoch || !this.ready) throw new Error('disconnected');
+      ack=ackSchema.parse(await this.request('rehearsal:command',envelope));
+      if(ack.code!=='unavailable' || attempt===3) break;
+      await new Promise(resolve=>setTimeout(resolve,100*2**attempt));
+    }
+    if(!ack) throw new Error('unavailable');
     if (ack.status === 'rejected') {
       this.notice(ack.code ?? 'invalid');
-      if (ack.code === 'stale') await this.snapshot();
+      if (ack.code === 'stale') { if(ack.state) await this.apply(ack.state); else await this.snapshot(); }
+      if (ack.code === 'session_expired') { this.snapshotApplied=false; this.setReady(false); }
     }
     return ack;
   }

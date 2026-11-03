@@ -570,11 +570,12 @@ loop and pre-roll preferences. Saved defaults remain an independent library API.
 
 | Commands | Requires current revision | Reason |
 | --- | --- | --- |
-| play, pause, seek | yes | Depend on selected piece, position and transport state |
+| play, seek | yes | Depend on selected piece, position and transport state |
+| pause | no | Idempotent pause at effective position |
 | setLoop, playStartingTones | yes | Depend on selected piece/range |
 | selectPiece | no | Absolute piece and version selection |
 | stop | no | Unconditional stop and rewind |
-| setTempo, setTransposition | no | Absolute transient setting |
+| setTempo, setTransposition | no | Absolute transient setting bound to pieceId/versionNo |
 | setMetronome, setCountIn, setStartingTones | no | Absolute preference |
 
 A future baseRevision is always stale. Checked commands require equality;
@@ -582,7 +583,11 @@ unchecked commands accept older revisions. Expiry is 5 seconds (also rejects
 client timestamps over 5 seconds ahead). Accepted command IDs are remembered per
 ensemble for 10 minutes, capped at 1000, in process memory; restart clears that
 window, so reconnect MUST discard pending commands. Per-socket token bucket:
-20 command burst, refill 20/second, including invalid inputs.
+20 command burst, refill 5/second, including invalid inputs. The same limit
+also applies per user; ensembles allow burst 100/refill 50 per second.
+Join/snapshot have separate socket/user (20/5) and ensemble (100/50) buckets.
+At most four requests per socket are in flight, ten sockets per user, and
+32 mutations per ensemble are queued; excess requests return rate_limited.
 
 Authenticated `/rehearsal` events (callback acknowledgements):
 - `rehearsal:join {ensembleId}` and `rehearsal:snapshot {ensembleId}` return
@@ -590,7 +595,8 @@ Authenticated `/rehearsal` events (callback acknowledgements):
 - `rehearsal:command <Envelope>` returns `{commandId,status,revision? ,code?}`.
   Accepted state commits to rehearsal_sessions before `playback:state` fanout to
   every room subscriber, including the sender. Concurrent commands share one
-  per-ensemble promise queue; snapshots, deletion and end transitions use it too.
+  per-ensemble promise queue; deletion and end transitions use it too. Snapshots
+  bypass this queue and read the last committed in-memory state.
 - `clock:ping` takes just a callback, returning `{serverTime}` from
   performance.timeOrigin + performance.now().
 
@@ -599,9 +605,11 @@ removal leaves the playback room and rejects subsequent controls. Auth revocatio
 continues to disconnect sockets immediately through the existing hook. Session
 expiry is checked locally for every control; the existing batched session poll
 remains a fallback. A command does not reload the auth session from Postgres.
-Piece/version tenant ownership is checked server-side. Score parsing and timing
-metadata extraction reuse the bounded two-worker/eight-waiter validation pool,
-with a 30-second timeout. Derived timing promises are cached by content hash
+Piece/version tenant ownership is checked server-side. Score timing is extracted
+at import/version creation and stored in score_versions.timing (JSONB). Existing
+versions lazily backfill via the bounded two-worker/eight-waiter validation pool
+with a 30-second timeout; validation_busy falls back to paused during recovery,
+and returns retryable unavailable for commands. New selectPiece is a lookup. Derived timing promises are cached by content hash
 (maximum 100). MusicXML uses the existing parser in worker-local JSDOM; the
 controller/timeline/clock modules themselves have no DOM or Node dependencies.
 
@@ -618,7 +626,10 @@ scheduler. No existing tempo-map converter was available to reuse.
 Loop wrap integrates score time within [startBeat,endBeat). Play optionally
 schedules 2 seconds of starting tones followed by configured count-in bars at the
 anchor's local tempo/time signature. Active count-in/starting-tone timestamps
-reset on every other transition; preference fields remain explicit. Standalone
+survive metronome/count-in/starting-tone preference and transposition changes.
+Tempo changes preserve pre-roll and scale remaining count-in at the effective
+instant to the new tempo. Play/pause/stop/seek/selectPiece/setLoop explicitly
+reset pre-roll timestamps; preference fields remain explicit. Standalone
 playStartingTones pauses and schedules tones without starting music. End timers
 persist a stopped state at the final beat with a new revision and broadcast;
 stop rewinds to zero. Piece deletion clears the selection and stops with a new
@@ -629,8 +640,10 @@ explicit exception to the engineering rule preferring ISO text boundaries).
 **Restart:** startup gates joins/commands on recovery. Persisted playing or
 countingIn sessions become paused at positionAt(state, recovery time), with
 revision bumped and active pre-roll/end timestamps cleared. No auto-resume.
-Nonmoving states retain their revision. A failed recovery fails closed and logs
-an error. Snapshot after reconnect is the durable truth; broadcasts are not a
+Nonmoving states retain their revision. Recovery isolates every row: missing or
+invalid timing pauses at its persisted beat with cleared pre-roll/end timestamps;
+unparseable states reset to initial state at persisted revision + 1. Logs preserve
+a redacted diagnostic JSON copy. A failed row cannot reject all healthy joins. Snapshot after reconnect is the durable truth; broadcasts are not a
 durable event log, and a crash between commit and fanout is repaired by snapshot.
 
 **Phase 3b must wire:**
@@ -792,3 +805,60 @@ screenshots are untracked under `.review-evidence/`. Earlier failing evidence is
 retained alongside the passing runs. The existing integration fixture now ages
 only the mail interval record before testing a second legitimate recovery;
 new attack tests exercise the interval without that adjustment.
+
+
+### Phase 3c — synchronized protocol review remediation (2026-11-03)
+
+Server/controller and Phase 3b seams only; player UI and audio remain unwired.
+This entry supersedes earlier Phase 3a behavior where it differs.
+
+Additional command semantics (for Phase 3d):
+
+| Case | Revision / behavior |
+| --- | --- |
+| play while playing/countingIn, no fromBeat | Accepted original state/revision; no retrigger |
+| play with fromBeat while moving | Seek without pre-roll; requires pieceId/versionNo |
+| seek, setLoop, setTempo, setTransposition | Require selected pieceId/versionNo; mismatch is stale |
+| pause | Unchecked; accepts older revision; pauses at effective position |
+| play at/after end, loop off | Restarts at beat zero |
+| seek at/beyond end | Clamps to totalBeats, status stopped |
+| restart past natural end | Stopped at totalBeats; otherwise paused, including countingIn |
+| enable loop outside [startBeat,endBeat) | Anchor snaps to startBeat |
+| seek outside enabled loop | Explicitly disables loop |
+| duplicate accepted commandId | Returns original acknowledgement, no broadcast/revision |
+| stale | Includes current revision and full state; client applies without another snapshot |
+
+Loop anchors represent the true wrapped position. Base BPM is tempos[0].bpm,
+without rounding (round only for display); the whole tempo map scales against it.
+Canonical countingIn can remain after countInUntil: consumers MUST use lateJoin
+(or playbackSchedule) to obtain current effective status and skip elapsed pre-roll.
+
+Errors: invalid = malformed input; not_found = missing/foreign piece/version;
+forbidden = membership/room denial; stale = revision/selection mismatch;
+expired = command clock window; session_expired = socket login expired;
+rate_limited = admission/queue limit; unavailable = retryable DB/worker busy,
+timeout, ownership or persistence conflict. Clients retry unavailable with bounded
+100/200/400 ms backoff using the SAME envelope/commandId, never reconnect replay.
+Join/snapshot acknowledgements have exported snapshotAckSchema/joinAckSchema.
+Session polling refreshes expiresAt when the auth session is extended.
+
+After PLAYBACK_IDLE_MS (default 600000) without room sockets, pause at the current
+position, including wrapped loops; evict the ensemble dedupe map. End timers retry
+failed commits with capped exponential backoff (250 ms to 30 s); clients also use
+lateJoin to stop locally while persistence is unavailable.
+
+Scaling: one active rehearsal owner holds a dedicated PostgreSQL session advisory
+lock (714083,1) across recovery, controls and timers; overlapping deployments fail
+rehearsal requests with unavailable. This is fail-closed ownership, not replica
+routing. Revision upserts only accept strictly newer revisions; conflict reloads
+state and returns unavailable. Replicas still require owner routing and shared
+admission/fanout. New command writes check at least min(50 ms, configured lead)
+remains after the write before committing; an exhausted lead rolls back and
+returns unavailable. Durable commit-to-fanout failures recover via snapshots.
+Timing and piece/version metadata caches are bounded to 100 entries each.
+
+Phase 3d must bind controls to the immutable selected piece/version, coalesce
+seek gestures (one latest target, avoid emitting per pointer move), respect
+rate_limited backoff, disable readiness on session_expired, handle idle pause,
+and retain the prior audio schedule through effective time. UI, audio, drift
+correction and measured multi-device timing remain the next phase.
