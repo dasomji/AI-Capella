@@ -218,3 +218,22 @@ it('SVG boundary rejects 18 executable payloads and retains real Verovio notatio
     }finally{toolkit.destroy();}
   }finally{vi.unstubAllGlobals();}
 },30000);
+
+it('library socket boundary ignores stale revisions, versions and post-delete events',async()=>{
+ const {vi}=await import('vitest');const {JSDOM}=await import('jsdom');const dom=new JSDOM('');
+ vi.stubGlobal('window',dom.window);vi.stubGlobal('Event',dom.window.Event);
+ vi.resetModules();
+ const handlers=new Map<string,(event:any)=>Promise<void>>();
+ vi.doMock('socket.io-client',()=>({io:()=>({on:(name:string,fn:any)=>handlers.set(name,fn),emit:()=>{},disconnect:()=>{}})}));
+ vi.doMock('../src/domain-client',()=>({api:async()=>[]}));
+ try {
+  const {subscribeToSongs,clearLibrary}=await import('../src/library');let songs:any[]=[];
+  const stop=subscribeToSongs(rows=>{songs=rows;},e=>{throw e;},'ensemble');await Promise.resolve();
+  const deliver=(change:any)=>handlers.get('library:changed')!({ensembleId:'ensemble',changes:[change]});
+  const m={id:'piece',pieceId:'piece',settings:{},sortKey:'0',revision:5,versionNo:2,title:'Newest',updatedAt:new Date().toISOString()};
+  await deliver(m);await deliver({...m,revision:4,title:'Stale'});await deliver({...m,revision:6,versionNo:1,title:'Old version'});
+  expect(songs[0].title).toBe('Newest');
+  await deliver({...m,revision:6,deleted:true});await deliver(m);expect(songs).toEqual([]);
+  stop();clearLibrary();
+ }finally{vi.doUnmock('socket.io-client');vi.doUnmock('../src/domain-client');vi.unstubAllGlobals();}
+});

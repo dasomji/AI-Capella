@@ -127,6 +127,11 @@ export function subscribeToSongs(
 ): () => void {
   clearLibrary();
   let closed = false;
+  const deleted = new Map<string, number>();
+  const currentEnough = (id: string, revision: number, versionNo: number) => {
+    const previous = metadata.get(id);
+    return revision > (deleted.get(id) ?? -1) && (!previous || (revision >= previous.revision && versionNo >= previous.versionNo));
+  };
   const emit = () => {
     if (!closed)
       callback(
@@ -158,13 +163,14 @@ export function subscribeToSongs(
     try {
       await Promise.all(
         event.changes.map(async (c: any) => {
-          if (c.deleted) metadata.delete(c.pieceId);
+          if (closed || !currentEnough(c.pieceId ?? c.id, c.revision, c.versionNo)) return;
+          if (c.deleted) { metadata.delete(c.pieceId); deleted.set(c.pieceId,c.revision); }
           else if (c.id && c.settings && c.sortKey !== undefined) metadata.set(c.id, c);
           else {
             const m = await api<PieceMetadata>(
               `/ensembles/${ensemble}/pieces/${c.pieceId}`,
             );
-            if (!closed) metadata.set(m.id, m);
+            if (!closed && currentEnough(m.id,m.revision,m.versionNo)) metadata.set(m.id, m);
           }
         }),
       );
