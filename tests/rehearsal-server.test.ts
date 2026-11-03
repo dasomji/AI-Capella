@@ -1,6 +1,6 @@
 import {it,expect,vi,beforeEach,afterEach} from 'vitest';
-const mocks=vi.hoisted(()=>({query:vi.fn(),authorize:vi.fn(),library:undefined as any,member:undefined as any,validate:vi.fn()}));
-vi.mock('../server/db/index.server',()=>({pool:{query:mocks.query,connect:async()=>({query:async(sql:string,args:any[])=>sql.includes('advisory')?{rows:[{locked:true}]}:['begin','commit','rollback'].includes(sql)?{}:mocks.query(sql,args),on:()=>{},release:()=>{}})}}));
+const mocks=vi.hoisted(()=>({locked:true,query:vi.fn(),authorize:vi.fn(),library:undefined as any,member:undefined as any,validate:vi.fn()}));
+vi.mock('../server/db/index.server',()=>({pool:{query:mocks.query,connect:async()=>({query:async(sql:string,args:any[])=>sql.includes('advisory')?{rows:[{locked:mocks.locked}]}:['begin','commit','rollback'].includes(sql)?{}:mocks.query(sql,args),on:()=>{},release:()=>{}})}}));
 vi.mock('../server/domain.server',()=>({authorize:mocks.authorize,onMembershipChange:(fn:any)=>{mocks.member=fn;return ()=>{};},onLibraryChange:(fn:any)=>{mocks.library=fn;return ()=>{};}}));
 vi.mock('../server/env.server',()=>({env:{PLAYBACK_LEAD_MS:400}}));
 vi.mock('../server/logger.server',()=>({logError:vi.fn()}));
@@ -11,7 +11,7 @@ const ensemble='00000000-0000-4000-8000-000000000001';
 const timing={baseBpm:120,totalBeats:100,tempos:[{beat:0,bpm:120}],measures:[]};
 let stored=new Map<string,any>(), recovery:any[]=[];
 let cleanup:(()=>void)|undefined;
-beforeEach(()=>{vi.useFakeTimers();mocks.query.mockReset();mocks.authorize.mockReset();stored=new Map();recovery=[];
+beforeEach(()=>{mocks.locked=true;vi.useFakeTimers();mocks.query.mockReset();mocks.authorize.mockReset();stored=new Map();recovery=[];
  mocks.query.mockImplementation(async(sql:string,args:any[])=>{
   if(sql==='select ensemble_id,revision,state from rehearsal_sessions')return {rows:recovery};
   if(sql.startsWith('select state'))return {rows:stored.has(args[0])?[{state:stored.get(args[0])}]:[]};
@@ -162,5 +162,17 @@ it.each([['invalid_score','invalid'],['validation_timeout','unavailable'],['vali
  mocks.validate.mockRejectedValue({code:error});
  const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
  expect((await c.emit('rehearsal:command',command('selectPiece',{command:{type:'selectPiece',pieceId:'p',versionNo:1}}))).code).toBe(expected);
+ expect(app.broadcasts).toEqual([]);
+});
+it('fails closed when another rehearsal process owns the startup lock',async()=>{
+ mocks.locked=false;const app=setup(),c=app.socket('one');
+ expect(await c.emit('rehearsal:join',{ensembleId:ensemble})).toEqual({code:'unavailable'});
+ expect(mocks.query).not.toHaveBeenCalled();expect(app.broadcasts).toEqual([]);
+});
+it('rejects a command when persistence consumes the minimum remaining lead',async()=>{
+ const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ const normal=mocks.query.getMockImplementation()!;
+ mocks.query.mockImplementation(async(sql,args)=>{const result=await normal(sql,args);if(sql.startsWith('insert into rehearsal_sessions'))app.setNow(1390);return result;});
+ expect((await c.emit('rehearsal:command',command())).code).toBe('unavailable');
  expect(app.broadcasts).toEqual([]);
 });
