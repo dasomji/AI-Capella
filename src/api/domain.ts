@@ -12,13 +12,18 @@ export const ensembleInput = z
     kind: z.enum(["choir", "band", "other"]).optional(),
   })
   .strict();
-export const memberInput = capabilities
-  .partial()
-  .extend({ isLead: z.boolean().optional(), stepDown: z.boolean().optional() })
+export const memberInput = z
+  .object({
+    manageMembers: z.boolean().optional(),
+    editPieces: z.boolean().optional(),
+    transcribe: z.boolean().optional(),
+    isLead: z.boolean().optional(),
+    stepDown: z.boolean().optional(),
+  })
   .strict();
 export const invitationInput = z
   .object({
-    email: z.email().transform((v) => v.trim().toLowerCase()),
+    email: z.string().trim().toLowerCase().pipe(z.email()),
     language: z.enum(["de", "en"]).optional(),
     capabilities: capabilities.optional(),
     idempotencyKey: z.string().min(1).max(200),
@@ -130,3 +135,32 @@ export const metadataSchema = z.object({
   settings: z.record(z.string(), z.json()),
 });
 export type PieceMetadata = z.infer<typeof metadataSchema>;
+
+export const ensembleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  kind: z.enum(["choir", "band", "other"]).nullable(),
+  isLead: z.boolean(),
+  capabilities,
+});
+export const memberSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  isLead: z.boolean(),
+  capabilities,
+  name: z.string().optional(),
+  email: z.email().optional(),
+});
+export const invitationSchema = z.object({
+  id: z.string(),
+  email: z.email(),
+  state: z.enum(["pending", "accepted", "revoked", "expired"]),
+  expiresAt: z.iso.datetime({ offset: true }),
+  deliveryState: z.enum(["sent", "not_sent"]),
+  sendCount: z.number().int(),
+  capabilities,
+});
+export const domainErrorSchema = z.object({
+  code: z.string(),
+  current: metadataSchema.optional(),
+});

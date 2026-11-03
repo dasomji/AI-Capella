@@ -62,7 +62,7 @@ api.on(['GET', 'POST'], '/api/auth/*', async c => {
   }
   const response = await withRequestLog(c.res.headers.get('x-request-id') ?? crypto.randomUUID(), () => auth.handler(c.req.raw));
   if (response.ok && path.endsWith('/sign-up/email')) return c.json({status:true});
-  if (response.ok && path.endsWith('/get-session')) { const data = await response.json(); if (data?.session) delete data.session.token; return c.json(data); }
+  if (response.ok && (path.endsWith('/get-session') || path.endsWith('/sign-in/email'))) { const data = await response.json(); if (data?.session) delete data.session.token; if(data) delete data.token; return Response.json(data, {status:response.status,headers:response.headers}); }
   if (response.status >= 500) logError('auth.http_failure', undefined, c.res.headers.get('x-request-id') ?? undefined);
   return response.status >= 500 ? c.json({ error: 'Service unavailable. Please try again.' }, 503) : response;
 });

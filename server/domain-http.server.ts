@@ -33,6 +33,20 @@ export const domain = new Hono<{
 }>();
 // Injectable application clock; tests change it in-process, never through HTTP or environment bypasses.
 export const clock = { now: () => new Date() };
+function canonicalJSON(value: unknown): string {
+  if (Array.isArray(value))
+    return "[" + value.map(canonicalJSON).join(",") + "]";
+  if (value && typeof value === "object")
+    return (
+      "{" +
+      Object.entries(value)
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(([key, value]) => JSON.stringify(key) + ":" + canonicalJSON(value))
+        .join(",") +
+      "}"
+    );
+  return JSON.stringify(value);
+}
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 const caps = (m: Record<string, unknown>) => ({
   manageMembers: !!(m.is_lead || m.manage_members),
@@ -47,6 +61,14 @@ const memberView = (m: Record<string, unknown>) => ({
   isLead: m.is_lead,
   capabilities: caps(m),
 });
+const requestKeys = (i: Record<string, any>): string[] => {
+  try {
+    const value = JSON.parse(i.request_key);
+    return Array.isArray(value) ? value : [i.request_key];
+  } catch {
+    return i.request_key ? [i.request_key] : [];
+  }
+};
 const inviteState = (i: Record<string, unknown>) =>
   i.state === "pending" && new Date(String(i.expires_at)) <= clock.now()
     ? "expired"
@@ -104,6 +126,7 @@ domain.get("/ensembles", async (c) => {
       name: e.name,
       kind: e.kind,
       isLead: e.is_lead,
+      membershipId: e.membership_id,
       capabilities: caps(e),
     })),
   );
@@ -112,6 +135,9 @@ domain.post("/ensembles", async (c) => {
   const input = ensembleInput.parse(await c.req.json()),
     u = c.get("user");
   const result = await transaction(async (db) => {
+    await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
+      u.id,
+    ]);
     const e = (
       await db.query(
         "insert into ensembles(name,kind) values($1,$2) returning *",
@@ -236,6 +262,9 @@ domain.delete("/ensembles/:ensemble/members/:member", async (c) => {
 domain.delete("/account", async (c) => {
   const u = c.get("user");
   await transaction(async (db) => {
+    await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
+      u.id,
+    ]);
     const es = await db.query(
       "select ensemble_id from memberships where user_id=$1 order by ensemble_id",
       [u.id],
@@ -251,7 +280,11 @@ domain.delete("/account", async (c) => {
   membershipChanged("", u.id);
   return c.json({ status: true });
 });
-async function sendInvite(db: PoolClient, i: Record<string, any>, raw: string) {
+async function sendInvite(
+  db: Pick<PoolClient, "query">,
+  i: Record<string, any>,
+  raw: string,
+) {
   const e = (
     await db.query("select name from ensembles where id=$1", [i.ensemble_id])
   ).rows[0];
@@ -261,6 +294,7 @@ async function sendInvite(db: PoolClient, i: Record<string, any>, raw: string) {
   const de = i.language === "de";
   try {
     await mailer.send({
+      idempotencyKey: `invitation-${i.id}-${i.send_count}`,
       to: i.email,
       subject: de ? `Einladung zu ${e.name}` : `Invitation to ${e.name}`,
       text: `${u?.name ?? "LightScore"} ${de ? "lädt dich ein zu" : "invites you to"} ${e.name}:\n${env.BETTER_AUTH_URL}/invite/${raw}`,
@@ -270,10 +304,10 @@ async function sendInvite(db: PoolClient, i: Record<string, any>, raw: string) {
     logError("invitation.delivery", error);
     i.delivery_state = "not_sent";
   }
-  await db.query("update invitations set delivery_state=$1 where id=$2", [
-    i.delivery_state,
-    i.id,
-  ]);
+  await db.query(
+    "update invitations set delivery_state=$1 where id=$2 and token_hash=$3",
+    [i.delivery_state, i.id, i.token_hash],
+  );
 }
 domain.get("/ensembles/:ensemble/invitations", async (c) => {
   const e = c.req.param("ensemble");
@@ -291,73 +325,73 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
   const input = invitationInput.parse(await c.req.json()),
     e = c.req.param("ensemble"),
     u = c.get("user");
-  return c.json(
-    await transaction(async (db) => {
-      await lockEnsemble(db, e);
-      const actor = await authorize(db, u.id, e, "manageMembers");
-      const cap = input.capabilities ?? {
-        manageMembers: false,
-        editPieces: false,
-        transcribe: false,
-      };
-      if (!actor.is_lead && Object.values(cap).some(Boolean))
-        throw new DomainError("forbidden", 403);
-      if (
-        (
-          await db.query(
-            'select m.id from memberships m join "user" u on u.id=m.user_id where ensemble_id=$1 and u.email=$2',
-            [e, input.email],
-          )
-        ).rowCount
-      )
-        throw new DomainError("already_member", 409);
-      const old = (
+  const delivery = await transaction(async (db) => {
+    await lockEnsemble(db, e);
+    const actor = await authorize(db, u.id, e, "manageMembers");
+    const cap = input.capabilities ?? {
+      manageMembers: false,
+      editPieces: false,
+      transcribe: false,
+    };
+    if (!actor.is_lead && Object.values(cap).some(Boolean))
+      throw new DomainError("forbidden", 403);
+    if (
+      (
         await db.query(
-          "select * from invitations where ensemble_id=$1 and email=$2 and state='pending' for update",
+          'select m.id from memberships m join "user" u on u.id=m.user_id where ensemble_id=$1 and u.email=$2',
           [e, input.email],
         )
-      ).rows[0];
-      if (old?.request_key === input.idempotencyKey) return inviteView(old);
-      if (old) {
-        if (old.send_count >= 5) throw new DomainError("send_limit", 429);
-        if (
-          clock.now().getTime() - new Date(old.last_sent_at).getTime() <
-          60000
-        )
-          throw new DomainError("send_cooldown", 429);
-      }
-      const raw = randomBytes(32).toString("base64url"),
-        expiry = new Date(clock.now().getTime() + 14 * 86400000);
-      const i = (
-        await db.query(
-          `insert into invitations(ensemble_id,email,inviter_id,token_hash,expires_at,manage_members,edit_music_pieces,ai_transcription,language,request_key,send_count,last_sent_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11) on conflict(ensemble_id,email) where state='pending' do update set token_hash=excluded.token_hash,expires_at=excluded.expires_at,inviter_id=excluded.inviter_id,manage_members=excluded.manage_members,edit_music_pieces=excluded.edit_music_pieces,ai_transcription=excluded.ai_transcription,language=excluded.language,request_key=excluded.request_key,send_count=invitations.send_count+1,last_sent_at=excluded.last_sent_at returning *`,
-          [
-            e,
-            input.email,
-            u.id,
-            hash(raw),
-            expiry,
-            cap.manageMembers,
-            cap.editPieces,
-            cap.transcribe,
-            input.language ?? "en",
+      ).rowCount
+    )
+      throw new DomainError("already_member", 409);
+    const old = (
+      await db.query(
+        "select * from invitations where ensemble_id=$1 and email=$2 and state='pending' for update",
+        [e, input.email],
+      )
+    ).rows[0];
+    if (old && requestKeys(old).includes(input.idempotencyKey))
+      return { invitation: old, raw: undefined as string | undefined };
+    if (old) {
+      if (old.send_count >= 5) throw new DomainError("send_limit", 429);
+      if (clock.now().getTime() - new Date(old.last_sent_at).getTime() < 60000)
+        throw new DomainError("send_cooldown", 429);
+    }
+    const raw = randomBytes(32).toString("base64url"),
+      expiry = new Date(clock.now().getTime() + 14 * 86400000);
+    const i = (
+      await db.query(
+        `insert into invitations(ensemble_id,email,inviter_id,token_hash,expires_at,manage_members,edit_music_pieces,ai_transcription,language,request_key,send_count,last_sent_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11) on conflict(ensemble_id,email) where state='pending' do update set token_hash=excluded.token_hash,expires_at=excluded.expires_at,inviter_id=excluded.inviter_id,manage_members=excluded.manage_members,edit_music_pieces=excluded.edit_music_pieces,ai_transcription=excluded.ai_transcription,language=excluded.language,request_key=excluded.request_key,delivery_state='not_sent',send_count=invitations.send_count+1,last_sent_at=excluded.last_sent_at returning *`,
+        [
+          e,
+          input.email,
+          u.id,
+          hash(raw),
+          expiry,
+          cap.manageMembers,
+          cap.editPieces,
+          cap.transcribe,
+          input.language ?? "en",
+          JSON.stringify([
+            ...(old ? requestKeys(old) : []),
             input.idempotencyKey,
-            clock.now(),
-          ],
-        )
-      ).rows[0];
-      await sendInvite(db, i, raw);
-      await audit(
-        db,
-        e,
-        u.id,
-        old ? "invitation.resend" : "invitation.create",
-        i.id,
-      );
-      return inviteView(i);
-    }),
-    201,
-  );
+          ]),
+          clock.now(),
+        ],
+      )
+    ).rows[0];
+
+    await audit(
+      db,
+      e,
+      u.id,
+      old ? "invitation.resend" : "invitation.create",
+      i.id,
+    );
+    return { invitation: i, raw };
+  });
+  if (delivery.raw) await sendInvite(pool, delivery.invitation, delivery.raw);
+  return c.json(inviteView(delivery.invitation), 201);
 });
 domain.post(
   "/ensembles/:ensemble/invitations/:invitation/resend",
@@ -368,43 +402,44 @@ domain.post(
         .parse(await c.req.json()),
       e = c.req.param("ensemble"),
       u = c.get("user");
-    return c.json(
-      await transaction(async (db) => {
-        await lockEnsemble(db, e);
-        await authorize(db, u.id, e, "manageMembers");
-        const i = (
+    const delivery = await transaction(async (db) => {
+      await lockEnsemble(db, e);
+      await authorize(db, u.id, e, "manageMembers");
+      const i = (
+        await db.query(
+          "select * from invitations where id=$1 and ensemble_id=$2 for update",
+          [c.req.param("invitation"), e],
+        )
+      ).rows[0];
+      if (!i) throw new DomainError("not_found", 404);
+      if (requestKeys(i).includes(idempotencyKey))
+        return { invitation: i, raw: undefined as string | undefined };
+      if (i.state !== "pending") throw new DomainError(i.state);
+      if (i.send_count >= 5) throw new DomainError("send_limit", 429);
+      if (clock.now().getTime() - new Date(i.last_sent_at).getTime() < 60000)
+        throw new DomainError("send_cooldown", 429);
+      const raw = randomBytes(32).toString("base64url");
+      Object.assign(
+        i,
+        (
           await db.query(
-            "select * from invitations where id=$1 and ensemble_id=$2 for update",
-            [c.req.param("invitation"), e],
+            "update invitations set token_hash=$1,expires_at=$2,request_key=$3,delivery_state='not_sent',send_count=send_count+1,last_sent_at=$4 where id=$5 returning *",
+            [
+              hash(raw),
+              new Date(clock.now().getTime() + 14 * 86400000),
+              JSON.stringify([...requestKeys(i), idempotencyKey]),
+              clock.now(),
+              i.id,
+            ],
           )
-        ).rows[0];
-        if (!i) throw new DomainError("not_found", 404);
-        if (i.request_key === idempotencyKey) return inviteView(i);
-        if (i.state !== "pending") throw new DomainError(i.state);
-        if (i.send_count >= 5) throw new DomainError("send_limit", 429);
-        if (clock.now().getTime() - new Date(i.last_sent_at).getTime() < 60000)
-          throw new DomainError("send_cooldown", 429);
-        const raw = randomBytes(32).toString("base64url");
-        Object.assign(
-          i,
-          (
-            await db.query(
-              "update invitations set token_hash=$1,expires_at=$2,request_key=$3,send_count=send_count+1,last_sent_at=$4 where id=$5 returning *",
-              [
-                hash(raw),
-                new Date(clock.now().getTime() + 14 * 86400000),
-                idempotencyKey,
-                clock.now(),
-                i.id,
-              ],
-            )
-          ).rows[0],
-        );
-        await sendInvite(db, i, raw);
-        await audit(db, e, u.id, "invitation.resend", i.id);
-        return inviteView(i);
-      }),
-    );
+        ).rows[0],
+      );
+
+      await audit(db, e, u.id, "invitation.resend", i.id);
+      return { invitation: i, raw };
+    });
+    if (delivery.raw) await sendInvite(pool, delivery.invitation, delivery.raw);
+    return c.json(inviteView(delivery.invitation));
   },
 );
 domain.delete("/ensembles/:ensemble/invitations/:invitation", async (c) => {
@@ -433,6 +468,9 @@ domain.post("/invitations/:token/accept", async (c) => {
   const u = c.get("user");
   return c.json(
     await transaction(async (db) => {
+      await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
+        u.id,
+      ]);
       const initial = (
         await db.query(
           "select ensemble_id from invitations where token_hash=$1",
@@ -495,7 +533,7 @@ async function metadata(db: Pick<PoolClient, "query">, e: string, id: string) {
 }
 async function content(input: z.infer<typeof contentInput>) {
   const raw =
-    input.format === "musicxml" ? input.body : JSON.stringify(input.body);
+    input.format === "musicxml" ? input.body : canonicalJSON(input.body);
   if (Buffer.byteLength(raw) > env.SCORE_MAX_BYTES)
     throw new DomainError("score_too_large", 413);
   if (input.format === "musicxml") {
@@ -505,12 +543,17 @@ async function content(input: z.infer<typeof contentInput>) {
       ignoreAttributes: false,
       processEntities: false,
     }).parse(raw);
+    const roots = Object.keys(parsed).filter(
+      (key) => !key.startsWith("?") && key !== "!DOCTYPE",
+    );
+    if (roots.length !== 1) throw new DomainError("invalid_xml");
     const root = parsed["score-partwise"] ?? parsed["score-timewise"];
     const hasNote = (v: unknown): boolean =>
       !!v &&
       typeof v === "object" &&
       Object.entries(v).some(([k, v]) => k === "note" || hasNote(v));
-    if (!root || !hasNote(root.part ?? root.measure))
+    const partWithNotes = (value: unknown): boolean => !!value && typeof value==='object' && Object.entries(value).some(([key,value])=>key==='part' ? hasNote(value) : partWithNotes(value));
+    if (!root || !partWithNotes(root))
       throw new DomainError("empty_score");
   }
   return { raw, hash: hash(raw), size: Buffer.byteLength(raw) };
@@ -581,7 +624,7 @@ domain.get(
     if (c.req.header("if-none-match") === `"${v.content_hash}"`)
       return c.body(null, 304);
     return c.body(
-      v.format === "musicxml" ? v.musicxml : JSON.stringify(v.native_score),
+      v.format === "musicxml" ? v.musicxml : canonicalJSON(v.native_score),
       200,
       {
         "Content-Type":
@@ -610,7 +653,7 @@ domain.post("/ensembles/:ensemble/pieces", async (c) => {
     }
     const n = (
       await db.query(
-        "select count(*)::int as n from music_pieces where ensemble_id=$1",
+        "select coalesce(max(sort_key::bigint),-1)+1 as n from music_pieces where ensemble_id=$1",
         [e],
       )
     ).rows[0].n;
@@ -756,6 +799,10 @@ domain.delete("/ensembles/:ensemble/pieces/:piece", async (c) => {
     );
     await db.query(
       "delete from score_versions where piece_id=$1 and ensemble_id=$2",
+      [p, e],
+    );
+    await db.query(
+      "update transcription_jobs set imported_piece_id=null where imported_piece_id=$1 and ensemble_id=$2",
       [p, e],
     );
     await db.query("delete from music_pieces where id=$1 and ensemble_id=$2", [
