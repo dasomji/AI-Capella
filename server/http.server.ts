@@ -63,9 +63,19 @@ api.use("/api/*", async (c, next) => {
   let release: (() => void) | undefined;
   if(c.req.method === "POST" && scorePath) {
     const session = await currentSession(c.req.raw.headers);
-    if(!session?.user.emailVerified) {return c.json({code:"SESSION_EXPIRED"},401);}
+    // Consume rejected bodies without retaining them. Leaving an HTTP/1 upload half-read
+    // lets the adapter's delayed cleanup close a socket already reused by the browser.
+    const discard = async () => {
+      const reader = c.req.raw.body?.getReader();
+      if (!reader) return;
+      const deadline = setTimeout(() => { void reader.cancel().catch(() => {}); }, 2000);
+      let size = 0;
+      try { while (true) { const chunk = await reader.read(); if (chunk.done) break; size += chunk.value.byteLength; if (size > env.SCORE_MAX_BYTES) { await reader.cancel(); break; } } }
+      finally {clearTimeout(deadline);reader.releaseLock();}
+    };
+    if(!session?.user.emailVerified) {await discard();return c.json({code:"SESSION_EXPIRED"},401);}
     try {await authorize(pool,session.user.id,scorePath[1],"editPieces");}
-    catch {return c.json({code:"forbidden"},403);}
+    catch {await discard();return c.json({code:"forbidden"},403);}
     const slot = uploadSlots.take(session.user.id);
     if ("code" in slot) {
       c.header("Retry-After", "2");

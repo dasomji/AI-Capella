@@ -73,11 +73,14 @@ test('origin, redirect, duplicate signup, cleanup, rate limits and database outa
  assert.equal((await fetch(`${base}/api/auth/sign-out`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status,403);
  for (const [endpoint, body] of [['sign-up/email',{email,password,name:'Singer',callbackURL:'https://evil.test'}],['request-password-reset',{email,redirectTo:'https://evil.test'}]]) assert.equal((await post(String(endpoint),body)).status,403);
  let count = captureMail.messages.length;
+ await pool.query("update rate_limit set last_request=$1 where key like 'account-mail:%:reset:interval'",[Date.now()-61000]);
  assert.equal((await post('sign-up/email',{email,password,name:'Singer'})).status,200); await waitMail(count);
  count = captureMail.messages.length;
+ await pool.query("update rate_limit set last_request=$1 where key like 'account-mail:%:reset:interval'",[Date.now()-61000]);
  assert.equal((await post('sign-up/email',{email,password,name:'Other'})).status,200); await waitMail(count);
  const recovery = mailLink().link; const recoveryToken=new URL(recovery).pathname.split('/').at(-1)!; assert.equal((await post('reset-password',{token:recoveryToken,newPassword:password})).status,200);
  count = captureMail.messages.length;
+ await pool.query("update rate_limit set last_request=$1 where key like 'account-mail:%:reset:interval'",[Date.now()-61000]);
  assert.equal((await post('sign-up/email',{email,password,name:'Other'})).status,200); await waitMail(count);
  assert.match(captureMail.messages[count].subject,/reset/i);
  const token = new URL(mailLink().link).pathname.split('/').at(-1)!;
