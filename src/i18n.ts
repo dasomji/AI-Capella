@@ -4,6 +4,7 @@ export type Lang = 'en' | 'de';
 const LANG_KEY = 'ai-capella-lang';
 
 const en = {
+ syncConnecting:'connecting…',syncStale:'The rehearsal has changed.',syncUnavailable:'Connection busy – retrying…',syncRateLimited:'Too many changes. Please wait a moment.',syncListen:'Tap to listen in',syncCountIn:'Count in: {bars}',
  accountPasswordInvalid:'Password incorrect. Please try again.', accountDelete:'Delete account', accountDeleteConfirm:'Permanently delete account', accountDeleteEnsembles:'These ensembles and their pieces will be deleted:', accountPassword:'Password',
  accountArea: 'Account and devices', accountSignOut: 'Sign out', accountDevice: 'Device', accountRevoke: 'Revoke session',
   publicEnsemble: 'Public',
@@ -381,6 +382,7 @@ const en = {
 };
 
 const de: Record<keyof typeof en, string> = {
+ syncConnecting:'verbinde…',syncStale:'Die Probe wurde inzwischen geändert.',syncUnavailable:'Verbindung belegt – neuer Versuch…',syncRateLimited:'Zu viele Änderungen. Bitte kurz warten.',syncListen:'Tippen, um mitzuhören',syncCountIn:'Einzählen: {bars}',
  accountPasswordInvalid:'Das Passwort stimmt nicht. Bitte versuche es erneut.', accountDelete:'Konto löschen', accountDeleteConfirm:'Konto endgültig löschen', accountDeleteEnsembles:'Diese Ensembles und ihre Stücke werden gelöscht:', accountPassword:'Passwort',
  accountArea: 'Konto und Geräte', accountSignOut: 'Abmelden', accountDevice: 'Gerät', accountRevoke: 'Sitzung widerrufen',
   publicEnsemble: 'Öffentlich',

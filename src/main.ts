@@ -444,13 +444,13 @@ function sharedReadiness(ready:boolean) {
  sharedReady=ready;
  app.classList.toggle('sync-connecting',syncEnabled() && !ready);
  document.querySelectorAll<HTMLButtonElement>('.transport button, [data-action=play], [data-action=stop]').forEach(b=>{b.disabled=syncEnabled() && !ready;});
- modeBadge.title=syncEnabled() && !ready ? (lang==='de'?'verbinde…':'connecting…') : '';
+ modeBadge.title=syncEnabled() && !ready ? t('syncConnecting') : '';
 }
 function sharedNotice(code:string) {
  if(code==='session_expired'){leavePlaybackSession();location.replace('/?state=expired');return;}
  if(code==='forbidden'){leavePlaybackSession();void checkMembership();return;}
- const messages:Record<string,[string,string]>={stale:['Die Probe wurde inzwischen geändert.','The rehearsal has changed.'],unavailable:['Verbindung belegt – neuer Versuch…','Connection busy – retrying…'],rate_limited:['Zu viele Änderungen. Bitte kurz warten.','Too many changes. Please wait a moment.'],connecting:['verbinde…','connecting…']};
- toast('✎ '+(messages[code]?.[lang==='de'?0:1]??domainError(code)));
+ const messages:Record<string,MessageKey>={stale:'syncStale',unavailable:'syncUnavailable',rate_limited:'syncRateLimited',connecting:'syncConnecting'};
+ toast('✎ '+(messages[code]?t(messages[code]):domainError(code)));
 }
 let sharedVersion:number|null=null;
 let lastScheduledStartServerMs:number|null=null;
@@ -1953,7 +1953,7 @@ function signed(n: number): string {
 
 /** Pushes the current tempo/key/loop/metronome state into every control bound to it (transport, dock, sheets, popovers). */
 function refreshBindings() {
-  document.querySelectorAll('[data-bind="count-in"]').forEach(el=>el.textContent=(lang==='de'?'Einzählen: ':'Count in: ')+(sharedState?.countIn.bars??0));
+  document.querySelectorAll('[data-bind="count-in"]').forEach(el=>el.textContent=t('syncCountIn',{bars:sharedState?.countIn.bars??0}));
   document.querySelectorAll('[data-bind="bpm"]').forEach((el) => (el.textContent = String(bpm)));
   document.querySelectorAll('[data-bind="transpose"]').forEach((el) => (el.textContent = signed(transpose)));
   const keyNow = transposedKeyName();
@@ -2573,7 +2573,7 @@ function openControlsSheet(opener: HTMLElement) {
   const body = document.createElement('div');
   body.className = 'sheet-body';
   body.append(tempoBlock(), keyBlock(), metronomeBlock(), startTonesBlock());
-  if(syncEnabled()){const count=document.createElement('button');count.className='mode-btn';count.dataset.bind='count-in';count.textContent=(lang==='de'?'Einzählen: ':'Count in: ')+(sharedState?.countIn.bars??0);count.onclick=()=>sendShared({type:'setCountIn',bars:sharedState?.countIn.bars?0:1});body.append(count);}
+  if(syncEnabled()){const count=document.createElement('button');count.className='mode-btn';count.dataset.bind='count-in';count.textContent=t('syncCountIn',{bars:sharedState?.countIn.bars??0});count.onclick=()=>sendShared({type:'setCountIn',bars:sharedState?.countIn.bars?0:1});body.append(count);}
   const sections = sectionsBlock();
   if (sections) body.appendChild(sections);
   body.appendChild(gotoBlock());
@@ -3662,7 +3662,7 @@ function updateSoundPrompt() {
     document.body.appendChild(button);
     el = button;
   }
-  el.querySelector('span')!.textContent = syncEnabled() ? (lang==='de'?'Tippen, um mitzuhören':'Tap to listen in') : t('tapForSound');
+  el.querySelector('span')!.textContent = syncEnabled() ? t('syncListen') : t('tapForSound');
   el.classList.add('show');
 }
 onAudioStateChange(updateSoundPrompt);
