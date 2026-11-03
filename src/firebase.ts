@@ -1,7 +1,9 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, signInAnonymously, onAuthStateChanged, type Auth } from 'firebase/auth';
 import { connectFirestoreEmulator, initializeFirestore, memoryLocalCache, persistentLocalCache, persistentMultipleTabManager, type Firestore } from 'firebase/firestore';
-import { firebaseConfig, isFirebaseConfigured } from './firebaseConfig';
+import { firebaseConfig } from './firebaseConfig';
+// Production fork: the prototype backend must never be initialized.
+const isFirebaseConfigured = false;
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;

@@ -1,3 +1,4 @@
+import { localPlayback } from './playback-transport';
 import { doc, getDocFromServer, onSnapshot, serverTimestamp, setDoc, Timestamp, type Unsubscribe } from 'firebase/firestore';
 import { currentUid, db } from './firebase';
 import type { LoopRegion } from './pianoRoll';
@@ -185,10 +186,7 @@ export function computeFutureOriginServerTimeMs(extraLeadMs = 0): number {
 
 /** Live-subscribes to the shared playback session; fires immediately and on every change from any device. */
 export function subscribePlaybackState(callback: (state: PlaybackState | null) => void, onError: (err: unknown) => void): Unsubscribe {
-  if (!db) {
-    onError(new Error('Firebase is not configured'));
-    return () => {};
-  }
+  if (!db) return localPlayback.subscribe(callback);
   return onSnapshot(
     doc(db, 'sessions', sessionDocId),
     (snap) => {
@@ -221,6 +219,6 @@ export function subscribePlaybackState(callback: (state: PlaybackState | null) =
 
 /** Merges the given fields into the shared playback session doc, creating it if it doesn't exist yet. */
 export async function publishPlaybackState(patch: Partial<PlaybackState>): Promise<void> {
-  if (!db) throw new Error('Firebase is not configured');
+  if (!db) return localPlayback.publish(patch);
   await setDoc(doc(db, 'sessions', sessionDocId), { ...patch, updatedAt: serverTimestamp() }, { merge: true });
 }

@@ -18,6 +18,7 @@ export function parseEnv(input: NodeJS.ProcessEnv) {
   const result = schema.safeParse(input);
   if (!result.success) throw new Error(`Invalid server configuration: ${result.error.issues.map(i => i.path.join('.')).join(', ')}`);
   const env = result.data;
+  if (env.NODE_ENV === 'production' && /replace-with|change-me/i.test(env.BETTER_AUTH_SECRET)) throw new Error('Production requires a generated authentication secret');
   if (env.NODE_ENV === 'production' && (env.MAIL_TRANSPORT !== 'resend' || !env.RESEND_API_KEY || !env.BETTER_AUTH_URL.startsWith('https://') || env.TRUSTED_ORIGINS.some(o => !o.startsWith('https://')))) throw new Error('Production requires HTTPS and Resend configuration');
   return env;
 }

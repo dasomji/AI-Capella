@@ -1,3 +1,4 @@
+import { localLibrary } from './local-library';
 // Typefaces are bundled with the app rather than loaded from Google's servers: no visitor data goes
 // to a third party (German courts have fined sites for remotely loaded Google Fonts), and they keep
 // working on weak rehearsal-room Wi-Fi.
@@ -112,9 +113,9 @@ function modeName(mode: 'solo' | 'ensemble'): string {
 }
 // The ensemble whose folder is open (ensembles.ts). Chosen on the title screen and fixed once it is
 // left: switching to another ensemble reloads, like switching modes.
-let currentEnsemble: string = activeEnsemble() || PUBLIC_ID;
+let currentEnsemble: string = isFirebaseConfigured ? activeEnsemble() || PUBLIC_ID : PUBLIC_ID;
 function inPublicFolder(): boolean {
-  return currentEnsemble === PUBLIC_ID;
+  return isFirebaseConfigured && currentEnsemble === PUBLIC_ID;
 }
 /** The ensemble a new song is added to: the open one. */
 function importEnsemble(): string {
@@ -684,6 +685,7 @@ enterCodeBtn.addEventListener('click', () => {
 
 /** The repertoire's heading: the open ensemble's name, a menu to switch. */
 function renderLibraryHead() {
+  if (!isFirebaseConfigured) { libTitleEl.textContent = lang === 'de' ? 'Lokal üben' : 'Local practice'; importBtn.hidden = false; return; }
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'ens-switch';
@@ -1443,7 +1445,7 @@ function renderSongList() {
   coverCanvases.clear();
   songGridEl.replaceChildren(...items);
   const count = countLabel(songs.length, 'arrangementsOne', 'arrangementsMany');
-  libCountEl.textContent = inPublicFolder() ? t('publicCount', { count }) : libraryState === 'ready' ? t('sharedWithChoir', { count }) : t('onThisDevice', { count });
+  libCountEl.textContent = !isFirebaseConfigured ? t('onThisDevice', { count }) : inPublicFolder() ? t('publicCount', { count }) : libraryState === 'ready' ? t('sharedWithChoir', { count }) : t('onThisDevice', { count });
   renderLibraryBanner();
 }
 
@@ -1570,11 +1572,7 @@ function titleFromFileName(name: string): string {
 }
 
 async function importFiles(files: FileList | File[]) {
-  if (!isFirebaseConfigured) {
-    toast(t('notConfigured'), 'error');
-    return;
-  }
-  if (inPublicFolder()) return; // look and listen only
+  if (isFirebaseConfigured && inPublicFolder()) return; // look and listen only
   // In the order of their names, numbers counted as numbers ("2." before "10."): a show's
   // numbered pieces arrive in the repertoire in running order.
   const list = Array.from(files)
@@ -4034,7 +4032,9 @@ staffCanvas.addEventListener('pointercancel', endStaffDrag);
  */
 async function runBootstrap() {
   if (!isFirebaseConfigured) {
-    importBtn.hidden = true;
+    importBtn.hidden = false;
+    libraryState = 'ready';
+    localLibrary.subscribe(songs => { importedSongs = songs.map(s => ({ ...s, imported: true })); renderSongList(); });
     renderSongList();
     return;
   }
@@ -4326,11 +4326,4 @@ void loadScriptFont().then(() => renderNow());
 window.addEventListener('online', renderSongList);
 window.addEventListener('offline', renderSongList);
 
-// Offline support: the service worker keeps the app itself (code, fonts, icons, the sample song)
-// on the device; the songs come from Firestore's own offline copy (see firebase.ts). Production
-// only -- in development it would serve stale modules.
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => {});
-  });
-}
+// Private authenticated shell: offline caching policy arrives in Phase 5.

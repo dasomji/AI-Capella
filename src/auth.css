@@ -1,0 +1,9 @@
+:root { color: var(--paper, #2e2219); background: var(--ink-1, #e8d8b6); font-family: 'Atkinson Hyperlegible Next Variable', sans-serif; }
+.auth-shell { max-width: 26rem; margin: 8vh auto; padding: 2rem; }
+.auth-shell h1 { font: 3rem 'Bodoni Moda Variable', serif; color: var(--gold, #9c6d1a); }
+.auth-shell label { display: block; margin: 1rem 0; }
+.auth-shell input, .auth-shell button, .auth-shell select { font: inherit; padding: .65rem; border: 1px solid var(--hair-2, #957847); border-radius: .3rem; background: var(--ink-3, #f3e9d3); color: var(--paper, #2e2219); }
+.auth-shell input { display: block; width: 100%; box-sizing: border-box; }
+.auth-shell nav { display:flex; flex-wrap:wrap; gap:.7rem; margin-top:1.5rem; }
+.auth-shell a { color: var(--gold, #9c6d1a); }
+.account-exit { position: fixed; top: .5rem; right: .5rem; z-index: 1000; font: inherit; color: var(--gold, #9c6d1a); background: var(--ink-3, #f3e9d3); border: 1px solid var(--hair-2, #957847); border-radius: .3rem; padding: .4rem; }

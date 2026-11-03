@@ -1,3 +1,4 @@
+import { localLibrary } from './local-library';
 import { unzipSync, strFromU8, strToU8, gzipSync, gunzipSync } from 'fflate';
 import {
   addDoc,
@@ -120,10 +121,7 @@ export function subscribeToSongs(
   onError: (err: unknown) => void,
   ensemble: string,
 ): Unsubscribe {
-  if (!db) {
-    onError(new Error('Firebase is not configured'));
-    return () => {};
-  }
+  if (!db) return localLibrary.subscribe(songs => callback(songs, false));
   // Filtered by ensemble, sorted here: ordering by another field in the query would need a
   // composite index set up in the Firebase console.
   const q = query(collection(db, SONGS_COLLECTION), where('ensemble', '==', ensemble));
@@ -161,7 +159,8 @@ export function songOrder(song: { importedAt: number; sortKey?: number }): numbe
 
 /** Moves songs in the repertoire (for everyone in the ensemble): their new places, in one write. */
 export async function saveSongOrder(places: { id: string; sortKey: number }[]): Promise<void> {
-  if (!db || !places.length) return;
+  if (!db) { await Promise.all(places.map(place => localLibrary.update(place.id, { sortKey: place.sortKey }))); return; }
+  if (!places.length) return;
   const batch = writeBatch(db);
   for (const { id, sortKey } of places) batch.update(doc(db, SONGS_COLLECTION, id), { sortKey });
   await batch.commit();
@@ -169,7 +168,7 @@ export async function saveSongOrder(places: { id: string; sortKey: number }[]): 
 
 /** Returns the new song's id (available immediately from Firestore's optimistic local write). */
 export async function saveImportedSong(song: { title: string; xml: string; format: SongFormat; ensemble?: string; scanMarks?: ScanMark[] }): Promise<string> {
-  if (!db) throw new Error('Firebase is not configured');
+  if (!db) return localLibrary.add(song);
   const compressed = gzipSync(strToU8(song.xml));
   if (compressed.byteLength > MAX_COMPRESSED_XML_BYTES) {
     throw new Error(
@@ -199,12 +198,12 @@ export async function saveImportedSong(song: { title: string; xml: string; forma
 
 /** The scan's places to check that are left (one was found fine and taken off the list). */
 export async function saveScanMarks(id: string, marks: ScanMark[]): Promise<void> {
-  if (!db) throw new Error('Firebase is not configured');
+  if (!db) return localLibrary.update(id, { scanMarks: marks });
   await updateDoc(doc(db, SONGS_COLLECTION, id), { scanMarks: writeScanMarks(marks) });
 }
 
 export async function deleteImportedSong(id: string): Promise<void> {
-  if (!db) throw new Error('Firebase is not configured');
+  if (!db) return localLibrary.remove(id);
   await deleteDoc(doc(db, SONGS_COLLECTION, id));
 }
 
@@ -224,7 +223,15 @@ export async function updateSongMetadata(
   id: string,
   patch: { title?: string; ensemble?: string; swing?: boolean; partName?: { partId: string; name: string }; clef?: { partId: string; clef: VoiceClef }; percussion?: { partId: string; on: boolean }; removedParts?: string[]; splitParts?: string[] },
 ): Promise<void> {
-  if (!db) throw new Error('Firebase is not configured');
+  if (!db) {
+    const song = localLibrary.get(id);
+    const { partName, clef, percussion, ensemble: _ensemble, ...plain } = patch;
+    return localLibrary.update(id, { ...plain,
+      ...(partName ? { partNameOverrides: { ...song?.partNameOverrides, [partName.partId]: partName.name } } : {}),
+      ...(clef ? { clefOverrides: { ...song?.clefOverrides, [clef.partId]: clef.clef } } : {}),
+      ...(percussion ? { percussion: { ...song?.percussion, [percussion.partId]: percussion.on } } : {}),
+    });
+  }
   const fields: Record<string, unknown> = {};
   if (patch.title !== undefined) fields.title = patch.title;
   if (patch.ensemble !== undefined) fields.ensemble = patch.ensemble;
@@ -247,7 +254,7 @@ export async function updateSongMetadata(
  * written as one complete, internally-consistent snapshot, never a single field in isolation.
  */
 export async function saveSongConfig(id: string, config: { transpose: number; bpm: number; sections: { label: string; beat: number }[] }): Promise<void> {
-  if (!db) throw new Error('Firebase is not configured');
+  if (!db) return localLibrary.update(id, { savedConfig: { ...config, played: true } });
   await updateDoc(doc(db, SONGS_COLLECTION, id), { savedConfig: { ...config, played: true } });
 }
 
@@ -256,7 +263,7 @@ export async function saveSongConfig(id: string, config: { transpose: number; bp
  * -- they're bookmarks, not a setting to snapshot. Leaves the rest of savedConfig as it is.
  */
 export async function saveSongSections(id: string, sections: { label: string; beat: number }[]): Promise<void> {
-  if (!db) throw new Error('Firebase is not configured');
+  if (!db) return localLibrary.update(id, { savedConfig: { ...localLibrary.get(id)?.savedConfig, sections, played: true } });
   await updateDoc(doc(db, SONGS_COLLECTION, id), { 'savedConfig.sections': sections, 'savedConfig.played': true });
 }
 
