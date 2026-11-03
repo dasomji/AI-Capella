@@ -128,3 +128,12 @@ BROWSER_BASE defaults to `http://localhost:3005`. The implementation run used an
 owned `aicap-p2b-client` Postgres container on loopback port 25436; it never used
 or altered development database fixtures. Remove only your owned fixture container
 after stopping its server. SMTP must target the local Mailpit, never Resend.
+
+Phase 3 prerequisite changes: score POST bodies are raw MusicXML (`text/xml`) or
+native Score JSON (`application/json`), with percent-encoded `X-Score-Title`,
+`Idempotency-Key` and version replacement `X-Expected-Revision` headers. Verification
+email links now ask for the password the user chose; link navigation alone no
+longer verifies an account. Unknown passwords must use the recovery flow.
+Account mail shares a recipient budget of 3/hour and 10/24 hours. Sign-in email
+budgets count failures, with a bounded global delay rather than global lockout.
+Playback remains local until the remaining Phase 3 protocol work lands.

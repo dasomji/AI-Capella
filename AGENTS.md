@@ -34,6 +34,7 @@ phase plan and progress log live in `docs/PLAN.md`.
 
 ## Plane project
 
+- Instance URL: https://plane.audiopoesis.com
 - Workspace: Audiopoesis
 - Workspace slug: audiopoesis
 - Workspace ID: 2ec572bc-f65e-4d5a-9dda-860528b07406

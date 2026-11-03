@@ -444,3 +444,110 @@ Validation: `npm run typecheck` passed; `npm test` passed (6 tests);
 contrast/theme assertions and the full visual matrix. Integration/build checks
 were run sequentially after browser capture to avoid replacing active chunks.
 The contact sheet indexes 567 screenshots. No push or infrastructure changes.
+
+### Phase 3 — Part A remediation checkpoint (2026-11-03)
+
+This checkpoint implements the Phase 3 prerequisite security/client leftovers.
+**Authoritative synchronized playback (Part B / AICAP-8, AICAP-9, controller work
+in AICAP-15) is still outstanding. Phase 3 is not complete.** The retained local
+playback seam and legacy sync implementation have not yet been replaced. No
+ensemble playback timing tolerance has been measured or claimed.
+
+- Score create/version uploads authorize membership and editPieces before the
+  HTTP body-limit middleware reads the stream, and reauthorize under the ensemble
+  transaction. Request bodies are raw `text/xml` or native-score
+  `application/json`; metadata uses percent-encoded `X-Score-Title`,
+  `Idempotency-Key`, and `X-Expected-Revision`. The byte ceiling applies to the
+  actual score. Two reusable worker threads validate/parse/canonicalize/hash
+  scores, with eight waiting jobs, 30-second execution deadlines and idle
+  retirement. Replay hashes use the content digest rather than serializing the
+  score again on the event loop. An exact 20 MiB valid upload sustained 70 health
+  probes with a measured maximum latency of 50.5 ms (local disposable fixture;
+  regression ceiling 500 ms, not a production latency guarantee).
+- Sign-in counts failures per normalized hashed email and email/IP. Global
+  email pressure adds a progressive delay capped at one second; it never imposes
+  a global hard lock. The existing per-IP and per-email/IP protections remain.
+  Regression: 14 IPs × 9 failed passwords, then the correct password on a new IP.
+- All verification and recovery mail, including internal duplicate-signup
+  recovery calls, shares a transactional per-recipient budget of three messages
+  per elapsed hour and ten per elapsed 24 hours. Duplicate signup sends one
+  recovery message instead of a notification plus recovery message.
+- Verification links open a password-confirmation page. Verification requires
+  the signed link AND proof of the current account password; clicking alone
+  never verifies. Someone who did not choose that password is instructed to use
+  password recovery (which sets their password, verifies and revokes sessions).
+  Successful password confirmation also revokes all sessions. Confirmation has
+  its own five-failure/15-minute user/IP limit. This chooses the brief's permitted
+  password-proof design rather than changing passwords on every verification.
+- Account deletion has a separate five-failure/15-minute password budget and
+  inline password errors. Only explicit SESSION_EXPIRED errors trigger expiry
+  navigation. Closure purges the user's idempotency records and invitation-send
+  records (including recipient-email matches). Cleanup prunes rate-limit rows
+  older than 48 elapsed hours. These windows are durations, not calendar days;
+  existing timestamp columns remain timestamptz and logs remain UTC.
+- Manager refreshes preserve the original inviter and grants. Permission audits
+  record old/new isLead and stored capability flags, including the actor's
+  step-down during lead transfer; payloads contain no names/emails. Invitation
+  acceptance checks the user again after acquiring the account-deletion lock.
+- NUL text is rejected with 422. Saved-setting schema lookup uses own properties.
+  Score-derived PDF SVG is parsed as XML and stripped of executable elements,
+  event handlers, external/script URLs and unsafe style content before insertion.
+  Staff rendering uses canvas; its source does not insert score-derived HTML.
+- Invitation acceptance always requires an explicit click after authentication.
+  Stored tokens clear after acceptance success/failure, invalid previews and
+  sign-out. Reorder broadcasts one metadata batch, applied without per-piece GETs.
+- Account/membership sockets and rename notifications refresh state on changes;
+  reconnect and visibility restore refresh it too. The former three-second
+  account/ensemble poll is now a 60-second fallback. Global rename notifications
+  are restricted to subscribed ensemble rooms.
+- Returning to the title rerenders the dedication, ensemble alternatives and mode
+  actions. Capability tracks use a gold fallback in every theme, with contrasting
+  right-hand knobs when checked. Browser assertions cover visible title choices
+  and computed track/knob/position differences in the theme matrix.
+
+Remaining Phase 3 work: shared Zod command protocol; canonical persisted state;
+per-ensemble ordering/idempotency/revision/expiry; cached socket authorization and
+revocation; rehearsal-controller extraction; calibrated scheduled audio transport;
+late joins, sleep/reconnect/offline behavior; natural end/restart handling; all
+playback unit/integration/two-context timing tests. For that implementation retain
+one process: replicas will require sticky transport routing, a Socket.IO Redis or
+Postgres fanout adapter, and single-owner ordering per ensemble. No replica
+infrastructure was implemented here. This is a scope checkpoint, not a product
+or credential blocker.
+
+Part A verification: `npm run typecheck` passed; `npm test` passed (8 tests);
+`npm run test:integration` passed (23 scenarios, disposable real Postgres, HTTP,
+sessions and sockets); `npm run db:generate` reported no drift. Final browser and
+secret-check results are recorded below. Browser fixtures now prove the password
+before sign-in and click invitation acceptance explicitly. The isolated browser
+harness checks TCP Postgres readiness to avoid its temporary bootstrap server.
+Implementation commits: `4ac6911` (server/auth/upload boundaries) and `8111ccd`
+(client consent/events/rendering and regression harness). No push or PR.
+
+The final full browser run passed all Phase 2b scenarios and the complete
+DE/EN × mobile/desktop × five-theme matrix, including dedication opacity,
+reduced-motion mask visibility, mode-button visibility and differing settled
+capability track/knob styles. Finite CSS transitions are finished before comparing
+styles, consistently with screenshot settlement. Intentional sign-out/deletion
+now suspends account refresh and disconnects the account socket until completion;
+failed requests restore it. This prevents revocation fanout from replacing the
+signed-out page with an expired-session redirect. Normal revocation still expires
+other devices. Browser fixtures cleaned up their own database/mail/server.
+
+The retained musical smoke also passed against that isolated built server after
+updating its selectors for the existing language buttons, password-toggle form,
+and verification/recovery result pages: actual AudioContext playback, staff view,
+PDF export (121435 bytes), recovery and theme changes; zero browser errors or
+forbidden requests. Evidence: `.review-evidence/browser/shots/index.html` and
+`.review-evidence/foundation/`. These are ignored local fixture artifacts.
+
+Additional implementation commits: `b29de61` (localized verification/elapsed
+cleanup), `48ea7ba` (verification route variants), `ac27aa5` (intentional sign-out
+race and settled style assertions). Authoritative playback remains pending as
+stated above; none of these results measures inter-device rehearsal timing.
+
+Final Part A checks: `npm run build` passed; `npm run check:secrets` passed
+(positive control detected, browser artifacts clean, no public source maps);
+`npm run test:browser` passed; `npm run typecheck` and `npm test` passed (8 tests);
+`npm run test:integration` passed (23/23); `npm run db:generate` reported no schema
+changes. Foundation browser smoke additionally passed as described above.
