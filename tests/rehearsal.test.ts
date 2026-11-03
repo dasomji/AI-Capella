@@ -1,4 +1,4 @@
-import { it, expect } from 'vitest';
+import { it, expect, vi } from 'vitest';
 import { apply, initialState, positionAt, restartPaused, lateJoin, revisionChecked } from '../src/rehearsal/controller';
 import { estimateClock } from '../src/rehearsal/clock';
 import { stateSchema, commandSchema, type Command, type Envelope, type RehearsalState } from '../src/rehearsal/contract';
@@ -71,4 +71,26 @@ it('counts in at the local tempo after a tempo-map change and reports elapsed na
     expect(pre.countInUntil).toBe(4400);
     const playing = run(s, { type: 'play' });
     expect(lateJoin(playing, 99999, t).status).toBe('stopped');
+});
+
+it('socket transport drops disconnected commands, awaits application, and snapshots after stale',async()=>{
+ const {SocketPlaybackTransport}=await import('../src/rehearsal/socket-transport');
+ const handlers=new Map<string,Function>(), emitted:string[]=[];let revision=0,hold:(()=>void)|undefined;
+ const socket={connected:false,on:(e:string,fn:Function)=>handlers.set(e,fn),off:(e:string)=>handlers.delete(e),disconnect:()=>{},volatile:{emit:(event:string,...args:any[])=>{
+   emitted.push(event);const ack=args.at(-1);
+   if(event==='clock:ping')ack({serverTime:1000});
+   else if(event==='rehearsal:command')ack({commandId:args[0].commandId,status:'rejected',code:'stale'});
+   else ack({state:{...initialState('ensemble','user',1000),revision:revision++}});
+ }}};
+ const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000);
+ transport.subscribe(()=>new Promise<void>(r=>{hold=r;}));
+ await expect(transport.send({type:'stop'})).rejects.toThrow('connecting');expect(emitted).toEqual([]);
+ socket.connected=true;const joined=transport.join();await vi.waitFor(()=>expect(hold).toBeTypeOf("function"));
+ expect(transport.ready).toBe(false);hold!();await joined;expect(transport.ready).toBe(true);
+ hold=undefined;const stale=transport.send({type:'stop'});await vi.waitFor(()=>expect(hold).toBeTypeOf('function'));
+ expect(emitted.at(-1)).toBe('rehearsal:snapshot');expect(transport.ready).toBe(false);
+ await Promise.resolve();hold!();await stale;expect(transport.ready).toBe(true);
+ socket.connected=false;handlers.get('disconnect')!();
+ const before=emitted.length;await expect(transport.send({type:'play'})).rejects.toThrow('connecting');expect(emitted.length).toBe(before);
+ transport.dispose();expect(transport.ready).toBe(false);
 });
