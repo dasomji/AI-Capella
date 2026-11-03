@@ -1,3 +1,8 @@
+> Production fork: the current runtime is TanStack Start plus a persistent Node
+> host. See [local development](docs/DEVELOPMENT.md) and [phase plan](docs/PLAN.md).
+> The historical prototype architecture below documents the preserved musical
+> client; its Firebase/shared playback integration is disabled in this fork.
+
 # LightScore
 
 *Formerly AI-Capella. The repository, the site's address (`…/AI-Capella/`), the Firebase

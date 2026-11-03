@@ -40,10 +40,73 @@ Out of scope for this run:
 Each phase: implementation (GPT-6.1 Sol, high) → code review (Claude Sonnet 5.5, high) →
 fixes → independent verification (GPT-6.1 Sol, high).
 
+## Phase 1 architecture decisions
+
+- TanStack Start/React owns routing and SSR at `/`; `/app` authenticates on the
+  server and mounts the existing vanilla client through a client effect. Musical
+  modules are preserved. Firebase initialization is hard-disabled, including for
+  callers that directly import the legacy integration module. Bundled samples and
+  ephemeral local imports use a `LibraryRepository`; `PlaybackTransport` defines
+  the replacement seam. Legacy service-worker registration is disabled until the
+  private cache policy in Phase 5.
+- **One plain Drizzle membership model**, referencing Better Auth users. The
+  organization plugin's additional member fields can represent capabilities
+  ([official documentation](https://better-auth.com/docs/plugins/organization)),
+  but its role-driven member/invitation endpoints would also need wrappers/hooks
+  to enforce three independent capability grants, invitation token hashing and
+  last-lead transfer. Plain domain tables keep those future operations explicit
+  without exposing a second authorization surface or duplicating memberships.
+  No organization/admin plugin is installed; platform roles are separate rows,
+  and impersonation/destructive global endpoints do not exist. Phase 2 must use
+  these tables transactionally rather than introduce another membership store.
+- Start's documented fetch entry is hosted by Hono's Node HTTP adapter in the
+  build; Vite's HTTP server is used in dev. Socket.IO is attached to that same
+  HTTP/1 server in both modes. The hosting test runs the actual npm commands and
+  authenticates sockets with real cookies. No separate socket port, proxy or
+  deployment platform adapter is required. One process initially; no replicas.
+- All application instants and auth timestamps are `timestamptz`; central runtime
+  configuration validates `APP_TIME_ZONE` (UTC default). No local calendar logic
+  is introduced. Tests cover an offset-qualified DST instant under Honolulu TZ.
+
 ## Progress log
 
-_(Agents append a short entry per phase: what landed, commands to verify, known gaps.)_
+### Phase 1 — 2026-11-03
+
+Landed Start shell and bilingual account UI; persistent Node/Socket.IO hosting;
+server-only validated configuration; integrated Better Auth Drizzle tables and
+email/password verification/recovery/session handling; Resend/SMTP/capture mail
+adapters; 15-table domain foundation and versioned SQL; rootless Docker local
+services; health/readiness; local-only musical client and repository/transport
+seams. No external infrastructure, prototype access, paid AI or real email.
+
+Setup: see `docs/DEVELOPMENT.md` (`docker compose up -d`, `.env` from example,
+`npm run db:migrate`, `npm run dev`). Production artifacts: `npm run build` then
+`NODE_ENV=test npm start` for isolated local SMTP testing; unqualified `npm start`
+defaults to production safeguards and requires real production configuration.
+
+Verification: `npm run db:generate`, `npm run db:migrate`, `npm run typecheck`,
+`npm test` (3 passing), `npm run build`, `npm run test:integration` (4 passing
+scenarios, real Postgres and HTTP), `npm run check:secrets` (passing, browser
+artifacts and source maps). Hosting scenarios cover actual dev/start commands
+with Mailpit verification and authenticated WebSocket upgrade. Main auth scenario
+uses in-process capture, real accounts, multiple devices, password recovery,
+sign-out/expiry rejection by HTTP/socket, existing socket disconnect, wrong-origin
+rejection, and non-UTC timestamptz persistence. Production bypass refusal tested.
+
+Known gaps: no interactive browser/audio/PDF smoke test in this implementation
+run; musical engine/render/export source is unchanged, and import fixtures/local
+repository behavior are tested. Socket revocation polling has a bounded ~1 second
+latency; per-command/membership authorization arrives in Phase 3. Local imports
+are intentionally memory-only until Phase 2. SeaweedFS runs with persistent data
+and local credentials; object API/bucket validation belongs to Phase 4. Legacy
+`omr-service` and `rules-test` files/scripts are unchanged and were not rerun.
+`npm audit` reports inherited Firebase/grpc and drizzle-kit/esbuild advisories;
+no force upgrade was applied to the retained legacy dependency graph. Separate
+review and independent verification belong to the parent orchestration run.
 
 ## Open questions
 
-_(Agents append blockers that need a product or operator decision.)_
+No Phase 1 credential or product blocker. Before release, run the interactive
+musical smoke scenarios, triage retained dependency advisories, and configure
+verified production sender/HTTPS origins through an authorized operator. This
+phase deliberately provisions nothing.
