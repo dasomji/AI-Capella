@@ -1,3 +1,5 @@
+import { timingFromScore, secondsAt } from './rehearsal/timeline';
+import { positionAt, lateJoin } from './rehearsal/controller';
 import { PlayerSession } from './rehearsal/player-session';
 import { preferenceCommands, SeekCoalescer } from './rehearsal/player-controls';
 import type { Command, RehearsalState } from './rehearsal/contract';
@@ -449,7 +451,55 @@ function sharedNotice(code:string) {
  if(code==='forbidden'){leavePlaybackSession();void checkMembership();return;}
  toast('✎ '+(lang==='de'?'Probe: ':'Rehearsal: ')+code);
 }
-async function receiveSharedState(state:RehearsalState) {sharedState=state;}
+let sharedVersion:number|null=null;
+let lastScheduledStartServerMs:number|null=null;
+let lastScheduledStartAudioTime:number|null=null;
+let lastSharedDrift=0;
+async function receiveSharedState(state:RehearsalState) {
+  if(!syncEnabled())return;
+  if(!state.pieceId){sharedState=state;audioEngine?.stop();setViewMode('library');endArrival();return;}
+  if(state.pieceId!==loadedSongId || state.versionNo!==sharedVersion){
+    const meta=await api(`/ensembles/${currentEnsemble}/pieces/${state.pieceId}`);
+    const response=await fetch(`/api/ensembles/${currentEnsemble}/pieces/${state.pieceId}/versions/${state.versionNo}`);
+    if(!response.ok)throw new Error('not_found');
+    const xml=await response.text();
+    await loadSongLocally({id:state.pieceId,title:meta.title,format:meta.format,xml,imported:true});
+    sharedVersion=state.versionNo;
+  }
+  sharedState=state;
+  scheduleSharedAudio();
+  bpm=state.bpm;transpose=state.transposition;metronomeOn=state.metronome;startTonesOn=state.startingTones.enabled;
+  loopEnabled=state.loop.enabled;
+  loopRegion=state.loop.startBeat!=null && state.loop.endBeat!=null?{start:state.loop.startBeat,end:state.loop.endBeat}:null;
+  pianoRoll?.setTranspose(transpose);staffView?.setTranspose(transpose);pianoRoll?.setLoopRegion(loopRegion);overview?.setLoopRegion(loopRegion);
+  refreshBindings();
+  const moving=lateJoin(state,playerSession!.clock.serverNow(),timingFromScore(currentScore!)).status;
+  syncPlayButtons(moving==='playing'||moving==='countingIn');
+  startRenderLoop();
+  if(arriveDirectly){viewOffsetBeats=0;if(arrivingAt)restoreSongSettings(arrivingAt);endArrival();}
+  renderNow();
+}
+function scheduleSharedAudio(at?:number){
+ if(!audioEngine || !currentScore || !sharedState || !playerSession?.clock.usable)return;
+ const now=at??playerSession.clock.serverNow();
+ const result=audioEngine.scheduleShared(sharedState,timingFromScore(currentScore),now,playerSession.clock.diagnostics!.offsetMs,startingPitches(positionAt(sharedState,now,timingFromScore(currentScore))));
+ lastScheduledStartServerMs=result.serverTime;lastScheduledStartAudioTime=result.audioTime;
+}
+const syncDebug=new URLSearchParams(location.search).get('debug')==='sync';
+if(syncDebug || import.meta.env.MODE==='test'){
+ Object.defineProperty(window,'__lightscoreSync',{configurable:true,get:()=>({offsetMs:playerSession?.clock.diagnostics?.offsetMs??null,uncertaintyMs:playerSession?.clock.diagnostics?.uncertaintyMs??null,lastScheduledStartServerMs,lastScheduledStartAudioTime,revision:sharedState?.revision??null,position:audioEngine?.getCurrentBeat()??0,status:sharedState?.status??null,ready:sharedReady})});
+}
+window.setInterval(()=>{
+ if(!syncEnabled() || !sharedState || !currentScore || !playerSession?.clock.usable || !audioEngine)return;
+ const timing=timingFromScore(currentScore),now=playerSession.clock.serverNow();
+ const joined=lateJoin(sharedState,now,timing);
+ if(joined.status==='playing' && audioEngine.context.state==='running'){
+  lastSharedDrift=(secondsAt(positionAt(sharedState,now,timing),timing)-secondsAt(audioEngine.getCurrentBeat(),timing))*timing.baseBpm/sharedState.bpm*1000;
+  if(Math.abs(lastSharedDrift)>30)scheduleSharedAudio(now+80);
+ }
+ if(joined.status==='stopped')syncPlayButtons(false);
+ if(syncDebug){let el=document.querySelector<HTMLElement>('#sync-debug');if(!el){el=document.createElement('pre');el.id='sync-debug';el.style.cssText='position:fixed;bottom:0;left:0;z-index:10000;background:var(--bg,#16151c);color:var(--ink,#eee);padding:8px;pointer-events:none';document.body.append(el);}el.textContent=JSON.stringify({offset:playerSession.clock.diagnostics?.offsetMs,uncertainty:playerSession.clock.diagnostics?.uncertaintyMs,drift:lastSharedDrift,revision:sharedState.revision});}
+},2000);
 function syncEnabled(): boolean {
   return serverLibraryEnabled && sessionMode === 'ensemble';
 }
@@ -577,6 +627,7 @@ function chooseMode(mode: 'solo' | 'ensemble') {
   sessionMode = mode;
   renderModeControls();
   setViewMode('library');
+  if(mode==='ensemble'){arriveDirectly=true;app.classList.add('arriving');setTimeout(endArrival,8000);}
   void runBootstrap();
 }
 document.querySelector<HTMLButtonElement>('#mode-solo-btn')!.addEventListener('click', () => chooseMode('solo'));
@@ -3500,6 +3551,7 @@ let audioTickIntervalId: number | null = null;
 function audioTick() {
   if (!audioEngine || !currentScore) return;
   audioEngine.tick();
+  if(syncEnabled())return;
   const beat = audioEngine.getCurrentBeat();
   // A loop region, once marked, bounds playback; the Loop button decides whether hitting that
   // bound (or the end of the piece, when no region is marked) wraps around or stops there.
@@ -3599,6 +3651,7 @@ function updateSoundPrompt() {
     button.innerHTML = `${icon('play')}<span></span>`;
     button.addEventListener('click', () => {
       unlockAudio();
+      if(syncEnabled())void playerSession?.resume().then(()=>scheduleSharedAudio());
       button.classList.remove('show');
     });
     document.body.appendChild(button);
@@ -3894,7 +3947,7 @@ async function runBootstrap() {
         // Clef changes and removed voices from another device apply to the open song too (once
         // it's paused -- reloading mid-playback would cut the music off).
         const fresh = currentSong && importedSongs.find((s) => s.id === currentSong!.id);
-        if (fresh && currentSong && voiceSetupKey(fresh) !== voiceSetupKey(currentSong) && !audioEngine?.isPlaying()) void reloadCurrentSong();
+        if (fresh && currentSong && voiceSetupKey(fresh) !== voiceSetupKey(currentSong) && !audioEngine?.isPlaying() && !syncEnabled()) void reloadCurrentSong();
         // Places to check ticked off on another device.
         if(fresh && currentSong){songTitleEl.textContent=fresh.title;currentSong.title=fresh.title;}
         if (fresh && currentSong && fresh.scanMarks !== currentSong.scanMarks) {
@@ -4035,6 +4088,7 @@ function endArrival() {
   requestAnimationFrame(() => app.classList.remove('arriving'));
 }
 function comeBackToPlace(fromCache: boolean) {
+  if(syncEnabled())return;
   const place = placeToRestore;
   if (!place?.songId) return;
   const song = allSongs().find((s) => s.id === place.songId);
@@ -4096,6 +4150,7 @@ if (serverLibraryEnabled && (switchedMode === 'solo' || switchedMode === 'ensemb
   setViewMode('landing');
 } else {
   setViewMode('library');
+
   void runBootstrap();
 }
 renderModeControls();
