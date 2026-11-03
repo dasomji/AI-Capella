@@ -6,21 +6,20 @@ export default defineConfig({
   plugins: [tanstackStart(), react(), {
     name: 'lightscore-node-host',
     async configureServer(server) {
-      const [{ getRequestListener }, { api }, { attachSockets }, { currentSession }] = await Promise.all([
-        import('@hono/node-server'), import('./server/http.server'), import('./server/socket.server'), import('./server/auth.server'),
+      const [{ getRequestListener }, { api }, { attachSockets }] = await Promise.all([
+        import('@hono/node-server'), import('./server/http.server'), import('./server/socket.server'),
       ]);
       if (!server.httpServer) throw new Error('A persistent HTTP server is required');
       const io = attachSockets(server.httpServer);
       server.httpServer.on('close', () => { void io.close(); });
       const listener = getRequestListener(api.fetch);
       server.middlewares.use((req, res, next) => {
-        if (/^\/app(?:\?|$)/.test(req.url ?? '')) {
-          const headers = new Headers(); headers.set('cookie', req.headers.cookie ?? '');
-          void currentSession(headers).then(session => {
-            if (!session?.user.emailVerified) { res.writeHead(302, { Location: '/?state=expired' }); res.end(); } else next();
-          }).catch(() => { res.writeHead(503); res.end('Service unavailable'); });
-        } else if (/^\/(api\/|healthz(?:\?|$)|readyz(?:\?|$))/.test(req.url ?? '')) void listener(req, res);
-        else next();
+        if (/^\/(api\/|healthz(?:\?|$)|readyz(?:\?|$))/.test(req.url ?? '')) { void listener(req, res); return; }
+        const headers = new Headers(); for (const [key, value] of Object.entries(req.headers)) if (value) headers.set(key, Array.isArray(value) ? value.join(',') : value);
+        void Promise.resolve(api.fetch(new Request(`http://localhost${req.url}`, { method: req.method, headers }))).then(response => {
+          for (const [key, value] of response.headers) res.setHeader(key, value);
+          if (response.status !== 404) { res.writeHead(response.status); void response.text().then(text => res.end(text)); } else next();
+        }).catch(next);
       });
     },
   }],
