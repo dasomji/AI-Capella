@@ -4092,20 +4092,99 @@ window.addEventListener('offline', renderSongList);
 // Private authenticated shell: offline caching policy arrives in Phase 5.
 
 async function openAccountArea(anchor: HTMLElement) {
-  const body = document.createElement('div');
-  const email=document.createElement('p');email.textContent=account?.email ?? '';body.append(email);
-  const signout = document.createElement('button'); signout.textContent = t('accountSignOut');
-  signout.onclick = async () => { const r = await fetch('/api/auth/sign-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); if (r.ok) {clearLibrary();localStorage.removeItem(PLACE_KEY);sessionStorage.removeItem(MODE_SWITCH_KEY);location.replace('/?state=signed-out');} else toast(pt('errorGeneric'),'error'); };
+  const body = document.createElement("div");
+  const email = document.createElement("p");
+  email.textContent = account?.email ?? "";
+  body.append(email);
+  const signout = document.createElement("button");
+  signout.textContent = t("accountSignOut");
+  signout.onclick = async () => {
+    const r = await fetch("/api/auth/sign-out", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (r.ok) {
+      clearLibrary();
+      localStorage.removeItem(PLACE_KEY);
+      sessionStorage.removeItem(MODE_SWITCH_KEY);
+      location.replace("/?state=signed-out");
+    } else toast(pt("errorGeneric"), "error");
+  };
   body.append(signout);
-  openSheet(t('accountArea'), body, anchor);
-  const heading=document.createElement('h3');heading.textContent=pt('devices');body.append(heading);
-  const response = await fetch('/api/auth/list-sessions'); if (!response.ok) {toast(pt('errorGeneric'),'error');return;}
+  const remove = document.createElement("button");
+  remove.textContent = t("accountDelete");
+  remove.onclick = async () => {
+    const plan = await api("/account/deletion");
+    const sheet = document.createElement("div");
+    sheet.className = "sheet-body domain-sheet";
+    const note = document.createElement("p");
+    note.textContent = t("accountDeleteEnsembles");
+    sheet.append(note);
+    for (const e of plan.deleteEnsembles) {
+      const row = document.createElement("p");
+      row.textContent = e.name;
+      sheet.append(row);
+    }
+    if (plan.lastLead.length) {
+      const warning = document.createElement("p");
+      warning.textContent = pt("lastLead");
+      sheet.append(warning);
+    }
+    const label = document.createElement("label");
+    label.textContent = t("accountPassword");
+    const password = document.createElement("input");
+    password.type = "password";
+    password.autocomplete = "current-password";
+    label.append(password);
+    sheet.append(label);
+    const confirm = document.createElement("button");
+    confirm.textContent = t("accountDeleteConfirm");
+    confirm.disabled = !!plan.lastLead.length;
+    confirm.onclick = async () => {
+      try {
+        await api("/account", "DELETE", {
+          deleteEnsembleIds: plan.deleteEnsembles.map((e: any) => e.id),
+          password: password.value,
+        });
+        clearLibrary();
+        location.replace("/?state=signed-out");
+      } catch (e) {
+        toast(domainError((e as Error).message), "error");
+      }
+    };
+    sheet.append(confirm);
+    openSheet(remove.textContent, sheet);
+  };
+  body.append(remove);
+  openSheet(t("accountArea"), body, anchor);
+  const heading = document.createElement("h3");
+  heading.textContent = pt("devices");
+  body.append(heading);
+  const response = await fetch("/api/auth/list-sessions");
+  if (!response.ok) {
+    toast(pt("errorGeneric"), "error");
+    return;
+  }
   const sessions = await response.json();
   for (const session of sessions) {
-    const row = document.createElement('p'); row.textContent = deviceLabel(session.userAgent) + (session.current ? ' · '+pt('thisDevice') : '');
-    const revoke = document.createElement('button'); revoke.textContent = t('accountRevoke');
-    revoke.onclick = async () => { const result = await fetch('/api/auth/revoke-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: session.id }) }); if (result.ok) row.remove(); else toast(pt('errorGeneric'),'error'); };
-    if(!session.current)row.append(revoke); body.append(row);
+    const row = document.createElement("p");
+    row.textContent =
+      deviceLabel(session.userAgent) +
+      (session.current ? " · " + pt("thisDevice") : "");
+    const revoke = document.createElement("button");
+    revoke.textContent = t("accountRevoke");
+    revoke.onclick = async () => {
+      const result = await fetch("/api/auth/revoke-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: session.id }),
+      });
+      if (result.ok) row.remove();
+      else toast(pt("errorGeneric"), "error");
+    };
+    if (!session.current) row.append(revoke);
+    body.append(row);
   }
 }
 

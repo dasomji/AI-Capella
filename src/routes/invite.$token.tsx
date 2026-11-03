@@ -104,6 +104,8 @@ function Invitation() {
               email: preview?.email ?? "",
               account: user?.email ?? "",
             })
+          : state === "superseded"
+            ? text("invitationSuperseded")
           : state === "revoked"
             ? text("invitationRevoked")
             : state === "expired"
