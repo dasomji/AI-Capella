@@ -1,6 +1,9 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 import '@fontsource-variable/bodoni-moda/opsz.css';
 import '@fontsource-variable/atkinson-hyperlegible-next/wght.css';
+// Keep the prototype's base → parchment cascade in one eager chunk. Loading
+// the base only from the lazy player lets it override parchment's panel grounds.
+import '../style.css';
 import '../parchment.css';
 import '../auth.css';
 export const Route = createRootRoute({
