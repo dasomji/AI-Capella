@@ -957,8 +957,7 @@ function appearanceItems() {
 }
 
 async function reloadForDesign() {
-  stopPlayback();
-  if (syncEnabled() && leaderId === myDeviceId) await sync.publishPlaybackState({ leaderId: null }).catch(() => {});
+  if(syncEnabled()){leavePlaybackSession();audioEngine?.stop();}else stopPlayback();
   if (!app.classList.contains('mode-landing')) sessionStorage.setItem(MODE_SWITCH_KEY, sessionMode);
   location.reload();
 }
