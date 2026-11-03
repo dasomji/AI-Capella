@@ -7,7 +7,7 @@ import { pool } from './db/index.server';
 import { attachSockets } from './socket.server';
 const app = new Hono();
 app.route('/', api);
-app.use('*', async (c, next) => { if (c.req.path.endsWith('.map')) return c.notFound(); await next(); });
+app.use('*', async (c, next) => { if (decodeURIComponent(c.req.path).endsWith('.map')) return c.notFound(); await next(); });
 app.use('*', serveStatic({ root: './dist/client' }));
 // Runtime import: Start's Vite build owns the server entry.
 const entryPath = '../dist/server/server.js';

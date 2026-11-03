@@ -3,7 +3,7 @@ import { auth, currentSession } from './auth.server';
 import { pool } from './db/index.server';
 import { env } from './env.server';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
-import { logError } from './logger.server';
+import { logError, withRequestLog } from './logger.server';
 export const api = new Hono();
 api.onError((error, c) => { logError('http.error', error, c.res.headers.get('x-request-id') ?? undefined); return Response.json({ error: 'Service unavailable. Please try again.' }, { status: 500 }); });
 api.use('*', async (c, next) => {
@@ -34,7 +34,7 @@ api.use('/app', async (c, next) => {
   await next();
 });
 api.on(['GET', 'POST'], '/api/auth/*', async c => {
-  const response = await auth.handler(c.req.raw);
+  const response = await withRequestLog(c.res.headers.get('x-request-id') ?? crypto.randomUUID(), () => auth.handler(c.req.raw));
   if (response.status >= 500) logError('auth.http_failure', undefined, c.res.headers.get('x-request-id') ?? undefined);
   return response.status >= 500 ? c.json({ error: 'Service unavailable. Please try again.' }, 503) : response;
 });

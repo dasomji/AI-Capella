@@ -22,3 +22,12 @@ it('keeps imported source and independent part edits in the local library', asyn
  expect(localLibrary.get(id)?.partNameOverrides).toEqual({soprano:'Soprano',bass:'Bass'});
  await deleteImportedSong(id); expect(localLibrary.get(id)).toBeUndefined();
 });
+
+it('redacts untrusted errors instead of serializing secret-bearing dependency messages', async () => {
+ const { logError, withRequestLog } = await import('../server/logger.server');
+ const { vi } = await import('vitest'); const capture = vi.spyOn(console,'error').mockImplementation(()=>{});
+ try {
+  withRequestLog('request-123',()=>logError('database.error',Object.assign(new Error('postgres://secret/password?token=reset'),{code:'57P01',password:'private'})));
+  const record = JSON.parse(capture.mock.calls[0][0]); expect(record.requestId).toBe('request-123'); expect(record.code).toBe('57P01'); expect(record.timestamp).toMatch(/Z$/); expect(JSON.stringify(record)).not.toMatch(/secret|password|token|private/);
+ } finally { capture.mockRestore(); }
+});

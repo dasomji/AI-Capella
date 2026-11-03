@@ -3,7 +3,26 @@ import { readdir, readFile } from 'node:fs/promises';
 const names = ['DATABASE_URL','BETTER_AUTH_SECRET','RESEND_API_KEY','S3_ACCESS_KEY_ID','S3_SECRET_ACCESS_KEY','OPENAI_API_KEY'];
 const sentinels = Object.fromEntries(names.map(name => [name, `SENTINEL_${name}_must_never_reach_browser_284392`]));
 sentinels.DATABASE_URL = `postgres://sentinel:SENTINEL_DATABASE_URL_must_never_reach_browser_284392@localhost/test`;
-const build = spawnSync('npm', ['run','build','--','--sourcemap'], { env: { ...process.env, ...sentinels }, stdio: 'inherit' });
-if (build.status !== 0) process.exit(build.status ?? 1);
-async function check(path) { for (const entry of await readdir(path, { withFileTypes: true })) { const file = `${path}/${entry.name}`; if (entry.isDirectory()) await check(file); else { const data = await readFile(file); for (const secret of Object.values(sentinels)) if (data.includes(secret)) throw new Error(`Secret leaked to ${file}`); } } }
-await check('dist/client'); console.log('PASS: browser artifacts and source maps contain no sentinel secrets');
+const control = 'SENTINEL_PUBLIC_VITE_positive_control_284392';
+const markers = ['BETTER_AUTH_SECRET','DATABASE_URL','RESEND','drizzle-orm','node_modules/pg','.server.ts','server/','ai-capella.firebase','ai-capella.firebasestorage','firestore.googleapis','firebaseio','AIza'];
+async function artifacts(path) {
+  const result = [];
+  for (const entry of await readdir(path, {withFileTypes:true})) {
+    const file = `${path}/${entry.name}`;
+    if (entry.isDirectory()) result.push(...await artifacts(file));
+    else result.push({file, data:await readFile(file,'utf8')});
+  }
+  return result;
+}
+function build(extra = {}) { const r = spawnSync('npm',['run','build'],{env:{...process.env,...sentinels,...extra},stdio:'inherit'}); if (r.status !== 0) throw new Error('Build failed'); }
+build({VITE_LEAK_TEST:control});
+if (!(await artifacts('dist/client')).some(({data})=>data.includes(control))) throw new Error('Positive control was not detected');
+build({VITE_LEAK_TEST:''});
+for (const {file,data} of await artifacts('dist/client')) {
+  // Source maps, if introduced, are scanned as text AND decoded sources/content.
+  const decoded = file.endsWith('.map') ? JSON.parse(data) : null;
+  const contents = data + (decoded ? JSON.stringify([decoded.sources,decoded.sourcesContent]) : '');
+  for (const value of [...Object.values(sentinels),...markers,control]) if (contents.includes(value)) throw new Error(`Forbidden client content ${value} in ${file}`);
+  if (file.endsWith('.map')) throw new Error(`Public source map ${file}`);
+}
+console.log('PASS: positive control detected; all client artifacts clean; no public source maps');

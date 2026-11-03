@@ -37,16 +37,17 @@ npm run test:integration
 npm run check:secrets
 ```
 
-Integration tests require migrated local Postgres and Mailpit, plus a current
-build. They launch real HTTP servers and the actual npm dev/start commands on
+Integration tests require Docker, local Mailpit, and a current build. The harness
+creates, migrates, stops/restarts, and removes its own disposable PostgreSQL
+container and volume; it never uses the development database. They launch real HTTP servers and the actual npm dev/start commands on
 23001–23003. Fixtures use real accounts and session cookies, in-process capture
-or SMTP to Mailpit, never an auth bypass, Resend or an AI provider. They create
-uniquely named fixture accounts in the local development DB. The time scenario
+or SMTP to Mailpit, never an auth bypass, Resend or an AI provider. They create fixture accounts only in the disposable database. The time scenario
 runs with `TZ=Pacific/Honolulu`. The secret check rebuilds with sentinel runtime
-credentials and scans all browser artifacts, including source maps.
+credentials and scans all browser artifacts, with a VITE positive control, forbidden server/prototype markers, and no public source maps.
 
 `npm run db:generate` generates versioned SQL after schema changes;
-`npm run db:migrate` applies committed migrations. `/healthz` is liveness;
+`npm run db:migrate` applies committed migrations using only DATABASE_URL and a
+Postgres advisory lock (17031501) to serialize migrators. `/healthz` is liveness;
 `/readyz` verifies DB connectivity and the complete committed migration hashes.
 Database/schema/repository modules are server-only (`*.server.ts`). Never add
 server credentials to `VITE_*`, router loaders or browser configuration.
@@ -66,8 +67,9 @@ installed, including `tsx`, used to run the typed persistent host. One HTTP/1
 Node server serves Start and Socket.IO; use one instance until Phase 3 specifies
 ordering/fanout across replicas. Secure cookies are HTTP-only, SameSite=Lax and
 Secure in production. Cookie caching is disabled so session revocation is checked
-against PostgreSQL. Existing sockets recheck sessions every second and disconnect
-on revocation/expiry; no rehearsal commands or ensemble rooms exist yet.
+against PostgreSQL. Session-deletion hooks immediately disconnect existing sockets on sign-out,
+revocation and password reset. A single batched query every 15 seconds checks
+expiry/external deletion and tolerates two consecutive database failures; no rehearsal commands or ensemble rooms exist yet.
 
 Legacy suites remain separate and unchanged:
 
@@ -81,3 +83,35 @@ npm --prefix rules-test test
 The rules suite uses its `demo-ls` emulator project and requires Java. Do not point
 these suites at any real Firebase project. Scan service migration belongs to a
 later phase; this application does not call it.
+
+
+Auth rate limits use PostgreSQL (`rate_limit`), enabled in all modes: sign-in and
+signup allow 10/minute; password reset and verification resend allow 5/minute.
+The general limit is 100/minute. Without trusted client-IP configuration, buckets
+are deliberately shared by path. For Railway, configure `AUTH_IP_HEADERS` (for
+example `x-forwarded-for`) and `AUTH_TRUSTED_PROXIES` (comma-separated actual proxy
+IPs/CIDRs). Only trust headers overwritten by the ingress; restrict direct origin
+access to that ingress. Better Auth interprets the chain, but cannot authenticate
+the sender of the header. Do not trust broad client-accessible private ranges.
+Tests keep origin checks and rate limiting enabled. NODE_ENV=test requires a
+loopback Better Auth URL; unset/unknown environments do not relax production
+safety. There is one process-global pool and auth instance across native/Vite
+module graphs, guarded by symbol keys and verified by duplicate-module tests.
+
+Run `npm run accounts:cleanup` daily via the eventual deployment scheduler to
+delete unverified accounts older than seven days. Scheduling is documented only;
+no task has been deployed. This command logs only UTC capture time and count.
+Production account closure requires the Phase 2 last-lead transaction guard
+specified in PLAN.md. Mail runs in background tasks with sanitized error logs;
+there is no durable mail queue yet, so failed delivery requires requesting a link
+again. Verification JWT replay is idempotent and never creates a session; reset
+identifiers are hashed and reset tokens are single-use and expire.
+
+Built-mode browser smoke: create a disposable database on loopback port 25435,
+migrate it, then start with NODE_ENV=test, PORT=3005, BETTER_AUTH_URL and
+TRUSTED_ORIGINS=http://localhost:3005, and MAIL_TRANSPORT=smtp. Run
+`PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs node scripts/browser-smoke.mjs`.
+The script uses installed `/usr/bin/google-chrome`, writes evidence under
+`/tmp/aicap-p1-fix/`, and exercises the production CSP (also enforced in test mode).
+Remove the fixture container with `docker rm -fv` when finished. Never point this
+script at an existing account or real mail service.

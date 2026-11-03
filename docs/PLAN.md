@@ -131,3 +131,40 @@ remaining lead memberships and mutate under that same lock. For closure spanning
 ensembles, acquire ensemble locks in sorted ID order. Membership/role cascades are
 storage semantics, not authorization to bypass this check. Originals/jobs remain
 owned by the ensemble when their initiating account is deleted.
+
+Phase 1 fixes verification: restored theme selection/pre-paint shell metadata;
+account/session controls now use the player's existing menu and sheet; no fixed
+sign-out overlay. Firebase config and SDK are removed from the client graph.
+Theme/CSS implementation files are unchanged from the Phase 1 baseline (the
+separate prototype checkout predates its parchment/revival additions); the dark
+palette retains prototype `#0d0c16` / `#efe7da` and stored device choices work.
+Server fixes include sanitized UTC/request-ID logs, hashed reset identifiers,
+background mail, duplicate-account notification/recovery, cleanup command,
+explicit origin checks, persistent rate limits and configurable proxy trust,
+namespace authentication, immediate socket revocation hooks and 15-second batched
+checks tolerating two consecutive database failures. Liveness survives database
+loss, readiness returns 503 and recovers. Shutdown has a 10-second forced exit.
+Cache policy and security headers apply through shared dev/built middleware;
+public hashed assets are immutable, public source maps are refused, and the
+secret scanner proves detection using a VITE positive control before a clean build.
+
+Validation: typecheck; four unit tests; build; seven integration scenarios in an
+owned disposable Postgres container (including stop/start, pooled backend
+termination, connected-socket revocation, polling cookies, pending migrations,
+hostile/missing origins, reset expiry/replay/garbage, schema constraints, cookie
+flags and production refusals); secret check; and rules-test npm ci. No development
+database fixtures or external infrastructure changes. Browser evidence under
+`/tmp/aicap-p1-fix/`: built start → signup/verification/sign-in → sample → actual
+AudioContext playback → staff view → PDF by mouse → account-menu sign-out →
+reset/sign-in; dark, light and stored-dark screenshots. PDF 121433 bytes; zero
+browser errors or Firebase requests. Screenshot files include
+`shots/start-sample.png`, `shots/start-playing.png`, `shots/start-staff.png`,
+`shots/start-light-sample.png`, and `shots/start-stored-papier.png`.
+
+Supersedes the original Phase 1 known gaps above concerning browser smoke,
+one-second socket polling, Firebase dependency retention and development-DB test
+fixtures. Verification links remain Better Auth's signed JWTs: replay is
+idempotent and creates no session. Reset tokens are hashed, expiring and single
+use. Cleanup scheduling and production rollout remain operator work; neither
+was deployed. Phase 2 still supplies durable library persistence and ensemble
+permissions; local imports remain intentionally ephemeral.
