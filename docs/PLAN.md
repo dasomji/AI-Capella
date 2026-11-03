@@ -681,3 +681,114 @@ flows and the full theme/language/device/capability matrix; `npm run db:generate
 reported no schema changes. `git diff --check` passed. No client scheduled-audio
 or inter-device timing claims: those remain the explicit Phase 3b work above.
 All changes committed on production-v1; no push, PR or external provisioning.
+
+### Phase 3b — review remediation and client seams (2026-11-03, partial)
+
+**This is not the completed Phase 3b player migration.** Part A is implemented;
+Part B has independently tested transport/clock/scheduling seams, with the player
+integration and measured multi-client acceptance still open. `main.ts`,
+`audioEngine.ts` and legacy `sync.ts` have not been switched to these seams.
+No push, production access, real mail or paid-provider calls.
+
+Part A:
+- A-B1: changing auth mode clears verification/token state; verification offers
+  password recovery. Built-start Playwright victim scenario resets an unknown
+  attacker password and signs in with the recovered password. Existing real-auth
+  reset coverage verifies email ownership and session revocation.
+- A-S1: process-global and per-user admission before bodyLimit/score body reads;
+  defaults 4/1 (`SCORE_UPLOAD_GLOBAL_MAX`, `SCORE_UPLOAD_USER_MAX`). Immediate
+  503/429 with Retry-After: 2; slots held through validation/persistence and
+  released in finally. Real streaming requests cover both limits and release.
+- A-S2: invalid percent encoding in score-title headers returns 422 invalid_text.
+- A-S3: separate verification/reset recipient intervals (60 s), rolling 24-hour
+  recipient ceiling 100/kind, requester-IP share 5/kind/recipient. Suppressed
+  attempts do not consume or extend budgets. Sanitized suppression logging and
+  visible resend seconds; generic public responses remain. Internal duplicate
+  signup recovery inherits the originating requester through async context.
+  HTTP regression covers three-request attack and a different requester's
+  recovery after an attacker's share is exhausted.
+- A-S4: reject NUL/non-well-formed strings and object keys before JSONB, including
+  native-score worker parsing and decoded headers. Added ES2024.String types for
+  isWellFormed, already supported by the required Node 22 runtime.
+- A-S5: non-queuing in-flight email/email+IP guards span password evaluation and
+  failure accounting. 80 concurrent wrong passwords yield at most 10 evaluations;
+  distributed legitimate recovery remains available. Like Phase 3a queues, these
+  guards assume one application process; replicas require shared admission.
+- A-S6: SVG-namespace element/attribute allowlists from actual Verovio 6.3 output;
+  only internal use references, known renderer CSS and embedded notation-font
+  declarations. Arbitrary styles, namespaces, animation, DOCTYPE/entities and
+  CSS-escaped URLs are excluded. 18 malicious payloads plus entity case pass;
+  every sample page's DOM is preserved exactly after equivalent import. Built
+  browser audio/staff/PDF smoke passed, exported PDF 121434 bytes, no page errors.
+- A-N1: copy invite capabilities before preserving existing grants on refresh;
+  same manager request retries successfully without another send.
+- A-N2: socket metadata compares revision/version; deletion tombstones reject
+  stale resurrection; fetched event metadata is checked again after await.
+- A-N3: creation/acceptance emit membership notifications after commit. Account
+  sockets serialize room refreshes and join additions/leave removals before
+  notifying the client. Real socket regression covers a newly created room,
+  immediate library fanout and membership removal.
+- A-N4: one existing-signup recovery branch; early auth/permission errors return
+  readable JSON without Connection: close. Rejected bodies are discarded as
+  bounded streaming chunks (2 s / score-size bound), not retained. This fixes
+  the adapter's delayed cleanup closing a reused HTTP/1 connection; the original
+  large upload/idempotent retry scenario passes again.
+
+Part B delivered seams (not yet installed in main):
+- `src/rehearsal/socket-transport.ts`: SocketPlaybackTransport implements the 3a
+  canonical RehearsalTransport, not the old patch-based PlaybackTransport.
+  Authenticated socket supplied by its owner; volatile emissions, disconnect
+  rejection, bounded acknowledgements, snapshot application awaited before
+  readiness, latest revision command construction, stale-triggered snapshot,
+  notice/readiness callbacks and disposal. Unit tests use a fake socket.
+- `src/rehearsal/client-clock.ts`: eight-ping estimateClock rounds, 30-second
+  refresh, visible/online/sleep triggers, explicit reconnect/resume refresh,
+  <=100 ms uncertainty gate and diagnostics. Monotonic performance epoch maps
+  accepted server times to output timestamps; latency fallback is tested.
+- `src/rehearsal/schedule.ts`: pure future/late/effective-time/pre-roll decisions
+  using positionAt/lateJoin and score tempo integration. Unit regressions cover
+  past offset, expired pre-roll and effective-time tempo continuity.
+
+**Measured synchronization tolerance:** not measured. No two-client scheduled
+AudioContext starts were tested; mean/max over 10 runs are unavailable. No timing
+claim follows from the pure-function tests or the single-client musical smoke.
+
+**Drift correction approach (still to implement):** retain the old audio schedule
+until the canonical effective instant, then compare expected musical score time
+(positionAt integrated through secondsAt) against actual audible output once per
+second. Correct sustained errors over 30 ms by scheduling a replacement at a
+future anchor, with a short gain ramp/crossfade where the preserved AudioEngine
+boundary permits. Do not repeatedly hard-retrigger sustained notes for clock
+estimate scatter. Measure this with real output timestamps before selecting the
+final correction/crossfade policy.
+
+**Remaining required work:** B1 adapter/UI installation and localized notices;
+B2 clock/readiness gating wired to the actual account/ensemble socket lifecycle;
+B3 actual AudioEngine scheduling of notes/metronome against the full tempo map,
+starting-tone pitches, future pause/stop/seek and drift recovery; B4 resume banner
+and recalibration/rejoin; B5 all Together-mode controls, immutable selected score
+versions, arriving/arriveAt/arriveDirectly and stale-device-place suppression;
+B6 remove Firestore sync only after replacement is installed; B7 real multi-client
+browser scenarios (a–g), >=10-run tolerance measurements and full acceptance.
+Mute/solo/view/zoom must remain local. Existing single-client smoke covers musical
+preservation, not completion of B7.
+
+Timing decisions preserve 3a's explicit numeric epoch-ms transport exception;
+beats/durations are not calendar instants. DB timestamp types stay timestamptz.
+UTC logs and rolling elapsed-time mail windows introduce no calendar-day logic.
+
+Validation for this partial handoff: `npm run typecheck` passed; `npm test`
+passed 34 tests (also `TZ=America/New_York npm test`); `npm run build` passed
+through the built-browser/secret harnesses; `npm run test:integration` passed
+33/33 scenarios, plus the subsequently added five-account global-upload scenario
+passed targeted. `npm run check:secrets` passed its positive control and clean
+build. `npm run test:browser` passed the complete Phase 2b functional and
+five-theme/language/viewport/capability matrix. The final built server also passed
+`scripts/browser-recovery.mjs`, explicitly waiting for the password-proof form
+before requesting reset. `BROWSER_SCRIPT=scripts/browser-smoke.mjs npm run
+test:browser` passed audio, staff, PDF and reset/sign-in smoke. `npm run
+db:generate` reported no schema changes; `git diff --check` passed. Logs and
+screenshots are untracked under `.review-evidence/`. Earlier failing evidence is
+retained alongside the passing runs. The existing integration fixture now ages
+only the mail interval record before testing a second legitimate recovery;
+new attack tests exercise the interval without that adjustment.
