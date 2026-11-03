@@ -132,6 +132,7 @@ it.each([
  const pre=run({...s,countIn:{bars:1},startingTones:{enabled:true}},{type:'play'});
  const next=run(pre,command,1000);
  expect(next).toMatchObject({status:'countingIn',countInUntil:4400,startingTonesUntil:2400,anchor:{beat:0}});
+ expect(next.anchor).toEqual(pre.anchor);expect(next.effectiveAt).toBe(1400);
  expect(positionAt(next,4400,t)).toBe(0);
 });
 it('rescales remaining count-in and preserves starting tones on tempo change',()=>{

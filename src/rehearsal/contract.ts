@@ -18,6 +18,7 @@ export const commandSchema = z.discriminatedUnion('type', [
 export const envelopeSchema = z.object({ ensembleId: id, commandId: z.uuid(), baseRevision: n.int().nonnegative(), clientSentAt: n, command: commandSchema }).strict();
 export const stateSchema = z.object({
     ensembleId: id, revision: n.int().nonnegative(), pieceId: id.nullable(), versionNo: n.int().positive().nullable(),
+    effectiveAt: n.optional(), // Legacy persisted states fall back to anchor.serverTime.
     status: z.enum(['stopped', 'countingIn', 'playing', 'paused']), anchor: z.object({ serverTime: n, beat }),
     bpm: n.min(1).max(1000), transposition: n.int().min(-48).max(48),
     loop: z.object({ enabled: z.boolean(), startBeat: beat.nullable(), endBeat: beat.nullable() }),

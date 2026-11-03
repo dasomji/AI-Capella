@@ -819,7 +819,7 @@ Additional command semantics (for Phase 3d):
 | play while playing/countingIn, no fromBeat | Accepted original state/revision; no retrigger |
 | play with fromBeat while moving | Seek without pre-roll; requires pieceId/versionNo |
 | seek, setLoop, setTempo, setTransposition | Require selected pieceId/versionNo; mismatch is stale |
-| pause | Unchecked; accepts older revision; pauses at effective position |
+| pause | Unchecked; accepts older revision; repeated paused state is an accepted no-op |
 | play at/after end, loop off | Restarts at beat zero |
 | seek at/beyond end | Clamps to totalBeats, status stopped |
 | restart past natural end | Stopped at totalBeats; otherwise paused, including countingIn |
@@ -862,3 +862,9 @@ seek gestures (one latest target, avoid emitting per pointer move), respect
 rate_limited backoff, disable readiness on session_expired, handle idle pause,
 and retain the prior audio schedule through effective time. UI, audio, drift
 correction and measured multi-device timing remain the next phase.
+
+
+Pre-roll settings preserve the entire musical anchor. Canonical `effectiveAt`
+records when the changed settings take effect independently of that anchor;
+playbackSchedule consumes it. The field is optional only when reading legacy
+persisted snapshots (fallback: anchor.serverTime); new controller states emit it.

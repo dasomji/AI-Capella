@@ -2,7 +2,7 @@ import type { Command, Envelope, RehearsalState as State, RejectionCode } from '
 import { secondsAt, beatAt, type PieceTiming } from './timeline';
 export const revisionChecked: Record<Command['type'], boolean> = { selectPiece: false, play: true, pause: false, stop: false, seek: true, setTempo: false, setTransposition: false, setLoop: true, setMetronome: false, setCountIn: false, setStartingTones: false, playStartingTones: true };
 export function initialState(ensembleId: string, userId: string, now: number): State {
-    return { ensembleId, revision: 0, pieceId: null, versionNo: null, status: 'stopped', anchor: { serverTime: now, beat: 0 }, bpm: 100, transposition: 0, loop: { enabled: false, startBeat: null, endBeat: null }, metronome: false, countIn: { bars: 0 }, countInUntil: null, startingTones: { enabled: false }, startingTonesUntil: null, endsAt: null, updatedBy: userId, updatedAt: now };
+    return { ensembleId, revision: 0, effectiveAt: now, pieceId: null, versionNo: null, status: 'stopped', anchor: { serverTime: now, beat: 0 }, bpm: 100, transposition: 0, loop: { enabled: false, startBeat: null, endBeat: null }, metronome: false, countIn: { bars: 0 }, countInUntil: null, startingTones: { enabled: false }, startingTonesUntil: null, endsAt: null, updatedBy: userId, updatedAt: now };
 }
 export function positionAt(s: State, now: number, t: PieceTiming): number {
     if (s.status === 'paused' || s.status === 'stopped')
@@ -103,12 +103,13 @@ export function apply(s: State, e: Envelope, ctx: {
     if (loop.enabled && (beat >= loop.endBeat! || (c.type === 'setLoop' && beat < loop.startBeat!))) beat = loop.startBeat!;
     if (beat > t.totalBeats || (loop.enabled && (loop.startBeat === null || loop.endBeat === null || loop.startBeat >= loop.endBeat || loop.endBeat > t.totalBeats)))
         return { code: 'invalid' };
+    const carryAnchor = ['setMetronome','setCountIn','setStartingTones','setTransposition'].includes(c.type) && ((countInUntil ?? 0) > at || (startingTonesUntil ?? 0) > at);
     const start = countInUntil ?? startingTonesUntil ?? at;
     const endsAt = pieceId && (status === 'playing' || status === 'countingIn') && !loop.enabled ? start + (secondsAt(t.totalBeats, t) - secondsAt(beat, t)) * 1000 * t.baseBpm / bpm : null;
-    return { ensembleId: s.ensembleId, revision: s.revision + 1, pieceId, versionNo, status, anchor: { serverTime: at, beat }, bpm, transposition, loop, metronome, countIn: { bars }, countInUntil, startingTones: { enabled }, startingTonesUntil, endsAt, updatedBy: ctx.userId, updatedAt: now };
+    return { ensembleId: s.ensembleId, revision: s.revision + 1, effectiveAt: at, pieceId, versionNo, status, anchor: carryAnchor ? s.anchor : { serverTime: at, beat }, bpm, transposition, loop, metronome, countIn: { bars }, countInUntil, startingTones: { enabled }, startingTonesUntil, endsAt, updatedBy: ctx.userId, updatedAt: now };
 }
 export function restartPaused(s: State, now: number, t: PieceTiming): State {
-    return { ...s, revision: s.revision + 1, status: s.endsAt !== null && now >= s.endsAt ? 'stopped' : 'paused', anchor: { serverTime: now, beat: positionAt(s, now, t) }, countInUntil: null, startingTonesUntil: null, endsAt: null, updatedAt: now };
+    return { ...s, revision: s.revision + 1, effectiveAt: now, status: s.endsAt !== null && now >= s.endsAt ? 'stopped' : 'paused', anchor: { serverTime: now, beat: positionAt(s, now, t) }, countInUntil: null, startingTonesUntil: null, endsAt: null, updatedAt: now };
 }
 /** offset = server minus local clock. Client schedules remaining pre-roll only. */
 export function lateJoin(s: State, now: number, t: PieceTiming, offsetMs = 0) {

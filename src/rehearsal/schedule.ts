@@ -5,7 +5,7 @@ import { secondsAt, type PieceTiming } from './timeline';
  * Musical beats stay in source coordinates; tempoFactor scales the entire score tempo map. */
 export function playbackSchedule(state: RehearsalState, now: number, timing: PieceTiming) {
   const joined=lateJoin(state,now,timing);
-  const effectiveAt=Math.max(now,state.anchor.serverTime);
+  const effectiveAt=Math.max(now,state.effectiveAt ?? state.anchor.serverTime);
   const musicAt=Math.max(effectiveAt,state.countInUntil ?? 0,state.startingTonesUntil ?? 0);
   const beat=positionAt(state,musicAt,timing);
   return {

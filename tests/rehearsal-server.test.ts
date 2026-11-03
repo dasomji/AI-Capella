@@ -1,6 +1,6 @@
 import {it,expect,vi,beforeEach,afterEach} from 'vitest';
-const mocks=vi.hoisted(()=>({locked:true,query:vi.fn(),authorize:vi.fn(),library:undefined as any,member:undefined as any,validate:vi.fn()}));
-vi.mock('../server/db/index.server',()=>({pool:{query:mocks.query,connect:async()=>({query:async(sql:string,args:any[])=>sql.includes('advisory')?{rows:[{locked:mocks.locked}]}:['begin','commit','rollback'].includes(sql)?{}:mocks.query(sql,args),on:()=>{},release:()=>{}})}}));
+const mocks=vi.hoisted(()=>({ownerError:undefined as any,locked:true,query:vi.fn(),authorize:vi.fn(),library:undefined as any,member:undefined as any,validate:vi.fn()}));
+vi.mock('../server/db/index.server',()=>({pool:{query:mocks.query,connect:async()=>({query:async(sql:string,args:any[])=>sql.includes('advisory')?{rows:[{locked:mocks.locked}]}:['begin','commit','rollback'].includes(sql)?{}:mocks.query(sql,args),on:(_event:string,fn:any)=>{mocks.ownerError=fn;},release:()=>{}})}}));
 vi.mock('../server/domain.server',()=>({authorize:mocks.authorize,onMembershipChange:(fn:any)=>{mocks.member=fn;return ()=>{};},onLibraryChange:(fn:any)=>{mocks.library=fn;return ()=>{};}}));
 vi.mock('../server/env.server',()=>({env:{PLAYBACK_LEAD_MS:400}}));
 vi.mock('../server/logger.server',()=>({logError:vi.fn()}));
@@ -175,4 +175,10 @@ it('rejects a command when persistence consumes the minimum remaining lead',asyn
  mocks.query.mockImplementation(async(sql,args)=>{const result=await normal(sql,args);if(sql.startsWith('insert into rehearsal_sessions'))app.setNow(1390);return result;});
  expect((await c.emit('rehearsal:command',command())).code).toBe('unavailable');
  expect(app.broadcasts).toEqual([]);
+});
+it('cancels idle publication when the ownership connection is lost',async()=>{
+ stored.set(ensemble,{...initialState(ensemble,'u',0),revision:1,pieceId:'p',versionNo:1,status:'playing',bpm:120,loop:{enabled:true,startBeat:2,endBeat:6},anchor:{serverTime:1000,beat:2}});
+ const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});c.socket.disconnect();
+ mocks.ownerError(Error('connection lost'));app.setNow(601000);await vi.advanceTimersByTimeAsync(600000);
+ expect(stored.get(ensemble).revision).toBe(1);expect(app.broadcasts).toEqual([]);
 });
