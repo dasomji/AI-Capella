@@ -25,7 +25,11 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         if(buckets.size>10000) buckets.delete(buckets.keys().next().value!);
         if(b.tokens<1)return false; b.tokens--; return true;
     }
-    const errorCode = (error:any): Ack['code'] => ['forbidden','session_expired','not_found','rate_limited','invalid'].includes(error?.code ?? error?.message) ? (error.code ?? error.message) : 'unavailable';
+    function errorCode(error: any): Ack['code'] {
+        const code = error?.code ?? error?.message;
+        if (['invalid_score','invalid_xml','empty_score','invalid_text','nesting_limit'].includes(code)) return 'invalid';
+        return ['forbidden','session_expired','not_found','rate_limited','invalid'].includes(code) ? code : 'unavailable';
+    }
     const queues = new Map<string, Promise<unknown>>(), timers = new Map<string, ReturnType<typeof setTimeout>>();
     const versions = new Map<string, {content_hash:string;format:'score'|'musicxml';timing:PieceTiming|null}>();
     const seen = new Map<string, Map<string, {at:number; ack:Ack}>>(), timings = new Map<string, Promise<PieceTiming>>();

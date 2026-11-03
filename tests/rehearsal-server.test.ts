@@ -152,3 +152,15 @@ it('lazily backfills legacy timing once through the bounded worker',async()=>{
  expect(mocks.validate).toHaveBeenCalledTimes(1);
  expect(mocks.query.mock.calls.find(([sql])=>sql.startsWith('update score_versions'))?.[1]).toEqual([ensemble,'p',1,JSON.stringify(timing)]);
 });
+it.each([['invalid_score','invalid'],['validation_timeout','unavailable'],['validation_busy','unavailable']])('maps worker %s to %s',async(error,expected)=>{
+ const normal=mocks.query.getMockImplementation()!;
+ mocks.query.mockImplementation(async(sql,args)=>{
+  if(sql.startsWith('select content_hash'))return {rows:[{content_hash:'legacy',format:'score',timing:null}]};
+  if(sql.startsWith('select native_score'))return {rows:[{native_score:'{}'}]};
+  return normal(sql,args);
+ });
+ mocks.validate.mockRejectedValue({code:error});
+ const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ expect((await c.emit('rehearsal:command',command('selectPiece',{command:{type:'selectPiece',pieceId:'p',versionNo:1}}))).code).toBe(expected);
+ expect(app.broadcasts).toEqual([]);
+});
