@@ -600,7 +600,7 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
     );
     if (cached)
       return { invitation: cached, raw: undefined as string | undefined };
-    const cap = input.capabilities ?? {
+    const cap = input.capabilities ? { ...input.capabilities } : {
       manageMembers: false,
       editPieces: false,
       transcribe: false,

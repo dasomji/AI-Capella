@@ -1762,3 +1762,14 @@ test('three requests cannot silence recovery and requester share preserves recip
   assert.equal((await reset('198.51.100.70')).status,200);await flush();assert.equal(count(),2);
   assert.equal((await reset('198.51.100.72')).status,200);await flush();assert.equal(count(),3);
 });
+
+test('manager refresh retry preserves original idempotency input',async()=>{
+ const lead=await account(), manager=await account(), e=await ok('ensembles','POST',{name:'Retry'},lead.cookie);
+ await pool.query('insert into memberships(ensemble_id,user_id,manage_members) values($1,$2,true)',[e.id,manager.id]);
+ const path=`ensembles/${e.id}/invitations`, email=`retry-${crypto.randomUUID()}@example.test`;
+ await ok(path,'POST',{email,capabilities:{editPieces:true,manageMembers:false,transcribe:false},idempotencyKey:'lead'},lead.cookie);
+ await pool.query('update invitation_sends set created_at=now()-interval \'61 seconds\' where ensemble_id=$1',[e.id]);
+ const input={email,capabilities:{editPieces:false,manageMembers:false,transcribe:false},idempotencyKey:'manager'};
+ const first=await ok(path,'POST',input,manager.cookie), retry=await ok(path,'POST',input,manager.cookie);
+ assert.equal(first.id,retry.id);assert.equal(retry.capabilities.editPieces,true);assert.equal(retry.sendCount,2);
+});
