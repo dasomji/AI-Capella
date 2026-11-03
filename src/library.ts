@@ -189,6 +189,12 @@ export const songOrder = (s: { sortKey?: number; importedAt: number }) =>
   s.sortKey ?? s.importedAt;
 export async function saveSongOrder(places: { id: string; sortKey: number }[]) {
   await api(`/ensembles/${activeEnsemble()}/reorder`, "POST", {
+    expectedOrder: [...metadata.values()]
+      .sort(
+        (a, b) =>
+          a.sortKey.localeCompare(b.sortKey) || a.id.localeCompare(b.id),
+      )
+      .map((p) => p.id),
     pieceIds: [...places]
       .sort((a, b) => a.sortKey - b.sortKey)
       .map((p) => p.id),

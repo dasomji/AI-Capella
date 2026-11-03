@@ -22,6 +22,13 @@
       "when": 1793737854763,
       "tag": "0002_short_ultragirl",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793739883456,
+      "tag": "0003_serious_machine_man",
+      "breakpoints": true
     }
   ]
 }

@@ -100,6 +100,34 @@ export const versionInput = z
     content: contentInput,
   })
   .strict();
+const partKey = z
+  .string()
+  .min(1)
+  .max(200)
+  .refine((k) => !["__proto__", "prototype", "constructor"].includes(k));
+const sections = z
+  .array(
+    z
+      .object({
+        label: z.string().max(200),
+        beat: z.number().finite().nonnegative(),
+      })
+      .strict(),
+  )
+  .max(1000);
+const savedValues = {
+  transpose: z.number().int().min(-48).max(48),
+  bpm: z.number().finite().min(1).max(1000),
+  sections,
+  played: z.boolean(),
+};
+const savedSchema = z
+  .object(
+    Object.fromEntries(
+      Object.entries(savedValues).map(([k, v]) => [k, v.optional()]),
+    ),
+  )
+  .strict();
 export const settingsInput = z
   .object({
     op: z.enum([
@@ -117,9 +145,56 @@ export const settingsInput = z
     value: z.json(),
     expectedRevision: z.number().int().positive().optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((v, ctx) => {
+    let schema: z.ZodType = z.never();
+    if (
+      v.value === null &&
+      v.key &&
+      !["title", "swing", "replace"].includes(v.op)
+    )
+      return;
+    switch (v.op) {
+      case "title":
+        schema = z.string().trim().min(1).max(500);
+        break;
+      case "partName":
+        schema = z.string().max(200);
+        break;
+      case "clef":
+        schema = z.enum(["treble", "treble8", "bass"]);
+        break;
+      case "removed":
+      case "split":
+      case "swing":
+        schema = z.boolean();
+        break;
+      case "replace":
+        schema = savedSchema;
+        break;
+      case "saved":
+        schema = savedValues[v.key as keyof typeof savedValues] ?? z.never();
+        break;
+      case "defaults":
+        schema =
+          v.key === "percussion"
+            ? z
+                .record(partKey, z.boolean())
+                .refine((v) => Object.keys(v).length <= 256)
+            : z.never();
+        break;
+    }
+    if (
+      !schema.safeParse(v.value).success ||
+      (v.key !== undefined && !partKey.safeParse(v.key).success)
+    )
+      ctx.addIssue({ code: "custom", message: "Invalid setting value" });
+  });
 export const reorderInput = z
-  .object({ pieceIds: z.array(z.string()).max(10000) })
+  .object({
+    pieceIds: z.array(z.string()).max(10000),
+    expectedOrder: z.array(z.string()).max(10000),
+  })
   .strict();
 export const metadataSchema = z.object({
   id: z.string(),
@@ -164,5 +239,5 @@ export const invitationSchema = z.object({
 });
 export const domainErrorSchema = z.object({
   code: z.string(),
-  current: metadataSchema.optional(),
+  current: z.union([metadataSchema,z.array(z.string())]).optional(),
 });

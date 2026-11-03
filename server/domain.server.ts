@@ -1,3 +1,5 @@
+import { logError } from "./logger.server";
+import { trackBackground } from "./background.server";
 import type { PoolClient } from "pg";
 import { pool } from "./db/index.server";
 export class DomainError extends Error {
@@ -13,16 +15,24 @@ export async function transaction<T>(
   run: (db: PoolClient) => Promise<T>,
 ): Promise<T> {
   const db = await pool.connect();
+  let broken = false;
   try {
     await db.query("begin");
+    await db.query("set local lock_timeout = '5s'");
+    await db.query("set local statement_timeout = '15s'");
     const result = await run(db);
     await db.query("commit");
     return result;
   } catch (error) {
-    await db.query("rollback");
+    try {
+      await db.query("rollback");
+    } catch (rollbackError) {
+      broken = true;
+      logError("database.rollback", rollbackError);
+    }
     throw error;
   } finally {
-    db.release();
+    db.release(broken);
   }
 }
 export type Capability = "lead" | "manageMembers" | "editPieces" | "transcribe";
@@ -79,17 +89,23 @@ export async function audit(
     [ensemble, actor, action, target],
   );
 }
-const listeners = new Set<(ensemble: string, user?: string) => void>();
+const listeners = new Set<
+  (ensemble: string, user?: string, removed?: boolean) => void
+>();
 export const onMembershipChange = (
-  fn: (ensemble: string, user?: string) => void,
+  fn: (ensemble: string, user?: string, removed?: boolean) => void,
 ) => {
   listeners.add(fn);
   return () => {
     listeners.delete(fn);
   };
 };
-export function membershipChanged(ensemble: string, user?: string) {
-  for (const fn of listeners) fn(ensemble, user);
+export function membershipChanged(
+  ensemble: string,
+  user?: string,
+  removed?: boolean,
+) {
+  for (const fn of listeners) fn(ensemble, user, removed);
 }
 const libraryListeners = new Set<
   (ensemble: string, changes: unknown[]) => Promise<void>
@@ -103,5 +119,11 @@ export const onLibraryChange = (
   };
 };
 export async function libraryChanged(ensemble: string, changes: unknown[]) {
-  await Promise.all([...libraryListeners].map((fn) => fn(ensemble, changes)));
+  trackBackground(
+    Promise.resolve()
+      .then(() =>
+        Promise.all([...libraryListeners].map((fn) => fn(ensemble, changes))),
+      )
+      .catch((error) => logError("library.emit", error)),
+  );
 }

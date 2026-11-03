@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { createHash, randomBytes } from "node:crypto";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
+import { verifyPassword } from "better-auth/crypto";
 import { currentSession } from "./auth.server";
 import { pool } from "./db/index.server";
 import {
@@ -33,21 +34,132 @@ export const domain = new Hono<{
 }>();
 // Injectable application clock; tests change it in-process, never through HTTP or environment bypasses.
 export const clock = { now: () => new Date() };
-function canonicalJSON(value: unknown): string {
+function canonicalJSON(value: unknown, depth = 0): string {
+  if (depth > 64) throw new DomainError("nesting_limit", 422);
   if (Array.isArray(value))
-    return "[" + value.map(canonicalJSON).join(",") + "]";
+    return "[" + value.map((v) => canonicalJSON(v, depth + 1)).join(",") + "]";
   if (value && typeof value === "object")
     return (
       "{" +
       Object.entries(value)
         .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-        .map(([key, value]) => JSON.stringify(key) + ":" + canonicalJSON(value))
+        .map(
+          ([key, value]) =>
+            JSON.stringify(key) + ":" + canonicalJSON(value, depth + 1),
+        )
         .join(",") +
       "}"
     );
   return JSON.stringify(value);
 }
+async function readBody(req: { json: () => Promise<unknown> }) {
+  const value = await req.json();
+  const stack: [unknown, number][] = [[value, 0]];
+  while (stack.length) {
+    const [v, depth] = stack.pop()!;
+    if (depth > 64) throw new DomainError("nesting_limit", 422);
+    if (v && typeof v === "object")
+      for (const child of Object.values(v)) stack.push([child, depth + 1]);
+  }
+  return value;
+}
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
+async function limit(
+  db: Pick<PoolClient, "query">,
+  key: string,
+  max: number,
+  window: number,
+) {
+  const now = clock.now().getTime();
+  const r = await db.query(
+    `insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request <= $2-$3 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request <= $2-$3 then $2 else rate_limit.last_request end returning count`,
+    [key, now, window],
+  );
+  if (r.rows[0].count > max) throw new DomainError("rate_limited", 429);
+}
+async function invitationBudget(
+  db: PoolClient,
+  e: string,
+  email: string,
+  u: string,
+) {
+  await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
+    "inviter:" + u,
+  ]);
+  const now = clock.now(),
+    since = new Date(now.getTime() - 86400000);
+  const r = (
+    await db.query(
+      `select count(*) filter(where ensemble_id=$1 and email=$2)::int as recipient, max(created_at) filter(where ensemble_id=$1 and email=$2) as last, count(*) filter(where ensemble_id=$1)::int as ensemble, count(*) filter(where inviter_id=$3)::int as inviter from invitation_sends where created_at > $4 and (ensemble_id=$1 or inviter_id=$3)`,
+      [e, email, u, since],
+    )
+  ).rows[0];
+  if (r.last && now.getTime() - new Date(r.last).getTime() < 60000)
+    throw new DomainError("send_cooldown", 429);
+  if (r.recipient >= 5) throw new DomainError("send_limit", 429);
+  if (
+    r.ensemble >= env.INVITE_ENSEMBLE_DAILY_MAX ||
+    r.inviter >= env.INVITE_USER_DAILY_MAX
+  )
+    throw new DomainError("send_daily_limit", 429);
+  await db.query(
+    "insert into invitation_sends(ensemble_id,email,inviter_id,created_at) values($1,$2,$3,$4)",
+    [e, email, u, now],
+  );
+}
+async function revokeIssued(db: PoolClient, e: string, u: string) {
+  await db.query(
+    "update invitations set state='revoked',revoked_at=$3 where ensemble_id=$1 and inviter_id=$2 and state='pending'",
+    [e, u, clock.now()],
+  );
+}
+async function replay(
+  db: PoolClient,
+  e: string,
+  u: string,
+  op: string,
+  key: string | undefined,
+  input: unknown,
+) {
+  if (!key) return;
+  const r = (
+    await db.query(
+      "select * from idempotency_records where ensemble_id=$1 and user_id=$2 and operation=$3 and request_key=$4 and created_at > $5",
+      [e, u, op, key, new Date(clock.now().getTime() - 86400000)],
+    )
+  ).rows[0];
+  if (r && r.request_hash !== hash(canonicalJSON(input)))
+    throw new DomainError("idempotency_mismatch", 422);
+  if (r && (op === "invite" || op.startsWith("resend:")))
+    return (
+      (await db.query("select * from invitations where id=$1", [r.response.id]))
+        .rows[0] ?? r.response
+    );
+  return r?.response;
+}
+async function remember(
+  db: PoolClient,
+  e: string,
+  u: string,
+  op: string,
+  key: string | undefined,
+  input: unknown,
+  response: unknown,
+) {
+  if (key)
+    await db.query(
+      `insert into idempotency_records(ensemble_id,user_id,operation,request_key,request_hash,response,created_at) values($1,$2,$3,$4,$5,$6,$7) on conflict(ensemble_id,user_id,operation,request_key) do update set request_hash=excluded.request_hash,response=excluded.response,created_at=excluded.created_at`,
+      [
+        e,
+        u,
+        op,
+        key,
+        hash(canonicalJSON(input)),
+        JSON.stringify(response),
+        clock.now(),
+      ],
+    );
+}
 const caps = (m: Record<string, unknown>) => ({
   manageMembers: !!(m.is_lead || m.manage_members),
   editPieces: !!(m.is_lead || m.edit_music_pieces),
@@ -62,14 +174,6 @@ const memberView = (m: Record<string, unknown>) => ({
   isLead: m.is_lead,
   capabilities: caps(m),
 });
-const requestKeys = (i: Record<string, any>): string[] => {
-  try {
-    const value = JSON.parse(i.request_key);
-    return Array.isArray(value) ? value : [i.request_key];
-  } catch {
-    return i.request_key ? [i.request_key] : [];
-  }
-};
 const inviteState = (i: Record<string, unknown>) =>
   i.state === "pending" && new Date(String(i.expires_at)) <= clock.now()
     ? "expired"
@@ -83,7 +187,24 @@ const inviteView = (i: Record<string, unknown>) => ({
   sendCount: i.send_count,
   capabilities: caps(i),
 });
-domain.onError((error, c) => {
+domain.onError(async (error, c) => {
+  if (
+    error instanceof DomainError &&
+    [403, 404].includes(error.status) &&
+    !["GET", "HEAD"].includes(c.req.method) &&
+    c.get("user")
+  ) {
+    try {
+      await limit(pool, "denied-audit:" + c.get("user").id, 10, 60000);
+      await pool.query(
+        "insert into audit_events(actor_id,action,target_id,outcome) values($1,'domain.mutation',$2,'denied')",
+        [c.get("user").id, c.req.param("ensemble") ?? null],
+      );
+    } catch (auditError) {
+      if (!(auditError instanceof DomainError))
+        logError("audit.denied", auditError);
+    }
+  }
   if (error instanceof DomainError)
     return c.json(
       { code: error.code, current: error.current },
@@ -101,7 +222,18 @@ domain.get("/invitations/:token", async (c) => {
       [hash(c.req.param("token"))],
     )
   ).rows[0];
-  if (!i) throw new DomainError("not_found", 404);
+  if (!i) {
+    if (
+      (
+        await pool.query(
+          "select 1 from superseded_invitations where token_hash=$1",
+          [hash(c.req.param("token") ?? "")],
+        )
+      ).rowCount
+    )
+      throw new DomainError("superseded", 409);
+    throw new DomainError("not_found", 404);
+  }
   return c.json({
     ensembleName: i.ensemble_name,
     inviter: i.inviter_name,
@@ -114,6 +246,8 @@ domain.use("*", async (c, next) => {
   const s = await currentSession(c.req.raw.headers);
   if (!s?.user.emailVerified) return c.json({ code: "SESSION_EXPIRED" }, 401);
   c.set("user", s.user);
+  if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method))
+    await limit(pool, "domain:" + s.user.id, env.DOMAIN_USER_MINUTE_MAX, 60000);
   await next();
 });
 domain.get("/ensembles", async (c) => {
@@ -133,12 +267,18 @@ domain.get("/ensembles", async (c) => {
   );
 });
 domain.post("/ensembles", async (c) => {
-  const input = ensembleInput.parse(await c.req.json()),
+  const input = ensembleInput.parse(await readBody(c.req)),
     u = c.get("user");
   const result = await transaction(async (db) => {
     await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
       u.id,
     ]);
+    await limit(
+      db,
+      "ensemble-create:" + u.id,
+      env.ENSEMBLE_USER_DAILY_MAX,
+      86400000,
+    );
     const e = (
       await db.query(
         "insert into ensembles(name,kind) values($1,$2) returning *",
@@ -150,12 +290,13 @@ domain.post("/ensembles", async (c) => {
       [e.id, u.id],
     );
     await audit(db, e.id, u.id, "ensemble.create", e.id);
-    return e;
+    const m = await authorize(db, u.id, e.id);
+    return { ...e, membershipId: m.id, isLead: true, capabilities: caps(m) };
   });
   return c.json(result, 201);
 });
 domain.patch("/ensembles/:ensemble", async (c) => {
-  const input = ensembleInput.pick({ name: true }).parse(await c.req.json()),
+  const input = ensembleInput.pick({ name: true }).parse(await readBody(c.req)),
     e = c.req.param("ensemble"),
     u = c.get("user");
   return c.json(
@@ -167,7 +308,13 @@ domain.patch("/ensembles/:ensemble", async (c) => {
         [input.name, e],
       );
       await audit(db, e, u.id, "ensemble.rename", e);
-      return result.rows[0];
+      const m = await authorize(db, u.id, e);
+      return {
+        ...result.rows[0],
+        membershipId: m.id,
+        isLead: m.is_lead,
+        capabilities: caps(m),
+      };
     }),
   );
 });
@@ -184,7 +331,7 @@ domain.get("/ensembles/:ensemble/members", async (c) => {
   );
 });
 domain.patch("/ensembles/:ensemble/members/:member", async (c) => {
-  const input = memberInput.parse(await c.req.json()),
+  const input = memberInput.parse(await readBody(c.req)),
     e = c.req.param("ensemble"),
     id = c.req.param("member"),
     u = c.get("user");
@@ -221,10 +368,17 @@ domain.patch("/ensembles/:ensemble/members/:member", async (c) => {
         actor.id,
       ]);
     }
+    if (
+      (m.is_lead && input.isLead === false) ||
+      (m.manage_members && input.manageMembers === false)
+    )
+      await revokeIssued(db, e, m.user_id);
+    if (input.stepDown) await revokeIssued(db, e, u.id);
     await audit(db, e, u.id, "membership.permissions", id);
     return memberView(result);
   });
-  membershipChanged(e);
+  membershipChanged(e, String(result.userId));
+  if (input.stepDown) membershipChanged(e, u.id);
   return c.json(result);
 });
 domain.delete("/ensembles/:ensemble/members/:member", async (c) => {
@@ -247,6 +401,7 @@ domain.delete("/ensembles/:ensemble/members/:member", async (c) => {
       if (m.is_lead && !actor.is_lead) throw new DomainError("forbidden", 403);
     }
     await protectLead(db, e, m);
+    await revokeIssued(db, e, m.user_id);
     await db.query("delete from memberships where id=$1", [id]);
     await audit(
       db,
@@ -257,30 +412,120 @@ domain.delete("/ensembles/:ensemble/members/:member", async (c) => {
     );
     removed = m.user_id;
   });
-  membershipChanged(e, removed);
+  membershipChanged(e, removed, true);
   return c.json({ status: true });
+});
+domain.get("/account/deletion", async (c) => {
+  const rows = await pool.query(
+    `select e.id,e.name,count(m.id)::int as members,count(m.id) filter(where m.is_lead)::int as leads,bool_or(m.user_id=$1 and m.is_lead) as own_lead from ensembles e join memberships m on m.ensemble_id=e.id where e.id in(select ensemble_id from memberships where user_id=$1) group by e.id order by e.id`,
+    [c.get("user").id],
+  );
+  return c.json({
+    deleteEnsembles: rows.rows
+      .filter((r) => r.members === 1)
+      .map((r) => ({ id: r.id, name: r.name })),
+    lastLead: rows.rows
+      .filter((r) => r.members > 1 && r.leads === 1 && r.own_lead)
+      .map((r) => r.id),
+  });
 });
 domain.delete("/account", async (c) => {
   const u = c.get("user");
+  const input = z
+    .object({
+      deleteEnsembleIds: z.array(z.string()).max(1000),
+      password: z.string().max(1000).optional(),
+    })
+    .strict()
+    .parse(await readBody(c.req));
+  const session = await currentSession(c.req.raw.headers);
+  if (
+    !session ||
+    clock.now().getTime() - new Date(session.session.createdAt).getTime() >
+      600000
+  ) {
+    const credential = (
+      await pool.query(
+        "select password from account where user_id=$1 and provider_id='credential'",
+        [u.id],
+      )
+    ).rows[0];
+    if (
+      !input.password ||
+      !credential?.password ||
+      !(await verifyPassword({
+        hash: credential.password,
+        password: input.password,
+      }))
+    )
+      throw new DomainError("recent_auth_required", 401);
+  }
   await transaction(async (db) => {
     await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
       u.id,
     ]);
-    const es = await db.query(
-      "select ensemble_id from memberships where user_id=$1 order by ensemble_id",
+    const es = (
+      await db.query(
+        "select ensemble_id from memberships where user_id=$1 order by ensemble_id",
+        [u.id],
+      )
+    ).rows;
+    const sole: string[] = [],
+      last: string[] = [];
+    for (const { ensemble_id: e } of es) {
+      await lockEnsemble(db, e);
+      const rows = (
+        await db.query("select * from memberships where ensemble_id=$1", [e])
+      ).rows;
+      if (rows.length === 1) sole.push(e);
+      else if (
+        rows.filter((m) => m.is_lead).length === 1 &&
+        rows.some((m) => m.user_id === u.id && m.is_lead)
+      )
+        last.push(e);
+    }
+    if (last.length) throw new DomainError("last_lead", 409, last);
+    if (
+      JSON.stringify([...new Set(input.deleteEnsembleIds)].sort()) !==
+        JSON.stringify(sole.sort()) ||
+      new Set(input.deleteEnsembleIds).size !== input.deleteEnsembleIds.length
+    )
+      throw new DomainError("confirm_ensemble_deletion", 409, sole);
+    await db.query(
+      "insert into audit_events(actor_id,action,target_id,outcome) values($1,'account.delete',$1,'ok')",
       [u.id],
     );
-    for (const { ensemble_id: e } of es.rows) {
-      await lockEnsemble(db, e);
-      const m = await authorize(db, u.id, e);
-      await protectLead(db, e, m);
-      await audit(db, e, u.id, "membership.leave", m.id);
+    for (const { ensemble_id: e } of es) {
+      await revokeIssued(db, e, u.id);
+      if (sole.includes(e)) {
+        await db.query(
+          "update music_pieces set current_version_id=null where ensemble_id=$1",
+          [e],
+        );
+        for (const table of [
+          "job_pages",
+          "transcription_jobs",
+          "stored_objects",
+          "score_versions",
+          "music_pieces",
+          "rehearsal_sessions",
+          "invitations",
+          "memberships",
+        ])
+          await db.query(`delete from ${table} where ensemble_id=$1`, [e]);
+        await db.query(
+          "update audit_events set ensemble_id=null where ensemble_id=$1",
+          [e],
+        );
+        await db.query("delete from ensembles where id=$1", [e]);
+      }
     }
     await db.query('delete from "user" where id=$1', [u.id]);
   });
-  membershipChanged("", u.id);
+  membershipChanged("", u.id, true);
   return c.json({ status: true });
 });
+
 async function sendInvite(
   db: Pick<PoolClient, "query">,
   i: Record<string, any>,
@@ -323,12 +568,22 @@ domain.get("/ensembles/:ensemble/invitations", async (c) => {
   );
 });
 domain.post("/ensembles/:ensemble/invitations", async (c) => {
-  const input = invitationInput.parse(await c.req.json()),
+  const input = invitationInput.parse(await readBody(c.req)),
     e = c.req.param("ensemble"),
     u = c.get("user");
   const delivery = await transaction(async (db) => {
     await lockEnsemble(db, e);
     const actor = await authorize(db, u.id, e, "manageMembers");
+    const cached = await replay(
+      db,
+      e,
+      u.id,
+      "invite",
+      input.idempotencyKey,
+      input,
+    );
+    if (cached)
+      return { invitation: cached, raw: undefined as string | undefined };
     const cap = input.capabilities ?? {
       manageMembers: false,
       editPieces: false,
@@ -351,12 +606,17 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
         [e, input.email],
       )
     ).rows[0];
-    if (old && requestKeys(old).includes(input.idempotencyKey))
-      return { invitation: old, raw: undefined as string | undefined };
+    await invitationBudget(db, e, input.email, u.id);
     if (old) {
-      if (old.send_count >= 5) throw new DomainError("send_limit", 429);
-      if (clock.now().getTime() - new Date(old.last_sent_at).getTime() < 60000)
-        throw new DomainError("send_cooldown", 429);
+      await db.query(
+        "insert into superseded_invitations(token_hash) values($1) on conflict do nothing",
+        [old.token_hash],
+      );
+      if (!actor.is_lead) {
+        cap.manageMembers = old.manage_members;
+        cap.editPieces = old.edit_music_pieces;
+        cap.transcribe = old.ai_transcription;
+      }
     }
     const recipient = (
       await db.query('select language from "user" where email=$1', [
@@ -378,10 +638,7 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
           cap.editPieces,
           cap.transcribe,
           input.language ?? recipient?.language ?? "en",
-          JSON.stringify([
-            ...(old ? requestKeys(old) : []),
-            input.idempotencyKey,
-          ]),
+          JSON.stringify([input.idempotencyKey]),
           clock.now(),
         ],
       )
@@ -394,6 +651,7 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
       old ? "invitation.resend" : "invitation.create",
       i.id,
     );
+    await remember(db, e, u.id, "invite", input.idempotencyKey, input, i);
     return { invitation: i, raw };
   });
   if (delivery.raw) await sendInvite(pool, delivery.invitation, delivery.raw);
@@ -405,7 +663,7 @@ domain.post(
     const { idempotencyKey } = z
         .object({ idempotencyKey: z.string().min(1).max(200) })
         .strict()
-        .parse(await c.req.json()),
+        .parse(await readBody(c.req)),
       e = c.req.param("ensemble"),
       u = c.get("user");
     const delivery = await transaction(async (db) => {
@@ -418,12 +676,18 @@ domain.post(
         )
       ).rows[0];
       if (!i) throw new DomainError("not_found", 404);
-      if (requestKeys(i).includes(idempotencyKey))
-        return { invitation: i, raw: undefined as string | undefined };
+      const cached = await replay(db, e, u.id, "invite", idempotencyKey, {
+        idempotencyKey,
+        invitationId: i.id,
+      });
+      if (cached)
+        return { invitation: cached, raw: undefined as string | undefined };
       if (i.state !== "pending") throw new DomainError(i.state);
-      if (i.send_count >= 5) throw new DomainError("send_limit", 429);
-      if (clock.now().getTime() - new Date(i.last_sent_at).getTime() < 60000)
-        throw new DomainError("send_cooldown", 429);
+      await invitationBudget(db, e, i.email, u.id);
+      await db.query(
+        "insert into superseded_invitations(token_hash) values($1) on conflict do nothing",
+        [i.token_hash],
+      );
       const raw = randomBytes(32).toString("base64url");
       Object.assign(
         i,
@@ -433,7 +697,7 @@ domain.post(
             [
               hash(raw),
               new Date(clock.now().getTime() + 14 * 86400000),
-              JSON.stringify([...requestKeys(i), idempotencyKey]),
+              JSON.stringify([idempotencyKey]),
               clock.now(),
               i.id,
             ],
@@ -442,6 +706,15 @@ domain.post(
       );
 
       await audit(db, e, u.id, "invitation.resend", i.id);
+      await remember(
+        db,
+        e,
+        u.id,
+        "invite",
+        idempotencyKey,
+        { idempotencyKey, invitationId: i.id },
+        i,
+      );
       return { invitation: i, raw };
     });
     if (delivery.raw) await sendInvite(pool, delivery.invitation, delivery.raw);
@@ -483,7 +756,18 @@ domain.post("/invitations/:token/accept", async (c) => {
           [hash(c.req.param("token"))],
         )
       ).rows[0];
-      if (!initial) throw new DomainError("not_found", 404);
+      if (!initial) {
+        if (
+          (
+            await db.query(
+              "select 1 from superseded_invitations where token_hash=$1",
+              [hash(c.req.param("token"))],
+            )
+          ).rowCount
+        )
+          throw new DomainError("superseded", 409);
+        throw new DomainError("not_found", 404);
+      }
       await lockEnsemble(db, initial.ensemble_id);
       const i = (
         await db.query(
@@ -507,6 +791,19 @@ domain.post("/invitations/:token/accept", async (c) => {
       }
       const state = inviteState(i);
       if (state !== "pending") throw new DomainError(String(state), 409);
+      const issuer = (
+        await db.query(
+          "select * from memberships where ensemble_id=$1 and user_id=$2",
+          [i.ensemble_id, i.inviter_id],
+        )
+      ).rows[0];
+      if (!issuer || (!issuer.is_lead && !issuer.manage_members))
+        throw new DomainError("revoked", 409);
+      if (!issuer.is_lead) {
+        i.manage_members = false;
+        i.edit_music_pieces = false;
+        i.ai_transcription = false;
+      }
       const m = (
         await db.query(
           "insert into memberships(ensemble_id,user_id,manage_members,edit_music_pieces,ai_transcription) values($1,$2,$3,$4,$5) on conflict(ensemble_id,user_id) do nothing returning *",
@@ -575,8 +872,8 @@ async function insertVersion(
   u: string,
   n: number,
   input: z.infer<typeof contentInput>,
+  data: Awaited<ReturnType<typeof content>>,
 ) {
-  const data = await content(input);
   const v = (
     await db.query(
       "insert into score_versions(ensemble_id,piece_id,version_no,created_by,format,schema_version,musicxml,native_score,content_hash,size) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id",
@@ -629,6 +926,14 @@ domain.get(
       )
     ).rows[0];
     if (!v) throw new DomainError("not_found", 404);
+    c.header(
+      "Content-Disposition",
+      'attachment; filename="score.' +
+        (v.format === "musicxml" ? "musicxml" : "json") +
+        '"',
+    );
+    c.header("Content-Security-Policy", "sandbox; default-src 'none'");
+    c.header("X-Content-Type-Options", "nosniff");
     c.header("ETag", `"${v.content_hash}"`);
     c.header("Cache-Control", "private, max-age=31536000, immutable");
     if (c.req.header("if-none-match") === `"${v.content_hash}"`)
@@ -639,28 +944,29 @@ domain.get(
       {
         "Content-Type":
           v.format === "musicxml"
-            ? "application/vnd.recordare.musicxml+xml; charset=utf-8"
+            ? "application/octet-stream"
             : "application/json",
       },
     );
   },
 );
 domain.post("/ensembles/:ensemble/pieces", async (c) => {
-  const input = createPieceInput.parse(await c.req.json()),
+  const input = createPieceInput.parse(await readBody(c.req)),
     e = c.req.param("ensemble"),
     u = c.get("user");
+  const data = await content(input.content);
   const result = await transaction(async (db) => {
     await lockEnsemble(db, e);
     await authorize(db, u.id, e, "editPieces");
-    if (input.idempotencyKey) {
-      const old = (
-        await db.query(
-          "select id from music_pieces where ensemble_id=$1 and idempotency_key=$2",
-          [e, input.idempotencyKey],
-        )
-      ).rows[0];
-      if (old) return metadata(db, e, old.id);
-    }
+    const cached = await replay(
+      db,
+      e,
+      u.id,
+      "piece",
+      input.idempotencyKey,
+      input,
+    );
+    if (cached) return cached;
     const n = (
       await db.query(
         "select coalesce(max(sort_key::bigint),-1)+1 as n from music_pieces where ensemble_id=$1",
@@ -675,29 +981,41 @@ domain.post("/ensembles/:ensemble/pieces", async (c) => {
           input.title,
           String(n).padStart(12, "0"),
           input.content.format,
-          input.idempotencyKey,
+          null,
         ],
       )
     ).rows[0];
-    await insertVersion(db, e, p.id, u.id, 1, input.content);
+    await insertVersion(db, e, p.id, u.id, 1, input.content, data);
     await audit(db, e, u.id, "piece.create", p.id);
-    return metadata(db, e, p.id);
+    const response = await metadata(db, e, p.id);
+    await remember(db, e, u.id, "piece", input.idempotencyKey, input, response);
+    return response;
   });
   await libraryChanged(e, [result]);
   return c.json(result, 201);
 });
 domain.post("/ensembles/:ensemble/pieces/:piece/versions", async (c) => {
-  const input = versionInput.parse(await c.req.json()),
+  const input = versionInput.parse(await readBody(c.req)),
     e = c.req.param("ensemble"),
     p = c.req.param("piece"),
     u = c.get("user");
+  const data = await content(input.content);
   const result = await transaction(async (db) => {
     await lockEnsemble(db, e);
     await authorize(db, u.id, e, "editPieces");
     const current = await metadata(db, e, p);
     if (current.revision !== input.expectedRevision)
       throw new DomainError("revision_conflict", 409, current);
-    await insertVersion(db, e, p, u.id, current.versionNo + 1, input.content);
+    await insertVersion(
+      db,
+      e,
+      p,
+      u.id,
+      current.versionNo + 1,
+      input.content,
+      data,
+    );
+    await audit(db, e, u.id, "piece.version.create", p);
     await db.query("update music_pieces set revision=revision+1 where id=$1", [
       p,
     ]);
@@ -707,7 +1025,7 @@ domain.post("/ensembles/:ensemble/pieces/:piece/versions", async (c) => {
   return c.json(result);
 });
 domain.patch("/ensembles/:ensemble/pieces/:piece", async (c) => {
-  const input = settingsInput.parse(await c.req.json()),
+  const input = settingsInput.parse(await readBody(c.req)),
     e = c.req.param("ensemble"),
     p = c.req.param("piece"),
     u = c.get("user");
@@ -721,6 +1039,14 @@ domain.patch("/ensembles/:ensemble/pieces/:piece", async (c) => {
         current.revision !== input.expectedRevision)
     )
       throw new DomainError("revision_conflict", 409, current);
+    if (input.key && input.value !== null) {
+      const existing = current.settings;
+      const keys = Object.values(existing).flatMap((v) =>
+        v && typeof v === "object" ? Object.keys(v) : [],
+      );
+      if (keys.length >= 1024 && !keys.includes(input.key))
+        throw new DomainError("settings_limit", 422);
+    }
     const columns = {
       partName: "part_names",
       clef: "clef_overrides",
@@ -758,30 +1084,36 @@ domain.patch("/ensembles/:ensemble/pieces/:piece", async (c) => {
           : [input.key, p, JSON.stringify(input.value)],
       );
     }
+    await audit(db, e, u.id, "piece.metadata." + input.op, p);
     return metadata(db, e, p);
   });
   await libraryChanged(e, [result]);
   return c.json(result);
 });
 domain.post("/ensembles/:ensemble/reorder", async (c) => {
-  const input = reorderInput.parse(await c.req.json()),
+  const input = reorderInput.parse(await readBody(c.req)),
     e = c.req.param("ensemble"),
     u = c.get("user");
   const results = await transaction(async (db) => {
     await lockEnsemble(db, e);
     await authorize(db, u.id, e, "editPieces");
     const all = (
-      await db.query("select id from music_pieces where ensemble_id=$1", [e])
+      await db.query(
+        'select id from music_pieces where ensemble_id=$1 order by sort_key collate "C",id',
+        [e],
+      )
     ).rows.map((r) => r.id);
+    if (JSON.stringify(all) !== JSON.stringify(input.expectedOrder))
+      throw new DomainError("stale_order", 409, all);
     if (
       new Set(input.pieceIds).size !== all.length ||
       input.pieceIds.length !== all.length ||
       input.pieceIds.some((id) => !all.includes(id))
     )
-      throw new DomainError("not_found", 404);
+      throw new DomainError("stale_order", 409, all);
     for (const [n, id] of input.pieceIds.entries())
       await db.query(
-        "update music_pieces set sort_key=$1,revision=revision+1 where id=$2 and ensemble_id=$3",
+        "update music_pieces set sort_key=$1 where id=$2 and ensemble_id=$3",
         [String(n).padStart(12, "0"), id, e],
       );
     await audit(db, e, u.id, "piece.reorder", e);
