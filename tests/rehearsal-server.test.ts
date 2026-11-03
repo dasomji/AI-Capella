@@ -70,3 +70,43 @@ it('pauses idle loops at the current wrapped beat using a controlled timer',asyn
  app.setNow(601500);await vi.advanceTimersByTimeAsync(600000);
  expect(stored.get(ensemble)).toMatchObject({status:'paused',revision:2,anchor:{beat:3},endsAt:null});
 });
+it('retries a failed end commit, then stops; a newer command defeats the old timer',async()=>{
+ const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ const selected=await c.emit('rehearsal:command',command('selectPiece',{command:{type:'selectPiece',pieceId:'p',versionNo:1}}));
+ await c.emit('rehearsal:command',command('play',{baseRevision:selected.revision}));
+ const end=stored.get(ensemble).endsAt;
+ const normal=mocks.query.getMockImplementation()!;let failed=false;
+ mocks.query.mockImplementation(async(sql,args)=>{if(sql.startsWith('insert into rehearsal_sessions')&&!failed){failed=true;throw Error('database');}return normal(sql,args);});
+ app.setNow(end);await vi.advanceTimersByTimeAsync(end-1000);
+ expect(stored.get(ensemble).status).toBe('playing');
+ await vi.advanceTimersByTimeAsync(251);
+ expect(stored.get(ensemble)).toMatchObject({status:'stopped',anchor:{beat:100}});
+ const stopped=stored.get(ensemble).revision;
+ app.setNow(end+1000);
+ await c.emit('rehearsal:command',command('play',{baseRevision:stopped,clientSentAt:end+1000}));
+ await c.emit('rehearsal:command',command('pause',{baseRevision:0,clientSentAt:end+1000}));
+ const paused=stored.get(ensemble);app.setNow(end+100000);await vi.advanceTimersByTimeAsync(100000);
+ expect(stored.get(ensemble)).toEqual(paused);
+});
+it('reports stale selection with current state and rejects an in-flight revoked command',async()=>{
+ const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ await c.emit('rehearsal:command',command('selectPiece',{command:{type:'selectPiece',pieceId:'p',versionNo:1}}));
+ const stale=await c.emit('rehearsal:command',command('setTempo',{command:{type:'setTempo',pieceId:'old',versionNo:1,bpm:100}}));
+ expect(stale).toMatchObject({code:'stale',revision:1,state:{pieceId:'p',revision:1}});
+ // A library lookup is an asynchronous authorization boundary.
+ await mocks.library(ensemble,[{pieceId:'unrelated',deleted:false}]);
+ const normal=mocks.query.getMockImplementation()!;let release!:()=>void;
+ const gate=new Promise<void>(r=>release=r);
+ mocks.query.mockImplementation(async(sql,args)=>{if(sql.startsWith('select content_hash'))await gate;return normal(sql,args);});
+ const pending=c.emit('rehearsal:command',command('play',{baseRevision:1}));
+ await Promise.resolve();await Promise.resolve();await Promise.resolve();
+ mocks.authorize.mockRejectedValue(Error('forbidden'));mocks.member(ensemble,'one',true);release();
+ expect((await pending).code).toBe('forbidden');expect(stored.get(ensemble).revision).toBe(1);
+});
+it('maps DB failures and revision conflicts to unavailable without broadcasting',async()=>{
+ const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ const normal=mocks.query.getMockImplementation()!;
+ mocks.query.mockImplementation(async(sql,args)=>sql.startsWith('insert into rehearsal_sessions')?{rowCount:0,rows:[]}:normal(sql,args));
+ expect((await c.emit('rehearsal:command',command())).code).toBe('unavailable');
+ expect(app.broadcasts).toEqual([]);
+});

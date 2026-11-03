@@ -76,7 +76,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         try {
         const result = await db.query('insert into rehearsal_sessions(ensemble_id,revision,state) values($1,$2,$3) on conflict(ensemble_id) do update set revision=excluded.revision,state=excluded.state,updated_at=now() where rehearsal_sessions.revision < excluded.revision returning revision', [s.ensembleId,s.revision,JSON.stringify(s)]);
         if (!result.rowCount) { committed.delete(s.ensembleId); throw Error('unavailable'); }
-        if(checkLead && s.anchor.serverTime-now()<Math.min(50,env.PLAYBACK_LEAD_MS)) throw Error('unavailable');
+        if(checkLead && env.PLAYBACK_LEAD_MS>0 && s.anchor.serverTime-now()<Math.min(50,env.PLAYBACK_LEAD_MS)) throw Error('unavailable');
         if(checkLead) await db.query('commit');
         committed.set(s.ensembleId,s);
         } catch(error) { if(checkLead) await db.query('rollback'); if(!committed.has(s.ensembleId)) await load(s.ensembleId); throw error; }
@@ -140,19 +140,31 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         if (set.has(e))
             return;
         const epoch = generation;
-        await authorize(pool, socket.data.userId, e);
+        try { await authorize(pool, socket.data.userId, e); } catch(error:any) { if(error.code==='not_found') throw Error('forbidden'); throw error; }
         if (epoch !== generation)
             return member(socket, e);
         if (!socket.connected)
             throw Error('forbidden');
         set.add(e);
     }
+    function armIdle(ensembles: Iterable<string>) {
+            for(const e of ensembles) {
+                if(ns.adapter.rooms.get(`rehearsal:${e}`)?.size) continue;
+                if(idle.has(e)) continue;
+                const timer=setTimeout(()=>{ idle.delete(e); seen.delete(e); void serial(e,async()=>{
+                    if(ns.adapter.rooms.get(`rehearsal:${e}`)?.size) return;
+                    const s=await load(e);
+                    if(s.status==='playing'||s.status==='countingIn') await publish(restartPaused(s,now(),await timing(e,s.pieceId,s.versionNo)));
+                }).catch(error=>logError('rehearsal.idle',error)); },options.idleMs ?? 600000);
+                timer.unref(); idle.set(e,timer);
+            }
+    }
     const offMember = onMembershipChange((e, u, removed) => { generation++; for (const [socket, set] of membership) {
         if (u && socket.data.userId !== u)
             continue;
         set.delete(e);
         if (removed)
-            void socket.leave(`rehearsal:${e}`);
+            void Promise.resolve(socket.leave(`rehearsal:${e}`)).then(()=>armIdle([e]));
     } });
     const offLibrary = onLibraryChange(async (e, changes) => { versions.clear(); if (!changes.some((c: any) => c.deleted))
         return; await ready; await serial(e, async () => { const s = await load(e); if (!changes.some((c: any) => c.deleted && c.pieceId === s.pieceId))
@@ -250,15 +262,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         });
         socket.on('disconnect', () => {
             const ensembles=membership.get(socket); membership.delete(socket);
-            for(const e of ensembles ?? []) {
-                if(ns.adapter.rooms.get(`rehearsal:${e}`)?.size) continue;
-                const timer=setTimeout(()=>{ idle.delete(e); seen.delete(e); void serial(e,async()=>{
-                    if(ns.adapter.rooms.get(`rehearsal:${e}`)?.size) return;
-                    const s=await load(e);
-                    if(s.status==='playing'||s.status==='countingIn') await publish(restartPaused(s,now(),await timing(e,s.pieceId,s.versionNo)));
-                }).catch(error=>logError('rehearsal.idle',error)); },options.idleMs ?? 600000);
-                timer.unref(); idle.set(e,timer);
-            }
+            armIdle(ensembles ?? []);
         });
     });
     return () => { closed = true; offMember(); offLibrary(); for(const timer of idle.values()) clearTimeout(timer);
