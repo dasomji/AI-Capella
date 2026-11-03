@@ -1,3 +1,4 @@
+import { safeSvg } from "./safe-svg";
 // The sheet music as a PDF: the song's own MusicXML, engraved by Verovio (verovio.org, LGPL) as A4
 // pages in the key it plays in now, with the voices chosen (all, unless some are left out) under the
 // names chosen, and drawn into a vector PDF by jsPDF + svg2pdf.js. Everything here is loaded only
@@ -275,8 +276,8 @@ export async function makePdf(req: PdfRequest, progress: (step: 'engraver' | 'en
         .renderToSVG(page)
         .replace(/font-family="Times, serif"/g, 'font-family="LiberationSerif"')
         .replace(/(<tspan\b[^>]*font-family="(?:LightScoreEngraving|Bravura|Leipzig)"[^>]*>)([^<]*)/g, (_, tspan: string, glyphs: string) => musicInText(tspan, glyphs) + glyphs);
-      host.innerHTML = svgText;
-      const svg = host.querySelector('svg')!;
+      const svg = safeSvg(svgText);
+      host.replaceChildren(svg);
       const drawing = flattenInnerSvg(svg);
       if (drawing) fitToWidth(svg, drawing);
       if (page > 1) pdf.addPage('a4', 'portrait');

@@ -74,9 +74,13 @@ async function signup(page, email, name) {
     .filter({ hasText: "Check your email" })
     .waitFor();
   await page.goto(await mailLink(email, "verify-email"));
+  await page.locator('[name=password]').fill(password);
+  await page.locator('[name=confirm]').fill(password);
+  await page.locator('form button[type=submit]').click();
+  await page.getByRole('status').filter({hasText:'Email verified'}).waitFor();
 }
 async function signin(page, email) {
-  if (new URL(page.url()).searchParams.get("state") === "verified") await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  if (!(await page.locator("[name=email]").count())) await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.locator("[name=email]").fill(email);
   await page.locator("[name=password]").fill(password);
   await page.locator("form button[type=submit]").click();
@@ -141,6 +145,8 @@ try {
   await signup(q, emailB, "Member Singer");
   await q.getByRole("button", { name: "Sign in", exact: true }).click();
   await signin(q, emailB);
+  assert.equal(await q.evaluate(()=>sessionStorage.getItem("lightscore-invite") !== null),true);
+  await q.getByRole("button", {name:"Accept invitation", exact:true}).click();
   await q.waitForURL("**/app");
   if (await q.locator("#mode-solo-btn").isVisible())
     await q.locator("#mode-solo-btn").click();

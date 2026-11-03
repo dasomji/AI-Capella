@@ -58,7 +58,7 @@ try {
   let ready = false;
   for (let i = 0; i < 100; i++) {
     if (
-      spawnSync("docker", ["exec", db, "pg_isready", "-U", "postgres"])
+      spawnSync("docker", ["exec", db, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"])
         .status === 0
     ) {
       ready = true;

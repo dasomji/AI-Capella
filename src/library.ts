@@ -150,6 +150,7 @@ export function subscribeToSongs(
   );
   socket.on("connect", () => {
     socket.emit("ensemble:join", ensemble);
+    window.dispatchEvent(new Event("membership:refresh"));
     void refresh().catch(onError);
   });
   socket.on("library:changed", async (event) => {
@@ -158,6 +159,7 @@ export function subscribeToSongs(
       await Promise.all(
         event.changes.map(async (c: any) => {
           if (c.deleted) metadata.delete(c.pieceId);
+          else if (c.id && c.settings && c.sortKey !== undefined) metadata.set(c.id, c);
           else {
             const m = await api<PieceMetadata>(
               `/ensembles/${ensemble}/pieces/${c.pieceId}`,

@@ -42,6 +42,7 @@ function Invitation() {
     } catch {
       setState("error");
     } finally {
+      sessionStorage.removeItem("lightscore-invite");
       setBusy(false);
     }
   }
@@ -55,21 +56,20 @@ function Invitation() {
         ]);
         const data = await r.json();
         if (!r.ok) {
+          sessionStorage.removeItem("lightscore-invite");
           setState("not_found");
           return;
         }
         setPreview(data);
-        if (data.state !== "pending")
+        if (data.state !== "pending") {
+          sessionStorage.removeItem("lightscore-invite");
           setState(data.state === "accepted" ? "already_used" : data.state);
+        }
         if (me.ok) {
           setUser((await me.json()).user);
-          if (
-            sessionStorage.getItem("lightscore-invite") === token &&
-            data.state === "pending"
-          )
-            void accept();
         }
       } catch {
+        sessionStorage.removeItem("lightscore-invite");
         setState("error");
       }
     })();
@@ -118,6 +118,7 @@ function Invitation() {
       ) : state === "wrong_account" ? (
         <button className="btn primary"
           onClick={async () => {
+            sessionStorage.removeItem("lightscore-invite");
             const r = await fetch("/api/auth/sign-out", {
               method: "POST",
               headers: { "Content-Type": "application/json" },

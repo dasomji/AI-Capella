@@ -4394,9 +4394,9 @@ body:has(#app.mode-landing)::after {
 .capability-row { display:flex; flex-wrap:wrap; gap:12px 18px; }
 .domain-sheet .capability-switch { position:relative; display:inline-flex; flex-wrap:nowrap; gap:8px; color:var(--paper-dim); font:400 12px 'Atkinson Hyperlegible Next Variable',sans-serif; cursor:pointer; min-height:32px; }
 .capability-switch input { position:absolute; opacity:0; width:28px; height:24px; margin:0; }
-.switch-track { display:inline-block; width:28px; height:16px; border:1px solid var(--paper-dim); border-radius:16px; flex:none; }
+.switch-track { background:transparent; display:inline-block; width:28px; height:16px; border:1px solid var(--paper-dim); border-radius:16px; flex:none; }
 .switch-track::after { content:''; display:block; width:10px; height:10px; margin:2px; border-radius:50%; background:var(--paper); transition:transform .15s; }
-.capability-switch input:checked + .switch-track { border-color:var(--gold); background:var(--gold); }
+.capability-switch input:checked + .switch-track { border-color:var(--gold, #d4ad65); background:var(--gold, #d4ad65); }
 .capability-switch input:checked + .switch-track::after { transform:translateX(12px); background:var(--ink-0); }
 .capability-switch input:focus-visible + .switch-track { outline:2px solid var(--gold); outline-offset:3px; }
 .row-menu { position:relative; flex:none; }
@@ -4411,3 +4411,8 @@ body:has(#app.mode-landing)::after {
 body:has(.domain-sheet) #toast { top:16px; bottom:auto; max-width:calc(100vw - 32px); }
 @media (prefers-reduced-motion:reduce) { .switch-track::after { transition:none; } }
 :root[data-ground='pergament'] .domain-gold { color:#795315; }
+
+/* With reduced motion the ink-writing animation never runs: expose the dedication. */
+@media (prefers-reduced-motion: reduce) {
+  .ded-name { -webkit-mask-image:none; mask-image:none; }
+}

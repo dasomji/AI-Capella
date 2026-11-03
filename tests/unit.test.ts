@@ -154,3 +154,26 @@ it("reloads a conflict without retrying the stale edit", async () => {
     fetcher.mockRestore();
   }
 });
+
+it('rejects prototype-named settings without calling inherited properties', async () => {
+  const {settingsInput}=await import('../src/api/domain');
+  for(const key of ['constructor','toString','__proto__']) {
+    expect(settingsInput.safeParse({op:'saved',key,value:42}).success).toBe(false);
+  }
+});
+it('removes executable content from score-derived SVG', async () => {
+  const {JSDOM}=await import('jsdom');
+  const dom=new JSDOM('');
+  const {vi}=await import('vitest');
+  vi.stubGlobal('DOMParser',dom.window.DOMParser);
+  vi.stubGlobal('document',dom.window.document);
+  try {
+    const {safeSvg}=await import('../src/safe-svg');
+    const svg=safeSvg('<svg xmlns="http://www.w3.org/2000/svg" onload="evil()"><script>evil()</script><foreignObject/><a href="javascript:evil()"/><use href="#note"/><text>Choir</text></svg>');
+    expect(svg.querySelector('script,foreignObject')).toBeNull();
+    expect(svg.hasAttribute('onload')).toBe(false);
+    expect(svg.querySelector('a')?.hasAttribute('href')).toBe(false);
+    expect(svg.querySelector('use')?.getAttribute('href')).toBe('#note');
+    expect(svg.textContent).toBe('Choir');
+  } finally {vi.unstubAllGlobals();}
+});

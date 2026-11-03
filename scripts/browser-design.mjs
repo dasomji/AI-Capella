@@ -72,11 +72,29 @@ export async function captureDesign(browser, lead, member, base, evidence) {
       await route.fulfill({json:data.map(e=>({...e,isLead:false,capabilities:{manageMembers:false,editPieces:false,transcribe:false}}))});
     });
     await page.goto(base+'/app?design='+design); await page.locator('#mode-solo-btn').waitFor(); await settle(page);
+    assert.equal(await page.locator('#landing-dedication').isVisible(),true);
+    assert.equal(await page.locator('#landing-dedication').evaluate(el=>getComputedStyle(el).opacity),'1');
+    assert.equal(await page.locator('#landing-dedication .ded-name').evaluate(el=>getComputedStyle(el).maskImage),'none');
+    assert.equal(await page.locator('#mode-solo-btn').isVisible(),true);
+    assert.equal(await page.locator('#mode-ensemble-btn').isVisible(),true);
     await shot(page,`${prefix}-title`,['.landing-choice p','.landing-choice button']);
     await page.locator('#mode-solo-btn').click(); await page.locator('.ens-switch').click();
     const item = page.getByText(language==='en'?'Members & invitations':'Mitglieder & Einladungen',{exact:true});
     if (role !== 'ordinary') {
       await item.click(); await page.locator('.domain-heading').first().waitFor();
+      if(role === 'lead') {
+        const track=page.locator('.capability-switch input').first();
+        if(await track.count()) {
+          const states=await track.evaluate(async input=>{
+            const style=()=>{const background=getComputedStyle(input.nextElementSibling).backgroundColor;const knob=getComputedStyle(input.nextElementSibling,'::after');return {track:background,knob:knob.backgroundColor,transform:knob.transform};};
+            const frame=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            const before=input.checked;input.checked=false;await frame();const off=style();input.checked=true;await frame();const on=style();input.checked=before;return {off,on};
+          });
+          assert.notEqual(states.on.track,states.off.track);
+          assert.notEqual(states.on.transform,states.off.transform);
+          assert.notEqual(states.on.knob,states.on.track);
+        }
+      }
       await shot(page,`${prefix}-members`,['.domain-heading','.member-email','.member-identity b','.capability-switch','.ctl-note']);
       const invite = page.getByRole('button',{name:language==='en'?'Invite':'Einladen',exact:true});
       await invite.scrollIntoViewIfNeeded(); await shot(page,`${prefix}-invite-form`,['.domain-heading','.capability-switch']);

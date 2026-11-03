@@ -64,7 +64,7 @@ export function attachSockets(server: ServerType) {
   const unsubscribeMembership = onMembershipChange(
     (ensemble, user, removed) => {
       for (const socket of connected)
-        if (!user || socket.data.userId === user) {
+        if (user ? socket.data.userId === user : socket.rooms.has(`ensemble:${ensemble}`)) {
           if (!ensemble) socket.disconnect(true);
           else {
             socket.emit("membership:changed", { ensembleId: ensemble });
@@ -96,6 +96,7 @@ export function attachSockets(server: ServerType) {
       socket.emit("library:changed", {
         ensembleId: ensemble,
         changes: changes.map((c: any) => ({
+          ...c,
           pieceId: c.pieceId ?? c.id,
           revision: c.revision,
           versionNo: c.versionNo,

@@ -4,7 +4,7 @@ export type Lang = 'en' | 'de';
 const LANG_KEY = 'ai-capella-lang';
 
 const en = {
- accountDelete:'Delete account', accountDeleteConfirm:'Permanently delete account', accountDeleteEnsembles:'These ensembles and their pieces will be deleted:', accountPassword:'Password',
+ accountPasswordInvalid:'Password incorrect. Please try again.', accountDelete:'Delete account', accountDeleteConfirm:'Permanently delete account', accountDeleteEnsembles:'These ensembles and their pieces will be deleted:', accountPassword:'Password',
  accountArea: 'Account and devices', accountSignOut: 'Sign out', accountDevice: 'Device', accountRevoke: 'Revoke session',
   publicEnsemble: 'Public',
   powerHintTitle: 'Moving text hard to read?',
@@ -381,7 +381,7 @@ const en = {
 };
 
 const de: Record<keyof typeof en, string> = {
- accountDelete:'Konto löschen', accountDeleteConfirm:'Konto endgültig löschen', accountDeleteEnsembles:'Diese Ensembles und ihre Stücke werden gelöscht:', accountPassword:'Passwort',
+ accountPasswordInvalid:'Das Passwort stimmt nicht. Bitte versuche es erneut.', accountDelete:'Konto löschen', accountDeleteConfirm:'Konto endgültig löschen', accountDeleteEnsembles:'Diese Ensembles und ihre Stücke werden gelöscht:', accountPassword:'Passwort',
  accountArea: 'Konto und Geräte', accountSignOut: 'Abmelden', accountDevice: 'Gerät', accountRevoke: 'Sitzung widerrufen',
   publicEnsemble: 'Öffentlich',
   powerHintTitle: 'Bewegter Text schwer lesbar?',

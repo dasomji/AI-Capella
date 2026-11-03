@@ -1,3 +1,4 @@
+import { io as accountSocket } from "socket.io-client";
 import { api } from './domain-client';
 import { createEnsembleSheet, membersSheet, leaveEnsemble } from './ensemble-ui';
 import { pt, domainError } from './i18n';
@@ -350,6 +351,7 @@ let stopLandingRibbons: (() => void) | null = null;
  * song switches to the player.
  */
 function setViewMode(mode: 'landing' | 'library' | 'player') {
+  if(mode === 'landing') renderLanding(true);
   app.classList.toggle('mode-landing', mode === 'landing');
   app.classList.toggle('mode-library', mode === 'library');
   app.classList.toggle('mode-player', mode === 'player');
@@ -4105,6 +4107,7 @@ async function openAccountArea(anchor: HTMLElement) {
   signout.className = "btn primary";
   signout.textContent = t("accountSignOut");
   signout.onclick = async () => {
+    sessionStorage.removeItem("lightscore-invite");
     const r = await fetch("/api/auth/sign-out", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4145,10 +4148,15 @@ async function openAccountArea(anchor: HTMLElement) {
     password.autocomplete = "current-password";
     label.append(password);
     sheet.append(label);
+    const inlineError = document.createElement("p");
+    inlineError.setAttribute("role","alert");
+    inlineError.className="account-error";
+    sheet.append(inlineError);
     const confirm = document.createElement("button");
     confirm.textContent = t("accountDeleteConfirm");
     confirm.disabled = !!plan.lastLead.length;
     confirm.onclick = async () => {
+      inlineError.textContent="";
       try {
         await api("/account", "DELETE", {
           deleteEnsembleIds: plan.deleteEnsembles.map((e: any) => e.id),
@@ -4157,7 +4165,7 @@ async function openAccountArea(anchor: HTMLElement) {
         clearLibrary();
         location.replace("/?state=signed-out");
       } catch (e) {
-        toast(domainError((e as Error).message), "error");
+        inlineError.textContent = (e as Error).message === "recent_auth_required" ? t("accountPasswordInvalid") : domainError((e as Error).message);
       }
     };
     sheet.append(confirm);
@@ -4201,7 +4209,18 @@ function deviceLabel(ua:string='') { const browser=/Edg/.test(ua)?'Edge':/Firefo
 window.addEventListener('piece:conflict',()=>{toast(pt('conflict'));if(currentSong)void reloadCurrentSong();});
 let checkingMembership=false;
 async function checkMembership(){if(checkingMembership)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(me.user.id!==account?.id){clearLibrary();location.reload();return;}await refreshEnsembleNames();window.dispatchEvent(new Event('membership:changed'));if(!inPublicFolder()&&!ensembleById(currentEnsemble)){stopPlayback();clearLibrary();importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{}finally{checkingMembership=false;}}
-setInterval(()=>void checkMembership(),3000);
+setInterval(()=>void checkMembership(),60000);
 window.addEventListener('membership:refresh',()=>void checkMembership());
 
-window.addEventListener('domain:error', (event)=>{const status=(event as CustomEvent).detail.status;if(status===401){stopPlayback();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
+window.addEventListener('domain:error', (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED'){stopPlayback();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
+
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void checkMembership();});
+
+// Keep account/ensemble changes live even while the title has no library subscription.
+const accountEvents = accountSocket({withCredentials:true,transports:['websocket']});
+accountEvents.on('connect',()=>{
+  for(const id of unlockedEnsembles())accountEvents.emit('ensemble:join',id);
+  void checkMembership();
+});
+accountEvents.on('membership:changed',()=>void checkMembership());
+accountEvents.on('disconnect',(reason)=>{if(reason==='io server disconnect')void checkMembership();});
