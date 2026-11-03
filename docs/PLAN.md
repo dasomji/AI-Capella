@@ -669,3 +669,15 @@ first combined run exposed fixed-port collision and concurrent dist rebuilds;
 the integration harness now allocates its app port and can filter scenarios via
 AICAP_TEST_PATTERN. New socket fixtures force fresh managers to isolate cookies.
 Targeted real Postgres/socket and real process-restart checks passed. No push.
+
+Phase 3a final verification: `npm run typecheck` passed; `npm test` passed
+(27 tests), also under TZ=America/New_York; `npm run build` passed;
+`npm run test:integration` passed (24/24 scenarios with disposable real Postgres,
+real sessions, three socket clients and an actual server-process restart).
+A targeted rerun after optimizing timing-cache body reads passed, including
+MusicXML parsing in the worker. `npm run check:secrets` passed (positive control
+and clean browser artifacts); `npm run test:browser` passed all existing Phase 2b
+flows and the full theme/language/device/capability matrix; `npm run db:generate`
+reported no schema changes. `git diff --check` passed. No client scheduled-audio
+or inter-device timing claims: those remain the explicit Phase 3b work above.
+All changes committed on production-v1; no push, PR or external provisioning.
