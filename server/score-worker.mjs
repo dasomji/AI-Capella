@@ -2,6 +2,7 @@ import { parentPort } from 'node:worker_threads';
 import { createHash } from 'node:crypto';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { tsImport } from 'tsx/esm/api';
+const { timingFromScore } = await tsImport('../src/rehearsal/timeline.ts', import.meta.url);
 const { contentInput } = await tsImport('../src/api/domain.ts', import.meta.url);
 function canonical(value, depth=0) {
   if(depth>64) throw Error('nesting_limit');
@@ -11,7 +12,7 @@ function canonical(value, depth=0) {
   if(value && typeof value==='object') return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k],depth+1)).join(',')+'}';
   return JSON.stringify(value);
 }
-parentPort.on('message', ({raw,format})=>{
+parentPort.on('message', async ({raw,format,timing})=>{
   try {
     if(raw.includes('\0')) throw Error('invalid_text');
     let body=raw;
@@ -32,6 +33,12 @@ parentPort.on('message', ({raw,format})=>{
       };
       if(!visit(parsed)) throw Error('empty_score');
     }
-    parentPort.postMessage({raw,hash:createHash('sha256').update(raw).digest('hex'),size:Buffer.byteLength(raw)});
+    let derived;
+    if(timing){
+      let score=body;
+      if(format==='musicxml'){const {JSDOM}=await import('jsdom');const dom=new JSDOM('');globalThis.DOMParser=dom.window.DOMParser;const {parseMusicXML}=await tsImport('../src/musicxml.ts',import.meta.url);score=parseMusicXML(raw);dom.window.close();}
+      derived=timingFromScore(score);
+    }
+    parentPort.postMessage({timing:derived,raw,hash:createHash('sha256').update(raw).digest('hex'),size:Buffer.byteLength(raw)});
   } catch(error) { parentPort.postMessage({error:['invalid_text','invalid_xml','empty_score','nesting_limit'].includes(error.message)?error.message:'invalid_score'}); }
 });

@@ -11,6 +11,7 @@ import { currentSession } from "./auth.server";
 import { pool } from "./db/index.server";
 import { onRevoked } from "./revocation.server";
 import { logError } from "./logger.server";
+import { installRehearsal } from './rehearsal.server';
 export function attachSockets(server: ServerType) {
   if (!(server instanceof HttpServer))
     throw new Error("HTTP/1 Node server required");
@@ -20,6 +21,7 @@ export function attachSockets(server: ServerType) {
     allowRequest: (req, callback) =>
       callback(null, env.TRUSTED_ORIGINS.includes(req.headers.origin ?? "")),
   });
+  const closeRehearsal = installRehearsal(io.of('/rehearsal'));
   const connected = new Set<Socket>();
   const authenticate = async (
     socket: Socket,
@@ -135,6 +137,7 @@ export function attachSockets(server: ServerType) {
   timer.unref();
   const close = io.close.bind(io);
   io.close = ((callback?: () => void) => {
+    closeRehearsal();
     clearInterval(timer);
     unsubscribe();
     unsubscribeMembership();

@@ -59,6 +59,7 @@ export function parseEnv(input: NodeJS.ProcessEnv) {
     INVITE_USER_DAILY_MAX: z.coerce.number().int().positive().default(100),
     ENSEMBLE_USER_DAILY_MAX: z.coerce.number().int().positive().default(10),
     DOMAIN_USER_MINUTE_MAX: z.coerce.number().int().positive().default(120),
+    PLAYBACK_LEAD_MS: z.coerce.number().int().min(0).max(5000).default(400),
     PORT: z.coerce.number().default(3000),
   });
   const result = schema.safeParse(input);
