@@ -57,3 +57,12 @@ test('compares written pitch regardless of transpose metadata; staffs constrain 
  expect(compareMusicXML(music([n('D')]),ref).metrics.pitch.f1).toBe(0);
  expect(compareMusicXML(ref.replace('</voice>','</voice><staff>2</staff>'),ref).metrics.notes.f1).toBe(0);
 });
+
+test('duplicate Piano names pair RH and LH by content before order',()=>{
+ const wrap=(parts:string[])=>score(parts).replaceAll('Soprano','Piano').replaceAll('Bass','Piano');
+ const a=part('S').replace('<octave>4','<octave>5'),b=part('B').replace('<octave>4','<octave>2');
+ const repeat=(p:string)=>p.replace('</part>',p.slice(p.indexOf('<measure'),p.indexOf('</part>'))+'</part>');
+ const ref=wrap([repeat(a),repeat(b)]);
+ const pred=wrap([repeat(b).replace('<step>C','<step>D'),repeat(a).replace('<step>C','<step>E')]);
+ expect(compareMusicXML(pred,ref).metrics.notes.f1).toBe(.5);
+});

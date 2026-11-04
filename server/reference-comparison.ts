@@ -86,7 +86,8 @@ export function compareMusicXML(predictedXML:string,referenceXML:string){
  const used=new Set<Part>();const edits=new Set<string>();const ambiguities:string[]=[];
  const pairs:([Part|undefined,Part|undefined])[]=reference.map(r=>{
  const available=predicted.filter(p=>!used.has(p));const candidates=available.filter(p=>p.name===r.name);if(candidates.length>1)ambiguities.push(r.name);
- const p=candidates.find(p=>p.fingerprint===r.fingerprint)??candidates[0]??available.find(p=>p.fingerprint===r.fingerprint)??available.map(p=>({p,score:4*intersection(p.profile.pitches,r.profile.pitches)+intersection(p.profile.rhythms,r.profile.rhythms)+10*intersection(p.profile.clefs,r.profile.clefs)-Math.abs(p.profile.center-r.profile.center)})).sort((a,b)=>b.score-a.score)[0]?.p;
+ const ranked=(parts:Part[])=>parts.map(p=>({p,score:4*intersection(p.profile.pitches,r.profile.pitches)+intersection(p.profile.rhythms,r.profile.rhythms)+10*intersection(p.profile.clefs,r.profile.clefs)-Math.abs(p.profile.center-r.profile.center)})).sort((a,b)=>b.score-a.score)[0]?.p;
+ const p=candidates.find(p=>p.fingerprint===r.fingerprint)??ranked(candidates)??available.find(p=>p.fingerprint===r.fingerprint)??available.map(p=>({p,score:4*intersection(p.profile.pitches,r.profile.pitches)+intersection(p.profile.rhythms,r.profile.rhythms)+10*intersection(p.profile.clefs,r.profile.clefs)-Math.abs(p.profile.center-r.profile.center)})).sort((a,b)=>b.score-a.score)[0]?.p;
  if(p)used.add(p);return [p,r];
  });for(const p of predicted)if(!used.has(p))pairs.push([p,undefined]);
  pairs.forEach(([p,r],part)=>{align(p?.measures??[],r?.measures??[]).forEach(([pm,rm],m)=>{for(const category of categories){
