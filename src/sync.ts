@@ -1,6 +1,5 @@
 // Solo playback compatibility model. Together uses rehearsal/ exclusively.
 import { randomId } from './uuid';
-import { localPlayback } from './playback-transport';
 import type { LoopRegion } from './pianoRoll';
 export interface PlaybackState {
   songId: string | null;
@@ -27,7 +26,4 @@ export function getDeviceId(): string {
   return id;
 }
 export const getServerTimeOffsetMs = () => 0;
-export const ensureCalibrated = async () => {};
 export const computeFutureOriginServerTimeMs = (extraLeadMs = 0) => Date.now() + 750 + extraLeadMs;
-export const subscribePlaybackState = localPlayback.subscribe;
-export const publishPlaybackState = localPlayback.publish;

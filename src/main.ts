@@ -498,7 +498,23 @@ function scheduleSharedAudio(at?:number){
 }
 const syncDebug=new URLSearchParams(location.search).get('debug')==='sync';
 if(syncDebug || import.meta.env.MODE==='test'){
- Object.defineProperty(window,'__lightscoreSync',{configurable:true,get:()=>({offsetMs:playerSession?.clock.diagnostics?.offsetMs??null,uncertaintyMs:playerSession?.clock.diagnostics?.uncertaintyMs??null,lastScheduledStartServerMs,lastScheduledStartAudioTime,revision:sharedState?.revision??null,position:audioEngine?.getCurrentBeat()??0,status:sharedState?.status??null,contextState:audioEngine?.context.state??null,ready:sharedReady})});
+ Object.defineProperty(window,'__lightscoreSync',{configurable:true,get:()=>{
+   const clock=playerSession?.clock, usable=clock?.usable ?? false;
+   const now=usable ? clock!.serverNow() : null;
+   return {
+     state:sharedState ? structuredClone(sharedState) : null,
+     timing:sharedTiming ? structuredClone(sharedTiming) : null,
+     serverNow:now,
+     positionAtServerTime:(at:number)=>sharedState && sharedTiming ? positionAt(sharedState,at,sharedTiming) : null,
+     scheduledClicks:[...(audioEngine?.sharedClickTimes ?? [])],
+     driftMs:sharedState && sharedTiming && audioEngine && now!==null ? playbackDriftMs(sharedState,now,audioEngine.getCurrentBeat(),sharedTiming) : null,
+     offsetMs:clock?.diagnostics?.offsetMs ?? null,
+     uncertaintyMs:clock?.diagnostics?.uncertaintyMs ?? null,
+     lastScheduledStartServerMs,lastScheduledStartAudioTime,
+     revision:sharedState?.revision ?? null,position:audioEngine?.getCurrentBeat() ?? 0,
+     status:sharedState?.status ?? null,contextState:audioEngine?.context.state ?? null,ready:sharedReady && usable,
+   };
+ }});
 }
 window.setInterval(()=>{
  if(!syncEnabled() || !sharedState || !currentScore || !playerSession?.clock.usable || !audioEngine)return;
@@ -603,7 +619,6 @@ async function requestModeSwitch(mode: 'solo' | 'ensemble') {
   if (!ok) return;
   leavePlaybackSession();
   audioEngine?.stop();
-  if (leaderId === myDeviceId) await sync.publishPlaybackState({ leaderId: null }).catch(() => {});
   localStorage.setItem(MODE_STORAGE_KEY, mode);
   // After an explicit switch, go straight on in the new mode (not the title screen).
   sessionStorage.setItem(MODE_SWITCH_KEY, mode);
@@ -1801,7 +1816,6 @@ async function publishPlayingAt(originBeat: number, extra: Partial<PlaybackState
     toast(t('followingHint'));
     return;
   }
-  await sync.ensureCalibrated();
   // startTones explicitly empty unless this is a fresh Play that asked for them (merge-write rule).
   pushState({ startTones: [], ...extra, playing: true, originBeat, originServerTimeMs: sync.computeFutureOriginServerTimeMs(extraLeadMs) });
 }
