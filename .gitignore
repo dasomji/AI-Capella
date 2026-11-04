@@ -34,3 +34,6 @@ review-*.log
 .transcription-tmp/
 
 reports/eval-*
+
+# Private operational backups (also excluded from Docker context)
+/backups/

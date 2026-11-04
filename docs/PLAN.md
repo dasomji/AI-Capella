@@ -2579,6 +2579,95 @@ All changes stay local on production-v1. Only owned admin paths and the small
 HTTP admin-guard hunk were staged; concurrent private/offline changes were
 preserved. No push, production access, paid provider calls or real mail.
 
+### Phase 6b — CI, Railway configuration and recovery (2026-11-04, AICAP-16)
+
+Implementation `d5e3ed3` follows concurrent migration commit `c4a7414`; only owned
+operations paths/package script hunks were committed through a separate index.
+No provisioning, deploy, push, real mail/paid AI, secret rotation or legacy access.
+
+Replaced the historical feature-branch Pages deployment with read-only PR/main CI:
+typecheck, unit suites (default + America/New_York), build, sentinel secrets,
+recorded evaluation, conditional Phase 6a migration tests, disposable backup drill,
+app/worker image builds (no push), fresh Postgres migrations/schema drift and
+integration/browser/transcription suites. npm and Playwright caches, per-ref
+concurrency, Postgres/Mailpit service containers and an owned authenticated SeaweedFS
+container are configured. SeaweedFS requires a Docker step because Actions services
+cannot override its server command. Legacy Firebase rules-test is deliberately
+skipped in app CI, and legacy source/config remains retained for migration/retirement.
+`act` is unavailable locally; the corresponding npm/Docker commands were run directly.
+
+Added separate railway.web.toml / railway.worker.toml with direct Node start,
+single web replica, /healthz, DATABASE_URL-only locked pre-deploy migration and drain
+windows. /readyz checks DB/migration readiness and reports sandbox/rehearsal separately;
+/readyz/rehearsal is the owner probe, never rolling-deploy admission. Sandbox failure
+preserves ordinary HTTP while upload inspection and worker startup fail closed.
+Images contain Python/libseccomp/Poppler and an ops:canary. Railway runtime seccomp,
+address-space/PDF behavior and trusted proxy peers remain first-deploy operator gates.
+
+Web SIGTERM refuses new HTTP work, notifies sockets with a reconnect hint, waits for
+queued rehearsal commands before releasing its dedicated ownership connection,
+closes sockets/HTTP, flushes background mail and closes the pool within 10 seconds.
+Worker SIGTERM stops claiming, aborts current page work and requeues/releases its
+lease at the checkpoint; completed pages survive. Its 20-second deadline falls back
+to expiring leases after forced kill. Tests cover real web/worker process signals,
+reconnect hint, lock reacquisition and active worker stop/claim refusal.
+
+The default backups/ directory is excluded from Git and Docker context.
+backup:db writes custom pg_dump + UTC/size/SHA-256 manifest (explicit connection URL
+inside the Docker client fixes PGDATABASE's default-socket behavior under rootless
+Docker). backup:objects paginates/downloads/hashes without deleting source originals.
+restore:verify always creates disposable Postgres + SeaweedFS, verifies downloaded
+artifacts, fully restores, checks committed migration hashes, reuploads/downloads all
+object bytes, matches every stored_objects row, lists orphans, counts entities and
+parses representative current pieces with the app validator/timeline. Verification
+restores process env after its isolated import; negative tests exposed and fixed
+that leakage. Object-volume size is bounded for disposable SeaweedFS fixtures.
+
+Final backup test verifies a separately copied download directory (matching dump
+bytes/hash), one account/ensemble/piece/original, parsed music and an explicitly
+reported orphan, then rejects corrupted object bytes, wrong DB reference hashes
+and a corrupted dump. The original source object remains readable. Failed earlier
+fixture/socket/reset runs remain in .review-evidence/p6b-backup*.log; successful
+copied-artifact evidence is p6b-backup-downloaded.log and p6b-backup-all-green.log.
+
+RUNBOOK covers deploy, migration/forward-fix rollback, encrypted offsite copies,
+proposed retention/drill cadence, incident response, stop controls, observability,
+scaling and separate legacy retirement authorization (AICAP-18 remains urgent).
+DEPLOYMENT documents service/env secrets, worker-only OpenAI key, shared validation's
+current auth/mail needs on worker, host-only secure cookies, exact trusted origins,
+proxy spoof-test gate and verified Resend sender setup. SECURITY, DEVELOPMENT,
+PROJECT and README describe current architecture, offline limits, capabilities,
+private originals, retention/deletion and sysadmin; superseded prototype flows are
+historical only. Cutover links the concurrent MIGRATION.md, with no live action.
+
+Validation (evidence under .review-evidence):
+
+- typecheck: passed (p6b-typecheck-final-green.log).
+- npm test: 260/260; TZ=America/New_York npm test: 260/260.
+- isolated production build: passed (p6b-build-final-green.log).
+- test:integration: 87/87 passed (p6b-integration.log).
+- check:secrets: sentinel positive control and clean client scan passed.
+- db:generate: no schema changes/drift; no owned schema changes.
+- eval:transcription -- --dry-run: eight completed fixture sets, no provider calls.
+- test:backup: full copied-artifact restore and negative checks passed.
+- test:ops: web SIGTERM/ownership and worker process/checkpoint cases passed.
+- Docker builds: app + worker passed (p6b-docker-{web,worker}-final-verified.log).
+- Local app and worker image canaries: sandbox=true, poppler=true.
+- test:browser:transcription: passed (p6b-browser-transcription-green.log). A stale
+  navigation fixture cleared only the legacy mode key; clear session mode-switch,
+  seen and account-scoped place as well before testing destination selection.
+  Initial failure retained in p6b-browser-transcription.log.
+- Standard browser: shared Phase 6a run passed exit 0 (migration/.runtime/browser.log),
+  including full three-client acceptance/restart/revocation/account switching. The
+  first Phase 6b run timed out at alignment after count-in (p6b-browser.log); the
+  dedicated rerun p6b-browser-rerun.log passed all three-client acceptance checks.
+
+Operator release work remains: separately authorize provisioning, verify proxy trust,
+run Railway sandbox/PDF smoke, validate real mail delivery, install backup/cleanup and
+alert schedules, approve RPO/RTO/retention, download/restore a real capture, rehearse
+cutover/reconciliation and handle AICAP-18 live inventory/containment independently.
+This configuration/local rehearsal does not establish production readiness by itself.
+
 ### Phase 6a — legacy migration tooling (2026-11-04, AICAP-10)
 
 Implementation commit `c4a7414` adds operator-only Firestore export, transactional
