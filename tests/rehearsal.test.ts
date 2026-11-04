@@ -407,3 +407,13 @@ it('keeps scheduling through epoch-scale loop wraps across tempo and length swee
   expect(note.mock.calls.length).toBeGreaterThan((b-a)*5);
  }
 });
+
+it('indexes every one and two bar count-in downbeat across tempo and meter sweeps',async()=>{
+ const {countInClickTimes}=await import('../src/rehearsal/schedule');
+ for(const bpm of [...Array.from({length:161},(_,i)=>40+i),77.7,133.3])for(const bars of [1,2])for(const beats of [3,4,6]){
+  const from=1791234567890.123,pulse=60000/bpm,n=beats*bars;
+  const clicks=countInClickTimes(from,from+n*pulse,pulse,from-10);
+  expect(clicks).toHaveLength(n);expect(clicks[0]).toBe(from);
+  expect(clicks.filter(time=>Math.abs(time-from)<1)).toHaveLength(1);
+ }
+});
