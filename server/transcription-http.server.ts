@@ -13,6 +13,7 @@ import { env } from './env.server';
 import { createJob,jobView,jobResult,jobReport,cancelJob,retryJob,processingPaused,transcriptionMetrics } from './transcription.server';
 export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string;email:string;name:string}}}>) {
  registerTranscriptionUi(app);
+ app.get('/transcription/config',c=>{c.header('Cache-Control','no-store');return c.json({pdf:sourceLimits.pdf,photo:sourceLimits.photo,pages:sourceLimits.pages});});
  app.post('/ensembles/:ensemble/originals',async c=>{
  const slot=slots.take(c.get('user').id);if('code' in slot)return c.json({code:'upload_busy'},slot.code);
  try{await authorize(pool,c.get('user').id,c.req.param('ensemble'),'transcribe');const length=Number(c.req.header('content-length'));if(Number.isFinite(length)&&length>0){if(length>sourceLimits.pdf)throw new DomainError('body_too_large',413);const used=(await pool.query("select coalesce(sum(size),0)::text as bytes from stored_objects where ensemble_id=$1 and kind='original' and state='ready'",[c.req.param('ensemble')])).rows[0];if(Number(used.bytes)+length>env.TRANSCRIPTION_STORAGE_MAX_BYTES)throw new DomainError('storage_limit',413);}

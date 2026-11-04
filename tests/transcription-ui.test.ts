@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { test,expect } from 'vitest';
+import { test,expect,vi } from 'vitest';
 import { jobPresentation,reorderPhotos,reviewItems,type TranscriptionJob } from '../src/transcription-model';
 import { tr } from '../src/i18n';
 const job=(patch:Partial<TranscriptionJob>={}):TranscriptionJob=>({id:'job',state:'queued',stage:'queued',pages:[{page_number:0,source_page:1,object_id:'source',content_type:'image/png',state:'queued'}],...patch});
@@ -18,4 +18,10 @@ for(const language of ['de','en'] as const)for(const n of [0,1,2])test(`${langua
  const text=tr('counts',{warnings:n,uncertainties:n},language);
  expect(text).toBe(language==='de'?`${n} ${n===1?'Warnung':'Warnungen'} · ${n} ${n===1?'Unsicherheit':'Unsicherheiten'}`:`${n} ${n===1?'warning':'warnings'} · ${n} ${n===1?'uncertainty':'uncertainties'}`);
  expect(tr('pages',{n,size:'1.4'},language)).toContain(language==='de'?(n===1?'Seite ·':'Seiten ·'):(n===1?'page ·':'pages ·'));
+});
+
+test('photo thumbnails decode at 200px and close the bitmap',async()=>{
+ const close=vi.fn(),drawImage=vi.fn();vi.stubGlobal('createImageBitmap',vi.fn(async()=>({width:200,height:100,close})));
+ vi.stubGlobal('OffscreenCanvas',class {getContext(){return {drawImage};}async convertToBlob(){return new Blob(['small']);}});
+ try{const {photoThumbnail}=await import('../src/photo-thumbnail');const file=new File(['photo'],'photo.png');await photoThumbnail(file);expect(createImageBitmap).toHaveBeenCalledWith(file,{resizeWidth:200,resizeQuality:'low'});expect(drawImage).toHaveBeenCalledWith(expect.anything(),0,0,200,100);expect(close).toHaveBeenCalledOnce();}finally{vi.unstubAllGlobals();}
 });
