@@ -1911,3 +1911,31 @@ including reasoning; truncated remains an explicit terminal reason requiring
 review/resubmission. Automatic overlapping top/bottom split retry is deferred
 because deduplicating overlapping measures without changing music needs its own
 fixtures and policy. No live quality/cost claim is made.
+
+Phase 4b fixes verification:
+
+- `npm run typecheck`: passed on final sources.
+- `npm test`: 154/154 passed (including exporter/timewise, identity, provider,
+  sandbox, rendering, prompt-hash and off-thread assembly regressions).
+- `npm run build`: passed; also rebuilt by the final secret-scan harness.
+- `npm run test:integration`: 75/75 passed with disposable Postgres/storage.
+  A subsequent targeted run passed 10/10, including the newly added durable
+  skipped-cover/invalid-page retry scenario, assembly backoff, pin handling,
+  global Date skew, ledger unknown usage and cleanup/filename recovery.
+- `npm run check:secrets`: passed positive control and clean final scan; no
+  forbidden-string weakening. Run builds sequentially: an earlier concurrent
+  browser/secret build raced over dist, and an earlier integration fixture was
+  created before the new migrations existed. Clean reruns passed.
+- `npm run test:browser`: passed account/design matrix, two-account sync and
+  full three-client acceptance, including offline/count-in/sleep/restart.
+- `npm run db:generate`: no schema drift after migrations 0008–0010.
+- `npm run eval:transcription -- --dry-run`: six offline jobs completed,
+  fixture F1=1; no network/provider call or live quality claim.
+- `docker build -f Dockerfile.worker -t lightscore-worker:phase4b-fixes .`:
+  passed with production-only dependencies and pinned base image.
+- `docker run --rm lightscore-worker:phase4b-fixes node scripts/renderer-smoke.mjs`:
+  passed selected PDF page through the real sandbox to 3500×1750 PNG.
+  The host has no Poppler, so the authoritative PDF smoke ran in the image.
+- Performance benchmark remains above the requested target, as recorded under S7.
+
+All implementation commits remain local on production-v1. No pushes or PRs.
