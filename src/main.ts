@@ -3677,7 +3677,7 @@ for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'])
 
 /** "Tap for sound": shown while the music plays here but the browser holds its sound up. */
 function updateSoundPrompt() {
-  const held = !!audioEngine?.isHeldUp() || (syncEnabled() && sharedState?.pieceId!=null && audioEngine?.context.state==='suspended');
+  const held = !!audioEngine?.isHeldUp() || (syncEnabled() && (sharedState?.status==='playing' || sharedState?.status==='countingIn') && audioEngine?.context.state==='suspended');
   heldUpSince = held ? heldUpSince || performance.now() : 0;
   let el = document.getElementById('sound-prompt');
   const show = held && performance.now() - heldUpSince > 700;
