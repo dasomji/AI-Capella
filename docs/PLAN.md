@@ -1579,3 +1579,134 @@ is a deployment prerequisite, not performed here. No push, production migration,
 provisioning, paid provider calls or real email occurred. Failed and successful
 local check logs remain in gitignored `.transcription-tmp/`; browser evidence is
 in gitignored `.review-evidence/browser/`.
+
+### Phase 4b-1 — direct transcription, assembly and review reports
+
+Implementation on `production-v1`, based on Phase 4a HEAD `20837fe`. No live AI
+request, account-access probe or paid evaluation was made. Audiveris and the
+prototype service remain untouched for Phase 4b-2.
+
+Verified official documentation (2026-11-04):
+
+- https://developers.openai.com/api/docs/models/gpt-6.1-sol — exact API identifier
+  `gpt-6.1-sol`, image input, text output, Responses endpoint, structured outputs,
+  128,000 maximum output tokens. This is capability documentation, not proof of
+  account access or notation accuracy.
+- https://developers.openai.com/api/docs/guides/images-vision — image input via
+  `input_image`, base64 data URL and `detail: high`.
+- https://developers.openai.com/api/docs/guides/structured-outputs — strict JSON
+  schema output and separate refusal handling.
+- Installed `openai` 7.50.0: `resources/responses/responses.d.ts` verifies
+  `input_image`, `text.format.json_schema`, `max_output_tokens`, incomplete details,
+  refusal content, usage and AbortSignal request options. The model parameter
+  permits string identifiers; the official model page supplies the exact Sol id.
+
+Provider decisions:
+
+- Server/worker only `OPENAI_API_KEY`; `OPENAI_TRANSCRIPTION_MODEL` defaults to
+  `gpt-6.1-sol`. No fallback model. Missing key or API model-not-found produces
+  `model_unavailable`. Production/development use the real provider; NODE_ENV=test
+  retains Phase 4a fake defaults. New integration tests explicitly instantiate the
+  real provider with an injected SDK fetch that returns fake HTTP responses.
+- Responses API, `store:false`, strict `{musicxml, uncertainties, flags}` JSON,
+  64,000 max output tokens, SDK retries disabled. Durable job attempts handle
+  rate limits, including Retry-After seconds/date; timeout/cancellation reaches
+  the SDK through AbortSignal. Refusals, incomplete/partial/truncated responses,
+  bad JSON/XML and infrastructure failures are distinct. Usage is retained even
+  on refusal/truncation/parse failure; request ids accompany successful usage.
+- Immutable `server/prompts/transcription-v1.txt` is pinned per job. Context carries
+  only part ids/names/instruments, clefs, divisions, key/time, last measure number,
+  open ties/slurs, lyric language and tempo. Full prior XML never enters a request.
+  Token growth follows score state, not accumulated prior page results.
+
+Rendering and operation:
+
+- Use a bounded raster per page instead of PDF file inputs: deterministic local
+  limits, page-level checkpoints/retry and exact correspondence with provenance.
+  No evidence establishes that whole-PDF input improves notation accuracy.
+- `BoundedPageRenderer` downloads at most 50 MiB into a private staging directory,
+  starts the existing Linux Python/seccomp sandbox, and kills its process group
+  on cancellation/deadline. The sandbox caps address space at 1.5 GiB, JS heap at
+  192 MiB, CPU at 5/6 seconds, files at 64 MiB, and disallows network syscalls.
+  Rasterization has a 15-second wall deadline. PDF: pdftoppm, requested 250 DPI,
+  single selected page, longest edge <=3500. Photos: EXIF orientation, input pixel
+  limit 40 million, <=3500x3500 output, grayscale/contrast normalization, PNG.
+  Temporary files are removed and abandoned render directories join staging cleanup.
+- Build `docker build -f Dockerfile.worker -t lightscore-worker .`; use the existing
+  worker environment with `docker run --env-file .env lightscore-worker`. No port
+  is exposed. Image installs Python3, libseccomp2 and poppler-utils, runs as node.
+  Development may install those same host binaries. Run from repository root so
+  pinned prompt assets and relative staging paths resolve. Configure a realistic
+  TRANSCRIPTION_TIMEOUT_MS for dense pages (the default is now 180 seconds).
+  Never put a real key into test/CI environments. `.dockerignore` excludes secrets,
+  Git metadata, dependencies, builds and private staging files from the image.
+
+Assembly and validation:
+
+- Part identity uses corroborated context ids, normalized names/instruments and
+  clef continuity; never array position. New identities are retained even when
+  part counts differ. Missing page spans and newly entering parts receive full
+  measure rests; every output part has the same continuously numbered measures.
+  Original measure subtrees preserve lyrics, ties/slurs, key/time/clef changes,
+  directions, repeats, tuplets and other notation. First-page metadata is retained.
+  Boundary tie/slur notation is preserved and checked across the assembled score;
+  ambiguous/missing endpoints become review warnings rather than invented notes.
+- JSON sidecar lives in the job's existing `provenance` JSONB: measure number,
+  canonical part id, source page, page-local printed number, model, prompt version,
+  and synthetic-rest marker. It is downloaded from the transcribe-gated `:job/report` endpoint and copied into
+  imported piece provenance. Raw MusicXML contains no private provenance markup.
+- Shared `src/score-validation.ts`, also called from the bounded import validator,
+  rejects absent/duplicate/unknown parts, empty parts/measures, invalid durations,
+  divisions, pitches and cursor positions. It checks voice/staff timing, meter,
+  notation availability and tie/slur continuity. Duration discrepancies, pickup/
+  final measures, missing notation and unmatched ties/slurs are review warnings;
+  structural errors block import. Accuracy remains explicitly unknown and review
+  is always required. Raw source XML remains canonical; validation never rewrites it.
+- Regression coverage reuses the prior-art `public/evening-rise.musicxml` fixture,
+  counting retained notes/lyrics/ties/slurs/directions/barlines/clefs/time after
+  paging and assembly. Added SATB continuity and accompaniment/divisi fixtures,
+  API failure fakes, abort, durable real-provider integration, EXIF orientation,
+  idempotent import and client parser/timing extraction checks. Old domain fixtures
+  now declare their part and divisions so they remain valid under shared validation.
+
+Open questions / follow-up boundaries:
+
+- Actual deployment account access, model accuracy, dense-page token/deadline tuning
+  and transcription quality require the opt-in live evaluation harness in 4b-2.
+  No live transcription quality claim is made by these offline tests.
+- Automatic identity inference cannot prove musical identity for indistinguishably
+  named parts; deterministic continuity plus retained sections still requires review.
+  Complex independent polymeter, mid-measure divisions changes and split printed
+  measures across pages need further evaluation fixtures; do not silently repair them.
+- Phase 4b-2 supplies live evaluation/cost reporting and removes Audiveris after
+  parity evidence. Phase 4c supplies transcription progress, report and review UI.
+
+Phase 4b-1 acceptance (2026-11-04):
+
+- `npm run typecheck`: passed.
+- `npm test`: 126 tests passed, including eight sounding events from twelve
+  notated SATB notes joined by cross-page ties, and an exact 12-beat timeline.
+- `npm run test:integration`: clean rerun passed 71/71 tests, zero failures or
+  cancellations, including real provider/renderer/assembler with fake OpenAI HTTP,
+  durable usage, separate report download, idempotent import and 3-measure timing.
+- `npm run test:browser`: passed account/collaboration, minimal two-account sync
+  and full sync acceptance (offline/count-in/sleep/loops included).
+- `npm run build`, `npm run check:secrets`: passed; positive secret-leak control
+  detected and final client artifacts clean, with no public source maps.
+- `npm run db:generate`: no schema changes, nothing to migrate.
+- `docker build -f Dockerfile.worker -t aicap-worker-4b1 .`: passed.
+  `docker run --rm --network none` with the repository's renderer smoke script and
+  current renderer mounted read-only passed: PDF page 2 rendered to 3500x1750 PNG
+  through the actual seccomp/resource-limited child. The host has no Poppler;
+  the worker image supplies it. Reusable check: `node scripts/renderer-smoke.mjs`
+  inside the worker image (or a host with the documented dependencies).
+
+Early concurrent acceptance runs exposed a progress-projection regression (fixed
+by serving the sidecar separately), a password-test timeout under contention, and
+shared build-output races. Failures were preserved in ignored local check logs;
+final integration and browser reruns passed. Do not run artifact-rebuilding checks
+concurrently with running app/browser tests in this shared checkout.
+
+Plane project mapping was verified through the connected tool. Ticket reads were
+unavailable because the tool rejected its arguments; no ticket state was changed.
+No paid calls, deployments, pushes, prototype edits or Audiveris removals occurred.
