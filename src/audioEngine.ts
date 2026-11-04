@@ -912,15 +912,15 @@ export class AudioEngine {
     const audioAt=(server:number)=>at+(server-decision.effectiveAt)/1000;
     if(decision.startingTones){
       const {from,until}=decision.startingTones;
-      const start=Math.max(this.ctx.currentTime,audioAt(from));
-      for(const pitch of pitches)this.scheduledVoices.push(playDuNote(this.ctx,this.masterGain,start,Math.max(.02,(until-Math.max(now,from))/1000),pitch+state.transposition,1/Math.sqrt(Math.max(1,pitches.length))));
+      const start=Math.max(this.ctx.currentTime,audioAt(Math.max(from,decision.effectiveAt)));
+      for(const pitch of pitches)this.scheduledVoices.push(playDuNote(this.ctx,this.masterGain,start,Math.max(.02,(until-Math.max(decision.effectiveAt,from))/1000),pitch+state.transposition,1/Math.sqrt(Math.max(1,pitches.length))));
     }
     this.sharedClickTimes=[];
     if(decision.countIn){
       const measure=timing.measures.findLast(m=>m.startBeat<=state.anchor.beat)??timing.measures[0];
       const localBpm=(timing.tempos.findLast(p=>p.beat<=state.anchor.beat)?.bpm??timing.baseBpm)*state.bpm/timing.baseBpm;
       const pulse=60000/localBpm*4/(measure?.beatType??4);
-      for(const time of countInClickTimes(decision.countIn.from,decision.countIn.until,pulse,now)) {
+      for(const time of countInClickTimes(decision.countIn.from,decision.countIn.until,pulse,decision.effectiveAt)) {
         this.sharedClickTimes.push(time);
         this.scheduledVoices.push(playClick(this.ctx,this.metronomeGain,audioAt(time),Math.abs(time-decision.countIn.from)<.001));
       }

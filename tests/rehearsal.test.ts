@@ -433,3 +433,10 @@ it('measures zero scheduling drift with perfect clocks regardless of visual/outp
   }
  }
 });
+
+it('clips replacement pre-roll to effective time instead of replaying surviving clicks',async()=>{
+ const {countInClickTimes,playbackSchedule}=await import('../src/rehearsal/schedule');
+ const state={...s,status:'countingIn' as const,anchor:{beat:0,serverTime:1000},effectiveAt:1800,countInUntil:5000};
+ const d=playbackSchedule(state,1400,t);
+ expect(countInClickTimes(d.countIn!.from,d.countIn!.until,500,d.effectiveAt)).toEqual([2000,2500,3000,3500,4000,4500]);
+});
