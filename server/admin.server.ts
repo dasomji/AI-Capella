@@ -81,7 +81,7 @@ for (const kind of Object.keys(sources) as (keyof typeof sources)[])
             }
             where.push(`(${order},${alias}.id) ${dir === 'asc' ? '>' : '<'} (${bind(cursor[0])},${bind(cursor[1])})`);
         }
-        const rows = (await pool.query(`select ${s.fields},${order} as _cursor from ${s.table} ${where.length ? 'where ' + where.join(' and ') : ''} order by ${order} ${dir},${alias}.id ${dir} limit ${bind(q.limit + 1)}`, values)).rows;
+        const rows = (await pool.query(`select ${s.fields},(${order})::text as _cursor from ${s.table} ${where.length ? 'where ' + where.join(' and ') : ''} order by ${order} ${dir},${alias}.id ${dir} limit ${bind(q.limit + 1)}`, values)).rows;
         const more = rows.length > q.limit;
         const items = rows.slice(0, q.limit), last = items.at(-1);
         const cursor = more && last ? Buffer.from(JSON.stringify([last._cursor instanceof Date ? last._cursor.toISOString() : String(last._cursor), last.id])).toString('base64url') : null;

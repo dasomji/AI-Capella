@@ -31,6 +31,9 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     const job = (await pool.query("insert into transcription_jobs(ensemble_id,user_id,model,prompt_version) values($1,$2,'fixture','v1') returning id", [e, sys.id])).rows[0].id;
     await pool.query("insert into job_pages(ensemble_id,job_id,object_id,page_number,model,prompt_version) values($1,$2,$3,1,'fixture','v1')", [e, job, object]);
     await pool.query('update music_pieces set provenance=$2 where id=$1', [p, { jobId: job }]);
+    await pool.query("update session set user_agent='PRIVATE_DEVICE_SENTINEL',ip_address='PRIVATE_IP_SENTINEL' where user_id=$1",[sys.id]);
+    await pool.query("insert into invitations(ensemble_id,email,inviter_id,token_hash,expires_at) values($1,'admin-invite@example.test',$2,'PRIVATE_INVITATION_HASH_SENTINEL',now()+interval '1 day')",[e,lead.id]);
+    const sensitive=(await pool.query('select password as value from account where user_id=$1 union all select token as value from session where user_id=$1',[sys.id])).rows.map(r=>r.value).filter(Boolean);
     const endpoints = ['users', 'users/' + sys.id, 'ensembles', 'ensembles/' + e, 'pieces', 'pieces/' + p, 'pieces/' + p + '/versions', 'pieces/' + p + '/originals', 'memberships', 'invitations', 'audit', 'transcription/jobs', 'transcription/failures?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z', 'transcription/control', 'transcription/usage?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z', 'transcription/metrics?from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00Z'];
     for (const cookie of ['', member.cookie, lead.cookie, manager.cookie]) {
         for (const path of endpoints)
@@ -40,11 +43,13 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
         for (const path of ['/admin', '/admin/users', '/admin/unknown'])
             assert.equal((await req(path, cookie)).status, 404, path);
     }
+    assert.equal((await fetch(base+'/api/admin/transcription/control',{method:'PUT',body:'invalid-json'})).status,404);
     await changeAdminRole(process.env.DATABASE_URL!, sys.email, true);
     for (const path of endpoints) {
         const value = await json(path, sys.cookie);
         const text = JSON.stringify(value);
-        assert.doesNotMatch(text, /PRIVATE_SCORE_SENTINEL|PRIVATE_AUDIT_SENTINEL/);
+        assert.doesNotMatch(text, /PRIVATE_SCORE_SENTINEL|PRIVATE_AUDIT_SENTINEL|PRIVATE_DEVICE_SENTINEL|PRIVATE_IP_SENTINEL|PRIVATE_INVITATION_HASH_SENTINEL/);
+        for(const secret of sensitive)assert.ok(!text.includes(secret),'An admin projection leaked a fixture credential');
         function scan(v: any) { if (!v || typeof v !== 'object')
             return; for (const [key, x] of Object.entries(v)) {
             assert.doesNotMatch(key, /password|token_hash|object_key|lease_owner|result_xml|native_score|musicxml|user_agent|ip_address|access_token|refresh_token/i);
@@ -60,6 +65,13 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     const found = await json('users?search=' + encodeURIComponent(sys.email), sys.cookie);
     assert.equal(found.items.length, 1);
     assert.equal(found.items[0].id, sys.id);
+    assert.equal(found.timeZone,'Europe/Berlin');
+    for(const [i,u] of [member,lead,manager].entries())await pool.query('update "user" set created_at=$2::timestamptz where id=$1',[u.id,`2026-03-29T00:30:00.00000${i+1}Z`]);
+    const precise='users?sort=created&limit=1&from=2026-03-29T00:30:00Z&to=2026-03-29T00:30:00.001Z';
+    const a=await json(precise,sys.cookie),b=await json(precise+'&cursor='+a.nextCursor,sys.cookie),c=await json(precise+'&cursor='+b.nextCursor,sys.cookie);
+    assert.deepEqual([a.items[0].id,b.items[0].id,c.items[0].id],[member.id,lead.id,manager.id]);assert.equal(c.nextCursor,null);
+    assert.equal((await req('/api/admin/users?limit=101',sys.cookie)).status,422);
+
     assert.equal((await req('/api/admin/users?from=2026-01-01', sys.cookie)).status, 422);
     assert.equal((await req('/api/admin/transcription/control', sys.cookie, 'PUT', { paused: true })).status, 422);
     await json('transcription/control', sys.cookie, 'PUT', { paused: true, reason: 'Local test stop' });
