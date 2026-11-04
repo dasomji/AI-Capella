@@ -1,0 +1,213 @@
+import {
+  ensembleSchema,
+  memberSchema,
+  invitationSchema,
+  metadataSchema,
+} from "../src/api/domain";
+import { test, after } from "node:test";
+import assert from "node:assert/strict";
+import { setTimeout as delay } from "node:timers/promises";
+import { io as connect } from "socket.io-client";
+process.env.NODE_ENV = "test";
+process.env.MAIL_TRANSPORT = "capture";
+process.env.PORT = (process.env.TEST_APP_PORT ?? "23001");
+process.env.BETTER_AUTH_URL = `http://localhost:${process.env.PORT}`;
+process.env.TRUSTED_ORIGINS = `http://localhost:${process.env.PORT}`;
+process.env.TZ = "America/New_York";
+const { server, io } = await import("../server/start");
+const { pool } = await import("../server/db/index.server");
+const { captureMail } = await import("../server/mail.server");
+const { clock } = await import("../server/domain-http.server");
+const base = process.env.BETTER_AUTH_URL;
+after(async () => {
+  await new Promise<void>((r) => io.close(() => r()));
+  server.close();
+  await pool.end();
+});
+async function request(
+  path: string,
+  method = "GET",
+  body?: unknown,
+  cookie = "",
+) {
+  const input = body as any;
+  const upload = method === "POST" && /\/pieces(?:\/[^/]+\/versions)?$/.test(path) && input?.content;
+  return fetch(base + "/api/" + path, {
+    method,
+    headers: { ...(method==='POST' && /\/transcriptions$/.test(path)?{'idempotency-key':crypto.randomUUID()}:{}), origin: base, cookie, "Content-Type": upload && input.content.format === "musicxml" ? "text/xml" : "application/json",
+      ...(upload && input.title ? {"x-score-title":encodeURIComponent(input.title)} : {}),
+      ...(upload && input.idempotencyKey ? {"idempotency-key":input.idempotencyKey} : {}),
+      ...(upload && input.expectedRevision ? {"x-expected-revision":String(input.expectedRevision)} : {}) },
+    body: upload ? (input.content.format === "musicxml" ? input.content.body : JSON.stringify(input.content.body)) : body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+async function ok(path: string, method = "GET", body?: unknown, cookie = "") {
+  const r = await request(path, method, body, cookie);
+  assert.ok(r.ok, `${method} ${path}: ${r.status} ${await r.clone().text()}`);
+  const data = await r.json();
+  for (const value of Array.isArray(data) ? data : [data]) {
+    if (value?.membershipId) ensembleSchema.parse(value);
+    else if (value?.userId && value?.capabilities) memberSchema.parse(value);
+    else if (value?.deliveryState) invitationSchema.parse(value);
+    else if (value?.contentHash && value?.settings) metadataSchema.parse(value);
+  }
+  return data;
+}
+async function register(
+  email = `${crypto.randomUUID()}@example.test`,
+  callbackURL = base + "/?state=verified",
+) {
+  const password = "domain-fixture-password-42";
+  const response = await ok("auth/sign-up/email", "POST", {
+    email,
+    password,
+    name: "Singer",
+    callbackURL,
+  });
+  for (
+    let n = 0;
+    n < 100 && !captureMail.messages.some((m) => m.to === email && m.text.includes("/api/auth/verify-email?"));
+    n++
+  )
+    await delay(10);
+  const link = captureMail.messages
+    .filter((m) => m.to === email && m.text.includes("/api/auth/verify-email?"))
+    .at(-1)!
+    .text.match(/https?:\/\/\S+/)![0];
+  return { email, password, response, link };
+}
+async function signin(a: { email: string; password: string }) {
+  const r = await request("auth/sign-in/email", "POST", a);
+  assert.equal(r.status, 200, await r.clone().text());
+  const cookie = r.headers
+    .getSetCookie()
+    .map((s) => s.split(";")[0])
+    .join("; ");
+  const user = await ok("me", "GET", undefined, cookie);
+  return { cookie, id: user.user.id, email: a.email };
+}
+async function account() {
+  const a = await register();
+  await ok("auth/verify-email-password", "POST", {token:new URL(a.link).searchParams.get("token"),password:a.password});
+  return signin(a);
+}
+
+const { S3Client,CreateBucketCommand,ListObjectsV2Command,DeleteObjectsCommand,DeleteBucketCommand }=await import('@aws-sdk/client-s3');
+const {PDFDocument}=await import('pdf-lib');
+const sharp=(await import('sharp')).default;
+const {TranscriptionWorker,transcriptionClock}=await import('../server/transcription.server');
+const {FakeProvider}=await import('../server/transcription-provider.server');
+const {sourceLimits,cleanupDerived,cleanupObjects}=await import('../server/originals.server');
+const {env}=await import('../server/env.server');
+const s3=new S3Client({endpoint:env.S3_ENDPOINT,region:env.S3_REGION,forcePathStyle:true,credentials:{accessKeyId:env.S3_ACCESS_KEY_ID!,secretAccessKey:env.S3_SECRET_ACCESS_KEY!}});
+await s3.send(new CreateBucketCommand({Bucket:env.S3_BUCKET}));
+after(async()=>{const objects=await s3.send(new ListObjectsV2Command({Bucket:env.S3_BUCKET}));if(objects.Contents?.length)await s3.send(new DeleteObjectsCommand({Bucket:env.S3_BUCKET,Delete:{Objects:objects.Contents.map(o=>({Key:o.Key!}))}}));await s3.send(new DeleteBucketCommand({Bucket:env.S3_BUCKET}));s3.destroy();});
+async function upload(e:string,cookie:string,bytes:Uint8Array){return fetch(base+'/api/ensembles/'+e+'/originals',{method:'POST',headers:{origin:base,cookie,'x-original-filename':'score.png'},body:bytes as BodyInit});}
+const png=await sharp({create:{width:16,height:16,channels:3,background:'white'}}).png().toBuffer();
+async function setup(){const lead=await account();const e=await ok('ensembles','POST',{name:'Transcription fixture',kind:'choir'},lead.cookie);const r=await upload(e.id,lead.cookie,png);assert.equal(r.status,201,await r.clone().text());return {lead,e,source:await r.json()};}
+async function job(e:string,cookie:string,source:string,key=crypto.randomUUID()){const r=await fetch(base+`/api/ensembles/${e}/transcriptions`,{method:'POST',headers:{origin:base,cookie,'content-type':'application/json','idempotency-key':key},body:JSON.stringify({sourceObjects:[source]})});assert.equal(r.status,201,await r.clone().text());return r.json();}
+async function view(e:string,cookie:string,j:string){return ok(`ensembles/${e}/transcriptions/${j}`,'GET',undefined,cookie);}
+test('private originals validate content and bounds, dedupe, authorize and audit access',async()=>{
+ const {lead,e,source}=await setup();const outsider=await account();
+ assert.equal((await upload(e.id,lead.cookie,Buffer.from('not an image'))).status,422);
+ const limit=sourceLimits.photo;sourceLimits.photo=10;try{assert.equal((await upload(e.id,lead.cookie,png)).status,413);}finally{sourceLimits.photo=limit;}
+ const pixels=sourceLimits.pixels;sourceLimits.pixels=10;try{assert.equal((await upload(e.id,lead.cookie,png)).status,422);}finally{sourceLimits.pixels=pixels;}
+ const pdf=await PDFDocument.create();pdf.addPage();pdf.addPage();const pages=sourceLimits.pages;sourceLimits.pages=1;try{assert.equal((await upload(e.id,lead.cookie,await pdf.save())).status,422);}finally{sourceLimits.pages=pages;}
+ const again=await upload(e.id,lead.cookie,png);assert.equal((await again.json()).id,source.id);
+ const path=`ensembles/${e.id}/originals/${source.id}`;
+ assert.equal((await request(path,'GET',undefined,outsider.cookie)).status,404);
+ assert.equal((await request(`ensembles/${e.id}/originals/guessed-key`,'GET',undefined,lead.cookie)).status,404);
+ const streamed=await request(path,'GET',undefined,lead.cookie);assert.deepEqual(Buffer.from(await streamed.arrayBuffer()),png);
+ const signed=await fetch(base+'/api/'+path+'?signed=1',{headers:{cookie:lead.cookie},redirect:'manual'});assert.equal(signed.status,302);const url=new URL(signed.headers.get('location')!);assert.equal(url.searchParams.get('X-Amz-Expires'),'60');assert.equal((await fetch(url)).status,200);
+ assert.equal((await pool.query("select count(*)::int n from audit_events where target_id=$1 and action='original.access'",[source.id])).rows[0].n,2);
+});
+test('durable jobs complete, immutable destination and concurrent import creates one validated piece',async()=>{
+ const {lead,e,source}=await setup();const key=crypto.randomUUID();const j=await job(e.id,lead.cookie,source.id,key);assert.equal((await job(e.id,lead.cookie,source.id,key)).id,j.id);
+ const worker=new TranscriptionWorker();assert.equal(await worker.tick(),true);const done=await view(e.id,lead.cookie,j.id);assert.equal(done.state,'completed');assert.equal(done.pages[0].state,'completed');
+ const other=await ok('ensembles','POST',{name:'Other',kind:'band'},lead.cookie);assert.equal((await request(`ensembles/${other.id}/transcriptions/${j.id}`,'GET',undefined,lead.cookie)).status,404);
+ const imports=await Promise.all(Array.from({length:4},()=>ok(`ensembles/${e.id}/transcriptions/${j.id}/import`,'POST',{},lead.cookie)));assert.equal(new Set(imports.map(p=>p.id)).size,1);assert.equal(imports[0].ensembleId,e.id);
+ const v=(await pool.query('select timing from score_versions where piece_id=$1',[imports[0].id])).rows[0];assert.ok(v.timing);
+});
+test('failure reasons, bounded automatic retry and explicit retry preserves complete pages',async()=>{
+ const {lead,e,source}=await setup();
+ for(const reason of ['provider_refusal','provider_timeout','rate_limited','invalid_output','truncated'] as const){
+ const j=await job(e.id,lead.cookie,source.id);const worker=new TranscriptionWorker(new FakeProvider(()=>reason));
+ for(let n=0;n<env.TRANSCRIPTION_MAX_ATTEMPTS;n++){await pool.query('update job_pages set next_attempt_at=$2 where job_id=$1',[j.id,new Date(0)]);await worker.tick();}
+ const state=await view(e.id,lead.cookie,j.id);assert.equal(state.state,'failed');assert.equal(state.failure_reason,reason);assert.ok(state.pages[0].attempts<=env.TRANSCRIPTION_MAX_ATTEMPTS);
+ await ok(`ensembles/${e.id}/transcriptions/${j.id}/retry`,'POST',{},lead.cookie);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+ }
+ const second=await sharp({create:{width:17,height:16,channels:3,background:'white'}}).png().toBuffer();const src=await (await upload(e.id,lead.cookie,second)).json();
+ const j=await ok(`ensembles/${e.id}/transcriptions`,'POST',{sourceObjects:[source.id,src.id]},lead.cookie);
+ const worker=new TranscriptionWorker(new FakeProvider(p=>p.pageIndex===1?'provider_refusal':'success'));await worker.tick();await worker.tick();
+ const completed=(await pool.query('select id,attempts from job_pages where job_id=$1 and state=\'completed\'',[j.id])).rows[0];
+ await ok(`ensembles/${e.id}/transcriptions/${j.id}/retry`,'POST',{},lead.cookie);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');assert.equal((await pool.query('select attempts from job_pages where id=$1',[completed.id])).rows[0].attempts,completed.attempts);
+});
+test('cancel and emergency pause retain work, revocation prevents provider invocation, cleanup retains originals',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
+ await pool.query('insert into transcription_control(id,paused) values(1,true) on conflict(id) do update set paused=true');assert.equal(await new TranscriptionWorker().tick(),false);assert.equal((await view(e.id,lead.cookie,j.id)).stage,'processing_paused');
+ await pool.query('update transcription_control set paused=false');await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);assert.equal(await new TranscriptionWorker().tick(),false);
+ await ok(`ensembles/${e.id}/transcriptions/${j.id}/retry`,'POST',{},lead.cookie);
+ const successor=await account();await pool.query('insert into memberships(ensemble_id,user_id,is_lead) values($1,$2,true)',[e.id,successor.id]);
+ await pool.query('update memberships set is_lead=false where ensemble_id=$1 and user_id=$2',[e.id,lead.id]);let calls=0;await new TranscriptionWorker(new FakeProvider(()=>{calls++;return 'success';})).tick();assert.equal(calls,0);assert.equal((await pool.query('select failure_reason from transcription_jobs where id=$1',[j.id])).rows[0].failure_reason,'permission_revoked');
+ assert.equal((await request(`ensembles/${e.id}/originals/${source.id}`,'GET',undefined,lead.cookie)).status,404);
+ await pool.query('update memberships set is_lead=true where ensemble_id=$1',[e.id]);
+ await pool.query("insert into stored_objects(ensemble_id,object_key,kind,size,content_type,sha256,provenance,state,created_at) values($1,$2,'derived',1,'text/plain','derived','{}','ready',$3)",[e.id,`ensembles/${e.id}/derived/test`,new Date(0)]);
+ assert.equal(await cleanupDerived(new Date()),1);await pool.query("update object_deletions set created_at=$1",[new Date(0)]);await cleanupObjects();assert.equal((await request(`ensembles/${e.id}/originals/${source.id}`,'GET',undefined,lead.cookie)).status,200);
+});
+test('worker process death recovers expired leases under a frozen non-UTC clock',async()=>{
+ const {spawn}=await import('node:child_process');const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
+ const child=spawn(process.execPath,['--import','tsx','--input-type=module','-e',`import {TranscriptionWorker} from './server/transcription.server.ts';import {FakeProvider} from './server/transcription-provider.server.ts';await new TranscriptionWorker(new FakeProvider(()=> 'success',60000)).tick();`],{cwd:process.cwd(),env:process.env,stdio:'pipe'});
+ let errors='';child.stderr.on('data',c=>{errors+=c;});
+ const exited=new Promise(resolve=>child.once('exit',resolve));
+ try{
+ for(let i=0;i<150;i++){const p=(await pool.query('select state from job_pages where job_id=$1',[j.id])).rows[0];if(p.state==='running')break;await delay(20);}
+ assert.equal((await pool.query('select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running',errors);
+ child.kill('SIGKILL');await exited;
+ const now=transcriptionClock.now;transcriptionClock.now=()=>new Date(Date.now()+env.TRANSCRIPTION_LEASE_MS+1000);
+ try{await new TranscriptionWorker().tick();}finally{transcriptionClock.now=now;}
+ const done=await view(e.id,lead.cookie,j.id);assert.equal(done.state,'completed');assert.equal(done.pages[0].attempts,2);
+ }finally{child.kill('SIGKILL');await exited;}
+});
+test('transcribe-only access cannot import, edit-only can import, and job admission limits persist',async()=>{
+ const {lead,e,source}=await setup();const member=await account();await pool.query('insert into memberships(ensemble_id,user_id,ai_transcription) values($1,$2,true)',[e.id,member.id]);
+ const j=await job(e.id,member.cookie,source.id);await new TranscriptionWorker().tick();
+ assert.equal((await request(`ensembles/${e.id}/transcriptions/${j.id}/import`,'POST',{},member.cookie)).status,403);
+ await pool.query('update memberships set ai_transcription=false,edit_music_pieces=true where ensemble_id=$1 and user_id=$2',[e.id,member.id]);
+ assert.equal((await request(`ensembles/${e.id}/transcriptions/${j.id}`,'GET',undefined,member.cookie)).status,403);
+ assert.equal((await request(`ensembles/${e.id}/transcriptions/${j.id}/import`,'POST',{},member.cookie)).status,200);
+ const active=[];for(let i=0;i<env.TRANSCRIPTION_USER_MAX;i++)active.push(await job(e.id,lead.cookie,source.id));
+ 
+ const r=await fetch(base+`/api/ensembles/${e.id}/transcriptions`,{method:'POST',headers:{origin:base,cookie:lead.cookie,'content-type':'application/json','idempotency-key':crypto.randomUUID()},body:JSON.stringify({sourceObjects:[source.id]})});assert.equal(r.status,429);
+ for(const a of active)await ok(`ensembles/${e.id}/transcriptions/${a.id}/cancel`,'POST',{},lead.cookie);
+});
+test('signed GET expires and in-flight cancellation fences the page checkpoint',async()=>{
+ const {storage}=await import('../server/storage.server');const {lead,e,source}=await setup();
+ const key=(await pool.query('select object_key from stored_objects where id=$1',[source.id])).rows[0].object_key;
+ const url=await storage().signedGet(key,1);assert.equal((await fetch(url)).status,200);await delay(2100);assert.equal((await fetch(url)).status,403);
+ const j=await job(e.id,lead.cookie,source.id);const work=new TranscriptionWorker(new FakeProvider(()=> 'success',300)).tick();
+ for(let i=0;i<50;i++){if((await view(e.id,lead.cookie,j.id)).pages[0].state==='running')break;await delay(10);}
+ await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);await work;const state=await view(e.id,lead.cookie,j.id);assert.equal(state.state,'cancelled');assert.equal(state.pages[0].state,'cancelled');
+});
+test('permission revoked between pages prevents the next provider call and ensemble admission is bounded',async()=>{
+ const {lead,e,source}=await setup();const member=await account();await pool.query('insert into memberships(ensemble_id,user_id,ai_transcription) values($1,$2,true)',[e.id,member.id]);
+ const j=await ok(`ensembles/${e.id}/transcriptions`,'POST',{sourceObjects:[source.id,source.id]},member.cookie);let calls=0;const worker=new TranscriptionWorker(new FakeProvider(()=>{calls++;return 'uncertain';}));await worker.tick();
+ await pool.query('update memberships set ai_transcription=false where ensemble_id=$1 and user_id=$2',[e.id,member.id]);await worker.tick();assert.equal(calls,1);assert.equal((await view(e.id,lead.cookie,j.id)).failure_reason,'permission_revoked');
+ await pool.query('update memberships set ai_transcription=true where ensemble_id=$1 and user_id=$2',[e.id,member.id]);
+ const active=[];for(let i=0;i<2;i++){active.push(await job(e.id,lead.cookie,source.id));active.push(await job(e.id,member.cookie,source.id));}
+ const third=await account();await pool.query('insert into memberships(ensemble_id,user_id,ai_transcription) values($1,$2,true)',[e.id,third.id]);
+ const r=await fetch(base+`/api/ensembles/${e.id}/transcriptions`,{method:'POST',headers:{origin:base,cookie:third.cookie,'content-type':'application/json','idempotency-key':crypto.randomUUID()},body:JSON.stringify({sourceObjects:[source.id]})});assert.equal(r.status,429);
+ for(const a of active)await ok(`ensembles/${e.id}/transcriptions/${a.id}/cancel`,'POST',{},lead.cookie);
+});
+test('sysadmin stop and metrics APIs enforce platform role, and sole-member closure deletes originals',async()=>{
+ const {lead,e,source}=await setup();
+ assert.equal((await request('admin/transcription/control','PUT',{paused:true},lead.cookie)).status,404);
+ await pool.query("insert into platform_roles(user_id) values($1)",[lead.id]);
+ assert.equal((await ok('admin/transcription/control','PUT',{paused:true},lead.cookie)).paused,true);
+ const j=await job(e.id,lead.cookie,source.id);assert.equal(await new TranscriptionWorker().tick(),false);
+ await ok('admin/transcription/control','PUT',{paused:false},lead.cookie);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+ const range='admin/transcription/metrics?from=2000-01-01T00:00:00Z&to=2100-01-01T00:00:00Z';const metrics=await ok(range,'GET',undefined,lead.cookie);assert.ok(metrics.some((r:any)=>r.model==='fake-transcription-v1'));
+ const key=(await pool.query('select object_key from stored_objects where id=$1',[source.id])).rows[0].object_key;
+ await ok('account','DELETE',{deleteEnsembleIds:[e.id]},lead.cookie);assert.equal((await pool.query('select 1 from stored_objects where id=$1',[source.id])).rowCount,0);assert.equal((await pool.query('select 1 from object_deletions where object_key=$1',[key])).rowCount,1);
+ await pool.query('update object_deletions set created_at=$2 where object_key=$1',[key,new Date(0)]);await cleanupObjects();
+ const {storage}=await import('../server/storage.server');await assert.rejects(()=>storage().head(key));
+});
