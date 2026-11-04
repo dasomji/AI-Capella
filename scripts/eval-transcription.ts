@@ -1,4 +1,4 @@
-import { readFile,writeFile,mkdir,readdir } from 'node:fs/promises';
+import { readFile,writeFile,appendFile,mkdir,readdir } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { resolve,dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -26,7 +26,10 @@ export async function evaluate(args:string[]){
  const jobs:any[]=[];
  const manifests:string[]=[];for(const entry of await readdir(opts.set,{withFileTypes:true})){if(entry.isDirectory())for(const name of ['manifest.json','photos.json']){const path=resolve(opts.set,entry.name,name);try{await readFile(path);manifests.push(path);}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}}}
  if(!manifests.length)throw Error('No fixture manifests found');
- for(const file of manifests.slice(0,opts.limit)){
+ await mkdir(dirname(opts.out),{recursive:true});
+ await writeFile(opts.out+'.jsonl','');
+ for(const file of manifests.sort().slice(0,opts.limit)){
+ try{
  const manifest=manifestSchema.parse(JSON.parse(await readFile(file,'utf8')));const dir=dirname(file);
  const local=(p:string)=>{const path=resolve(dir,p);if(!path.startsWith(dir+'/'))throw Error('Fixture path escapes directory');return path;};
  const store={get:async(key:string)=>createReadStream(key)} satisfies Pick<ObjectStorage,'get'>;
@@ -36,7 +39,7 @@ export async function evaluate(args:string[]){
  for(let attempt=1;attempt<=3;attempt++){
  const abort=new AbortController();const timer=setTimeout(()=>abort.abort(),180000);const callStart=Date.now();
  try{
- const input=await renderer.render({objectKey:local(opts.dry?p.recordedRaster:p.source),contentType:opts.dry?'image/png':p.contentType,sourcePage:opts.dry?1:p.sourcePage,pageIndex:index},abort.signal);
+ const input=await renderer.render({objectKey:local(opts.dry?(manifest.id.endsWith('-photos')?p.source:p.recordedRaster):p.source),contentType:opts.dry&&!manifest.id.endsWith('-photos')?'image/png':p.contentType,sourcePage:opts.dry?1:p.sourcePage,pageIndex:index},abort.signal);
  // Replay at the SDK HTTP boundary: real prompt, schema parser, refusal handling and provider code execute, no network.
  const client=opts.dry?new OpenAI({apiKey:'recorded-fixture-only',maxRetries:0,fetch:async()=>new Response(JSON.stringify({id:'recorded',object:'response',status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify(p.recorded),annotations:[]}]}],usage:{input_tokens:100,output_tokens:200}}),{headers:{'content-type':'application/json'}})}):undefined;
  result=await new OpenAITranscriptionProvider(undefined,client).transcribePage(input,results,{},abort.signal);
@@ -44,16 +47,19 @@ export async function evaluate(args:string[]){
  }catch(e){const error=e instanceof ProviderError?e:new ProviderError('infrastructure_error');failure=error.reason;const model=process.env.OPENAI_TRANSCRIPTION_MODEL??'gpt-6.1-sol';attempts.push({attempt,outcome:failure,requestId:error.requestId,usage:error.usage??{},latencyMs:Date.now()-callStart,estimatedCost:estimatedCost(model,error.usage??{},prices)});if(!error.retryable||attempt===3||error.retryAfterMs>30000)break;await new Promise(r=>setTimeout(r,Math.min(30000,Math.max(250,error.retryAfterMs))));}
  finally{clearTimeout(timer);}
  }
- let accuracy=null,validation=null;if(result){results.push(result);accuracy=compareMusicXML(result.musicxmlFragment,await readFile(local(p.reference),'utf8'));const dom=scoreDocument(result.musicxmlFragment);try{validation=validateMusicDocument(dom.window.document,[],result.uncertainties);}finally{dom.window.close();}}
- pages.push({page:index+1,outcome:result?'completed':failure,attempts,retries:attempts.length-1,latencyMs:Date.now()-start,accuracy,validation,validationCounts:validation?{errors:validation.errors.length,warnings:validation.warnings.length,uncertainties:validation.uncertainties.length}:null,uncertainties:result?.uncertainties??[],flags:result?.flags??[]});if(!result)break;
+ let accuracy=null,validation=null,comparisonError=null;if(result){try{results.push(result);accuracy=compareMusicXML(result.musicxmlFragment,await readFile(local(p.reference),'utf8'));const dom=scoreDocument(result.musicxmlFragment);try{validation=validateMusicDocument(dom.window.document,[],result.uncertainties);}finally{dom.window.close();}}catch(e){comparisonError=e instanceof Error?e.message:String(e);}}
+ pages.push({page:index+1,outcome:comparisonError?'comparison_failed':result?'completed':failure,comparisonError,costBasis:opts.dry?'synthetic':'provider',knownCostUSD:attempts.reduce((s,a)=>s+(a.estimatedCost??0),0),unpricedCalls:attempts.filter(a=>a.estimatedCost===null).length,estimatedCost:attempts.every(a=>a.estimatedCost!==null)?attempts.reduce((s,a)=>s+a.estimatedCost,0):null,attempts,retries:attempts.length-1,latencyMs:Date.now()-start,accuracy,validation,validationCounts:validation?{errors:validation.errors.length,warnings:validation.warnings.length,uncertainties:validation.uncertainties.length}:null,uncertainties:result?.uncertainties??[],flags:result?.flags??[]});if(!result)break;
  }
  let accuracy=null,validation=null;let assemblyError=null;
  if(results.length===manifest.pages.length){try{const assembled=await new ScoreAssembler().assembleDetailed(results);validation=assembled.report;accuracy=compareMusicXML(assembled.xml,await readFile(local(manifest.reference),'utf8'));}catch(e){assemblyError=e instanceof Error?e.message:String(e);}}
  const calls=pages.flatMap(p=>p.attempts);const costKnown=calls.every(c=>c.estimatedCost!==null);
- jobs.push({id:manifest.id,metadata:manifest.metadata,model:process.env.OPENAI_TRANSCRIPTION_MODEL??'gpt-6.1-sol',promptVersion:'transcription-v1',outcome:assemblyError?'assembly_failed':accuracy?(validation?.structurallyValid?'completed':'validation_failed'):'failed',assemblyError,latencyMs:Date.now()-jobStart,accuracy,validation,usage:{inputTokens:calls.reduce((s,c)=>s+(c.usage.inputTokens??0),0),outputTokens:calls.reduce((s,c)=>s+(c.usage.outputTokens??0),0)},retries:pages.reduce((s,p)=>s+p.retries,0),estimatedCost:costKnown?calls.reduce((s,c)=>s+c.estimatedCost,0):null,pages});
+ jobs.push({id:manifest.id,metadata:manifest.metadata,model:process.env.OPENAI_TRANSCRIPTION_MODEL??'gpt-6.1-sol',promptVersion:'transcription-v1',outcome:pages.some(p=>p.comparisonError)?'comparison_failed':assemblyError?'assembly_failed':accuracy?(validation?.structurallyValid?'completed':'validation_failed'):'failed',assemblyError,latencyMs:Date.now()-jobStart,accuracy,validation,usage:{inputTokens:calls.reduce((s,c)=>s+(c.usage.inputTokens??0),0),outputTokens:calls.reduce((s,c)=>s+(c.usage.outputTokens??0),0)},retries:pages.reduce((s,p)=>s+p.retries,0),estimatedCost:costKnown?calls.reduce((s,c)=>s+c.estimatedCost,0):null,costBasis:opts.dry?'synthetic':'provider',unpricedCalls:calls.filter(c=>c.estimatedCost===null).length,knownCostUSD:calls.reduce((s,c)=>s+(c.estimatedCost??0),0),pages});
+ }catch(e){jobs.push({id:file,outcome:'job_failed',error:e instanceof Error?e.message:String(e),pages:[],estimatedCost:null});}
+ await appendFile(opts.out+'.jsonl',JSON.stringify({type:'job',job:jobs.at(-1)})+'\n');
+ await writeFile(opts.out,JSON.stringify({schemaVersion:1,partial:true,jobs},null,2)+'\n');
  }
  const report={schemaVersion:1,capturedAt:new Date().toISOString(),mode:opts.dry?'recorded-offline':'live',tokenUsageBasis:opts.dry?'synthetic replay counters, not measured provider usage':'provider response usage',currency:'USD',priceTable:prices,qualityThresholds:null,jobs};
  const rows=jobs.map(j=>({job:j.id,outcome:j.outcome,pages:j.pages.length,noteF1:j.accuracy?.metrics.notes.f1??null,editMeasures:j.accuracy?.reviewEffort.measuresNeedingEdits??null,costUSD:j.estimatedCost??'unknown'}));console.table(rows);if(opts.pages)console.table(jobs.flatMap(j=>j.pages.map((p:any)=>({job:j.id,page:p.page,outcome:p.outcome,noteF1:p.accuracy?.metrics.notes.f1}))));
- await mkdir(dirname(opts.out),{recursive:true});await writeFile(opts.out,JSON.stringify(report,null,2)+'\n');await writeFile(opts.out.replace(/\.json$/,'')+'.md',`# Transcription evaluation\n\nMode: ${report.mode}. Prices USD per million tokens; missing prices mean unknown, never free. No quality acceptance threshold set.\n\n| Job | Outcome | Pages | Note F1 | Edit measures | Estimated USD |\n|---|---|---:|---:|---:|---:|\n${rows.map(r=>`| ${r.job} | ${r.outcome} | ${r.pages} | ${r.noteF1} | ${r.editMeasures} | ${r.costUSD} |`).join('\n')}\n\nDetailed per-page diagnostics, uncertainties and attempts are in the companion JSON report.\n`);return report;
+ await appendFile(opts.out+'.jsonl',JSON.stringify({type:'summary',jobs:jobs.length,completed:jobs.filter(j=>j.outcome==='completed').length,costBasis:opts.dry?'synthetic':'provider'})+'\n');await writeFile(opts.out,JSON.stringify(report,null,2)+'\n');await writeFile(opts.out.replace(/\.json$/,'')+'.md',`# Transcription evaluation\n\nMode: ${report.mode}. Prices USD per million tokens; missing prices mean unknown, never free. No quality acceptance threshold set.\n\n| Job | Outcome | Pages | Note F1 | Edit measures | Estimated USD |\n|---|---|---:|---:|---:|---:|\n${rows.map(r=>`| ${r.job} | ${r.outcome} | ${r.pages} | ${r.noteF1} | ${r.editMeasures} | ${r.costUSD} |`).join('\n')}\n\nDetailed per-page diagnostics, uncertainties and attempts are in the companion JSON report.\n`);return report;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)evaluate(process.argv.slice(2)).then(report=>{if(report.jobs.some(j=>j.outcome!=='completed'))process.exitCode=1;}).catch(e=>{console.error(e.message);process.exitCode=1;});
