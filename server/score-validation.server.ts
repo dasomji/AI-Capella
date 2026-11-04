@@ -1,7 +1,7 @@
 import { Worker } from 'node:worker_threads';
 import { DomainError } from './domain.server';
 import type { PieceTiming } from '../src/rehearsal/timeline';
-type Result = {raw:string;hash:string;size:number;timing?:PieceTiming};
+type Result = {raw:string;hash:string;size:number;validation?:import('../src/score-validation').ValidationReport;timing?:PieceTiming};
 type Job = {raw:string;format:'score'|'musicxml';timing:boolean;resolve:(value:Result)=>void;reject:(error:unknown)=>void};
 type Slot = {worker:Worker;job?:Job;timeout?:ReturnType<typeof setTimeout>;idle?:ReturnType<typeof setTimeout>};
 const queue:Job[]=[];

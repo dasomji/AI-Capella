@@ -33,12 +33,19 @@ parentPort.on('message', async ({raw,format,timing})=>{
       };
       if(!visit(parsed)) throw Error('empty_score');
     }
+    let validation;
+    if(format==='musicxml'){
+      const {JSDOM}=await import('jsdom');const dom=new JSDOM(raw,{contentType:'text/xml'});
+      const {validateMusicDocument}=await tsImport('../src/score-validation.ts',import.meta.url);
+      validation=validateMusicDocument(dom.window.document);dom.window.close();
+      if(!validation.structurallyValid)throw Error('invalid_score');
+    }
     let derived;
     if(timing){
       let score=body;
       if(format==='musicxml'){const {JSDOM}=await import('jsdom');const dom=new JSDOM('');globalThis.DOMParser=dom.window.DOMParser;const {parseMusicXML}=await tsImport('../src/musicxml.ts',import.meta.url);score=parseMusicXML(raw);dom.window.close();}
       derived=timingFromScore(score);
     }
-    parentPort.postMessage({timing:derived,raw,hash:createHash('sha256').update(raw).digest('hex'),size:Buffer.byteLength(raw)});
+    parentPort.postMessage({validation,timing:derived,raw,hash:createHash('sha256').update(raw).digest('hex'),size:Buffer.byteLength(raw)});
   } catch(error) { parentPort.postMessage({error:['invalid_text','invalid_xml','empty_score','nesting_limit'].includes(error.message)?error.message:'invalid_score'}); }
 });
