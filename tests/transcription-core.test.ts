@@ -185,3 +185,7 @@ test('global identity assignment preserves stronger context signals and warns on
  const a=page(['P','Q']).replaceAll('<part-name>P</part-name>','<part-name>Soprano</part-name>').replaceAll('<part-name>Q</part-name>','<part-name>Soprano</part-name>');const b=page(['R','U']).replaceAll('<part-name>R</part-name>','<part-name>Soprano</part-name>').replaceAll('<part-name>U</part-name>','<part-name>Soprano</part-name>');
  const out=await new ScoreAssembler().assembleDetailed([result(a),result(b)]);expect(out.report.warnings.map(w=>w.code)).toContain('ambiguous_part_identity');
 });
+
+test('clef identity ignores exporter whitespace',async()=>{
+ const first=page(['S']);const pretty=first.replace('<sign>G</sign><line>2</line>','\n<sign>G</sign>\n<line>2</line>\n');const out=await new ScoreAssembler().assembleDetailed([result(first),result(pretty)]);const d=scoreDocument(out.xml);try{expect(d.window.document.querySelectorAll('part')).toHaveLength(1);}finally{d.window.close();}
+});

@@ -12,6 +12,7 @@ export function scoreDocument(xml:string){
 }
 export const normalizePartName=(name:string)=>name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/soprano?|sopran|s(?=\s*\d)/g,'soprano').replace(/alto?|alt|a(?=\s*\d)/g,'alto').replace(/tenore?|t(?=\s*\d)/g,'tenor').replace(/basso?|bass|b(?=\s*\d)/g,'bass').replace(/[^a-z0-9]/g,'');
 const identity=(p:Element)=>normalizePartName(text(p,'part-name'));
+const clefIdentity=(p:Element)=>Array.from(p.querySelectorAll('attributes > clef')).map(c=>[c.getAttribute('number')??'1',text(c,'sign').trim(),text(c,'line').trim(),text(c,'clef-octave-change').trim()||'0'].join(':')).sort().join('|');
 /** Page validation uses the same parser/validator as assembly; inherited attributes come from context. */
 export function validatePage(page:PageResult, prior:PageResult[]=[]){
  if(page.flags?.includes('no_music'))return 'skipped';
@@ -51,11 +52,11 @@ export class ScoreAssembler implements JobAssembler {
  try{
  const source=dom.window.document;if(!source.querySelector('part')&&!source.querySelector('score-part')){skippedPages.push(pageIndex+1);continue;}if(total===0)for(const child of Array.from(source.documentElement.children))if(!['part','part-list'].includes(child.tagName))root.insertBefore(doc.importNode(child,true),list);const mapped=new Map<string,Element>();
  const declarations=Array.from(source.querySelectorAll('part-list > score-part')).sort((a,b)=>a.id.localeCompare(b.id));
- const weights=declarations.map(d=>{const local=children(source.documentElement,'part').find(p=>p.id===d.id);const clef=local?Array.from(local.querySelectorAll('attributes > clef')).map(c=>c.textContent).join('|'):'';return registry.map(p=>(p.clef&&clef&&p.clef!==clef)?-100000:(p.id===d.id?1000:0)+(p.identity===identity(d)?100:0));});
+ const weights=declarations.map(d=>{const local=children(source.documentElement,'part').find(p=>p.id===d.id);const clef=local?clefIdentity(local):'';return registry.map(p=>(p.clef&&clef&&p.clef!==clef)?-100000:(p.id===d.id?1000:0)+(p.identity===identity(d)?100:0));});
  const assignments=assignParts(weights);
  for(const [declarationIndex,declaration] of declarations.entries()){ 
  const local=children(source.documentElement,'part').find(p=>p.id===declaration.id);if(!local)throw new ProviderError('invalid_output',true);
- const name=identity(declaration),clef=Array.from(local.querySelectorAll('attributes > clef')).map(c=>c.textContent).join('|');
+ const name=identity(declaration),clef=clefIdentity(local);
  let entry=assignments[declarationIndex]>=0?registry[assignments[declarationIndex]]:undefined;
  const row=weights[declarationIndex],best=Math.max(0,...row);if(best>0&&row.filter(w=>w===best).length>1)identityWarnings.push({code:'ambiguous_part_identity',part:declaration.id,measure:total+1});
  if(!entry){let id=declaration.id||'P1';while(registry.some(p=>p.id===id))id+='n';const copy=doc.importNode(declaration,true);copy.id=id;list.append(copy);const element=doc.createElement('part');element.id=id;root.append(element);entry={id,identity:name,clef,declaration:copy,element};if(total)identityWarnings.push({code:'new_part_identity',part:id,measure:total+1,message:`part ${id} first appears on page ${pageIndex+1}`} as import('../src/score-validation').Diagnostic);registry.push(entry);}
