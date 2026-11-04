@@ -1,5 +1,5 @@
 // @ts-ignore shared with the plain Node score worker
-import { cleanMusicXML } from './musicxml-input.mjs';
+import { cleanMusicXML,normalizeTimewise } from './musicxml-input.mjs';
 import { JSDOM } from 'jsdom';
 import { XMLValidator } from 'fast-xml-parser';
 import { children,text,validateMusicDocument,type MeasureSource } from '../src/score-validation';
@@ -8,7 +8,7 @@ export function scoreDocument(xml:string){
  try{xml=cleanMusicXML(xml,true);}catch{throw new ProviderError('invalid_output',true);}
  if(XMLValidator.validate(xml)!==true)throw new ProviderError('invalid_output');
  let depth=0;for(const tag of xml.matchAll(/<([^>]+)>/g)){const t=tag[1];if(t.startsWith('/') )depth--;else if(!t.startsWith('?')&&!t.startsWith('!')&&!t.endsWith('/'))depth++;if(depth>256)throw new ProviderError('invalid_output',true);}
- const dom=new JSDOM(xml,{contentType:'text/xml'});if(dom.window.document.documentElement.tagName!=='score-partwise'){dom.window.close();throw new ProviderError('invalid_output');}return dom;
+ const dom=new JSDOM(xml,{contentType:'text/xml'});normalizeTimewise(dom.window.document);if(dom.window.document.documentElement.tagName!=='score-partwise'){dom.window.close();throw new ProviderError('invalid_output');}return dom;
 }
 export const normalizePartName=(name:string)=>name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/soprano?|sopran|s(?=\s*\d)/g,'soprano').replace(/alto?|alt|a(?=\s*\d)/g,'alto').replace(/tenore?|t(?=\s*\d)/g,'tenor').replace(/basso?|bass|b(?=\s*\d)/g,'bass').replace(/[^a-z0-9]/g,'');
 const identity=(p:Element)=>normalizePartName(text(p,'part-name'));
@@ -32,6 +32,12 @@ export function validatePage(page:PageResult, prior:PageResult[]=[]){
  return 'completed';
  }finally{dom.window.close();}
 }
+/** Maximum-weight one-to-one assignment, including an unmatched slot per row. */
+export function assignParts(weights:number[][]):number[]{
+ const n=weights.length,m=(weights[0]?.length??0)+n,u=Array(n+1).fill(0),v=Array(m+1).fill(0),p=Array(m+1).fill(0),way=Array(m+1).fill(0);
+ for(let i=1;i<=n;i++){p[0]=i;let j0=0;const min=Array(m+1).fill(Infinity),used=Array(m+1).fill(false);do{used[j0]=true;const i0=p[j0];let delta=Infinity,j1=0;for(let j=1;j<=m;j++)if(!used[j]){const cost=-(weights[i0-1]?.[j-1]??0)-u[i0]-v[j];if(cost<min[j]){min[j]=cost;way[j]=j0;}if(min[j]<delta){delta=min[j];j1=j;}}for(let j=0;j<=m;j++)if(used[j]){u[p[j]]+=delta;v[j]-=delta;}else min[j]-=delta;j0=j1;}while(p[j0]!==0);do{const j1=way[j0];p[j0]=p[j1];j0=j1;}while(j0);}
+ const result=Array(n).fill(-1);for(let j=1;j<=m;j++)if(p[j]&&j<=m-n&&weights[p[j]-1][j-1]>0)result[p[j]-1]=j-1;return result;
+}
 export class ScoreAssembler implements JobAssembler {
  async assemble(pages:PageResult[]){return (await this.assembleDetailed(pages)).xml;}
  async assembleDetailed(pages:PageResult[]){
@@ -45,13 +51,13 @@ export class ScoreAssembler implements JobAssembler {
  try{
  const source=dom.window.document;if(!source.querySelector('part')&&!source.querySelector('score-part')){skippedPages.push(pageIndex+1);continue;}if(total===0)for(const child of Array.from(source.documentElement.children))if(!['part','part-list'].includes(child.tagName))root.insertBefore(doc.importNode(child,true),list);const mapped=new Map<string,Element>();
  const declarations=Array.from(source.querySelectorAll('part-list > score-part')).sort((a,b)=>a.id.localeCompare(b.id));
- const reserved=new Set(declarations.filter(d=>registry.some(p=>p.id===d.id)).map(d=>d.id));
- for(const declaration of declarations){
+ const weights=declarations.map(d=>{const local=children(source.documentElement,'part').find(p=>p.id===d.id);const clef=local?Array.from(local.querySelectorAll('attributes > clef')).map(c=>c.textContent).join('|'):'';return registry.map(p=>(p.clef&&clef&&p.clef!==clef)?-100000:(p.id===d.id?1000:0)+(p.identity===identity(d)?100:0));});
+ const assignments=assignParts(weights);
+ for(const [declarationIndex,declaration] of declarations.entries()){ 
  const local=children(source.documentElement,'part').find(p=>p.id===declaration.id);if(!local)throw new ProviderError('invalid_output',true);
  const name=identity(declaration),clef=Array.from(local.querySelectorAll('attributes > clef')).map(c=>c.textContent).join('|');
- const compatible=(p:newPart)=>!p.clef||!clef||p.clef===clef;
- let entry=registry.find(p=>p.id===declaration.id&&compatible(p));
- if(!entry){const candidates=registry.filter(p=>p.identity===name&&compatible(p)&&!mapped.has(p.id)&&!reserved.has(p.id));if(candidates.length===1)entry=candidates[0];else if(candidates.length>1)identityWarnings.push({code:'ambiguous_part_identity',part:declaration.id,measure:total+1});}
+ let entry=assignments[declarationIndex]>=0?registry[assignments[declarationIndex]]:undefined;
+ const row=weights[declarationIndex],best=Math.max(0,...row);if(best>0&&row.filter(w=>w===best).length>1)identityWarnings.push({code:'ambiguous_part_identity',part:declaration.id,measure:total+1});
  if(!entry){let id=declaration.id||'P1';while(registry.some(p=>p.id===id))id+='n';const copy=doc.importNode(declaration,true);copy.id=id;list.append(copy);const element=doc.createElement('part');element.id=id;root.append(element);entry={id,identity:name,clef,declaration:copy,element};if(total)identityWarnings.push({code:'new_part_identity',part:id,measure:total+1,message:`part ${id} first appears on page ${pageIndex+1}`} as import('../src/score-validation').Diagnostic);registry.push(entry);}
  mapped.set(entry.id,local);
  }
@@ -73,7 +79,8 @@ export class ScoreAssembler implements JobAssembler {
  }finally{dom.window.close();}
  }
  // Backfilled measures also receive explicit synthetic provenance.
- for(const entry of registry)for(let i=0;i<total;i++)if(!provenance.some(p=>p.part===entry.id&&p.measure===i+1)){const template=provenance.find(p=>p.measure===i+1)!;provenance.push({...template,part:entry.id,synthetic:true});}
+ const seen=new Set(provenance.map(p=>p.part+':'+p.measure));const byMeasure=new Map(provenance.map(p=>[p.measure,p]));
+ for(const entry of registry)for(let i=0;i<total;i++)if(!seen.has(entry.id+':'+(i+1))){const template=byMeasure.get(i+1)!;provenance.push({...template,part:entry.id,synthetic:true});}
  const report=validateMusicDocument(doc,provenance,pages.flatMap((p,index)=>[...p.uncertainties,...(p.flags??[]).map(flag=>({flag,page:index+1}))]));
  for(const source of provenance)if(source.synthetic)report.warnings.push({code:'inferred_tacet_rest',part:source.part,measure:source.measure,source});
  report.warnings.push(...identityWarnings,...skippedPages.map(page=>({code:'skipped_page',page})));

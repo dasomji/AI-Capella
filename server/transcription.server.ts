@@ -1,3 +1,4 @@
+import { assembleOffThread } from './assembly-worker.server';
 import { estimatedCost,priceTable } from './transcription-cost';
 import { OpenAITranscriptionProvider } from './openai-provider.server';
 import { BoundedPageRenderer } from './page-renderer.server';
@@ -10,7 +11,6 @@ import { logError } from './logger.server';
 import { env } from './env.server';
 import { FakeProvider, ReferenceRenderer, FakeAssembler, ProviderError, type TranscriptionProvider, type PageRenderer, type JobAssembler, type PageResult } from './transcription-provider.server';
 const defaultProvider=()=>env.NODE_ENV==='test'?new FakeProvider():new OpenAITranscriptionProvider();
-export const transcriptionClock={now:()=>new Date()};
 export async function processingPaused(){return env.TRANSCRIPTION_EMERGENCY_STOP==='1' || !!(await pool.query('select paused from transcription_control where id=1')).rows[0]?.paused;}
 export async function createJob(user:string,ensemble:string,key:string,objects:string[],options:Record<string,unknown>,provider:TranscriptionProvider=defaultProvider()) {
  const requestHash=createHash('sha256').update(JSON.stringify({objects,options})).digest('hex');
@@ -37,7 +37,7 @@ export async function jobReport(user:string,e:string,id:string){
  return {measures:row.provenance?.measures??[],validation:row.provenance?.validation??null};
 }
 export async function cancelJob(user:string,e:string,id:string){await transaction(async db=>{await authorize(db,user,e,'transcribe');const job=(await db.query('update transcription_jobs set state=\'cancelled\',failure_reason=\'cancelled\' where id=$1 and ensemble_id=$2 and state in (\'queued\',\'running\') returning id',[id,e])).rows[0];if(!job)throw new DomainError('invalid_state',409);await db.query("update job_pages set state='cancelled',failure_reason='cancelled',lease_owner=null,lease_expires_at=null where job_id=$1 and state!='completed'",[id]);await db.query("update provider_calls c set outcome='abandoned',error_kind='cancelled',finished_at=now(),usage=coalesce(usage,'{}') || jsonb_build_object('usage_unknown',true) where job_id=$1 and outcome='running' and not exists(select 1 from job_pages p where p.lease_owner=c.lease_owner and p.state='running' and p.lease_expires_at>now())",[id]);});await emit(e,id);}
-export async function retryJob(user:string,e:string,id:string){const provider=defaultProvider();const result=await transaction(async db=>{const owner=(await db.query('select user_id from transcription_jobs where id=$1 and ensemble_id=$2',[id,e])).rows[0];if(!owner)throw new DomainError('not_found',404);await db.query('select pg_advisory_xact_lock(hashtextextended($1,0))',['transcription-user:'+user]);await lockEnsemble(db,e);await authorize(db,user,e,'transcribe');const j=(await db.query('select * from transcription_jobs where id=$1 and ensemble_id=$2 for update',[id,e])).rows[0];if(!j || !['failed','cancelled'].includes(j.state))throw new DomainError('invalid_state',409);const n=(await db.query("select count(*) filter(where started_by=$1)::int as own,count(*) filter(where ensemble_id=$2)::int as ensemble from transcription_jobs where state in ('queued','running')",[user,e])).rows[0];if(n.own>=env.TRANSCRIPTION_USER_MAX || n.ensemble>=env.TRANSCRIPTION_ENSEMBLE_MAX)throw new DomainError('concurrency_limit',429);await db.query("update job_pages set state='queued',attempts=0,failure_reason=null,next_attempt_at=now(),lease_owner=null,lease_expires_at=null where job_id=$1 and (state!='completed' or $2)",[id,true]);return (await db.query("update transcription_jobs set state='queued',failure_reason=null,result_xml=null,model=$3,prompt_version=$4,provenance=(provenance-'assemblyAttempts'-'assemblyRetryAt') || jsonb_build_object('promptSha256',$5::text),started_by=$2 where id=$1 returning id,state",[id,user,provider.model,provider.promptVersion,provider.promptSha256??null])).rows[0];});await emit(e,id);return result;}
+export async function retryJob(user:string,e:string,id:string){const provider:TranscriptionProvider=defaultProvider();const result=await transaction(async db=>{const owner=(await db.query('select user_id from transcription_jobs where id=$1 and ensemble_id=$2',[id,e])).rows[0];if(!owner)throw new DomainError('not_found',404);await db.query('select pg_advisory_xact_lock(hashtextextended($1,0))',['transcription-user:'+user]);await lockEnsemble(db,e);await authorize(db,user,e,'transcribe');const j=(await db.query('select * from transcription_jobs where id=$1 and ensemble_id=$2 for update',[id,e])).rows[0];if(!j || !['failed','cancelled'].includes(j.state))throw new DomainError('invalid_state',409);const n=(await db.query("select count(*) filter(where started_by=$1)::int as own,count(*) filter(where ensemble_id=$2)::int as ensemble from transcription_jobs where state in ('queued','running')",[user,e])).rows[0];if(n.own>=env.TRANSCRIPTION_USER_MAX || n.ensemble>=env.TRANSCRIPTION_ENSEMBLE_MAX)throw new DomainError('concurrency_limit',429);await db.query("update job_pages set state='queued',attempts=0,failure_reason=null,result_xml=null,metrics=null,model=$3,prompt_version=$4,next_attempt_at=now(),lease_owner=null,lease_expires_at=null where job_id=$1 and (state!='completed' or $2)",[id,j.model!==provider.model||j.prompt_version!==provider.promptVersion||['assembly_failed','invalid_output'].includes(j.failure_reason),provider.model,provider.promptVersion]);return (await db.query("update transcription_jobs set state='queued',failure_reason=null,result_xml=null,model=$3,prompt_version=$4,provenance=(provenance-'assemblyAttempts'-'assemblyRetryAt') || jsonb_build_object('promptSha256',$5::text),started_by=$2 where id=$1 returning id,state",[id,user,provider.model,provider.promptVersion,provider.promptSha256??null])).rows[0];});await emit(e,id);return result;}
 export class TranscriptionWorker {
  constructor(private provider:TranscriptionProvider=defaultProvider(),private renderer:PageRenderer=provider instanceof FakeProvider?new ReferenceRenderer():new BoundedPageRenderer(),private assembler:JobAssembler=provider instanceof FakeProvider?new FakeAssembler():new ScoreAssembler()){}
  async tick():Promise<boolean>{
@@ -106,19 +106,23 @@ export class TranscriptionWorker {
  try{await this.assembleJob(id);}catch(error){logError('transcription.assembly',error);const retry=!(error instanceof ProviderError) && (!(error instanceof DomainError)||['validation_busy','validation_timeout'].includes(error.code));await pool.query(`update transcription_jobs set state=case when $2 and coalesce((provenance->>'assemblyAttempts')::int,0)<3 then 'running' else 'failed' end,failure_reason='assembly_failed',provenance=coalesce(provenance,'{}') || jsonb_build_object('assemblyAttempts',coalesce((provenance->>'assemblyAttempts')::int,0)+1,'assemblyRetryAt',now()+interval '5 seconds'*power(2,coalesce((provenance->>'assemblyAttempts')::int,0))) where id=$1 and state in ('queued','running')`,[id,retry]);}
  }
  private async assembleJob(id:string){
- // Assembly is repeatable: row lock makes the durable completion checkpoint unique.
- await transaction(async db=>{
- const j=(await db.query('select * from transcription_jobs where id=$1 for update',[id])).rows[0];if(!j || !['queued','running'].includes(j.state))return;if(j.provenance?.assemblyRetryAt && new Date(j.provenance.assemblyRetryAt).getTime()>Date.now())return;
+ // Expensive work precedes the short, fenced completion transaction.
+ const db=pool;
+ const j=(await db.query('select * from transcription_jobs where id=$1',[id])).rows[0];if(!j || !['queued','running'].includes(j.state))return;if(j.provenance?.assemblyRetryAt && new Date(j.provenance.assemblyRetryAt).getTime()>Date.now())return;
  if(j.model!==this.provider.model || j.prompt_version!==this.provider.promptVersion)return;
  const pages=(await db.query('select * from job_pages where job_id=$1 order by page_number',[id])).rows;if(!pages.length || pages.some(p=>!['completed','skipped'].includes(p.state)))return;
  try{await authorize(db,j.started_by,j.ensemble_id,'transcribe');}catch(error){if(!(error instanceof DomainError) || ![403,404].includes(error.status))throw error;await db.query("update transcription_jobs set state='failed',failure_reason='permission_revoked' where id=$1",[id]);return;}
  if(await processingPaused())return;
  const assembledPages=(pages.map(p=>({musicxmlFragment:p.result_xml,uncertainties:p.metrics?.uncertainties??[],usage:p.metrics?.usage??{inputTokens:0,outputTokens:0},promptVersion:j.prompt_version,flags:p.metrics?.flags??[],model:j.model,latency:p.metrics?.latency??0})));
- const detailed=this.assembler instanceof ScoreAssembler?await this.assembler.assembleDetailed(assembledPages):undefined;
+ const detailed=this.assembler instanceof ScoreAssembler?await assembleOffThread(assembledPages):undefined;
  const xml=detailed?.xml??await this.assembler.assemble(assembledPages);
+ await validateScore(xml,'musicxml');
+ await transaction(async db=>{
+ const current=(await db.query('select * from transcription_jobs where id=$1 for update',[id])).rows[0];if(!current||!['queued','running'].includes(current.state)||current.attempts!==j.attempts||current.started_by!==j.started_by)return;
+ await authorize(db,current.started_by,current.ensemble_id,'transcribe');
+ if(await processingPaused())return;
  if(detailed)await db.query('update transcription_jobs set provenance=provenance || $2::jsonb where id=$1',[id,JSON.stringify({measures:detailed.provenance,validation:detailed.report})]);
  if(detailed && !detailed.report.structurallyValid){await db.query("update transcription_jobs set state='failed',failure_reason='invalid_output' where id=$1",[id]);return;}
- await validateScore(xml,'musicxml');
  await db.query("update transcription_jobs set state='completed',result_xml=$2 where id=$1",[id,xml]);
  });
  }
