@@ -141,7 +141,7 @@ test('failure reasons, bounded automatic retry and explicit retry preserves comp
  const j=await job(e.id,lead.cookie,source.id);const worker=new TranscriptionWorker(new FakeProvider(()=>reason));
  for(let n=0;n<env.TRANSCRIPTION_MAX_ATTEMPTS;n++){await pool.query('update job_pages set next_attempt_at=$2 where job_id=$1',[j.id,new Date(0)]);await worker.tick();}
  const state=await view(e.id,lead.cookie,j.id);assert.equal(state.state,'failed');assert.equal(state.failure_reason,reason);assert.equal(state.pages[0].attempts,['provider_timeout','rate_limited'].includes(reason)?3:reason==='invalid_output'?2:1);
- if(reason==='truncated')assert.match(state.pages[0].review_reason,/including reasoning/);
+ if(reason==='truncated')assert.equal(state.pages[0].review_reason,'truncated');
  await ok(`ensembles/${e.id}/transcriptions/${j.id}/retry`,'POST',{},lead.cookie);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
  }
  const second=await sharp({create:{width:17,height:16,channels:3,background:'white'}}).png().toBuffer();const src=await (await upload(e.id,lead.cookie,second)).json();
@@ -278,8 +278,8 @@ test('job projection excludes source internals and large result fragments',async
  await pool.query("update transcription_jobs set result_xml=$2 where id=$1",[j.id,'x'.repeat(100000)]);
  await pool.query("update job_pages set metrics=$2,result_xml=$3 where job_id=$1",[j.id,{result:'x'.repeat(100000)},'x'.repeat(100000)]);
  const projection=await view(e.id,lead.cookie,j.id);assert.ok(JSON.stringify(projection).length<20000);
- for(const key of ['result_xml','request_hash','options','provenance'])assert.equal(key in projection,false);
- assert.equal('metrics' in projection.pages[0],false);
+ for(const key of ['result_xml','request_hash','provenance'])assert.equal(key in projection,false);
+ assert.equal('metrics' in projection.pages[0],false);assert.deepEqual(projection.options,{title:'score'});
 });
 test('worker wall clock skew cannot steal a live database lease',async()=>{
  const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
