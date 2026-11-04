@@ -17,9 +17,10 @@ delete strictResponseSchema.$schema;
 const array=<T>(v:T|T[]|undefined):T[]=>v===undefined?[]:Array.isArray(v)?v:[v];
 /** Retain only state in effect, never previous notation or full responses. */
 export function compactContext(pages:PageResult[]) {
- const checkpoint=[...pages].reverse().find(p=>p.contextState)?.contextState as {parts:Record<string,unknown>[];lastMeasure:number;tempo:string;lyricLanguage:string}|undefined;
+ const checkpointIndex=pages.findLastIndex(p=>!!p.contextState);
+ const checkpoint=pages[checkpointIndex]?.contextState as {parts:Record<string,unknown>[];lastMeasure:number;tempo:string;lyricLanguage:string}|undefined;
  const parts=new Map<string,Record<string,unknown>>((checkpoint?.parts??[]).map(p=>[String(p.id),structuredClone(p)]));let lastMeasure=checkpoint?.lastMeasure??0;let tempo=checkpoint?.tempo??'';let lyricLanguage=checkpoint?.lyricLanguage??'';
- const checkpointIndex=pages.findLastIndex(p=>!!p.contextState);pages=pages.slice(checkpointIndex+1);
+ pages=pages.slice(checkpointIndex+1);
  for(const page of pages){
  let pageMeasures=0;const score=new XMLParser({ignoreAttributes:false,processEntities:false}).parse(page.musicxmlFragment)['score-partwise'];if(!score)continue;
  for(const item of array<any>(score['part-list']?.['score-part'])){const id=String(item['@_id']);parts.set(id,{...parts.get(id),id,name:item['part-name'],instrument:item['score-instrument']});}
