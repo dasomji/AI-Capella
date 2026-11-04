@@ -506,10 +506,8 @@ The app works without a connection once it has been opened online on that device
   styles, the Latin font subsets, the music font, icons and the sample song. Page loads are
   network-first with the stored copy as fallback; build files are served from storage first (their
   names change with every build) and older builds' files are pruned.
-- Firestore's persistent local cache (IndexedDB, `firebase.ts`) keeps every song that has been
-  listed, including its score, so the repertoire and every song open and play offline. The
-  repertoire shows "Offline: showing the songs saved on this device" in that case. Changes made
-  offline (renames etc.) are sent when the connection returns. Ensemble mode needs a connection.
+- The authenticated library client caches previously opened pieces on this device.
+  Together mode and server mutations require a connection.
 
 ### Design ("Dusk"; today in its paper form, "Papier & Feder" -- see below)
 The visual system, from the September 2026 redesign, extended by the "Samt & Glas" materials
@@ -774,8 +772,6 @@ AI-Capella/
 │   ├── intro.ts               # the introduction tours
 │   ├── library.ts             # Firestore-backed shared song storage, PIN verification, .mxl unzip
 │   ├── sync.ts                 # Solo playback compatibility model/helpers
-│   ├── firebase.ts            # disabled scan/feedback compatibility (no Firebase SDK)
-│   ├── firebaseConfig.ts      # Firebase web app config (not secret; see file comment)
 │   ├── pinGate.ts             # the PIN screen
 │   ├── backdrop.ts            # the velvet wave backdrop behind the whole app
 │   └── style.css              # all styling
@@ -1312,59 +1308,12 @@ Two playback sounds, chosen per device in the player ⋯ menu (`ai-capella-sound
   song/part is still the one on screen, in case the user has since navigated elsewhere — if the
   write actually rejects, surfacing the failure via `setImportStatus` instead of the console.
 
-### 4.6 Shared library & access (`firebase.ts`, `library.ts`, `pinGate.ts`)
+### 4.6 Shared library & access (`library.ts`, `domain-client.ts`)
 
-- Firebase is initialized only if `firebaseConfig.ts` looks configured (`isFirebaseConfigured`);
-  without it the import button is simply disabled and the app still works fully for the
-  bundled sample song.
-- Every client signs in **anonymously** (`ensureSignedIn()`) before touching Firestore, since
-  the security rules require `request.auth != null`. Anonymous auth state is asynchronously
-  restored from persisted storage on load, so `ensureSignedIn()` waits for the *first*
-  `onAuthStateChanged` callback before deciding whether to call `signInAnonymously()` — calling
-  it based on a synchronous `currentUser` read (which reads `null` for a moment even when a
-  session is about to be restored) would silently create a brand-new anonymous account on
-  every single page load instead of reusing the persisted one.
-- Firestore is initialized with `experimentalAutoDetectLongPolling: true`, since its default
-  WebChannel streaming transport can stall indefinitely behind some restrictive proxies/VPNs —
-  a documented Firebase workaround for that exact symptom.
-- Imported scores are **gzip-compressed** (`fflate`) before being written to Firestore, since a
-  document is capped at 1 MiB; `MAX_COMPRESSED_XML_BYTES` leaves headroom below that limit and
-  produces a clear error (naming the actual compressed size) if a score is still too large
-  after compression. Older documents written before compression was added are still read
-  correctly via a fallback to a raw `xml` field.
-- The song list is a **live subscription** (`onSnapshot`), not a one-time fetch — importing or
-  deleting a song from any device updates every other open client immediately, with no manual
-  refresh. A collection `onSnapshot` fires (with the full current result set) on *any* change to
-  *any* doc in it, so `subscribeToSongs` keeps a **per-song decompression cache** across
-  snapshots, keyed by doc id, and only re-gunzips/re-decodes a song via `docChanges()` when that
-  specific doc actually changed — reusing every unchanged song's already-decoded `StoredSong` as-
-  is. Before this, one voice's rename or one new import re-gunzipped and re-decoded *every* song
-  in the library, on *every* connected device, on every single such event — with a roomful of
-  devices all doing that main-thread work simultaneously, this was a real, repeatable cause of a
-  synced-rehearsal-wide stutter/freeze that got worse the more songs (and the more people editing
-  at once) there were — a concrete, confirmed contributor to reported multi-device performance
-  problems.
-- The PIN itself is never stored or transmitted in the clear: `verifyPin()` hashes the entered
-  PIN with SHA-256 (`crypto.subtle.digest`) client-side and compares it against a `pinHash`
-  field on a single `config/access` Firestore document. As documented directly in the code,
-  this is a *soft* gate against casual link-sharing, not a real security boundary — Firestore's
-  actual access control is "authenticated (even anonymously) clients can read/write," which the
-  PIN does nothing to restrict.
-  With ensembles (above), the PIN is replaced by per-ensemble codes that the Firestore rules
-  (`firestore.rules`) enforce.
-- **Renaming** (§2) writes through `updateSongMetadata(id, patch)`, an `updateDoc` on the song's
-  existing document — the app's first update-in-place write; every other write was previously
-  either a brand-new document (`saveImportedSong`) or a full delete. A song title is a plain
-  top-level field write, but a voice rename uses a **dot-path field key**
-  (`` `partNameOverrides.${partId}` ``) rather than writing `{ partNameOverrides: { [partId]:
-  name } }` as a literal nested object — Firestore's `updateDoc` only merges at the top level of
-  the fields object it's given, so a plain object value for a field *replaces* whatever was
-  already stored there wholesale. With a real multi-part choir score, that would mean renaming a
-  second voice silently wiping out every other voice's already-saved rename the next time this
-  ran. The dot-path form updates only that one nested key, leaving the rest of the map alone.
-  `partNameOverrides` itself is applied client-side, once, right after a song's `xml`/`score`
-  blob is parsed and before anything downstream (the parts panel, piano roll, sheet view) reads
-  a part's name — the stored source data is never rewritten just to rename a voice.
+The authenticated API stores pieces and immutable score versions in PostgreSQL
+and object storage. Ensemble membership and capabilities authorize each request.
+Better Auth owns account sessions; Socket.IO invalidates cached library views.
+Source XML remains immutable when part display names change.
 
 ### 4.7 Synced multi-device playback (`src/rehearsal/`, `main.ts`)
 
@@ -1598,39 +1547,17 @@ carry the CA bundle from before the eMudhra fix of October 2026 (see Deployment)
 ```bash
 npm install
 npm run dev       # Vite dev server with HMR
-npm run build     # tsc typecheck + production build to dist/
-npm run preview   # serve the production build locally
+npm run build     # production build to dist/
+npm start         # authenticated production server
 ```
 
-To point the app at your own Firebase project instead of the bundled one, edit
-`src/firebaseConfig.ts` with your project's web app config (Project settings → General →
-"Your apps" → Web app in the Firebase console), and create:
-- A Firestore collection `songs` (populated automatically as scores are imported).
-- The Firestore Security Rules in `firestore.rules` (see Ensembles). They cover the
-  synced-playback session docs **and** the per-device clock-calibration docs
-  `sessions/clockPing_<uid>` (see §4.7). Rules that leave the latter out silently break clock
-  calibration — `calibrateClockOffset()` swallows the permission-denied error and just leaves
-  the offset at its default of 0, which shows up as synced playback starting audibly out of
-  sync (by however much this device's own clock differs from the server) rather than as an
-  obvious error. Check the browser console for a `[LightScore] Clock calibration failed` warning
-  if that happens.
-
-### Deployment
-
-`.github/workflows/deploy.yml` builds the project and deploys `dist/` to GitHub Pages on every
-push to `claude/amazing-bardeen-c4fcke` (or manually via `workflow_dispatch`). Because GitHub
-Pages serves the repo at a subpath (`https://<user>.github.io/AI-Capella/`), `vite.config.ts`
-sets `base: '/AI-Capella/'` so every built asset URL accounts for that prefix; local dev is
-unaffected. `import.meta.env.BASE_URL` is used (never a bare `/...` path) anywhere the app
-needs to reference its own bundled assets, like the sample song's URL, for the same reason.
-
-The build runs on Node 24 with `check-latest` and a step that stops it on anything older than
-24.22.1 -- the security release whose CA bundle has the eMudhra fix (October 2026; Node 20, which
-the build used before, is out of support and got no fix). The page itself is static: what it talks
-to over HTTPS (Firebase) is checked by the visitor's browser and its own certificate store, so
-images are on `node:24-bookworm-slim` with the same check, and get rebuilt with `--pull`
-the system's certificates to Node's bundle instead of replacing it, so it can't take a distrusted
-one out -- the updated Node does. npm installs are pinned by the lockfiles' integrity hashes.
+Configure local PostgreSQL, storage and account settings with `.env.example`.
+Run `npm run typecheck`, `npm test`, `npm run test:integration` and
+`npm run test:browser` before release. `npm run build` creates the production
+assets; `npm start` serves the authenticated app, and `npm run worker` starts
+the durable transcription worker. Deployment images include the required system
+certificate bundle and sandbox dependencies. Never expose server credentials in
+client assets. See `docs/PLAN.md` for production phase status and verification.
 
 ---
 

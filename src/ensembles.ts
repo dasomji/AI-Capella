@@ -13,7 +13,6 @@ export interface Ensemble {
     transcribe: boolean;
   };
   channel?: string;
-  feedback?: boolean;
 }
 export let ENSEMBLES: Ensemble[] = [];
 export let account: { id: string; email: string; name: string } | null = null;
