@@ -974,7 +974,7 @@ offline/reconnect races, autoplay suspension, pre-roll, live tempo/key/loop edit
 account isolation and physical output uncertainty. No push, PR, external
 provisioning, paid AI or real email was performed.
 
-### Phase 3e-1 — review remediation (2026-11-04, in progress)
+### Phase 3e-1 — review remediation (2026-11-04)
 
 - Password admission now exclusively reserves email/IP pairs. Only IPs with recent
   failures share the email's four-attempt concurrency cap; fresh IPs retain access.
@@ -990,3 +990,91 @@ provisioning, paid AI or real email was performed.
 - Recovery commits paused/stopped state in memory before attempting persistence;
   failed persistence retains that recovered state for retry and keeps readiness off.
   Unit takeover/recovery probes and real pg_terminate_backend recovery pass.
+- Client join retries continue with capped backoff on unavailable/timeouts, and join
+  awaits usable calibration. Partial rounds accept four good samples; failed rounds
+  retain the previous estimate. Reconnect invalidates older rounds. Each listener is
+  isolated; invalid broadcasts request a snapshot. Wall/performance delta mismatch
+  over two seconds invalidates calibration before commands or scheduling.
+- Clamp base/tempo marks to 1–1000; validate every persisted/broadcast state and
+  reject invalid derived states. PostgreSQL class 22 errors map to invalid; version
+  numbers cannot exceed int4. Pausing stopped remains stopped, and explicit play
+  outside a paused loop disables the loop.
+- Audio timestamps require a running context and a stamp within one second. Each
+  scheduling batch maps once and adds relative audio offsets (already in 3d).
+  Device-local output latency correction (−500…500 ms) is in the existing settings
+  menu, EN/DE; positive means schedule earlier. Drift correction at 30 ms requires
+  uncertainty under 15 ms. True pre-roll origins, status, endsAt and loop data are
+  exposed by playbackSchedule; preference changes preserve the count-in grid.
+- Exact-version `?timing=1` metadata carries stored timing and content hash. The
+  client logs a derivation mismatch and uses server timing for all shared sync
+  math. Timing derivation version 2 triggers bounded lazy recomputation on change.
+- Rehearsal sockets already force WebSocket in 3d: volatile join/snapshot/ping
+  frames therefore cannot be dropped during the polling-to-WebSocket upgrade.
+  Acknowledgements still time out and joins retry. Server-initiated disconnects
+  do not reconnect blindly; socket-cap closure has its own notice, while revoked
+  sessions use the existing sign-in flow.
+- Shared secure-random UUID fallback covers client call sites on insecure dev LANs.
+  Ensemble admission follows authorization; rejected upload slots drain bodies.
+  Pings are throttled per socket; idle committed snapshots are evicted; session
+  expiry polling builds a token lookup once instead of scanning per socket.
+- Mail recipient limits now count individual sends in a rolling 24-hour window;
+  requester shares are two per kind/recipient/day. Twenty IPs cannot consume the
+  100-send recipient ceiling. Old fixed-window usage is conservatively retained
+  until it expires. Remaining risk: sufficiently many requester IPs can exhaust
+  the ceiling or compete for the one-minute interval; this is mitigation, not
+  proof of requester identity. Account creation/recovery replies stay generic.
+- SVG attribute CSS rejects every backslash or comment opener, preventing parser
+  differentials including invalid Unicode escapes; renderer preservation passes.
+- The generated largest upload fixture is 20 MiB including timing extraction. A
+  real upload probe asserts completion under the worker's 30-second deadline;
+  the stable run measured about 2.8 seconds, with <50 ms health response latency.
+
+Verification results follow. Initial red probes,
+failed expectation updates and invalidated concurrent-build runs remain under
+ignored `.review-evidence/phase3e-*`; no failed evidence was concealed or deleted.
+
+The ownership audit additionally reproduced an in-flight end callback rearming
+its retry after lock loss. Timer scheduling/retries and idle admission now require
+current ownership; its deterministic regression distinguishes the single ownership
+retry timer from an unwanted second rehearsal timer.
+
+Verification on the implementation:
+- `npm run typecheck`: passed; `npm test`: 93 tests passed.
+- `npm run build`: passed; `npm run check:secrets`: positive control and clean
+  client artifacts passed. No public source maps.
+- `npm run test:integration`: 38/38 passed, including all 30 correct-password
+  attempts under 12 concurrent looping attacker IPs, real owner termination,
+  timing backfill/versioning, rolling mail windows and 20 MiB upload with timing
+  in 2682 ms (maximum health probe latency 40.1 ms). Final ownership/timer follow-up
+  checks are also recorded in `.review-evidence/phase3e-ownership-final.log`.
+- `BROWSER_SCRIPT=scripts/browser-sync.mjs npm run test:browser`: passed the
+  two-account Together scenario, 0 ms scheduled server-start difference, pause,
+  Solo isolation, and device-local latency persistence through reload. The added
+  reload probe explicitly re-enters Together because this harness deliberately
+  clears the saved arrival state on each page load.
+- `BROWSER_SCRIPT=scripts/browser-smoke.mjs npm run test:browser`: passed audio,
+  staff rendering, PDF export (121435 bytes), reset/sign-in, zero browser errors
+  and no forbidden external calls.
+- `npm run db:generate`: no schema changes/no drift; `git diff --check`: passed.
+
+These are scheduled-clock and local browser checks, not an acoustic measurement
+of Bluetooth/Safari hardware output. The existing wider Phase 3e multi-device
+acceptance work remains outside this review-fix task.
+
+- Final complete `npm run test:browser`: passed both the full Phase 2b
+  theme/language/capability matrix and the extended Phase 3d two-account scenario.
+  The final Together scheduled-start difference was 0 ms; latency persistence
+  remained local to the browser/device. No page errors.
+- Final timing and ownership follow-ups pass against disposable PostgreSQL;
+  timing-version backfill is checked through both metadata and rehearsal selection.
+
+All listed review findings and requested nice-to-haves are addressed. Changes
+remain local on production-v1; no push, PR, deployment, provisioning, paid AI or
+real email. The wider Phase 3e work noted above remains separate.
+
+The final sleep guard also gates periodic AudioEngine refill directly on clock
+usability; controls and explicit scheduling were already gated. A regression
+asserts no new voices are queued until calibration becomes usable. After this
+last change, typecheck, all 93 unit tests, secret scanning, Together/latency
+browser checks and musical smoke were rerun. Real PostgreSQL timing selection
+also forces a stale derivation version and verifies the lazy update is persisted.
