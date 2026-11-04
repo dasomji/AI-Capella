@@ -46,7 +46,7 @@ export class ScoreAssembler implements JobAssembler {
  }
  // Backfilled measures also receive explicit synthetic provenance.
  for(const entry of registry)for(let i=0;i<total;i++)if(!provenance.some(p=>p.part===entry.id&&p.measure===i+1)){const template=provenance.find(p=>p.measure===i+1)!;provenance.push({...template,part:entry.id,synthetic:true});}
- const report=validateMusicDocument(doc,provenance,pages.flatMap(p=>[...p.uncertainties,...(p.flags??[]).map(flag=>({flag}))]));
+ const report=validateMusicDocument(doc,provenance,pages.flatMap((p,index)=>[...p.uncertainties,...(p.flags??[]).map(flag=>({flag,page:index+1}))]));
  for(const source of provenance)if(source.synthetic)report.warnings.push({code:'inferred_tacet_rest',part:source.part,measure:source.measure,source});
  return {xml:root.outerHTML,provenance,report};
  }finally{output.window.close();}

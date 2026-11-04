@@ -66,3 +66,12 @@ test('interior rhythm errors and unmatched stops are review warnings; nonfinite 
  const dom=scoreDocument(xml);const report=validateMusicDocument(dom.window.document);expect(report.errors).toEqual([]);expect(report.warnings.map(w=>w.code)).toContain('measure_duration');expect(report.warnings.map(w=>w.code)).toContain('unmatched_tie_stop');dom.window.close();
  const invalid=scoreDocument(xml.replace('<duration>4','<duration>NaN'));expect(validateMusicDocument(invalid.window.document).errors.map(e=>e.code)).toContain('invalid_duration');invalid.window.close();
 });
+
+test('part reorder and tacet spans retain identity; compact request state stays bounded',async()=>{
+ const first=page(['S','A','T','B']);const second=page(['B','A','S']).replace(/<step>C<\/step>/g,'<step>D</step>');const out=await new ScoreAssembler().assembleDetailed([result(first),result(second),result(first)]);const dom=scoreDocument(out.xml);
+ expect(dom.window.document.querySelector('part[id="T"] measure[number="2"] rest')).toBeTruthy();expect(dom.window.document.querySelector('part[id="S"] measure[number="2"] step')?.textContent).toBe('D');expect(out.provenance.find(p=>p.part==='T'&&p.measure===2)?.synthetic).toBe(true);dom.window.close();
+ const short=JSON.stringify(compactContext([result(first)]));const long=JSON.stringify(compactContext(Array(40).fill(result(first))));expect(long.length).toBeLessThanOrEqual(short.length+10);expect(compactContext(Array(40).fill(result(first))).lastMeasure).toBe(40);
+});
+test('SDK connection timeout is a retryable provider timeout',async()=>{
+ const client=new OpenAI({apiKey:'fixture-only',fetch:async()=>{throw new OpenAI.APIConnectionTimeoutError();}});await expect(new OpenAITranscriptionProvider('gpt-6.1-sol',client).transcribePage(input,[],{},new AbortController().signal)).rejects.toMatchObject({reason:'provider_timeout',retryable:true});
+});
