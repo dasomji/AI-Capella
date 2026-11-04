@@ -23,7 +23,7 @@ parentPort.on('message', async ({raw,format,timing})=>{
       raw=canonical(body);
 
     } else {
-      if(/<!ENTITY/i.test(raw) || XMLValidator.validate(raw)!==true) throw Error('invalid_xml');
+      if(/<!DOCTYPE|<!ENTITY/i.test(raw) || XMLValidator.validate(raw)!==true) throw Error('invalid_xml');
       const parsed=new XMLParser({ignoreAttributes:false,processEntities:false}).parse(raw);
       const roots=Object.keys(parsed).filter(k=>!k.startsWith('?') && k!=='!DOCTYPE');
       if(roots.length!==1 || !(parsed['score-partwise'] || parsed['score-timewise'])) throw Error('invalid_xml');

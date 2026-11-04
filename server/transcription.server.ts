@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { pool } from './db/index.server';
 import { authorize, transaction, lockEnsemble, DomainError } from './domain.server';
+import { validateScore } from './score-validation.server';
 import { logError } from './logger.server';
 import { env } from './env.server';
 import { FakeProvider, ReferenceRenderer, FakeAssembler, ProviderError, type TranscriptionProvider, type PageRenderer, type JobAssembler, type PageResult } from './transcription-provider.server';
@@ -100,6 +101,7 @@ export class TranscriptionWorker {
  try{await authorize(db,j.user_id,j.ensemble_id,'transcribe');}catch(error){if(!(error instanceof DomainError) || ![403,404].includes(error.status))throw error;await db.query("update transcription_jobs set state='failed',failure_reason='permission_revoked' where id=$1",[id]);return;}
  if(await processingPaused())return;
  const xml=await this.assembler.assemble(pages.map(p=>({musicxmlFragment:p.result_xml,uncertainties:[],usage:p.metrics?.usage??{inputTokens:0,outputTokens:0},model:j.model,latency:p.metrics?.latency??0})));
+ await validateScore(xml,'musicxml');
  await db.query("update transcription_jobs set state='completed',result_xml=$2,metrics=$3 where id=$1",[id,xml,{pages:pages.length,attempts:pages.reduce((n,p)=>n+(p.metrics?.attempts??0),0),latency:pages.reduce((n,p)=>n+(p.metrics?.latency??0),0),estimatedCost:pages.reduce((n,p)=>n+(p.metrics?.estimatedCost??0),0),usage:pages.reduce((n,p)=>({inputTokens:n.inputTokens+(p.metrics?.usage?.inputTokens??0),outputTokens:n.outputTokens+(p.metrics?.usage?.outputTokens??0)}),{inputTokens:0,outputTokens:0}),model:j.model,promptVersion:j.prompt_version,outcome:'completed'}]);
  });
  }

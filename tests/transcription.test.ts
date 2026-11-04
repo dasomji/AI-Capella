@@ -277,3 +277,10 @@ test('worker wall clock skew cannot steal a live database lease',async()=>{
  const original=transcriptionClock.now;try{for(const delta of [-600000,600000]){transcriptionClock.now=()=>new Date(Date.now()+delta);assert.equal(await new TranscriptionWorker().tick(),false);}}finally{transcriptionClock.now=original;}
  await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);
 });
+test('result downloads are inert attachments and shared validation rejects active XML',async()=>{
+ const {validateScore}=await import('../server/score-validation.server');
+ for(const xml of ['<!DOCTYPE score-partwise><score-partwise/>','<!DOCTYPE x [<!ENTITY a "x">]><score-partwise/>','<html><script/></html>'])await assert.rejects(()=>validateScore(xml,'musicxml'));
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);await new TranscriptionWorker().tick();
+ const r=await request(`ensembles/${e.id}/transcriptions/${j.id}/result`,'GET',undefined,lead.cookie);
+ assert.equal(r.status,200);assert.equal(r.headers.get('content-type'),'application/octet-stream');assert.match(r.headers.get('content-disposition')!,/^attachment/);assert.equal(r.headers.get('x-content-type-options'),'nosniff');assert.equal(r.headers.get('content-security-policy'),"sandbox; default-src 'none'");
+});

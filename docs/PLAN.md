@@ -1508,3 +1508,8 @@ Socket progress is projected once and per-recipient failures are isolated.
 S7: claim, heartbeat, expiry and retry backoff use PostgreSQL now() and SQL
 interval arithmetic. Tests expire fixture leases directly in SQL; skewed worker
 JS clocks cannot steal live leases. No production clock override is exposed.
+
+S5: signed downloads override MIME and disposition to inert attachments. Results
+have attachment, octet-stream, sandbox/default-src none and nosniff headers.
+Assembly uses shared score validation, which rejects DOCTYPE/entities and roots
+other than score-partwise/timewise.

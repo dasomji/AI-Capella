@@ -23,7 +23,7 @@ export class S3Storage implements ObjectStorage {
   async get(key:string){const r=await this.client.send(new GetObjectCommand({Bucket:this.bucket,Key:key}));return r.Body as Readable;}
   async head(key:string){const r=await this.client.send(new HeadObjectCommand({Bucket:this.bucket,Key:key}));return {size:r.ContentLength!,type:r.ContentType};}
   async delete(key:string){await this.client.send(new DeleteObjectCommand({Bucket:this.bucket,Key:key}));}
-  signedGet(key:string,seconds=60){return getSignedUrl(this.client,new GetObjectCommand({Bucket:this.bucket,Key:key}),{expiresIn:Math.max(1,Math.min(60,seconds))});}
+  signedGet(key:string,seconds=60){return getSignedUrl(this.client,new GetObjectCommand({Bucket:this.bucket,Key:key,ResponseContentDisposition:'attachment',ResponseContentType:'application/octet-stream'}),{expiresIn:Math.max(1,Math.min(60,seconds))});}
 }
 let instance:S3Storage|undefined;
 export function storage(){return instance ??=new S3Storage();}
