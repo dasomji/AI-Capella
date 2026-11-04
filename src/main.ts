@@ -4332,6 +4332,12 @@ setInterval(()=>void checkMembership(),60000);
 window.addEventListener('membership:refresh',()=>void checkMembership());
 
 window.addEventListener('pagehide',leavePlaybackSession);
+window.addEventListener('pageshow',event=>{
+ if(event.persisted && !leavingAccount && syncEnabled() && currentEnsemble && !playerSession){
+  sharedReadiness(false);
+  playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice,()=>scheduleSharedAudio());
+ }
+});
 window.addEventListener('domain:error', (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED' && !leavingAccount){leavePlaybackSession();audioEngine?.stop();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
 
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void checkMembership();});
