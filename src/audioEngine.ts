@@ -895,6 +895,7 @@ export class AudioEngine {
   private canonical: {state:RehearsalState;timing:PieceTiming;offset:number;server:number;audio:number;through:number} | null = null;
   private previousCanonical: typeof this.canonical = null;
   outputLatencyOffsetMs = 0;
+  sharedClockReady?: () => boolean;
   get context() {return this.ctx;}
   /** Canonical scheduling uses the shared tempo map and explicit effective instant.
    * Existing voices survive until that instant; future voices are faded/cancelled there. */
@@ -925,7 +926,7 @@ export class AudioEngine {
   }
   private sharedServerNow(c= this.canonical!) {return c.server+(this.ctx.currentTime-c.audio-this.outputDelay()-this.outputLatencyOffsetMs/1000)*1000;}
   private fillShared() {
-    const c=this.canonical;if(!c)return;this.waiting=this.ctx.state!=='running';if(this.waiting)return;
+    const c=this.canonical;if(!c || this.sharedClockReady?.()===false)return;this.waiting=this.ctx.state!=='running';if(this.waiting)return;
     this.waiting=false;
     const {state:s,timing:t}=c;
     if(s.status!=='playing' && s.status!=='countingIn')return;

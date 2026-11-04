@@ -1666,7 +1666,9 @@ test('authoritative rehearsal serializes ordinary members, snapshots, rejection 
   const other=await ok('ensembles','POST',{name:'Other rehearsal'},lead.cookie);
   const foreign=await ok(`ensembles/${other.id}/pieces`,'POST',{title:'Foreign',content:{format:'musicxml',schemaVersion:1,body:xml}},lead.cookie);
   assert.equal((await emit(clients[0],'rehearsal:command',env({type:'selectPiece',pieceId:foreign.id,versionNo:1}))).code,'not_found');
+  await pool.query("update score_versions set timing=timing || '{\"derivationVersion\":0}'::jsonb where piece_id=$1",[piece.id]);
   const selected=env({type:'selectPiece',pieceId:piece.id,versionNo:1});assert.equal((await emit(clients[0],'rehearsal:command',selected)).status,'accepted');revision++;
+  assert.equal((await pool.query('select timing from score_versions where piece_id=$1',[piece.id])).rows[0].timing.derivationVersion,2);
   assert.deepEqual(await emit(clients[0],'rehearsal:command',selected),{commandId:selected.commandId,status:'accepted',revision:1});
   const results=await Promise.all(Array.from({length:6},(_,i)=>emit(clients[i%3],'rehearsal:command',env({type:'setTempo',pieceId:piece.id,versionNo:1,bpm:120+i}))));
   assert.deepEqual(results.map(r=>r.revision).sort((a,b)=>a-b),[2,3,4,5,6,7]);revision=7;

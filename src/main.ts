@@ -1698,6 +1698,7 @@ async function loadSongLocally(song: SongEntry, replaceAt?:number) {
   audioEngine = new AudioEngine(played, playbackSound);
   audioEngine.setLightOffsetMs(lightOffsetMs);
   audioEngine.outputLatencyOffsetMs=outputLatencyMs;
+  audioEngine.sharedClockReady=()=>!syncEnabled() || !!playerSession?.clock.usable;
   audioEngine.setDuckedVolume(duckVolume);
   const partColor = (partId: string) => colorForPart(score.parts.findIndex((p) => p.id === partId), score.parts.length);
   currentPartColor = partColor;

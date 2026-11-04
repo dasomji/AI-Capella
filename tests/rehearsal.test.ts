@@ -364,3 +364,9 @@ it('compares server timing without false JSONB key-order mismatches',async()=>{
  const reordered={measures:t.measures,tempos:t.tempos.map(({bpm,beat})=>({bpm,beat})),baseBpm:t.baseBpm,totalBeats:t.totalBeats};
  expect(timingMatches(t,reordered)).toBe(true);expect(timingMatches(t,{...reordered,baseBpm:42})).toBe(false);
 });
+it('holds periodic audio refill until the shared clock is usable again',()=>{
+ const {engine,note}=fakeSharedEngine();const now=performance.timeOrigin+performance.now();let ready=false;
+ engine.sharedClockReady=()=>ready;
+ engine.scheduleShared({...s,status:'playing',anchor:{beat:0,serverTime:now+400},effectiveAt:now+400},t,now,0,[]);
+ expect(note).not.toHaveBeenCalled();ready=true;(engine as any).fillShared();expect(note).toHaveBeenCalledTimes(1);
+});
