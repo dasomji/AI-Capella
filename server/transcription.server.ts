@@ -62,7 +62,7 @@ export class TranscriptionWorker {
  await authorize(pool,page.user_id,page.ensemble_id,'transcribe').catch(error=>{if(error instanceof DomainError && [403,404].includes(error.status))throw new ProviderError('permission_revoked');throw error;});
  paused=await processingPaused();
  if(!paused){
- const context=(await pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number",[page.job_id])).rows.map(r=>({musicxmlFragment:r.result_xml,uncertainties:[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},model:page.job_model,latency:r.metrics?.latency??0}) as PageResult);
+ const context=(await pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number",[page.job_id])).rows.map(r=>({musicxmlFragment:r.result_xml,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},model:page.job_model,latency:r.metrics?.latency??0}) as PageResult);
  let timeoutReject:()=>void=()=>{};
  const deadline=new Promise<never>((_,reject)=>{timeoutReject=()=>reject(new ProviderError('provider_timeout',true));abort.signal.addEventListener('abort',timeoutReject,{once:true});if(abort.signal.aborted)timeoutReject();});
  await pool.query('insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version) values($1,$2,$3,$4,$5,$6)',[page.job_id,page.id,page.attempts+1,token,this.provider.model,this.provider.promptVersion]);
@@ -86,12 +86,11 @@ export class TranscriptionWorker {
  const price=JSON.parse(env.TRANSCRIPTION_PRICE_TABLE)[this.provider.model]??{input:0,output:0};
  const history=[...(p.metrics?.history??[]),{latency:Date.now()-started,usage:result?.usage??{inputTokens:0,outputTokens:0},outcome:reason??'completed',model:this.provider.model,promptVersion:this.provider.promptVersion}];
  const usage=history.reduce((sum,item)=>({inputTokens:sum.inputTokens+item.usage.inputTokens,outputTokens:sum.outputTokens+item.usage.outputTokens}),{inputTokens:0,outputTokens:0});
- const metrics={history,latency:history.reduce((sum,item)=>sum+item.latency,0),attempts:history.length,retries:history.length-1,usage,model:this.provider.model,promptVersion:this.provider.promptVersion,estimatedCost:(usage.inputTokens*price.input+usage.outputTokens*price.output)/1000000,outcome:reason??'completed'};
+ const metrics={history,latency:history.reduce((sum,item)=>sum+item.latency,0),attempts:history.length,retries:history.length-1,usage,model:this.provider.model,promptVersion:this.provider.promptVersion,estimatedCost:(usage.inputTokens*price.input+usage.outputTokens*price.output)/1000000,outcome:reason??'completed',uncertainties:result?.uncertainties??[]};
  await db.query(`update job_pages set state=$2,failure_reason=$3,result_xml=$4,metrics=$5,next_attempt_at=now()+$6*interval '1 millisecond',lease_owner=null,lease_expires_at=null where id=$1`,[page.id,failure?(retry?'queued':'failed'):'completed',reason,result?.musicxmlFragment,metrics,Math.min(60000,1000*2**p.attempts)]);
  if(failure && !retry)await db.query("update transcription_jobs set state='failed',failure_reason=$2 where id=$1",[page.job_id,reason]);
  });
- await pool.query(`update transcription_jobs j set metrics=(select jsonb_build_object('pages',count(*),'attempts',coalesce(sum((metrics->>'attempts')::int),0),'latency',coalesce(sum((metrics->>'latency')::numeric),0),'estimatedCost',coalesce(sum((metrics->>'estimatedCost')::numeric),0),'usage',jsonb_build_object('inputTokens',coalesce(sum((metrics->'usage'->>'inputTokens')::numeric),0),'outputTokens',coalesce(sum((metrics->'usage'->>'outputTokens')::numeric),0)),'model',j.model,'promptVersion',j.prompt_version,'outcome',j.state) from job_pages where job_id=j.id) where j.id=$1`,[page.job_id]);
- await this.assemble(page.job_id);await emit(page.ensemble_id,page.job_id);return true;
+ await this.assemble(page.job_id);await refreshMetrics(page.job_id);await emit(page.ensemble_id,page.job_id);return true;
  }
  async assemble(id:string){
  try{await this.assembleJob(id);}catch(error){logError('transcription.assembly',error);await pool.query("update transcription_jobs set state='failed',failure_reason='assembly_failed' where id=$1 and state in ('queued','running')",[id]);}
@@ -103,9 +102,9 @@ export class TranscriptionWorker {
  const pages=(await db.query('select * from job_pages where job_id=$1 order by page_number',[id])).rows;if(!pages.length || pages.some(p=>p.state!=='completed'))return;
  try{await authorize(db,j.started_by,j.ensemble_id,'transcribe');}catch(error){if(!(error instanceof DomainError) || ![403,404].includes(error.status))throw error;await db.query("update transcription_jobs set state='failed',failure_reason='permission_revoked' where id=$1",[id]);return;}
  if(await processingPaused())return;
- const xml=await this.assembler.assemble(pages.map(p=>({musicxmlFragment:p.result_xml,uncertainties:[],usage:p.metrics?.usage??{inputTokens:0,outputTokens:0},model:j.model,latency:p.metrics?.latency??0})));
+ const xml=await this.assembler.assemble(pages.map(p=>({musicxmlFragment:p.result_xml,uncertainties:p.metrics?.uncertainties??[],usage:p.metrics?.usage??{inputTokens:0,outputTokens:0},model:j.model,latency:p.metrics?.latency??0})));
  await validateScore(xml,'musicxml');
- await db.query("update transcription_jobs set state='completed',result_xml=$2,metrics=$3 where id=$1",[id,xml,{pages:pages.length,attempts:pages.reduce((n,p)=>n+(p.metrics?.attempts??0),0),latency:pages.reduce((n,p)=>n+(p.metrics?.latency??0),0),estimatedCost:pages.reduce((n,p)=>n+(p.metrics?.estimatedCost??0),0),usage:pages.reduce((n,p)=>({inputTokens:n.inputTokens+(p.metrics?.usage?.inputTokens??0),outputTokens:n.outputTokens+(p.metrics?.usage?.outputTokens??0)}),{inputTokens:0,outputTokens:0}),model:j.model,promptVersion:j.prompt_version,outcome:'completed'}]);
+ await db.query("update transcription_jobs set state='completed',result_xml=$2 where id=$1",[id,xml]);
  });
  }
  async recoverAssembly(){for(const j of (await pool.query("select id from transcription_jobs where state in ('queued','running') and not exists(select 1 from job_pages where job_id=transcription_jobs.id and state!='completed')")).rows)await this.assemble(j.id);}
@@ -116,3 +115,5 @@ export async function maintainTranscription(worker:TranscriptionWorker,cleanup:(
  try{await cleanup();}catch(error){logError('transcription.cleanup',error);}
  try{await worker.recoverAssembly();}catch(error){logError('transcription.recovery',error);}
 }
+
+async function refreshMetrics(id:string){await pool.query(`update transcription_jobs j set metrics=(select jsonb_build_object('attempts',count(*),'latency',coalesce(sum(extract(epoch from (finished_at-started_at))*1000),0),'estimatedCost',coalesce(sum(estimated_cost::text::numeric),0),'usage',jsonb_build_object('inputTokens',coalesce(sum((usage->>'inputTokens')::numeric),0),'outputTokens',coalesce(sum((usage->>'outputTokens')::numeric),0)),'model',j.model,'promptVersion',j.prompt_version,'outcome',j.state) from provider_calls where job_id=j.id) where j.id=$1`,[id]);}

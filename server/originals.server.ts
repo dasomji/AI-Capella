@@ -7,7 +7,7 @@ import { storage, type ObjectStorage } from './storage.server';
 import { transaction, authorize, audit, DomainError, lockEnsemble } from './domain.server';
 import { pool } from './db/index.server';
 import { env } from './env.server';
-export const sourceLimits={pdf:env.TRANSCRIPTION_PDF_MAX_BYTES,photo:env.TRANSCRIPTION_PHOTO_MAX_BYTES,pages:env.TRANSCRIPTION_MAX_PAGES,pixels:env.TRANSCRIPTION_MAX_PIXELS};
+export const sourceLimits={idleMs:30000,totalMs:600000,pdf:env.TRANSCRIPTION_PDF_MAX_BYTES,photo:env.TRANSCRIPTION_PHOTO_MAX_BYTES,pages:env.TRANSCRIPTION_MAX_PAGES,pixels:env.TRANSCRIPTION_MAX_PIXELS};
 export async function inspectSource(path:string):Promise<{type:string;pages:number;width?:number;height?:number}> {
  return new Promise((resolve,reject)=>{
  const child=spawn('python3',[fileURLToPath(new URL('./inspection-sandbox.py',import.meta.url)),process.execPath,'--jitless','--max-old-space-size=192',fileURLToPath(new URL('./source-inspect.mjs',import.meta.url)),JSON.stringify({path,maxPages:sourceLimits.pages,maxPixels:sourceLimits.pixels})],{stdio:['ignore','pipe','ignore'],env:{PATH:process.env.PATH}});
@@ -26,9 +26,9 @@ export async function uploadOriginal(user:string,ensemble:string,body:ReadableSt
  if(env.NODE_ENV==='development' && 'initialize' in store)await (store as import('./storage.server').S3Storage).initialize();
  await mkdir('.transcription-tmp',{recursive:true,mode:0o700});const dir=await mkdtemp('.transcription-tmp/upload-');const path=dir+'/source';
  const reader=body.getReader();const file=await open(path,'wx',0o600);const hash=createHash('sha256');let size=0;let first=Buffer.alloc(0);let limit=sourceLimits.pdf;
- let timedOut=false;const expire=()=>{timedOut=true;void reader.cancel();};let idle=setTimeout(expire,30000);const timer=setTimeout(expire,600000);
+ let timedOut=false;const expire=()=>{timedOut=true;void reader.cancel();};let idle=setTimeout(expire,sourceLimits.idleMs);const timer=setTimeout(expire,sourceLimits.totalMs);
  try {
- while(true){const chunk=await reader.read();if(chunk.done)break;clearTimeout(idle);idle=setTimeout(expire,30000);size+=chunk.value.length;
+ while(true){const chunk=await reader.read();if(chunk.done)break;clearTimeout(idle);idle=setTimeout(expire,sourceLimits.idleMs);size+=chunk.value.length;
  if(first.length<5){first=Buffer.concat([first,Buffer.from(chunk.value.subarray(0,5-first.length))]);if(first.length===5 && first.toString()!=='%PDF-')limit=sourceLimits.photo;}
  if(size>limit)throw new DomainError('body_too_large',413);
  hash.update(chunk.value);await file.writeFile(chunk.value);

@@ -222,13 +222,14 @@ test('durable progress notifications reach only current transcribers on authenti
  const ack=await socket.timeout(2000).emitWithAck('ensemble:join',e.id);assert.equal(ack.ok,true);
  }
  let ordinaryEvents=0;sockets[1].on('transcription:progress',()=>ordinaryEvents++);
+ await pool.query('update memberships set ai_transcription=false where ensemble_id=$1 and user_id=$2',[e.id,ordinary.id]);
  const j=await job(e.id,lead.cookie,source.id);
  const received=new Promise<any>((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('missing progress notification')),3000);sockets[0].once('transcription:progress',data=>{clearTimeout(timer);resolve(data);});});
  await new TranscriptionWorker().tick();const progress=await received;assert.equal(progress.jobId,j.id);assert.equal(progress.state,'completed');assert.equal(progress.pages[0].state,'completed');await delay(100);assert.equal(ordinaryEvents,0);
  }finally{for(const socket of sockets)socket.disconnect();}
 });
 test('sandbox bounds PDF object-stream bombs without growing API memory',async()=>{
- const {createDeflate}=await import('node:zlib');const once=(emitter:any,event:string)=>new Promise<void>((resolve,reject)=>{emitter.once(event,resolve);emitter.once('error',reject);});
+ const {createDeflate}=await import('node:zlib');const once=(emitter:any,event:string)=>new Promise<void>((resolve,reject)=>{const done=()=>{emitter.removeListener('error',reject);resolve();};emitter.once(event,done);emitter.once('error',reject);});
  const {writeFile,mkdtemp,rm}=await import('node:fs/promises');const {inspectSource}=await import('../server/originals.server');
  const dir=await mkdtemp('.transcription-tmp/bomb-');
  try{for(const mb of [512,2048]){
@@ -238,7 +239,7 @@ test('sandbox bounds PDF object-stream bombs without growing API memory',async()
  zip.end('<< /Type /Catalog /Pages 3 0 R >>');await once(zip,'end');const compressed=Buffer.concat(chunks);
  const path=dir+'/'+mb+'.pdf';await writeFile(path,Buffer.concat([Buffer.from(`%PDF-1.5\n4 0 obj\n<< /Type /ObjStm /N 1 /First 5 /Length ${compressed.length} /Filter /FlateDecode >>\nstream\n`),compressed,Buffer.from('\nendstream\nendobj\n1 0 obj\n<< /Type /Catalog /Pages 3 0 R >>\nendobj\n3 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R /Size 5 >>\n%%EOF\n')]));
  const rss=process.memoryUsage().rss;const start=Date.now();
- await assert.rejects(()=>inspectSource(path),(e:any)=>['source_too_complex','invalid_source'].includes(e.code));
+ await assert.rejects(()=>inspectSource(path),(e:any)=>e.code==='source_too_complex');
  assert.ok(process.memoryUsage().rss-rss<100*1024*1024);assert.ok(Date.now()-start<12000);
  }}finally{await rm(dir,{recursive:true,force:true});}
 });
@@ -265,7 +266,7 @@ test('assembly poison fails only its job and recovery proceeds',async()=>{
  await new TranscriptionWorker().recoverAssembly();await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,good.id)).state,'completed');
 });
 test('job projection excludes source internals and large result fragments',async()=>{
- const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
+ const {lead,e,source}=await setup();const j=await ok(`ensembles/${e.id}/transcriptions`,'POST',{sourceObjects:Array(60).fill(source.id)},lead.cookie);
  await pool.query("update transcription_jobs set result_xml=$2 where id=$1",[j.id,'x'.repeat(100000)]);
  await pool.query("update job_pages set metrics=$2,result_xml=$3 where job_id=$1",[j.id,{result:'x'.repeat(100000)},'x'.repeat(100000)]);
  const projection=await view(e.id,lead.cookie,j.id);assert.ok(JSON.stringify(projection).length<20000);
@@ -336,4 +337,18 @@ test('polyglot image trailers and storage ceiling are rejected',async()=>{
  const {lead,e}=await setup();const poly=await upload(e.id,lead.cookie,Buffer.concat([png,Buffer.from('<html/>')]));assert.equal(poly.status,422);
  const limit=env.TRANSCRIPTION_STORAGE_MAX_BYTES;env.TRANSCRIPTION_STORAGE_MAX_BYTES=1;
  try{const photo=await sharp({create:{width:23,height:23,channels:3,background:'blue'}}).png().toBuffer();const r=await upload(e.id,lead.cookie,photo);assert.equal((await r.json()).code,'storage_limit');}finally{env.TRANSCRIPTION_STORAGE_MAX_BYTES=limit;}
+});
+test('animated WebP and encrypted PDF are explicitly rejected',async()=>{
+ const {lead,e}=await setup();const raw=Buffer.alloc(16*32*3);raw.fill(255,16*16*3);
+ const animated=await sharp(raw,{raw:{width:16,height:32,channels:3,pageHeight:16} as any}).webp({loop:0,delay:[100,100]}).toBuffer();
+ assert.equal((await (await upload(e.id,lead.cookie,animated)).json()).code,'animated_image');
+ const doc=await PDFDocument.create();doc.addPage();const encrypted=Buffer.from(await doc.save({useObjectStreams:false})).toString('latin1').replace('trailer\n<<','trailer\n<< /Encrypt 1 0 R');
+ assert.equal((await (await upload(e.id,lead.cookie,Buffer.from(encrypted,'latin1'))).json()).code,'encrypted_pdf');
+});
+test('upload idle deadline expires a stalled body',async()=>{
+ const {uploadOriginal}=await import('../server/originals.server');const {lead,e}=await setup();const idle=sourceLimits.idleMs;sourceLimits.idleMs=30;
+ try{await assert.rejects(()=>uploadOriginal(lead.id,e.id,new ReadableStream({start(c){c.enqueue(png.subarray(0,8));}}),'idle.png',{} as any),(e:any)=>e.code==='upload_timeout');}finally{sourceLimits.idleMs=idle;}
+});
+test('parallel claim race invokes the provider only once for a page',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);let calls=0;const worker=new TranscriptionWorker(new FakeProvider(()=>{calls++;return 'success';},50));await Promise.all(Array.from({length:8},()=>worker.tick()));assert.equal(calls,1);assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
 });
