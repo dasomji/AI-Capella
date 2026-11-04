@@ -20,7 +20,7 @@ const response=(data:unknown,extra={})=>({object:'response',id:'resp_fixture',st
 test('three SATB pages preserve lyrics, boundary ties, provenance and playable timing',async()=>{
  const pages=[result(page(['S','A','T','B'],'start')),result(page(['S','A','T','B'],'stop')),result(page(['S','A','T','B']))];
  const assembled=await new ScoreAssembler().assembleDetailed(pages);expect(assembled.report.errors).toEqual([]);expect(assembled.report.warnings.filter(w=>w.code.includes('tie'))).toEqual([]);expect(assembled.provenance).toHaveLength(12);
- const dom=scoreDocument(assembled.xml);globalThis.DOMParser=dom.window.DOMParser;const parsed=parseMusicXML(assembled.xml);expect(timingFromScore(parsed)).toBeTruthy();expect(assembled.xml.match(/Freude/g)).toHaveLength(12);dom.window.close();
+ const dom=scoreDocument(assembled.xml);globalThis.DOMParser=dom.window.DOMParser;const parsed=parseMusicXML(assembled.xml);expect(parsed.notes).toHaveLength(8);expect(parsed.notes.filter(n=>n.startBeat===0).map(n=>n.durationBeats)).toEqual([8,8,8,8]);expect(timingFromScore(parsed).totalBeats).toBe(12);expect(assembled.xml.match(/Freude/g)).toHaveLength(12);dom.window.close();
  const context=JSON.stringify(compactContext(pages));expect(context).not.toContain('<note');expect(context).toContain('openTies');
 });
 test('accompaniment and divisi enter without dropping a section; all parts aligned',async()=>{
