@@ -167,6 +167,11 @@ try {
   const hook=page=>page.evaluate(()=>{const {positionAtServerTime,...s}=window.__lightscoreSync;return s;});
   const ready=page=>page.waitForFunction(()=>window.__lightscoreSync?.ready,null,{timeout:20000});
   const together=async page=>{await page.evaluate(()=>{sessionStorage.setItem('ai-capella-mode-switch','ensemble');localStorage.setItem('ai-capella-mode-v2','ensemble');});await page.goto(base+'/app?debug=sync');await ready(page);};
+  const setTempo=async bpm=>{
+    await action(p,'open-tempo');const input=p.locator('.bpm-input:visible');
+    await input.fill(String(bpm));await next(p,()=>input.dispatchEvent('change'));
+    await p.keyboard.press('Escape');
+  };
   const action=(page,name)=>page.locator(`.transport [data-action="${name}"]:visible`).first().click();
   const converge=async (active=pages)=>{
     const revision=Math.max(...await Promise.all(active.map(async page=>(await hook(page)).revision)));
@@ -231,7 +236,8 @@ try {
   await z.goto(base); // leave room, then join while playing in the tempo-change section
   await next(p,()=>p.locator('.play-btn').click(),[p,q]);const moving=await status('countingIn',[p,q]);
   await after(p,moving.countInUntil+200);
-  await together(z);await z.locator('.play-btn').waitFor({state:'visible'});await z.evaluate(()=>window.fixtureAudio.resume());
+  await together(z);await z.locator('.play-btn').waitFor({state:'visible'});await z.evaluate(()=>window.fixtureAudio.suspend());
+  const joinedSuspended=(await hook(p)).serverNow;await after(p,joinedSuspended+5000);await z.locator('body').click({position:{x:2,y:2}});await z.waitForFunction(()=>window.fixtureAudio.state==='running');
   await converge();await aligned();assert.deepEqual((await hook(z)).scheduledClicks,[]);results.d='passed: bar 6 tempo section, expired count-in/tones skipped';
   await p.setViewportSize({width:650,height:1000});await p.locator('[data-action="open-controls"]').click();
   await next(p,()=>p.locator('[data-bind="count-in"]').click());await p.keyboard.press('Escape');await p.setViewportSize({width:1440,height:1000});
@@ -246,6 +252,7 @@ try {
   await q.evaluate(()=>document.querySelector('.play-btn').click());
   await next(p,()=>action(p,'stop'),[p,z]);assert.equal(frames.get(q).commands,offlineCommands);
   await b.setOffline(false);await ready(q);await converge();await aligned();assert.equal(await q.locator('.play-btn').isEnabled(),true);results.h='passed';console.log('acceptance: offline passed');
+  await setTempo(90);
   // Count-in grid and tones survive a metronome preference change.
   await p.setViewportSize({width:650,height:1000});await p.locator('[data-action="open-controls"]').click();
   await next(p,()=>p.locator('[data-bind="count-in"]').click());
@@ -260,7 +267,8 @@ try {
   // Suspended output, wake event, then wall-clock discontinuity.
   await q.evaluate(()=>window.fixtureAudio.suspend());
   await q.locator('#sound-prompt.show').waitFor();
-  await q.locator('#sound-prompt').click();await q.waitForFunction(()=>window.fixtureAudio.state==='running');await ready(q);
+  const suspendedAt=(await hook(p)).serverNow;await after(p,suspendedAt+5000);
+  await q.locator('body').click({position:{x:2,y:2}});await q.waitForFunction(()=>window.fixtureAudio.state==='running');await ready(q);
   const pingsBefore=frames.get(q).pings;
   await q.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));window.fixtureJump=600000;Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'));});
   await ready(q);assert.ok(frames.get(q).pings>pingsBefore);await converge();await aligned();
@@ -276,9 +284,20 @@ try {
   await next(p,async()=>{await p.mouse.move(x(8),y);await p.mouse.down();await p.mouse.move(x(16),y,{steps:5});await p.mouse.up();});
   const loop=(await hook(p)).state.loop;assert.ok(Math.abs(loop.startBeat-8)<.1 && Math.abs(loop.endBeat-16)<.1,JSON.stringify(loop));
   await p.locator('.play-btn').click();const looping=await status('playing');
+  for(const testBpm of [113,77.7]){
+  await next(p,()=>action(p,'stop'));await setTempo(testBpm);await p.locator('.play-btn').click();const looping=await status('playing');
   const loopStart=looping.anchor.serverTime,span=(loop.endBeat-loop.startBeat)*60000/looping.bpm;
-  for(let wrap=1;wrap<=2;wrap++){await after(p,loopStart+span*wrap-300);const high=await Promise.all(pages.map(hook));assert.ok(high.every(s=>s.position>14),JSON.stringify(high.map(s=>s.position)));await after(p,loopStart+span*wrap+150);await aligned();const beat=(await p.evaluate(()=>window.__lightscoreSync.positionAtServerTime(window.__lightscoreSync.serverNow)));assert.ok(beat>=loop.startBeat-.02 && beat<loop.endBeat);const low=await Promise.all(pages.map(hook));assert.ok(low.every(s=>s.position<12),JSON.stringify(low.map(s=>s.position)));}
-  results.g='passed: bars 3-4, two wraps';
+  for(let wrap=1;wrap<=4;wrap++){await after(p,loopStart+span*wrap-300);const high=await Promise.all(pages.map(hook));assert.ok(high.every(s=>s.position>14),JSON.stringify(high.map(s=>s.position)));await after(p,loopStart+span*wrap+150);await aligned();const beat=(await p.evaluate(()=>window.__lightscoreSync.positionAtServerTime(window.__lightscoreSync.serverNow)));assert.ok(beat>=loop.startBeat-.02 && beat<loop.endBeat);const low=await Promise.all(pages.map(hook));assert.ok(low.every(s=>s.position<12),JSON.stringify(low.map(s=>s.position)));}
+  }
+  results.g='passed: bars 3-4, four wraps each at 113 and 77.7 BPM';
+  await q.locator('#player-menu-btn').click();await q.getByText('Settings',{exact:true}).click();
+  await q.getByText('Output latency offset',{exact:true}).click();
+  const offset=q.getByRole('slider',{name:'Output latency offset'});
+  await offset.evaluate(el=>{el.value='80';el.dispatchEvent(new Event('change',{bubbles:true}));});await q.keyboard.press('Escape');
+  const calm=await hook(q);await after(p,calm.serverNow+10000);
+  const calmEnd=await hook(q);assert.equal(calmEnd.sharedScheduleCount,calm.sharedScheduleCount);assert.ok(Math.abs(calmEnd.schedulingDriftMs)<25);
+  results.offset='passed: 80 ms output offset, no reschedule for 10 seconds';
+  await q.locator('#player-menu-btn').click();await q.getByText('Settings',{exact:true}).click();await q.getByText('Output latency offset',{exact:true}).click();await q.getByRole('slider',{name:'Output latency offset'}).evaluate(el=>{el.value='0';el.dispatchEvent(new Event('change',{bubbles:true}));});await q.keyboard.press('Escape');
   // Real process restart, requested over local IPC to the owning harness.
   assert.ok(process.send,'Run through browser-isolated.mjs');
   const restarted=new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('restart timeout')),20000);process.once('message',m=>{clearTimeout(timer);m.error?reject(Error(m.error)):resolve();});});

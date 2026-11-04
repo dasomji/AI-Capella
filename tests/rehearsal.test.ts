@@ -449,3 +449,30 @@ it('falls back to 100 for missing or invalid score tempo while clamping explicit
 it('clearing a selected region explicitly disables the canonical loop',()=>{
  expect(preferenceCommands({loopRegion:null},{...s,loop:{enabled:true,startBeat:2,endBeat:6}},16)[0]).toMatchObject({type:'setLoop',enabled:false});
 });
+
+it('single-flights repeated repair joins and retries failed application without a new revision',async()=>{
+ vi.useFakeTimers();vi.spyOn(console,'error').mockImplementation(()=>{});
+ const {SocketPlaybackTransport}=await import('../src/rehearsal/socket-transport');
+ const handlers=new Map<string,any>();let joins=0,applications=0;
+ const socket:any={connected:true,on:(e:string,f:any)=>handlers.set(e,f),off:()=>{},disconnect:()=>{},volatile:{emit:(_e:string,_v:any,ack:any)=>{joins++;ack({state:s});}}};
+ const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000);
+ transport.subscribe(()=>{if(++applications===1)throw Error('fetch');});
+ handlers.get('connect')();handlers.get('connect')();handlers.get('connect')();
+ await vi.advanceTimersByTimeAsync(0);expect(transport.ready).toBe(false);expect(joins).toBe(1);
+ await vi.advanceTimersByTimeAsync(300);expect(transport.ready).toBe(true);expect(joins).toBe(2);expect(applications).toBe(2);
+ transport.dispose();vi.useRealTimers();vi.restoreAllMocks();
+});
+it('engine accents the first count-in click and clips replacement nodes at effective time',()=>{
+ const {engine}=fakeSharedEngine(),ctx=engine.context as any;const starts:number[]=[],accents:number[]=[];
+ const param=()=>({value:0,setValueAtTime:vi.fn(),exponentialRampToValueAtTime:vi.fn(),linearRampToValueAtTime:vi.fn(),cancelAndHoldAtTime:vi.fn()});
+ ctx.createGain=()=>({gain:param(),connect(){return this;}});
+ ctx.createOscillator=()=>({frequency:{setValueAtTime:(v:number)=>accents.push(v)},connect(){return this;},start:(at:number)=>starts.push(at),stop(){},addEventListener(){}});
+ const now=performance.timeOrigin+performance.now(),from=now+400,pulse=60000/90;
+ const state={...s,bpm:90,status:'countingIn' as const,anchor:{beat:0,serverTime:from},effectiveAt:from,countInUntil:from+4*pulse};
+ engine.scheduleShared(state,t,now,0,[]);
+ expect(starts).toHaveLength(4);expect(accents).toEqual([1500,1000,1000,1000]);
+ starts.length=0;accents.length=0;
+ const effectiveAt=from+pulse+200;
+ const d=engine.scheduleShared({...state,revision:1,effectiveAt},t,from+pulse-100,0,[]);
+ expect(starts).toHaveLength(2);expect(starts.every(at=>at>=d.audioTime-(state.countInUntil-effectiveAt)/1000)).toBe(true);
+});

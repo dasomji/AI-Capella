@@ -463,6 +463,7 @@ function sharedNotice(code:string) {
 }
 let sharedTiming: ReturnType<typeof timingFromScore> | null=null;
 let sharedVersion:number|null=null;
+let sharedScheduleCount=0;
 let lastScheduledStartServerMs:number|null=null;
 let lastScheduledStartAudioTime:number|null=null;
 let lastSharedDrift=0;
@@ -498,6 +499,7 @@ async function receiveSharedState(state:RehearsalState) {
 function scheduleSharedAudio(at?:number){
  if(!audioEngine || !currentScore || !sharedState || !playerSession?.clock.usable)return;
  const now=at??playerSession.clock.serverNow();
+ sharedScheduleCount++;
  const result=audioEngine.scheduleShared(sharedState,(sharedTiming ?? timingFromScore(currentScore)),now,playerSession.clock.diagnostics!.offsetMs,startingPitches(positionAt(sharedState,now,(sharedTiming ?? timingFromScore(currentScore)))));
  lastScheduledStartServerMs=result.serverTime;lastScheduledStartAudioTime=result.audioTime;
 }
@@ -515,6 +517,8 @@ if(syncDebug || import.meta.env.MODE==='test'){
      driftMs:sharedState && sharedTiming && audioEngine && now!==null ? playbackDriftMs(sharedState,now,audioEngine.getCurrentBeat(),sharedTiming) : null,
      offsetMs:clock?.diagnostics?.offsetMs ?? null,
      uncertaintyMs:clock?.diagnostics?.uncertaintyMs ?? null,
+     sharedScheduleCount,
+     schedulingDriftMs:audioEngine && clock?.diagnostics && now!==null ? audioEngine.sharedDriftMs(now,clock.diagnostics.offsetMs) : null,
      lastScheduledStartServerMs,lastScheduledStartAudioTime,
      revision:sharedState?.revision ?? null,position:audioEngine?.getCurrentBeat() ?? 0,
      status:sharedState?.status ?? null,contextState:audioEngine?.context.state ?? null,ready:sharedReady && usable,
@@ -2518,7 +2522,7 @@ function tempoBlock(): HTMLElement {
     <div class="presets">
       ${BPM_PRESETS.map((b) => `<button type="button" class="bpm-preset" data-action="bpm-preset" data-bpm="${b}" aria-pressed="false">${b}</button>`).join('')}
     </div>
-    <label class="custom-tempo"><span>${t('customTempo')}</span><input class="bpm-input field" type="number" min="${MIN_BPM}" max="${MAX_BPM}" step="1" inputmode="numeric" /></label>`;
+    <label class="custom-tempo"><span>${t('customTempo')}</span><input class="bpm-input field" type="number" min="${MIN_BPM}" max="${MAX_BPM}" step="0.1" inputmode="decimal" /></label>`;
   return block;
 }
 
@@ -2554,7 +2558,7 @@ function gotoBlock(): HTMLElement {
   block.innerHTML = `
     <label class="label" for="goto-input">${t('goToBar')}</label>
     <div class="goto-row">
-      <input id="goto-input" class="field measure-input" type="number" min="1" max="${maxBar}" step="1" inputmode="numeric" placeholder="1–${maxBar}" value="${typed}" />
+      <input id="goto-input" class="field measure-input" type="number" min="1" max="${maxBar}" step="0.1" inputmode="decimal" placeholder="1–${maxBar}" value="${typed}" />
       <button type="submit" class="btn primary">${t('go')}</button>
     </div>`;
   block.addEventListener('submit', (e) => {
@@ -2691,7 +2695,7 @@ function stopPlayback() {
 }
 
 function applyBpm(newBpm: number) {
-  const clamped = Math.min(Math.max(Math.round(newBpm), MIN_BPM), MAX_BPM);
+  const clamped = Math.min(Math.max(Math.round(newBpm*10)/10, MIN_BPM), MAX_BPM);
   if (clamped === bpm) return;
   if (audioEngine?.isPlaying()) {
     // Explicitly zeroed, not omitted: publishPlaybackState is a merge write, so an omitted
@@ -2707,7 +2711,7 @@ function applyBpm(newBpm: number) {
  *  to MIN_BPM, so clearing the field to retype doesn't briefly apply a wrong tempo. */
 function applyBpmInput(input: HTMLInputElement) {
   if (!input.value.trim()) return;
-  const n = Math.min(Math.max(parseInt(input.value, 10) || bpm, MIN_BPM), MAX_BPM);
+  const n = Math.min(Math.max(parseFloat(input.value) || bpm, MIN_BPM), MAX_BPM);
   input.value = String(n);
   applyBpm(n);
 }

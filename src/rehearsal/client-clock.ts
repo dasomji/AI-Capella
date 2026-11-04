@@ -60,7 +60,7 @@ export interface OutputClock {
   state?: string;
   outputLatency?: number;
   baseLatency?: number;
-  getOutputTimestamp?: () => {contextTime: number;performanceTime: number};
+  getOutputTimestamp?: () => {contextTime?: number;performanceTime?: number};
 }
 /** Audible target time, including output latency. Timestamp performanceTime shares performance.now's origin. */
 export function serverToAudioTime(serverTime: number, offsetMs: number, context: OutputClock,
@@ -68,7 +68,7 @@ export function serverToAudioTime(serverTime: number, offsetMs: number, context:
   const target = serverTime-offsetMs-timeOrigin;
   let stamp: ReturnType<NonNullable<OutputClock['getOutputTimestamp']>> | undefined;
   if(context.state==='running') {try{stamp=context.getOutputTimestamp?.();}catch{/* Unsupported output clocks use the latency fallback. */}}
-  if(context.state==='running' && stamp && Math.abs(stamp.performanceTime-performanceTime)<=1000 && stamp.performanceTime>0 && Number.isFinite(stamp.contextTime))
-    return stamp.contextTime+(target-stamp.performanceTime)/1000;
+  if(context.state==='running' && stamp && Math.abs((stamp.performanceTime??0)-performanceTime)<=1000 && (stamp.performanceTime??0)>0 && Number.isFinite(stamp.contextTime))
+    return stamp.contextTime!+(target-stamp.performanceTime!)/1000;
   return context.currentTime+(target-performanceTime)/1000-(context.outputLatency || context.baseLatency || 0);
 }

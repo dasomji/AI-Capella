@@ -49,7 +49,7 @@ api.use("*", async (c, next) => {
   if (c.req.path.startsWith("/assets/"))
     c.header("Cache-Control", "public, max-age=31536000, immutable");
   else if (
-    /^\/(?:api(?:\/|$)|healthz$|readyz(?:/rehearsal)?$|app$|_serverFn(?:\/|$))/.test(
+    /^\/(?:api(?:\/|$)|healthz$|readyz(?:\/rehearsal)?$|app$|_serverFn(?:\/|$))/.test(
       c.req.path,
     ) ||
     c.req.path === "/"

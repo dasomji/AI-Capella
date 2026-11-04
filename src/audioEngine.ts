@@ -910,7 +910,7 @@ export class AudioEngine {
     this.pausedBeat=decision.beat;this.lastTranspose=state.transposition;
     this.metronomeEnabled=state.metronome;
     const audioAt=(server:number)=>at+(server-decision.effectiveAt)/1000;
-    if(decision.startingTones){
+    if(decision.startingTones && decision.startingTones.until>decision.effectiveAt){
       const {from,until}=decision.startingTones;
       const start=Math.max(this.ctx.currentTime,audioAt(Math.max(from,decision.effectiveAt)));
       for(const pitch of pitches)this.scheduledVoices.push(playDuNote(this.ctx,this.masterGain,start,Math.max(.02,(until-Math.max(decision.effectiveAt,from))/1000),pitch+state.transposition,1/Math.sqrt(Math.max(1,pitches.length))));

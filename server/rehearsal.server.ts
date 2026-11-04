@@ -251,7 +251,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
     const offLibrary = onLibraryChange(async (e, changes) => {
       versions.clear();
       const pieces=deletedPieces.get(e)??new Set<string>();
-      for(const change of changes)if(change.deleted)pieces.add(change.pieceId);
+      for(const change of changes as {deleted?:boolean;pieceId:string}[])if(change.deleted)pieces.add(change.pieceId);
       if(!pieces.size)return;
       deletedPieces.set(e,pieces);
       // Retain invalidations through an unavailable owner; acquire drains them.
