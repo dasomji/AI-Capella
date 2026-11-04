@@ -8,6 +8,9 @@ permissions:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -70,6 +73,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
+      mailpit:
+        image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
+        ports: ['21025:1025', '28025:8025']
       postgres:
         image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
         env:
@@ -84,6 +90,7 @@ jobs:
       BETTER_AUTH_URL: http://localhost:23001
       TRUSTED_ORIGINS: http://localhost:23001
       MAIL_TRANSPORT: smtp
+      MAILPIT_URL: http://127.0.0.1:28025
       SMTP_URL: smtp://127.0.0.1:21025
       S3_ENDPOINT: http://127.0.0.1:28333
       S3_BUCKET: ci-fixture

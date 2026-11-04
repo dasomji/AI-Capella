@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { io } from 'socket.io-client';
+const mailpit = process.env.MAILPIT_URL || 'http://127.0.0.1:28025';
 async function availablePort(){const s=createServer();await new Promise<void>(r=>s.listen(0,'127.0.0.1',r));const port=(s.address() as {port:number}).port;await new Promise<void>(r=>s.close(()=>r()));return port;}
 for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start, auth and Socket.IO on one HTTP origin`, { timeout: 30000 }, async () => {
  const port = await availablePort(); const base = `http://localhost:${port}`;
@@ -19,9 +20,9 @@ for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start
   const post = (path: string, body: unknown) => fetch(`${base}/api/auth/${path}`,{ method:'POST',headers:{origin:base,'Content-Type':'application/json'},body:JSON.stringify(body) });
   const email = `${mode}-${crypto.randomUUID()}@example.test`; const password = 'valid-singer-password-55';
   assert.equal((await post('sign-up/email',{ email,password,name:'Host singer',callbackURL:base })).status,200);
-  let list: any; for (let i=0;i<100;i++) { list = await (await fetch('http://127.0.0.1:28025/api/v1/messages')).json(); if (list.messages.some((m: any) => m.To.some((to: any) => to.Address === email))) break; await delay(50); }
+  let list: any; for (let i=0;i<100;i++) { list = await (await fetch(`${mailpit}/api/v1/messages`)).json(); if (list.messages.some((m: any) => m.To.some((to: any) => to.Address === email))) break; await delay(50); }
   const mail = list.messages.find((m: {To: {Address: string}[]}) => m.To.some(to => to.Address === email)); assert.ok(mail);
-  const message = await (await fetch(`http://127.0.0.1:28025/api/v1/message/${mail.ID}`)).json();
+  const message = await (await fetch(`${mailpit}/api/v1/message/${mail.ID}`)).json();
   const link = message.Text.match(/http[^\s]+/)[0]; await fetch(link,{redirect:'manual'});
   assert.equal((await post('verify-email-password',{token:new URL(link).searchParams.get('token'),password})).status,200);
   const signedIn = await post('sign-in/email',{ email,password }); assert.equal(signedIn.status,200,await signedIn.clone().text());

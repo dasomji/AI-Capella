@@ -2,7 +2,7 @@ import {chromium} from 'playwright';
 import pg from 'pg';
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
-const base=process.env.BROWSER_BASE,shots='/tmp/aicap-final-polish/shots';await fs.mkdir(shots,{recursive:true});
+const base=process.env.BROWSER_BASE,shots=`${process.env.BROWSER_EVIDENCE || `${process.cwd()}/.review-evidence/final-polish`}/shots`;await fs.mkdir(shots,{recursive:true});
 const db=new pg.Client({connectionString:process.env.DATABASE_URL});await db.connect();
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox']});
 const context=await browser.newContext();const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));

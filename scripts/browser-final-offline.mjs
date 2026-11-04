@@ -6,7 +6,7 @@ import { captureDesign } from "./browser-design.mjs";
 import { assertPlayerContrast } from "./browser-themes.mjs";
 const base = process.env.BROWSER_BASE || "http://localhost:3000",
   evidence =
-    '/tmp/aicap-final-polish';
+    process.env.BROWSER_EVIDENCE || `${process.cwd()}/.review-evidence/final-offline`;
 fs.mkdirSync(`${evidence}/shots`, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
