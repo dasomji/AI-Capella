@@ -150,7 +150,7 @@ it('lazily backfills legacy timing once through the bounded worker',async()=>{
  await c.emit('rehearsal:command',command('selectPiece',{command:selection}));
  await c.emit('rehearsal:command',command('selectPiece',{command:selection}));
  expect(mocks.validate).toHaveBeenCalledTimes(1);
- expect(mocks.query.mock.calls.find(([sql])=>sql.startsWith('update score_versions'))?.[1]).toEqual([ensemble,'p',1,JSON.stringify(timing)]);
+ expect(mocks.query.mock.calls.find(([sql])=>sql.startsWith('update score_versions'))?.[1]).toEqual([ensemble,'p',1,JSON.stringify(timing),'2']);
 });
 it.each([['invalid_score','invalid'],['validation_timeout','unavailable'],['validation_busy','unavailable']])('maps worker %s to %s',async(error,expected)=>{
  const normal=mocks.query.getMockImplementation()!;

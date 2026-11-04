@@ -60,7 +60,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
                 const body = await pool.query('select native_score::text,musicxml from score_versions where ensemble_id=$1 and piece_id=$2 and version_no=$3', [e,p,v]);
                 if (!body.rows[0]) throw Error('not_found');
                 const derived = (await validateScore(row.format === 'score' ? body.rows[0].native_score : body.rows[0].musicxml, row.format, true)).timing!;
-                await pool.query("update score_versions set timing=$4 where ensemble_id=$1 and piece_id=$2 and version_no=$3 and (timing is null or timing->>'derivationVersion' is distinct from '2')",[e,p,v,JSON.stringify(derived)]);
+                await pool.query("update score_versions set timing=$4 where ensemble_id=$1 and piece_id=$2 and version_no=$3 and (timing is null or timing->>'derivationVersion' is distinct from $5)",[e,p,v,JSON.stringify(derived),String(TIMING_DERIVATION_VERSION)]);
                 row.timing=derived;
                 return derived;
             })();
