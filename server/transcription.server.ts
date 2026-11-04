@@ -55,11 +55,15 @@ export class TranscriptionWorker {
  });
  if(!page)return false;
  const abort=new AbortController();const timeout=setTimeout(()=>abort.abort(),env.TRANSCRIPTION_TIMEOUT_MS);
+ let heartbeatBusy=false;let lastHeartbeat=performance.now(),lastControl=0;
  const heartbeat=setInterval(()=>{void (async()=>{
+ if(heartbeatBusy)return;heartbeatBusy=true;
+ try{
  const r=await pool.query("update job_pages p set lease_expires_at=now()+$3*interval '1 millisecond' from transcription_jobs j where p.id=$1 and p.lease_owner=$2 and p.state='running' and p.lease_expires_at>now() and j.id=p.job_id and j.state='running' returning p.id",[page.id,token,env.TRANSCRIPTION_LEASE_MS]);
- if(!r.rowCount)abort.abort();
- if(await processingPaused()){paused=true;abort.abort();}
- })().catch(()=>abort.abort());},Math.min(250,Math.max(25,env.TRANSCRIPTION_LEASE_MS/3)));
+ if(!r.rowCount){abort.abort();return;}lastHeartbeat=performance.now();
+ if(performance.now()-lastControl>=Math.max(5000,env.TRANSCRIPTION_LEASE_MS/2)){lastControl=performance.now();if(await processingPaused()){paused=true;abort.abort();}}
+ }catch(error){logError('transcription.heartbeat',error);if(performance.now()-lastHeartbeat>=env.TRANSCRIPTION_LEASE_MS)abort.abort();}finally{heartbeatBusy=false;}
+ })();},heartbeatInterval(env.TRANSCRIPTION_LEASE_MS));
 
  const started=Date.now();let result:PageResult|undefined;let failure:ProviderError|undefined;let paused=false;
  try {
@@ -71,7 +75,9 @@ export class TranscriptionWorker {
  await authorize(pool,page.user_id,page.ensemble_id,'transcribe').catch(error=>{if(error instanceof DomainError && [403,404].includes(error.status))throw new ProviderError('permission_revoked');throw error;});
  paused=await processingPaused();
  if(!paused){
- const context=(await pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number",[page.job_id])).rows.map(r=>({musicxmlFragment:r.result_xml,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},promptVersion:page.job_prompt,flags:r.metrics?.flags??[],model:page.job_model,latency:r.metrics?.latency??0}) as PageResult);
+ let context=(await pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number desc limit 1",[page.job_id])).rows.map(r=>({musicxmlFragment:r.result_xml,contextState:r.metrics?.contextState,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},promptVersion:page.job_prompt,flags:r.metrics?.flags??[],model:page.job_model,latency:r.metrics?.latency??0}) as PageResult);
+ // Upgrade pre-checkpoint jobs once; subsequent pages read only the last checkpoint.
+ if(context.length&&!context[0].contextState&&!(this.provider instanceof FakeProvider))context=(await pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number",[page.job_id])).rows.map(r=>({musicxmlFragment:r.result_xml,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},model:page.job_model,latency:0}) as PageResult);
  let timeoutReject:()=>void=()=>{};
  const deadline=new Promise<never>((_,reject)=>{timeoutReject=()=>reject(new ProviderError('provider_timeout',true));abort.signal.addEventListener('abort',timeoutReject,{once:true});if(abort.signal.aborted)timeoutReject();});
  await pool.query('insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version,prompt_sha256) values($1,$2,$3,$4,$5,$6,$7)',[page.job_id,page.id,page.attempts+1,token,this.provider.model,this.provider.promptVersion,this.provider.promptSha256??null]);
@@ -94,9 +100,9 @@ export class TranscriptionWorker {
  if(paused){await db.query("update job_pages set state='queued',attempts=greatest(0,attempts-1),failure_reason='emergency_stop',lease_owner=null,lease_expires_at=null where id=$1",[page.id]);return;}
  const reason=failure?.reason;const retry=(failure?.reason==='invalid_output'?p.attempts<2:failure?.retryable) && p.attempts<env.TRANSCRIPTION_MAX_ATTEMPTS;
  const prices=priceTable(env.TRANSCRIPTION_PRICE_TABLE);
- const history=[...(p.metrics?.history??[]),{latency:Date.now()-started,usage:result?.usage??failure?.usage??{inputTokens:0,outputTokens:0},outcome:reason??'completed',model:this.provider.model,promptVersion:this.provider.promptVersion}];
+ const history=[...(p.metrics?.history??[]),{usageUnknown:!result?.usage&&!failure?.usage,latency:Date.now()-started,usage:result?.usage??failure?.usage??{inputTokens:0,outputTokens:0},outcome:reason??'completed',model:this.provider.model,promptVersion:this.provider.promptVersion}];
  const usage=history.reduce((sum,item)=>({inputTokens:sum.inputTokens+item.usage.inputTokens,outputTokens:sum.outputTokens+item.usage.outputTokens}),{inputTokens:0,outputTokens:0});
- const metrics={history,latency:history.reduce((sum,item)=>sum+item.latency,0),attempts:history.length,retries:history.length-1,usage,model:this.provider.model,promptVersion:this.provider.promptVersion,estimatedCost:estimatedCost(this.provider.model,usage,prices),outcome:reason??'completed',uncertainties:result?.uncertainties??[],flags:result?.flags??[],requestId:result?.requestId??failure?.requestId};
+ const metrics={contextState:result?.contextState,history,latency:history.reduce((sum,item)=>sum+item.latency,0),attempts:history.length,retries:history.length-1,usage,model:this.provider.model,promptVersion:this.provider.promptVersion,estimatedCost:history.some(item=>item.usageUnknown)?null:estimatedCost(this.provider.model,usage,prices),costUnknown:history.some(item=>item.usageUnknown)||!prices[this.provider.model],outcome:reason??'completed',reviewReason:reason==='truncated'?'Output token budget exhausted (including reasoning). Review and resubmit smaller page regions; automatic overlap deduplication is unavailable.':null,uncertainties:result?.uncertainties??[],flags:result?.flags??[],requestId:result?.requestId??failure?.requestId};
  await db.query(`update job_pages set state=$2,failure_reason=$3,result_xml=$4,metrics=$5,next_attempt_at=now()+$6*interval '1 millisecond',lease_owner=null,lease_expires_at=null where id=$1`,[page.id,failure?(retry?'queued':'failed'):(result?.flags?.includes('no_music')?'skipped':'completed'),reason,result?.musicxmlFragment,metrics,Math.max(failure?.retryAfterMs??0,Math.min(60000,1000*2**p.attempts))]);
  if(failure && !retry)await db.query("update transcription_jobs set state='failed',failure_reason=$2 where id=$1",[page.job_id,reason]);
  });
@@ -135,4 +141,6 @@ export async function maintainTranscription(worker:TranscriptionWorker,cleanup:(
  try{await worker.recoverAssembly();}catch(error){logError('transcription.recovery',error);}
 }
 
-async function refreshMetrics(id:string){await pool.query(`update transcription_jobs j set metrics=(select jsonb_build_object('attempts',count(*),'latency',coalesce(sum(extract(epoch from (finished_at-started_at))*1000),0),'estimatedCost',coalesce(sum(estimated_cost::text::numeric),0),'usage',jsonb_build_object('inputTokens',coalesce(sum((usage->>'inputTokens')::numeric),0),'outputTokens',coalesce(sum((usage->>'outputTokens')::numeric),0)),'model',j.model,'promptVersion',j.prompt_version,'outcome',j.state) from provider_calls where job_id=j.id) where j.id=$1`,[id]);}
+async function refreshMetrics(id:string){await pool.query(`update transcription_jobs j set metrics=(select jsonb_build_object('attempts',count(*),'latency',coalesce(sum(extract(epoch from (finished_at-started_at))*1000),0),'estimatedCost',case when count(*) filter(where estimated_cost is null)>0 then null else sum(estimated_cost::text::numeric) end,'knownCostUSD',coalesce(sum(estimated_cost::text::numeric),0),'unpricedCalls',count(*) filter(where estimated_cost is null),'costUnknown',count(*) filter(where estimated_cost is null)>0,'usage',jsonb_build_object('inputTokens',coalesce(sum((usage->>'inputTokens')::numeric),0),'outputTokens',coalesce(sum((usage->>'outputTokens')::numeric),0)),'model',j.model,'promptVersion',j.prompt_version,'outcome',j.state) from provider_calls where job_id=j.id) where j.id=$1`,[id]);}
+
+export const heartbeatInterval=(leaseMs:number)=>Math.max(1000,leaseMs/5);
