@@ -1,13 +1,15 @@
 // @ts-ignore shared with the plain Node score worker
 import { cleanMusicXML } from './musicxml-input.mjs';
 import OpenAI from 'openai';
-import { resolve } from 'node:path';
+import { logProviderError } from './logger.server';
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { ProviderError, type TranscriptionProvider, type PageInput, type PageResult } from './transcription-provider.server';
-const prompt=readFileSync(resolve('server/prompts/transcription-v1.txt'),'utf8');
-export const responseSchema=z.object({musicxml:z.string().min(1),uncertainties:z.array(z.object({measure:z.string(),part:z.string(),voice:z.string(),reason:z.string()})),flags:z.array(z.enum(['refusal','partial','truncated','unreadable']))}).strict();
+const prompt=readFileSync(new URL('./prompts/transcription-v1.txt',import.meta.url),'utf8');
+export const responseSchema=z.object({musicxml:z.string(),uncertainties:z.array(z.object({measure:z.string(),part:z.string(),voice:z.string(),reason:z.string()})),flags:z.array(z.enum(['refusal','partial','truncated','unreadable','no_music']))}).strict();
+export const strictResponseSchema=z.toJSONSchema(responseSchema);
+delete strictResponseSchema.$schema;
 const array=<T>(v:T|T[]|undefined):T[]=>v===undefined?[]:Array.isArray(v)?v:[v];
 /** Retain only state in effect, never previous notation or full responses. */
 export function compactContext(pages:PageResult[]) {
@@ -32,21 +34,32 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
  if(!this.client){if(!process.env.OPENAI_API_KEY)throw new ProviderError('model_unavailable');this.client=new OpenAI({apiKey:process.env.OPENAI_API_KEY,maxRetries:0});}
  let usage:PageResult['usage']|undefined;let requestId:string|undefined;
  try{
- const response=await this.client.responses.create({model:this.model,store:false,max_output_tokens:64000,instructions:prompt,input:[{role:'user',content:[{type:'input_text',text:JSON.stringify({page:input.pageIndex+1,language:options.language??null,context:compactContext(pages)})},{type:'input_image',detail:'high',image_url:`data:image/png;base64,${input.raster.toString('base64')}`}]}],text:{format:{type:'json_schema',name:'transcription_page',strict:true,schema:z.toJSONSchema(responseSchema)}}},{signal,maxRetries:0});
+ const response=await this.client.responses.create({model:this.model,store:false,max_output_tokens:64000,instructions:prompt,input:[{role:'user',content:[{type:'input_text',text:JSON.stringify({page:input.pageIndex+1,language:options.language??null,context:compactContext(pages)})},{type:'input_image',detail:'high',image_url:`data:image/png;base64,${input.raster.toString('base64')}`}]}],text:{format:{type:'json_schema',name:'transcription_page',strict:true,schema:strictResponseSchema}}},{signal,maxRetries:0});
  usage={inputTokens:response.usage?.input_tokens??0,outputTokens:response.usage?.output_tokens??0};requestId=response._request_id??response.id;
  if(response.output.some(o=>o.type==='message' && o.content.some(c=>c.type==='refusal')))throw new ProviderError('provider_refusal');
  if(response.status==='incomplete')throw new ProviderError(response.incomplete_details?.reason==='max_output_tokens'?'truncated':'provider_refusal');
  if(response.status!=='completed')throw new ProviderError('infrastructure_error',true);
- let data:z.infer<typeof responseSchema>;try{data=responseSchema.parse(JSON.parse(response.output_text));}catch{throw new ProviderError('invalid_output');}
+ let data:z.infer<typeof responseSchema>;try{data=responseSchema.parse(JSON.parse(response.output_text.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i,'$1')));}catch{throw new ProviderError('invalid_output',true);}
+ if(data.flags.includes('no_music'))data.musicxml='<score-partwise><part-list/></score-partwise>';
  if(data.flags.includes('refusal'))throw new ProviderError('provider_refusal');
  if(data.flags.includes('truncated')||data.flags.includes('partial'))throw new ProviderError('truncated');
  try{data.musicxml=cleanMusicXML(data.musicxml,true);}catch{throw new ProviderError('invalid_output',true);}
- if(XMLValidator.validate(data.musicxml)!==true || !new XMLParser().parse(data.musicxml)['score-partwise'])throw new ProviderError('invalid_output');
+ if(XMLValidator.validate(data.musicxml)!==true || !new XMLParser().parse(data.musicxml)['score-partwise'])throw new ProviderError('invalid_output',true);
  return {musicxmlFragment:data.musicxml,uncertainties:data.uncertainties.map(u=>({...u,page:input.pageIndex+1})),flags:data.flags,usage,requestId,model:this.model,promptVersion:this.promptVersion,latency:Date.now()-start};
- }catch(error){if(error instanceof ProviderError){error.usage=usage;error.requestId=requestId;throw error;}
- if(signal.aborted || error instanceof OpenAI.APIUserAbortError || error instanceof OpenAI.APIConnectionTimeoutError)throw new ProviderError('provider_timeout',true);
- if(error instanceof OpenAI.APIError){if(error.code==='model_not_found' || error.code==='model_not_available')throw new ProviderError('model_unavailable');if(error.status===429){const value=error.headers?.get('retry-after');const ms=value?(Number.isFinite(Number(value))?Number(value)*1000:Date.parse(value)-Date.now()):0;throw new ProviderError('rate_limited',true,Math.max(0,ms||0));}throw new ProviderError('infrastructure_error',!error.status || error.status>=500);}
- throw new ProviderError('infrastructure_error',true);
+ }catch(error){
+ let failure:ProviderError;
+ if(error instanceof ProviderError)failure=error;
+ else if(signal.aborted || error instanceof OpenAI.APIUserAbortError || error instanceof OpenAI.APIConnectionTimeoutError)failure=new ProviderError('provider_timeout',true);
+ else if(error instanceof OpenAI.APIError){
+ requestId??=error.requestID??undefined;
+ if(error.code==='insufficient_quota'||error.status===401||error.status===403)failure=new ProviderError('provider_account_error');
+ else if(error.code==='model_not_found'||error.code==='model_not_available')failure=new ProviderError('model_unavailable');
+ else if(error.status===429){const value=error.headers?.get('retry-after');const ms=value?(Number.isFinite(Number(value))?Number(value)*1000:Date.parse(value)-Date.now()):0;failure=new ProviderError('rate_limited',true,Math.max(0,ms||0));}
+ else failure=new ProviderError('infrastructure_error',!error.status||error.status>=500);
+ }else failure=new ProviderError(usage?'invalid_output':'infrastructure_error',true);
+ failure.usage=usage;failure.requestId=requestId;
+ logProviderError(failure.reason,error instanceof OpenAI.APIError?error.status:undefined,error instanceof OpenAI.APIError?error.code:undefined,requestId);
+ throw failure;
  }
  }
 }

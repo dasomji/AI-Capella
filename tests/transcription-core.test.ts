@@ -106,3 +106,33 @@ test('valid unusual notation produces warnings, cross-staff mixed-meter ties sta
  const tied=page(['S'],'start').replace('</part>',`<measure>${note().replace('</note>','<tie type="start"/><tie type="stop"/></note>')}</measure><measure>${note('stop')}</measure></part>`);
  expect(validate(tied).warnings.map(w=>w.code).filter(c=>c.includes('tie'))).toEqual([]);
 });
+
+test('covers skip with provenance; divisi reserves context ids before name matching; renamed parts stay continuous',async()=>{
+ const {validatePage}=await import('../server/score-assembly.server');
+ const cover=result('<score-partwise><part-list/></score-partwise>');expect(validatePage(cover)).toBe('skipped');
+ const renamed=page(['S']).replace('<part-name>S</part-name>','<part-name>Sopran</part-name>');
+ const first=page(['S']).replace('<part-name>S</part-name>','<part-name>Soprano</part-name>');
+ const reverse=page(['S2','S']).replaceAll('<part-name>S2</part-name>','<part-name>Soprano</part-name>').replaceAll('<part-name>S</part-name>','<part-name>Soprano</part-name>');
+ const assembled=await new ScoreAssembler().assembleDetailed([cover,result(first),result(reverse),result(renamed)]);
+ const dom=scoreDocument(assembled.xml);expect(dom.window.document.querySelectorAll('part')).toHaveLength(2);expect(assembled.skippedPages).toEqual([1]);expect(assembled.report.warnings.map(w=>w.code)).toContain('new_part_identity');dom.window.close();
+ expect(()=>validatePage(result(page(['S']).replace('<duration>4</duration>','<duration>bad</duration>')))).toThrow();
+ expect(validatePage(result(page(['S']).replace(attrs,'')),[result(first)])).toBe('completed');
+});
+
+test('strict response schema uses the documented supported subset',async()=>{
+ // https://developers.openai.com/api/docs/guides/structured-outputs#supported-schemas
+ const {strictResponseSchema}=await import('../server/openai-provider.server');
+ const walk=(v:any)=>{if(!v||typeof v!=='object')return;for(const k of ['$schema','minLength','maxLength','pattern','format'])expect(v).not.toHaveProperty(k);if(v.type==='object'){expect(v.additionalProperties).toBe(false);expect(v.required.sort()).toEqual(Object.keys(v.properties).sort());}for(const c of Object.values(v))if(Array.isArray(c))c.forEach(walk);else walk(c);};walk(strictResponseSchema);
+});
+
+test('model fences are tolerated and empty/reasoning-only responses retry; parser failures retain usage',async()=>{
+ const noisy={musicxml:'  ```xml\n<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">'+page(['S'])+'\n```  ',uncertainties:[],flags:[]};
+ await expect(provider(response(noisy)).transcribePage(input,[],{},new AbortController().signal)).resolves.toHaveProperty('musicxmlFragment',page(['S']));
+ await expect(provider(response({}, {output_text:'',output:[]})).transcribePage(input,[],{},new AbortController().signal)).rejects.toMatchObject({reason:'invalid_output',retryable:true,requestId:'resp_fixture',usage:{inputTokens:50,outputTokens:100}});
+ const deep={musicxml:'<score-partwise>'+ '<x>'.repeat(400)+'</x>'.repeat(400)+'</score-partwise>',uncertainties:[],flags:[]};
+ await expect(provider(response(deep)).transcribePage(input,[],{},new AbortController().signal)).rejects.toMatchObject({reason:'invalid_output',requestId:'resp_fixture'});
+});
+
+test('quota/auth failures are terminal account errors',async()=>{
+ for(const status of [401,403,429])await expect(provider({error:{message:'private',type:'test',code:status===429?'insufficient_quota':'invalid_api_key'}},status,{'x-request-id':'req_account'}).transcribePage(input,[],{},new AbortController().signal)).rejects.toMatchObject({reason:'provider_account_error',retryable:false,requestId:'req_account'});
+});

@@ -1,4 +1,4 @@
-export type FailureReason='provider_refusal'|'provider_timeout'|'rate_limited'|'invalid_output'|'truncated'|'cancelled'|'permission_revoked'|'emergency_stop'|'abandoned'|'infrastructure_error'|'model_unavailable';
+export type FailureReason='provider_refusal'|'provider_timeout'|'rate_limited'|'invalid_output'|'truncated'|'cancelled'|'permission_revoked'|'emergency_stop'|'abandoned'|'infrastructure_error'|'model_unavailable'|'provider_account_error'|'render_failed'|'sandbox_unavailable';
 export class ProviderError extends Error {constructor(public reason:FailureReason,public retryable=false,public retryAfterMs=0,public usage?:{inputTokens:number;outputTokens:number},public requestId?:string){super(reason);}}
 export type PageInput={objectKey:string;contentType:string;sourcePage:number;pageIndex:number;raster?:Buffer};
 export type PageResult={musicxmlFragment:string;uncertainties:unknown[];usage:{inputTokens:number;outputTokens:number};model:string;latency:number;requestId?:string;flags?:string[];promptVersion?:string};
