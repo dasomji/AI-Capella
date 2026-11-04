@@ -1539,3 +1539,7 @@ aged outbox entry to make original-retention cleanup coverage non-vacuous.
 Time-rule review: ledger instants use timestamptz; lease/backoff arithmetic uses
 PostgreSQL now(), metrics keep half-open instant ranges, and regression fixtures
 run under America/New_York with explicit SQL lease expiry and JS skew.
+
+The bundled Evening Rise MusicXML sample now omits its external DTD declaration
+so it remains importable under the shared DOCTYPE rejection policy; musical
+content is unchanged. The first browser run caught this compatibility issue.

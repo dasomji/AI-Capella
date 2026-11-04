@@ -322,10 +322,10 @@ test('cleanup failure cannot block transcription ticks',async()=>{
 test('lease theft retains both provider calls and fences stale output',async()=>{
  const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);let entered!:()=>void,release!:()=>void;
  const ready=new Promise<void>(r=>entered=r),gate=new Promise<void>(r=>release=r);const provider=new FakeProvider();const transcribe=provider.transcribePage.bind(provider);
- provider.transcribePage=async(i,c,o,_signal)=>{entered();await gate;return transcribe(i,c,o,new AbortController().signal);};
+ provider.transcribePage=async(i,c,o,_signal)=>{entered();await gate;const value=await transcribe(i,c,o,new AbortController().signal);return {...value,musicxmlFragment:value.musicxmlFragment.replace('</measure>','<!--stale--></measure>')};};
  const first=new TranscriptionWorker(provider).tick();await ready;
  await pool.query("update job_pages set lease_expires_at=now()-interval '1 second' where job_id=$1",[j.id]);await new TranscriptionWorker().tick();release();await first;
- const calls=(await pool.query('select * from provider_calls where job_id=$1',[j.id])).rows;assert.equal(calls.length,2);assert.ok(calls.every(c=>c.finished_at));assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+ const calls=(await pool.query('select * from provider_calls where job_id=$1',[j.id])).rows;assert.equal(calls.length,2);assert.ok(calls.every(c=>c.finished_at));assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');assert.doesNotMatch((await pool.query('select result_xml from job_pages where job_id=$1',[j.id])).rows[0].result_xml,/stale/);
 });
 test('emergency pause aborts in-flight calls without spending an attempt',async()=>{
  const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);let entered!:()=>void;const ready=new Promise<void>(r=>entered=r);const provider=new FakeProvider();
