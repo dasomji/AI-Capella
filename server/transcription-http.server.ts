@@ -7,7 +7,7 @@ import { uploadOriginal } from './originals.server';
 import { storage } from './storage.server';
 import { uploadAdmission as slots } from './upload-admission.server';
 import { env } from './env.server';
-import { createJob,jobView,jobResult,cancelJob,retryJob,processingPaused,transcriptionMetrics } from './transcription.server';
+import { createJob,jobView,jobResult,jobReport,cancelJob,retryJob,processingPaused,transcriptionMetrics } from './transcription.server';
 export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string;email:string;name:string}}}>) {
  app.post('/ensembles/:ensemble/originals',async c=>{
  const slot=slots.take(c.get('user').id);if('code' in slot)return c.json({code:'upload_busy'},slot.code);
@@ -28,6 +28,7 @@ export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string
  });
  app.get('/ensembles/:ensemble/transcriptions/:job',async c=>c.json(await jobView(c.get('user').id,c.req.param('ensemble'),c.req.param('job'))));
  app.get('/ensembles/:ensemble/transcriptions/:job/result',async c=>{const xml=await jobResult(c.get('user').id,c.req.param('ensemble'),c.req.param('job'));return c.body(xml,200,{'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="transcription.musicxml"','Content-Security-Policy':"sandbox; default-src 'none'",'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});});
+ app.get('/ensembles/:ensemble/transcriptions/:job/report',async c=>{c.header('Cache-Control','no-store');c.header('Content-Disposition','attachment; filename="transcription-report.json"');return c.json(await jobReport(c.get('user').id,c.req.param('ensemble'),c.req.param('job')));});
  app.post('/ensembles/:ensemble/transcriptions/:job/cancel',async c=>{await cancelJob(c.get('user').id,c.req.param('ensemble'),c.req.param('job'));return c.json({state:'cancelled'});});
  app.post('/ensembles/:ensemble/transcriptions/:job/retry',async c=>c.json(await retryJob(c.get('user').id,c.req.param('ensemble'),c.req.param('job'))));
  app.put('/admin/transcription/control',async c=>{

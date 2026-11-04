@@ -70,5 +70,5 @@ function mergeAttributes(doc:Document,prior:Element|undefined,next:Element|undef
 function effectiveAttributes(doc:Document,measure:Element){
  let state:Element|undefined;const siblings=measure.parentElement?children(measure.parentElement,'measure'):[measure];
  for(const sibling of siblings){state=mergeAttributes(doc,state,sibling.querySelector('attributes'));if(sibling===measure)break;}
- return state;
+ return state??doc.createElement('attributes');
 }

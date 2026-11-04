@@ -380,7 +380,7 @@ test('Sol HTTP boundary fake completes durable multipage job, imports idempotent
  }}));
  const key=crypto.randomUUID();const j=await createJob(lead.id,e.id,key,[source.id,source.id,source.id],{},provider);assert.equal((await createJob(lead.id,e.id,key,[source.id,source.id,source.id],{},provider)).id,j.id);
  const worker=new TranscriptionWorker(provider,new BoundedPageRenderer(),new ScoreAssembler());for(let i=0;i<3;i++)await worker.tick();assert.equal(calls,3);assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');await worker.tick();assert.equal(calls,3);
- const saved=(await pool.query('select provenance,result_xml from transcription_jobs where id=$1',[j.id])).rows[0];assert.equal(saved.provenance.measures.length,18);assert.equal(saved.provenance.validation.structurallyValid,true);
+ const saved=(await pool.query('select provenance,result_xml from transcription_jobs where id=$1',[j.id])).rows[0];assert.equal(saved.provenance.measures.length,18);assert.equal(saved.provenance.validation.structurallyValid,true);const report=await ok(`ensembles/${e.id}/transcriptions/${j.id}/report`,'GET',undefined,lead.cookie);assert.equal(report.measures.length,18);assert.equal('sources' in report,false);
  const {validateScore}=await import('../server/score-validation.server');assert.ok((await validateScore(saved.result_xml,'musicxml',true)).timing);
  const imported=await ok(`ensembles/${e.id}/transcriptions/${j.id}/import`,'POST',{},lead.cookie);assert.equal((await ok(`ensembles/${e.id}/transcriptions/${j.id}/import`,'POST',{},lead.cookie)).id,imported.id);
  const ledger=(await pool.query('select usage from provider_calls where job_id=$1',[j.id])).rows;assert.equal(ledger.length,3);assert.ok(ledger.every(r=>r.usage.outputTokens===200));
