@@ -310,7 +310,7 @@ try {
       const s=window.__lightscoreSync,ctx=window.fixtureAudio,stamp=ctx.getOutputTimestamp?.(),now=performance.now();
       const valid=stamp?.performanceTime>0 && Math.abs(stamp.performanceTime-now)<=1000;
       const audio=valid?stamp.contextTime:ctx.currentTime,perf=valid?stamp.performanceTime:now+(ctx.outputLatency||ctx.baseLatency||0)*1000;
-      return window.fixtureNotes.filter(({at})=>{const server=performance.timeOrigin+perf+(at-audio)*1000+s.offsetMs;return server>=boundary+10 && server<boundary+Math.min(span,2000);}).length;
+      return window.fixtureNotes.filter(({at})=>{const server=performance.timeOrigin+perf+(at-audio)*1000+s.offsetMs;return server>=boundary+10 && server<boundary+span-10;}).length;
     },{boundary,span})));
     assert.ok(counts.every(n=>n>0),`Silent loop after wrap ${wrap} at ${testBpm} BPM: ${counts}`);
     (results.loopNoteStarts??=[]).push({bpm:testBpm,wrap,counts});

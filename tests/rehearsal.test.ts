@@ -520,14 +520,14 @@ it('clears loop bounds through the controller round trip and ignores the next ov
  expect(clearLoopCommands(canonical)).toEqual([]);
 });
 
-it('repairs failed stale-ack application once without an invalid toast or reload',async()=>{
+it.each(['snapshot','reconnect'])('repairs failed stale-ack application via %s without an invalid toast or reload',async mode=>{
  const {SocketPlaybackTransport}=await import('../src/rehearsal/socket-transport');
  const notices:string[]=[],handlers=new Map<string,any>();let snapshots=0,failed=false;
  const updated={...s,revision:1};
  const socket:any={connected:true,on:(e:string,f:any)=>handlers.set(e,f),off(){},disconnect(){},volatile:{emit:(event:string,...args:any[])=>{
   const ack=args.at(-1);
   if(event==='rehearsal:command')ack({commandId:args[0].commandId,status:'rejected',code:'stale',state:updated,revision:1});
-  else {if(event==='rehearsal:snapshot')snapshots++;ack({state:event==='rehearsal:join'?s:updated});}
+  else {if(event==='rehearsal:snapshot'){snapshots++;if(mode==='reconnect'){ack({code:'unavailable'});return;}}ack({state:event==='rehearsal:join' && !failed?s:updated});}
  }}};
  const log=vi.spyOn(console,'error').mockImplementation(()=>{});
  const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000,()=>{},code=>notices.push(code));
