@@ -519,7 +519,7 @@ window.setInterval(()=>{
  const timing=(sharedTiming ?? timingFromScore(currentScore)),now=playerSession.clock.serverNow();
  const joined=lateJoin(sharedState,now,timing);
  if(joined.status==='playing' && audioEngine.context.state==='running'){
-  lastSharedDrift=playbackDriftMs(sharedState,now,audioEngine.getCurrentBeat(),timing);
+  lastSharedDrift=audioEngine.sharedDriftMs(now,playerSession.clock.diagnostics!.offsetMs);
   if(playerSession.clock.diagnostics!.uncertaintyMs<15 && Math.abs(lastSharedDrift)>30){const beat=positionAt(sharedState,now,timing);const delta=(secondsAt(Math.ceil(beat+.01),timing)-secondsAt(beat,timing))*timing.baseBpm/sharedState.bpm*1000;scheduleSharedAudio(now+(delta>=80 && delta<=300?delta:80));}
  }
  if(joined.status==='stopped')syncPlayButtons(false);

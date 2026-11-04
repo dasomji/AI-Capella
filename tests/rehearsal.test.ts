@@ -417,3 +417,16 @@ it('indexes every one and two bar count-in downbeat across tempo and meter sweep
   expect(clicks.filter(time=>Math.abs(time-from)<1)).toHaveLength(1);
  }
 });
+
+it('measures zero scheduling drift with perfect clocks regardless of visual/output offsets',()=>{
+ for(const offset of [0,25,80,150]){
+  const {engine}=fakeSharedEngine();engine.setLightOffsetMs(offset);engine.outputLatencyOffsetMs=offset;
+  const perf=performance.now(),origin=performance.timeOrigin,now=origin+perf;
+  engine.scheduleShared({...s,status:'playing',anchor:{beat:0,serverTime:now+400},effectiveAt:now+400},t,now,0,[]);
+  // Derive the initial sampled mapping; scheduleShared samples performance.now internally.
+  const c=(engine as any).canonical;const startPerf=(c.server-origin)-(c.audio-10+offset/1000)*1000;
+  for(let sec=0;sec<=10;sec+=2){(engine.context as any).currentTime=10+sec;
+   expect(engine.sharedDriftMs(now+sec*1000,0,startPerf+sec*1000,origin)).toBeCloseTo(0,5);
+  }
+ }
+});

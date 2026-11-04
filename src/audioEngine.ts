@@ -928,6 +928,13 @@ export class AudioEngine {
     this.fillShared();
     return {serverTime:decision.musicAt,audioTime:audioAt(decision.musicAt)};
   }
+  /** Compare the live output mapping with the mapping used to lay this schedule.
+   * Visual light/compressor compensation must never drive audio corrections. */
+  sharedDriftMs(now:number,offset:number,performanceTime=performance.now(),timeOrigin=performance.timeOrigin) {
+    const c=this.canonical;if(!c)return 0;
+    const mapped=serverToAudioTime(now,offset,this.ctx,performanceTime,timeOrigin)-this.outputLatencyOffsetMs/1000;
+    return (mapped-(c.audio+(now-c.server)/1000))*1000;
+  }
   private sharedServerNow(c= this.canonical!) {return c.server+(this.ctx.currentTime-c.audio-this.outputDelay()-this.outputLatencyOffsetMs/1000)*1000;}
   private fillShared() {
     const c=this.canonical;if(!c || this.sharedClockReady?.()===false)return;this.waiting=this.ctx.state!=='running';if(this.waiting)return;
