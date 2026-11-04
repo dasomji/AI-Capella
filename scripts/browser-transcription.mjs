@@ -27,6 +27,10 @@ try{
  await page.getByRole('button',{name:'Start reading',exact:true}).click();await page.locator('.tx-job').first().waitFor();await shot('jobs-running');
  await page.getByRole('button',{name:'Review',exact:true}).first().waitFor({timeout:30000});await review();assert.ok(await page.locator('.tx-mark').count()>=2);
  await page.locator('.tx-review-item').first().click();await page.locator('.tx-original img').waitFor({timeout:30000});
+ await page.locator('dialog .tx-close').click();
+ const hostile='<img src=x onerror="window.providerExecuted=1">';
+ await page.route('**/report',async route=>{const response=await route.fetch();const body=await response.json();body.validation.uncertainties=[{measure:'1',part:hostile,reason:hostile,page:1}];await route.fulfill({json:body});});
+ await review();assert.ok((await page.locator('.tx-review-items').innerText()).includes(hostile));assert.equal(await page.locator('.tx-review-items img').count(),0);assert.equal(await page.evaluate(()=>window.providerExecuted),undefined);await page.unroute('**/report');
  // Visual fixtures reuse a real completed job/result; only job-list states are overridden.
  // No provider call is made for the failed/paused/cancelled matrix examples.
  const completed=(await req(context,`/ensembles/${e}/transcriptions`)).find(j=>j.state==='completed');

@@ -451,3 +451,28 @@ test('lease heartbeat derives its interval and tolerates one transient DB error'
  pool.query=function(this:typeof pool,...args:any[]){if(String(args[0]).startsWith('update job_pages p set lease_expires_at')&&!failed){failed=true;return Promise.reject(Error('transient heartbeat test'));}return (original as any).apply(this,args);} as any;
  try{await new TranscriptionWorker(provider).tick();assert.equal(failed,true);assert.equal((await pool.query('select state from transcription_jobs where id=$1',[j.id])).rows[0].state,'completed');}finally{pool.query=original;env.TRANSCRIPTION_LEASE_MS=lease;}
 });
+
+test('UI endpoints isolate ensembles, validate pages/options and sandbox cached previews',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);const member=await account(),outsider=await account();
+ await pool.query('insert into memberships(ensemble_id,user_id) values($1,$2)',[e.id,member.id]);
+ const list=`ensembles/${e.id}/transcriptions`,page=`ensembles/${e.id}/originals/${source.id}/pages/1`;
+ for(const user of [member,outsider])for(const path of [list,page])assert.ok([403,404].includes((await request(path,'GET',undefined,user.cookie)).status));
+ const other=await ok('ensembles','POST',{name:'Other'},lead.cookie);
+ for(const path of [`ensembles/${other.id}/transcriptions/${j.id}`,`ensembles/${other.id}/originals/${source.id}/pages/1`])assert.equal((await request(path,'GET',undefined,lead.cookie)).status,404);
+ for(const n of ['0','2','1.5'])assert.equal((await request(page.replace(/1$/,n),'GET',undefined,lead.cookie)).status,404);
+ for(const options of [{title:'x'.repeat(201)},{title:'a\0b'},{title:'\ud800'},{language:'fr'}])assert.equal((await request(list,'POST',{sourceObjects:[source.id],options},lead.cookie)).status,422);
+ const responses=await Promise.all(Array.from({length:4},()=>request(page,'GET',undefined,lead.cookie)));
+ for(const response of responses){assert.equal(response.status,200,await response.clone().text());assert.equal(response.headers.get('content-type'),'image/png');assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(response.headers.get('content-security-policy'),'sandbox');await response.arrayBuffer();}
+ assert.equal((await pool.query("select count(*)::int n from audit_events where actor_id=$1 and target_id=$2 and action='original.access'",[lead.id,source.id])).rows[0].n,1);
+ const row=(await pool.query('select options from transcription_jobs where id=$1',[j.id])).rows[0];assert.equal(row.options.title,'score');
+});
+
+test('persistent or hung heartbeat and stuck rendering release before lease expiry',async()=>{
+ for(const mode of ['failed','hung','render']){
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);const query=pool.query,lease=env.TRANSCRIPTION_LEASE_MS;env.TRANSCRIPTION_LEASE_MS=2500;
+ pool.query=function(this:typeof pool,...args:any[]){if(String(args[0]).startsWith('update job_pages p set lease_expires_at'))return mode==='failed'?Promise.reject(Error('persistent heartbeat fixture')):new Promise(()=>{});return (query as any).apply(this,args);} as any;
+ const provider=new FakeProvider(()=> 'success',10000);let aborted=false;
+ const renderer=mode==='render'?{render:async(_input:any,signal:AbortSignal)=>{signal.addEventListener('abort',()=>{aborted=true;},{once:true});return new Promise<any>(()=>{});}}:undefined;
+ const started=performance.now();try{await new TranscriptionWorker(provider,renderer).tick();assert.ok(performance.now()-started<2500);assert.equal(mode==='render'?aborted:true,true);assert.notEqual((await query.call(pool,'select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running');}finally{pool.query=query;env.TRANSCRIPTION_LEASE_MS=lease;}
+ }
+});
