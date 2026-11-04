@@ -49,7 +49,7 @@ api.use("*", async (c, next) => {
   if (c.req.path.startsWith("/assets/"))
     c.header("Cache-Control", "public, max-age=31536000, immutable");
   else if (
-    /^\/(?:api(?:\/|$)|healthz$|readyz$|app$|_serverFn(?:\/|$))/.test(
+    /^\/(?:api(?:\/|$)|healthz$|readyz(?:/rehearsal)?$|app$|_serverFn(?:\/|$))/.test(
       c.req.path,
     ) ||
     c.req.path === "/"
@@ -95,6 +95,7 @@ api.use("/api/*", async (c, next) => {
   })(c, next); } finally { release?.(); }
 });
 api.get("/healthz", (c) => c.json({ status: "ok" }));
+api.get("/readyz/rehearsal", (c) => rehearsalReady() ? c.json({status:"ready"}) : c.json({status:"rehearsal unavailable"},503));
 api.get("/readyz", async (c) => {
   try {
     const expected = readMigrationFiles({ migrationsFolder: "./drizzle" });
@@ -108,8 +109,7 @@ api.get("/readyz", async (c) => {
       expected.some((m, i) => m.hash !== result.rows[i]?.hash)
     )
       return c.json({ status: "migrations pending" }, 503);
-    if(!rehearsalReady()) return c.json({status:"rehearsal unavailable"},503);
-    return c.json({ status: "ready" });
+    return c.json({ status: "ready", rehearsal: rehearsalReady() });
   } catch (error) {
     logError("database.readiness", error);
     return c.json({ status: "not ready" }, 503);

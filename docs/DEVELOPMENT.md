@@ -137,3 +137,10 @@ longer verifies an account. Unknown passwords must use the recovery flow.
 Account mail shares a recipient budget of 3/hour and 10/24 hours. Sign-in email
 budgets count failures, with a bounded global delay rather than global lockout.
 Playback remains local until the remaining Phase 3 protocol work lands.
+
+Phase 3 deployment probes: Railway should use `/readyz` for HTTP readiness
+(database connectivity and committed migration hashes). It returns a `rehearsal`
+boolean but a standby without the advisory lock can still serve HTTP. Use
+`/readyz/rehearsal` for ownership/recovery monitoring, not rolling-deploy admission.
+Only one instance owns shared playback; other instances reject playback commands
+until they acquire ownership. Route rehearsal sockets to the owner.
