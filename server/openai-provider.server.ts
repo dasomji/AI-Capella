@@ -49,7 +49,7 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
  if(data.flags.includes('refusal'))throw new ProviderError('provider_refusal');
  if(data.flags.includes('truncated')||data.flags.includes('partial'))throw new ProviderError('truncated');
  try{data.musicxml=cleanMusicXML(data.musicxml,true);}catch{throw new ProviderError('invalid_output',true);}
- if(XMLValidator.validate(data.musicxml)!==true || !new XMLParser().parse(data.musicxml)['score-partwise'])throw new ProviderError('invalid_output',true);
+ if(XMLValidator.validate(data.musicxml)!==true || !['score-partwise','score-timewise'].some(root=>new XMLParser().parse(data.musicxml)[root]))throw new ProviderError('invalid_output',true);
  return {musicxmlFragment:data.musicxml,uncertainties:data.uncertainties.map(u=>({...u,page:input.pageIndex+1})),flags:data.flags,usage,requestId,model:this.model,promptVersion:this.promptVersion,latency:Date.now()-start};
  }catch(error){
  let failure:ProviderError;

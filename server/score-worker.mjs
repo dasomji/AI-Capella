@@ -1,4 +1,4 @@
-import { cleanMusicXML } from './musicxml-input.mjs';
+import { cleanMusicXML,normalizeTimewise } from './musicxml-input.mjs';
 import { parentPort } from 'node:worker_threads';
 import { createHash } from 'node:crypto';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
@@ -38,13 +38,7 @@ parentPort.on('message', async ({raw,format,timing})=>{
     let validation;
     if(format==='musicxml'){
       const {JSDOM}=await import('jsdom');const dom=new JSDOM(raw,{contentType:'text/xml'});
-      if(dom.window.document.documentElement.tagName==='score-timewise'){
-        const doc=dom.window.document, old=doc.documentElement, root=doc.createElement('score-partwise');
-        root.setAttribute('version',old.getAttribute('version')??'4.0');
-        for(const child of Array.from(old.children))if(child.tagName!=='measure')root.append(child.cloneNode(true));
-        for(const declaration of Array.from(root.querySelectorAll('part-list > score-part'))){const part=doc.createElement('part');part.id=declaration.id;for(const m of Array.from(old.children).filter(c=>c.tagName==='measure')){const measure=doc.createElement('measure');for(const a of m.attributes)measure.setAttribute(a.name,a.value);const local=Array.from(m.children).find(p=>p.id===part.id);if(local)for(const child of Array.from(local.children))measure.append(child.cloneNode(true));part.append(measure);}root.append(part);}
-        old.replaceWith(root);raw=root.outerHTML;
-      }
+      if(dom.window.document.documentElement.tagName==='score-timewise'){normalizeTimewise(dom.window.document);raw=dom.window.document.documentElement.outerHTML;}
       const {validateMusicDocument}=await tsImport('../src/score-validation.ts',import.meta.url);
       validation=validateMusicDocument(dom.window.document);dom.window.close();
       if(!validation.structurallyValid)throw Error('invalid_score');
