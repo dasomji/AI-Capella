@@ -6,7 +6,7 @@ type Category=typeof categories[number];
 export type Metric={precision:number;recall:number;f1:number;matched:number;predicted:number;reference:number};
 type Measure=Record<Category,string[]>;
 type Event={m:number;at:number;absolute:number;duration:number;pitch:string;voice:string;rest:boolean;lyrics:string[];start:boolean;stop:boolean};
-type Part={name:string;measures:Measure[];fingerprint:string};
+type Part={name:string;measures:Measure[];fingerprint:string;profile:{pitches:string[];rhythms:string[];clefs:string[];center:number}};
 const empty=()=>Object.fromEntries(categories.map(c=>[c,[] as string[]])) as Measure;
 const normalized=(s:string)=>s.normalize('NFC').trim().replace(/\s+/g,' ').toLowerCase();
 const round=(n:number)=>Math.round(n*1e5)/1e5;
@@ -55,7 +55,9 @@ function parse(xml:string):Part[]{
  if(e.start||e.stop)out.ties.push(JSON.stringify([anchor,e.pitch,e.start,e.stop]));
  }
  const fingerprint=JSON.stringify([merged.filter(e=>!e.rest).map(e=>e.pitch).sort(),merged.map(e=>round(e.duration)).sort(),[...state].filter(([k])=>k.startsWith('clef'))]);
- return {name,measures,fingerprint};
+ const pitched=merged.filter(e=>!e.rest);const midis=pitched.map(e=>{const [step,alter,octave]=e.pitch.split(':');return Number(octave)*12+({C:0,D:2,E:4,F:5,G:7,A:9,B:11}[step as 'C']??0)+Number(alter);}).filter(Number.isFinite);
+ const profile={pitches:pitched.map(e=>e.pitch),rhythms:merged.map(e=>String(round(e.duration))),clefs:[...state].filter(([k])=>k.startsWith('clef')).map(([,v])=>v),center:midis.length?midis.reduce((a,b)=>a+b,0)/midis.length:0};
+ return {name,measures,fingerprint,profile};
  });
  }finally{dom.window.close();}
 }
@@ -81,7 +83,7 @@ export function compareMusicXML(predictedXML:string,referenceXML:string){
  const used=new Set<Part>();const edits=new Set<string>();const ambiguities:string[]=[];
  const pairs:([Part|undefined,Part|undefined])[]=reference.map(r=>{
  const available=predicted.filter(p=>!used.has(p));const candidates=available.filter(p=>p.name===r.name);if(candidates.length>1)ambiguities.push(r.name);
- const p=candidates.find(p=>p.fingerprint===r.fingerprint)??candidates[0]??available.find(p=>p.fingerprint===r.fingerprint)??available.map(p=>({p,score:intersection(p.measures.flatMap(m=>m.pitch),r.measures.flatMap(m=>m.pitch))})).sort((a,b)=>b.score-a.score)[0]?.p;
+ const p=candidates.find(p=>p.fingerprint===r.fingerprint)??candidates[0]??available.find(p=>p.fingerprint===r.fingerprint)??available.map(p=>({p,score:4*intersection(p.profile.pitches,r.profile.pitches)+intersection(p.profile.rhythms,r.profile.rhythms)+10*intersection(p.profile.clefs,r.profile.clefs)-Math.abs(p.profile.center-r.profile.center)})).sort((a,b)=>b.score-a.score)[0]?.p;
  if(p)used.add(p);return [p,r];
  });for(const p of predicted)if(!used.has(p))pairs.push([p,undefined]);
  pairs.forEach(([p,r],part)=>{align(p?.measures??[],r?.measures??[]).forEach(([pm,rm],m)=>{for(const category of categories){

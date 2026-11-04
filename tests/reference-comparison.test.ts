@@ -38,3 +38,5 @@ test('elided lyric syllables retain all text',()=>{
 });
 
 test('onsets tolerate small divisions-normalization noise',()=>{const a=music(['<forward><duration>1</duration></forward>'+note()]);const b=music(['<forward><duration>1.00001</duration></forward>'+note()]);expect(compareMusicXML(a,b).metrics.onset.f1).toBe(1);});
+
+test('reordered renamed parts align by pitch range and rhythm content',()=>{const high=part('S','G').replace('<octave>4','<octave>5');const low=part('B','C').replace('<sign>G','<sign>F').replace('<octave>4','<octave>2');const ref=score([high,low]);const candidate=score([low,high]).replace('<part-name>Soprano</part-name>','<part-name>Upper choir</part-name>').replace('<part-name>Bass</part-name>','<part-name>Lower choir</part-name>');expect(compareMusicXML(candidate,ref).metrics.notes.f1).toBe(1);});

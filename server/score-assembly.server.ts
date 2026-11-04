@@ -100,9 +100,9 @@ export class ScoreAssembler implements JobAssembler {
  }finally{output.window.close();}
  }
 }
-function restMeasure(doc:Document,template:Element,number:number,attributes?:Element,templateState?:Element){
+function restMeasure(doc:Document,template:Element,number:number,attributes:Element|undefined,templateState:Element){
  const measure=doc.createElement('measure');measure.setAttribute('number',String(number));
- const templateAttrs=templateState?doc.importNode(templateState,true):effectiveAttributes(doc,template);for(const child of Array.from(templateAttrs.children))if(child.tagName!=='time')child.remove();
+ const templateAttrs=doc.importNode(templateState,true);for(const child of Array.from(templateAttrs.children))if(child.tagName!=='time')child.remove();
  if(!attributes?.querySelector('divisions')){const d=doc.createElement('divisions');d.textContent='1';templateAttrs.prepend(d);}
  const a=mergeAttributes(doc,attributes,templateAttrs);if(a)measure.append(doc.importNode(a,true));
  const note=doc.createElement('note');const rest=doc.createElement('rest');rest.setAttribute('measure','yes');note.append(rest);
@@ -116,12 +116,6 @@ function mergeAttributes(doc:Document,prior:Element|undefined,next:Element|undef
  const number=child.getAttribute('number');const old=Array.from(out.children).find(c=>c.tagName===child.tagName&&c.getAttribute('number')===number);old?.remove();out.append(doc.importNode(child,true));
  }return out;
 }
-function effectiveAttributes(doc:Document,measure:Element){
- let state:Element|undefined;const siblings=measure.parentElement?children(measure.parentElement,'measure'):[measure];
- for(const sibling of siblings){state=mergeAttributes(doc,state,sibling.querySelector('attributes'));if(sibling===measure)break;}
- return state??doc.createElement('attributes');
-}
-
 /** endMeasure/localMeasureEnd are inclusive; actual recognized measures remain individual. */
 export function compressSyntheticSources(sources:MeasureSource[]){
  const result:(MeasureSource&{endMeasure?:number;localMeasureEnd?:string})[]=[];
