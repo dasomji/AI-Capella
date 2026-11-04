@@ -25,7 +25,7 @@ Out of scope for this run:
 2. **Ensembles, permissions, invitations, library**: ensemble CRUD, leads, capabilities,
    lead transfer, invitations via Resend, metadata/body split, revision-checked edits, atomic
    reorder, client switched off Firebase for library/ensembles. (AICAP-3, 5, 6, 15)
-3. **Synchronized playback**: Socket.IO authoritative command protocol, clock calibration,
+3. **Synchronized playback — complete (Phase 3f)**: Socket.IO authoritative command protocol, clock calibration,
    reconnect/late join, revocation on live sockets; rehearsal controller extraction.
    (AICAP-8, 9, 15)
 4. **Transcription**: private original storage (S3 interface, SeaweedFS dev), durable jobs,
@@ -1226,3 +1226,106 @@ Final checks (all passed):
 
 All work is committed locally on `production-v1`. No push, PR, deployment,
 external provisioning, paid provider call or real email delivery was performed.
+
+### Phase 3f — final synchronized-playback review remediation (2026-11-04)
+
+Reviewed against production-v1 at f3b00dc, including the Phase 3e-2 fixes that
+postdated the c0cae91 review. All changes are confined to this production fork.
+Phase 3 is closed after the validation recorded below.
+
+- B1: scheduler uses milliseconds relative to its effective anchor and carries
+  the musical cursor explicitly through refills and loop wraps. Epoch rounding
+  can no longer strand it immediately below the loop end. Regression covers
+  80 seconds (at least five wraps), 77.7/113/133.3 BPM, 60–180 in steps of seven,
+  and three loop lengths. The pre-fix failure is retained in
+  `.review-evidence/phase3f-loop-red.log`.
+- S1: Phase 3e-2 already fixed indexed count-in generation fully for ordinary
+  one/two-bar count-ins. Added the complete integer 40–200 and fractional sweep,
+  three meters, exact first-click boundary and actual oscillator accent checks.
+  Browser count-in now runs at 90 BPM with four clicks.
+- S2: drift compares live output-clock mapping with the original scheduling
+  mapping. Visual light/compressor compensation cannot cause audio corrections.
+  Tests cover perfect clocks over ten seconds with 0/25/80/150 ms offsets.
+  Routine calibration also retains schedules whose mapping remains stable.
+- S3: every AudioContext transition to running rebuilds shared playback from the
+  current canonical instant, including ordinary taps away from the banner.
+  Drift over one second bypasses the small-drift uncertainty threshold; unusable
+  clocks still require calibration before any shared scheduling.
+- S4: failed snapshot application keeps readiness false and leaves the revision
+  unapplied. Rejoin retries the same revision with backoff, without a new command.
+- N1: replacement clicks/tones start no earlier than the new effective instant;
+  old pre-roll survives only until that boundary. Expired tones are skipped.
+- N2: `/readyz` means DB/migration-ready HTTP and reports rehearsal ownership as
+  a boolean. `/readyz/rehearsal` requires ownership/recovery. Railway admission
+  should use `/readyz`; rehearsal ownership remains a separate monitoring probe.
+  This supersedes the ownership-dependent readiness notes above. Deployment
+  remains one process initially; replicas need owner-aware socket routing.
+- N3: deleted-piece invalidations survive unavailable ownership and are drained
+  on acquisition before snapshots are served.
+- N4: actual ZodError instances/names map to `invalid`.
+- N5: missing/nonpositive/nonfinite score metadata tempo falls back to 100 BPM;
+  explicit valid tempo marks retain the clamp.
+- N6: persisted pageshow recreates the disposed PlayerSession and rejoins.
+- N7: clearing a selected loop explicitly sends `enabled:false`.
+- N8: unavailable/rejected/failed loop commands restore the canonical preview.
+- N9: suspended shared audio only offers “Tap to listen in” for moving sessions.
+- N10: reconnect/recovery uses one join loop per socket epoch.
+- N11: three consecutive heartbeat failures are required to discard ownership;
+  successful probes reset the count. Queries are single-flight and failures stay
+  logged. Connection error events still invalidate ownership immediately.
+- N12: production `?debug=sync` is deliberately read-only, scoped to the signed-in
+  device's own state; its scope and removal are documented in DEVELOPMENT.md.
+
+The acceptance suite extends g to four wraps each at 113 and 77.7 BPM, checks an
+80 ms output offset for ten seconds without a rebuild, rejoins with suspended
+audio for five seconds before a tap elsewhere, and simulates persisted page
+lifecycle recovery. Fractional custom tempo entry preserves tenths of a BPM.
+All timestamp arithmetic remains typed epoch milliseconds or relative durations;
+no schema or business/calendar-time behavior changed. UTC logging is preserved.
+
+Known limitations: browser checks measure scheduled/score-time alignment, not
+loudspeaker/acoustic output. Safari/iOS, Bluetooth and real OS sleep still need
+physical validation. Network asymmetry cannot be eliminated by clock estimation.
+The heartbeat policy tolerates stalls but can take roughly 15–17 seconds to detect
+a silent owner failure. No new deployment, provisioning, push or PR is included.
+
+Final validation (production fork, local disposable services):
+
+- `npm run typecheck`: passed.
+- `npm test`: 107/107; `TZ=America/New_York npm test`: 107/107.
+- `npm run build`: passed, including fresh built-mode browser harness builds.
+- `npm run test:integration`: 39/39, no skips, including standby HTTP readiness.
+- `npm run check:secrets`: positive control detected, client artifacts clean,
+  no public source maps.
+- `npm run db:generate`: no schema changes / no migration drift.
+- `npm run test:browser:sync`: all a–n plus offset stability and persisted
+  page lifecycle recovery passed. Four wraps each at 113 and 77.7 BPM,
+  90 BPM count-in oscillator frequencies 1500/1000/1000/1000 Hz, suspended
+  join/tap-elsewhere recovery, 80 ms output offset without rescheduling for ten
+  seconds. Focused run: ten scheduled starts mean/p95/max 0/0/0 ms; maximum
+  pairwise score-time error 15.05 ms (50 ms acceptance ceiling).
+
+The earlier extended-browser failures are retained in the Phase 3f logs and
+`phase3f-loop-browser-*-red.json`: harness setup reset the loop position, then
+exact bar seeking disabled a pointer-derived region whose start was slightly
+above beat eight. Re-selecting after the tempo popover also failed to produce
+a revision. The final scenario retains the playing loop and derives boundaries
+from each accepted tempo anchor. No application retry masks these failures.
+
+Final full `npm run test:browser` passed the entire design/language/device/
+capability matrix, the original two-account rehearsal check, and the extended
+three-account a–n suite plus offset and bfcache checks. Zero page errors. Ten
+scheduled-start differences mean/p95/max **0/0/0 ms**; maximum pairwise score-time
+error **11.13 ms**. Four wraps at both tempos, the accent, ten-second offset
+stability, five-second suspended join and persisted session recreation all passed.
+Raw final evidence is `.review-evidence/browser/sync-acceptance.json`; the
+separate focused pass is `phase3f-focused-sync-green.json`. All results are local
+Chromium scheduling/position measurements, not acoustic-output measurements.
+
+`BROWSER_SCRIPT=scripts/browser-smoke.mjs npm run test:browser` also passed on a
+fresh build: playback, staff, PDF export (121433 bytes), reset/sign-in and player
+themes; zero browser errors and zero forbidden external requests. Final
+`git diff --check` passed. Phase 3 synchronized playback is complete with the
+hardware/operational limitations documented above. Every review item has its
+own local commit; follow-up test/harness commits preserve the intermediate
+failure evidence. All commits remain on `production-v1`; nothing was pushed.
