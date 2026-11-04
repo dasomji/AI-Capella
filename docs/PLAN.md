@@ -1535,3 +1535,7 @@ attempt to the queue without consuming the automatic attempt allowance.
 Regression additions reproduce reviewer cancellation/lease/crash/authorization/
 assembly probes, assert exact automatic retry counts, and seed a live original's
 aged outbox entry to make original-retention cleanup coverage non-vacuous.
+
+Time-rule review: ledger instants use timestamptz; lease/backoff arithmetic uses
+PostgreSQL now(), metrics keep half-open instant ranges, and regression fixtures
+run under America/New_York with explicit SQL lease expiry and JS skew.

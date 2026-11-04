@@ -99,6 +99,7 @@ export class TranscriptionWorker {
  // Assembly is repeatable: row lock makes the durable completion checkpoint unique.
  await transaction(async db=>{
  const j=(await db.query('select * from transcription_jobs where id=$1 for update',[id])).rows[0];if(!j || !['queued','running'].includes(j.state))return;
+ if(j.model!==this.provider.model || j.prompt_version!==this.provider.promptVersion){await db.query("update transcription_jobs set state='failed',failure_reason='model_unavailable' where id=$1",[id]);return;}
  const pages=(await db.query('select * from job_pages where job_id=$1 order by page_number',[id])).rows;if(!pages.length || pages.some(p=>p.state!=='completed'))return;
  try{await authorize(db,j.started_by,j.ensemble_id,'transcribe');}catch(error){if(!(error instanceof DomainError) || ![403,404].includes(error.status))throw error;await db.query("update transcription_jobs set state='failed',failure_reason='permission_revoked' where id=$1",[id]);return;}
  if(await processingPaused())return;
