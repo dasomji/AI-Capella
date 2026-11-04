@@ -489,3 +489,22 @@ it('replacement starting tones never start before the effective boundary',()=>{
  const boundary=result.audioTime-(state.countInUntil-state.effectiveAt)/1000;
  expect(starts.length).toBeGreaterThan(0);expect(starts.every(at=>at>=boundary)).toBe(true);
 });
+
+
+it('never doubles a click or note at loop wraps across 60–180 BPM',()=>{
+ for(const bpm of [...Array.from({length:121},(_,i)=>60+i),133.3]){
+  const {engine,note}=fakeSharedEngine(),ctx=engine.context as any,clicks:number[]=[];
+  const param=()=>({value:0,setValueAtTime(){},exponentialRampToValueAtTime(){},linearRampToValueAtTime(){},cancelAndHoldAtTime(){}});
+  ctx.createGain=()=>({gain:param(),connect(){return this;}});
+  ctx.createOscillator=()=>({frequency:param(),connect(){return this;},start:(at:number)=>clicks.push(at),stop(){},addEventListener(){}});
+  (engine as any).score.notes=Array.from({length:9},(_,startBeat)=>({partId:'a',startBeat,durationBeats:.5,midi:60}));
+  (engine as any).beatMarkers=Array.from({length:9},(_,beat)=>({beat,isDownbeat:beat%4===0}));
+  const now=performance.timeOrigin+performance.now(),timing={...t,baseBpm:120,tempos:[{beat:0,bpm:120}]};
+  const start=engine.scheduleShared({...s,bpm,metronome:true,status:'playing',anchor:{beat:0,serverTime:now+400},effectiveAt:now+400,loop:{enabled:true,startBeat:0,endBeat:8}},timing,now,0,[]).audioTime;
+  for(let elapsed=0;elapsed<9*8*60/bpm;elapsed+=.2){ctx.currentTime=10+elapsed;engine.tick();}
+  for(const starts of [clicks,note.mock.calls.map(c=>c[1])])for(let wrap=1;wrap<=8;wrap++){
+   const at=start+wrap*8*60/bpm;
+   expect(starts.filter(time=>Math.abs(time-at)<.005),`bpm ${bpm}, wrap ${wrap}`).toHaveLength(1);
+  }
+ }
+});

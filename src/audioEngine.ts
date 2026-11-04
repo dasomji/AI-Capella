@@ -892,7 +892,7 @@ export class AudioEngine {
     this.scheduleAhead(true);
   }
 
-  private canonical: {state:RehearsalState;timing:PieceTiming;offset:number;server:number;audio:number;through:number;beat?:number} | null = null;
+  private canonical: {state:RehearsalState;timing:PieceTiming;offset:number;server:number;audio:number;through:number;beat?:number;wrapped?:boolean} | null = null;
   private previousCanonical: typeof this.canonical = null;
   outputLatencyOffsetMs = 0;
   sharedClockReady?: () => boolean;
@@ -947,18 +947,19 @@ export class AudioEngine {
     let beat=c.beat ?? positionAt(s,c.server+from,t);
     const horizon=Math.max(0,this.sharedServerNow(c)-c.server)+LOOKAHEAD_SEC*1000;
     const scale=t.baseBpm/s.bpm;
+    let wrapped=c.wrapped??false;
     let guard=0;
     while(from<horizon && guard++<512){
       const end=s.loop.enabled ? s.loop.endBeat??t.totalBeats : t.totalBeats;
-      if(beat>=end){if(!s.loop.enabled)break;beat=s.loop.startBeat??0;}
+      if(beat>=end){if(!s.loop.enabled)break;beat=s.loop.startBeat??0;wrapped=true;}
       const endTime=from+(secondsAt(end,t)-secondsAt(beat,t))*scale*1000;
       const until=Math.min(horizon,endTime);
-      const endBeat=beatAt(secondsAt(beat,t)+(until-from)/1000/scale,t);
+      const endBeat=until>=endTime ? end : Math.min(end,beatAt(secondsAt(beat,t)+(until-from)/1000/scale,t));
       const audioAt=(b:number)=>c.audio+from/1000+(secondsAt(b,t)-secondsAt(beat,t))*scale;
       for(const note of this.score.notes){
         if(note.startBeat>=endBeat || note.startBeat+note.durationBeats<=beat)continue;
         // Only pick up held notes at a new schedule/loop start, never at a lookahead refill.
-        if(note.startBeat<beat && from!==musicAt-c.server && !(s.loop.enabled && Math.abs(beat-(s.loop.startBeat??0))<1e-6))continue;
+        if(note.startBeat<beat && from!==musicAt-c.server && !wrapped)continue;
         const gain=this.partGains.get(note.partId);if(!gain)continue;
         const start=Math.max(this.ctx.currentTime,audioAt(Math.max(beat,note.startBeat)));
         const finish=audioAt(Math.min(end,note.startBeat+note.durationBeats));
@@ -971,11 +972,11 @@ export class AudioEngine {
       if(until>=endTime){
         beat=s.loop.enabled ? s.loop.startBeat??0 : end;
         // Relative times retain sub-millisecond progress even at epoch-scale anchors.
-        from=endTime;
+        from=endTime;wrapped=s.loop.enabled;
         if(!s.loop.enabled)break;
-      }else{from=until;beat=endBeat;}
+      }else{from=until;beat=endBeat;wrapped=false;}
     }
-    c.through=from;c.beat=beat;
+    c.through=from;c.beat=beat;c.wrapped=wrapped;
   }
 
   /** True while the starting tones of the most recent play() are still sounding. */
