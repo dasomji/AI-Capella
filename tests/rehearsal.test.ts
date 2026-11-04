@@ -508,3 +508,13 @@ it('never doubles a click or note at loop wraps across 60–180 BPM',()=>{
   }
  }
 });
+
+it('clears loop bounds through the controller round trip and ignores the next overview tap',async()=>{
+ const {clearLoopCommands}=await import('../src/rehearsal/player-controls');
+ const selected={...s,loop:{enabled:true,startBeat:2,endBeat:6}};
+ const commands=preferenceCommands({loopRegion:null},selected,16);
+ expect(commands).toEqual([{type:'setLoop',pieceId:'piece',versionNo:1,enabled:false}]);
+ const canonical=run(selected,commands[0]);
+ expect(canonical.loop).toEqual({enabled:false,startBeat:null,endBeat:null});
+ expect(clearLoopCommands(canonical)).toEqual([]);
+});

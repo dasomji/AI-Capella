@@ -2,7 +2,7 @@ import { playbackDriftMs } from './rehearsal/schedule';
 import { timingFromScore, timingMatches, secondsAt } from './rehearsal/timeline';
 import { positionAt, lateJoin } from './rehearsal/controller';
 import { PlayerSession } from './rehearsal/player-session';
-import { preferenceCommands, SeekCoalescer } from './rehearsal/player-controls';
+import { clearLoopCommands, preferenceCommands, SeekCoalescer } from './rehearsal/player-controls';
 import type { Command, RehearsalState } from './rehearsal/contract';
 import { io as accountSocket } from "socket.io-client";
 import { api } from './domain-client';
@@ -3224,7 +3224,8 @@ function seekToBeat(beat: number) {
 
 function clearLoopRegion() {
   if (!loopRegion) return;
-  pushState({ loopRegion: null });
+  if(syncEnabled()){if(sharedState)for(const command of clearLoopCommands(sharedState))sendShared(command);}
+  else pushState({ loopRegion: null });
 }
 
 function finalizeLoopSelection(beatA: number, beatB: number) {

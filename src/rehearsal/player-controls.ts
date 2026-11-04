@@ -8,7 +8,7 @@ export function preferenceCommands(patch:Partial<PlaybackState>, state:Rehearsal
  if(binding && patch.transpose!==undefined) commands.push({type:'setTransposition',...binding,semitones:patch.transpose});
  if(binding && (patch.loopEnabled!==undefined || patch.loopRegion!==undefined)) {
   const selectedRegion=patch.loopRegion===undefined ? state.loop : patch.loopRegion ? {startBeat:patch.loopRegion.start,endBeat:patch.loopRegion.end}:null;
-  const region=selectedRegion?.startBeat!=null?selectedRegion:totalBeats?{startBeat:0,endBeat:totalBeats}:null;
+  const region=patch.loopRegion===null ? null : selectedRegion?.startBeat!=null?selectedRegion:totalBeats?{startBeat:0,endBeat:totalBeats}:null;
   commands.push({type:'setLoop',...binding,enabled:patch.loopRegion===null ? false : patch.loopEnabled ?? state.loop.enabled,...(region?.startBeat!=null && region?.endBeat!=null ? {startBeat:region.startBeat,endBeat:region.endBeat}:{})});
  }
  if(patch.metronomeOn!==undefined) commands.push({type:'setMetronome',enabled:patch.metronomeOn});
@@ -29,4 +29,9 @@ export class SeekCoalescer {
  }
  flush(){clearTimeout(this.timer);if(this.latest){const command=this.latest;this.latest=undefined;this.last=this.now();this.send(command);}}
  cancel(){clearTimeout(this.timer);this.latest=undefined;}
+}
+
+/** Clearing an overview selection is a no-op after the canonical round trip. */
+export function clearLoopCommands(state:RehearsalState):Command[] {
+ return state.loop.startBeat==null || state.loop.endBeat==null ? [] : preferenceCommands({loopRegion:null},state);
 }
