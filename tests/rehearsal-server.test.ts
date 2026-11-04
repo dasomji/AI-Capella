@@ -253,3 +253,12 @@ it('does not rearm an in-flight end timer after ownership loss',async()=>{
  app.setNow(end);await vi.advanceTimersByTimeAsync(end-1000);
  expect(vi.getTimerCount()).toBe(1); // ownership retry only, no rehearsal/end timer
 });
+
+it('reconciles deletions received while ownership is unavailable on recovery',async()=>{
+ stored.set(ensemble,{...initialState(ensemble,'u',0),revision:2,pieceId:'p',versionNo:1});
+ mocks.locked=false;const app=setup(),c=app.socket('delete');
+ expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).code).toBe('unavailable');
+ await mocks.library(ensemble,[{deleted:true,pieceId:'p'}]);
+ mocks.locked=true;await vi.advanceTimersByTimeAsync(1000);
+ expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).state).toMatchObject({pieceId:null,revision:3});
+});

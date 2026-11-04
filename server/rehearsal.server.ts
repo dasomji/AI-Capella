@@ -117,6 +117,15 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
     let heartbeat: ReturnType<typeof setInterval> | undefined;
     let retry: ReturnType<typeof setTimeout> | undefined;
     let failures=0;
+    const deletedPieces=new Map<string,Set<string>>();
+    async function reconcileDeleted(e:string) {
+      await serial(e,async()=>{
+        const pieces=deletedPieces.get(e);if(!pieces)return;
+        const s=await load(e);
+        if(s.pieceId && pieces.has(s.pieceId))await publish({...initialState(e,s.updatedBy,now()),revision:s.revision+1});
+        deletedPieces.delete(e);
+      });
+    }
     const pendingRecovery=new Map<string,RehearsalState>();
     function loseOwnership() {
         ownershipReady=false;
@@ -176,6 +185,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         }
         if(owner!==client || closed) throw Error('unavailable');
         ownershipReady=true;failures=0;
+        for(const e of deletedPieces.keys())await reconcileDeleted(e);
         for(const state of committed.values())if(ns.adapter.rooms.get(`rehearsal:${state.ensembleId}`)?.size)ns.to(`rehearsal:${state.ensembleId}`).emit('playback:state',state);
       } catch(error) {
         logError('rehearsal.recovery',error);if(owner===client)loseOwnership();else if(!owner)retryOwnership();throw error;
@@ -229,9 +239,16 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         if (removed)
             void Promise.resolve(socket.leave(`rehearsal:${e}`)).then(()=>armIdle([e]));
     } });
-    const offLibrary = onLibraryChange(async (e, changes) => { versions.clear(); if (!changes.some((c: any) => c.deleted))
-        return; await waitReady(); await serial(e, async () => { const s = await load(e); if (!changes.some((c: any) => c.deleted && c.pieceId === s.pieceId))
-        return; const next = initialState(e, s.updatedBy, now()); await publish({ ...next, revision: s.revision + 1 }); }); });
+    const offLibrary = onLibraryChange(async (e, changes) => {
+      versions.clear();
+      const pieces=deletedPieces.get(e)??new Set<string>();
+      for(const change of changes)if(change.deleted)pieces.add(change.pieceId);
+      if(!pieces.size)return;
+      deletedPieces.set(e,pieces);
+      // Retain invalidations through an unavailable owner; acquire drains them.
+      if(!ownershipReady)return;
+      try{await reconcileDeleted(e);}catch(error){logError('rehearsal.library',error);loseOwnership();}
+    });
     ns.on('connection', socket => {
         if ([...ns.sockets.values()].filter(s=>s.data.userId===socket.data.userId).length>10) { socket.emit('rehearsal:closed',{code:'socket_limit'});socket.disconnect(true); return; }
         let inFlight=0;
