@@ -2873,3 +2873,55 @@ integration-green,secrets,db-final,browser,transcription-browser-final,
 admin-browser-verified,offline-browser-final}.log. Contact sheet with 37 screenshots:
 /tmp/aicap-final-polish/shots/index.html (DE/EN dark/light transcription, mobile,
 offline banner and quota toast). The screenshots wait for real loaded metrics.
+
+### Phase 6a fixes — review follow-up (2026-11-04, AICAP-10)
+
+Implementation: `31ae4e5`; production-v1 only. Verified the legacy shapes in
+`68a750b:src/ensembles.ts` and `68a750b:src/library.ts` before changing tooling.
+
+1. Name-less ensemble documents use the exact historical defaults, then mapping
+   displayName, then ID; cleaned/truncated names and recovered titles are reported.
+2. CLI reserves both report paths before database queries. Mode-0600 JSON uses
+   atomic replacements and file/directory fsync before/after each ensemble commit;
+   pre-commit links are marked commit_unconfirmed for interrupted-commit recovery.
+3. Reconciliation reports invalid stored bodies per piece and checks piece/version
+   format, numeric stored size, content, settings, notation, timing and order.
+4. Revoked lead grants require --reissue-revoked; expired pending grants are
+   reported; --rotate-invitations rotates without sending. Failed mail retains links.
+5. Pending member invitation conflicts become actionable findings; song deltas commit.
+6. Export matches --project to service-account project_id; emulator IDs require demo-.
+   Foreign destination source projects require --allow-source-project-change and are flagged.
+7. Export retains only ensemble/song contents; skipped collections retain counts,
+   code IDs are excluded, and unknown root collections appear in manifest/reports.
+8. Ordering uses numeric sortKey, falling back to importedAt, with byte-order ID ties.
+   Reconciliation independently applies byte sort then stable numeric sort.
+9. MIGRATION.md specifies IAM permissions, official references and operator review.
+   --check-permissions performs reads and optional IAM introspection, never write probes;
+   emulator checks cannot certify IAM. No real-project verification was performed.
+10. Harness builds isolated artifacts itself and reports Java/Docker/npm prerequisites.
+    Seventeen cases include sixteen focused regressions and the retained end-to-end
+    rollback rehearsal, covering real CLI imports/mapping/crashes and API lead guards.
+
+Additional fixes: settings-only changes reuse validated score versions; migrated keys
+follow native numeric keys; all changed titles and missing mapping/source ensembles
+are reported; binary scan provenance retains hash/size instead of image bytes;
+transient validation failures retry with backoff and stay distinct from malformed
+scores; duplicate lead-constraints.sql removed; bilingual migration-context mail;
+invitation lead grants require a migration-source marker via committed migration 0017.
+
+Final verification (all exit 0): `npm run typecheck`; `npm test` **271/271**;
+`npm run build` with an owned `LIGHTSCORE_BUILD_ROOT`;
+`npm run test:integration` **90/90** with that isolated build;
+`npm run check:secrets` (positive control detected, clean browser artifacts);
+`npm run test:browser` (full account/theme/offline and three-client a–n acceptance);
+`npm run db:generate` (no drift); `npm run test:migration` **17/17**, including
+its independent TypeScript check and freshly built artifacts without a prior build.
+
+Evidence is retained under ignored `migration/.runtime/`:
+`phase6a-{typecheck-complete,unit-verified,build-isolated,integration-isolated,
+secrets-final,browser-final,drift-final,fixes-migration-committed}.log`.
+Intermediate failures remain recorded: a concurrently updated unit/admin assertion,
+shared-dist entry-page 500 and an earlier loop-alignment timeout. The final full
+runs passed without editing those other agents' owned files. Rehearsals used only
+demo Firestore and disposable local PostgreSQL/capture mail. No real Firebase,
+mail delivery, provisioning or push occurred. Plane AICAP-10 tracks this follow-up.
