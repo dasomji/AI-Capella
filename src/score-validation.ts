@@ -1,22 +1,22 @@
 /** Shared import/transcription musical diagnostics. Raw notation is never rewritten. */
-export type MeasureSource={measure:number;part:string;page:number;localMeasure:string;model:string;promptVersion:string;synthetic?:boolean};
+export type MeasureSource={measure:number;part:string;page:number;localMeasure:string;model:string;promptVersion:string;synthetic?:boolean;endMeasure?:number;localMeasureEnd?:string};
 export type Diagnostic={code:string;part?:string;measure?:number;voice?:string;source?:MeasureSource};
 export type ValidationReport={structurallyValid:boolean;accuracy:'unknown';reviewRequired:boolean;errors:Diagnostic[];warnings:Diagnostic[];uncertainties:unknown[]};
 export const children=(e:Element,name:string)=>Array.from(e.children).filter(c=>c.tagName===name);
 export const text=(e:Element,selector:string)=>e.querySelector(selector)?.textContent??'';
 export function validateMusicDocument(doc:Document,sources:MeasureSource[]=[],uncertainties:unknown[]=[]):ValidationReport {
  const errors:Diagnostic[]=[],warnings:Diagnostic[]=[];
- const sourceIndex=new Map(sources.map(s=>[s.part+':'+s.measure,s]));
+ const sourceIndex=new Map<string,MeasureSource>();for(const source of sources)for(let m=source.measure;m<=(source.endMeasure??source.measure);m++)sourceIndex.set(source.part+':'+m,source);
  const add=(list:Diagnostic[],code:string,part?:string,measure?:number,voice?:string)=>list.push({code,part,measure,voice,source:sourceIndex.get(part+':'+measure)});
  const root=doc.documentElement;
  if(root.tagName!=='score-partwise'||doc.querySelector('parsererror'))add(errors,'invalid_xml');
- const declarations=Array.from(doc.querySelectorAll('part-list > score-part'));const ids=declarations.map(p=>p.id);
+ const declarations=Array.from(doc.querySelectorAll('part-list > score-part'));const ids=declarations.map(p=>p.id);const declaredIds=new Set(ids);
  if(new Set(ids).size!==ids.length||ids.some(id=>!id))add(errors,'duplicate_part_id');
  const parts=children(root,'part');if(!parts.length)add(errors,'empty_score');
  if(parts.length!==ids.length || new Set(parts.map(p=>p.id)).size!==parts.length)add(errors,'part_list_mismatch');
  const alignment=new Map<number,{part:string;duration:number}[]>();
  const count=Math.max(0,...parts.map(p=>children(p,'measure').length));
- for(const part of parts){const id=part.id;if(!ids.includes(id))add(errors,'unknown_part',id);
+ for(const part of parts){const id=part.id;if(!declaredIds.has(id))add(errors,'unknown_part',id);
  const measures=children(part,'measure');if(measures.length!==count)add(warnings,'discontinuous_part',id);
  if(!part.querySelector('note'))add(warnings,'empty_part',id);
  if(part.querySelector('note')&&!part.querySelector('note > pitch, note > unpitched'))add(warnings,'all_rest_part',id);
@@ -42,7 +42,7 @@ export function validateMusicDocument(doc:Document,sources:MeasureSource[]=[],un
  const k=v+':'+(pitch?['step','alter','octave'].map(k=>text(pitch,k)||'0').join(':'):'');for(const tie of children(node,'tie').sort((a,b)=>Number(b.getAttribute('type')==='stop')-Number(a.getAttribute('type')==='stop'))){if(tie.getAttribute('type')==='stop'){if(!ties.delete(k))add(warnings,'unmatched_tie_stop',id,number,voice);}if(tie.getAttribute('type')==='start'){if(ties.has(k))add(warnings,'duplicate_tie_start',id,number,voice);ties.set(k,number);}}
  for(const slur of Array.from(node.querySelectorAll('notations > slur'))){const k=v+':'+(slur.getAttribute('number')??'1');if(slur.getAttribute('type')==='stop'&&!slurs.delete(k))add(warnings,'unmatched_slur_stop',id,number,voice);if(slur.getAttribute('type')==='start')slurs.set(k,number);}
  }
- const duration=Math.max(0,...end.values());alignment.set(number,[...(alignment.get(number)??[]),{part:id,duration}]);
+ const duration=Math.max(0,...end.values());const aligned=alignment.get(number)??[];aligned.push({part:id,duration});alignment.set(number,aligned);
  const expected=meter;
  for(const [voice,duration] of end)if(Number.isFinite(expected)&&expected>0&&Math.abs(duration-expected)>1e-6){const pickup=(index===0||index===measures.length-1||m.getAttribute('implicit')==='yes')&&duration<expected;add(warnings,pickup?'pickup_or_final_measure':'measure_duration',id,number,voice);}
  if(!end.size)add(warnings,'empty_measure',id,number);

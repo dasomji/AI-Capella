@@ -36,3 +36,5 @@ test('tied halves equal a sustained note and numeric alters normalize',()=>{
 test('elided lyric syllables retain all text',()=>{
  const xml=music([note('C',1,'<lyric><text>la</text><elision> </elision><text>lu</text></lyric>')]);expect(compareMusicXML(xml,xml.replace('<text>la</text><elision> </elision><text>lu</text>','<text>la lu</text>')).metrics.lyrics.f1).toBe(1);expect(compareMusicXML(xml,xml.replace('<text>lu</text>','<text>no</text>')).metrics.lyrics.f1).toBe(0);
 });
+
+test('onsets tolerate small divisions-normalization noise',()=>{const a=music(['<forward><duration>1</duration></forward>'+note()]);const b=music(['<forward><duration>1.00001</duration></forward>'+note()]);expect(compareMusicXML(a,b).metrics.onset.f1).toBe(1);});

@@ -59,7 +59,15 @@ function parse(xml:string):Part[]{
  });
  }finally{dom.window.close();}
 }
-function intersection(a:string[],b:string[]){const counts=new Map<string,number>();for(const s of b)counts.set(s,(counts.get(s)??0)+1);let matched=0;for(const s of a)if(counts.get(s)){matched++;counts.set(s,counts.get(s)!-1);}return matched;}
+const timingTolerance=1e-4;
+function equivalent(a:unknown,b:unknown):boolean{
+ if(a===b)return true;if(typeof a==='number'&&typeof b==='number')return Math.abs(a-b)<=timingTolerance;
+ if(Array.isArray(a)&&Array.isArray(b))return a.length===b.length&&a.every((v,i)=>equivalent(v,b[i]));
+ if(typeof a==='string'&&typeof b==='string'&&a.startsWith('[')&&b.startsWith('[')){try{return equivalent(JSON.parse(a),JSON.parse(b));}catch{return false;}}return false;
+}
+function intersection(a:string[],b:string[]){const counts=new Map<string,number>();for(const s of b)counts.set(s,(counts.get(s)??0)+1);let matched=0;const unmatched:string[]=[];for(const s of a)if(counts.get(s)){matched++;counts.set(s,counts.get(s)!-1);}else unmatched.push(s);
+ for(const s of unmatched){const candidate=[...counts.keys()].find(k=>counts.get(k)!>0&&equivalent(s,k));if(candidate!==undefined){matched++;counts.set(candidate,counts.get(candidate)!-1);}}return matched;}
+
 /** Sequence edit alignment: substitutions cost one, insertions/deletions one. */
 function align(a:Measure[],b:Measure[]){
  const fingerprint=(m:Measure)=>JSON.stringify([m.notes,m.rests]);const af=a.map(fingerprint),bf=b.map(fingerprint);

@@ -467,7 +467,7 @@ played (`playedBeat`).
 
 ### Production transcription
 
-The authenticated server and durable worker replace the prototype scan service.
+The authenticated server and durable worker process private transcription jobs.
 See docs/PLAN.md Phase 4a/4b and eval/fixtures/README.md. File imports remain
 available; transcription review UI follows in Phase 4c. Feedback has no server
 endpoint and its obsolete client entry points have been removed.

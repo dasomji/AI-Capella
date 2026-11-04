@@ -92,10 +92,11 @@ export class ScoreAssembler implements JobAssembler {
  for(const entry of registry)for(let i=0;i<total;i++)if(!seen.has(entry.id+':'+(i+1))){const template=byMeasure.get(i+1)!;provenance.push({...template,part:entry.id,synthetic:true});}
  const validationClock=performance.now();
  const report=validateMusicDocument(doc,provenance,pages.flatMap((p,index)=>[...p.uncertainties,...(p.flags??[]).map(flag=>({flag,page:index+1}))]));
- for(const source of provenance)if(source.synthetic)report.warnings.push({code:'inferred_tacet_rest',part:source.part,measure:source.measure,source});
+ const compactProvenance=compressSyntheticSources(provenance);
+ for(const source of compactProvenance)if(source.synthetic)report.warnings.push({code:'inferred_tacet_rest',part:source.part,measure:source.measure,source});
  report.warnings.push(...identityWarnings,...skippedPages.map(page=>({code:'skipped_page',page})));
  const validationMs=performance.now()-validationClock;const serializationClock=performance.now();const xml=root.outerHTML;
- return {xml,provenance:compressSyntheticSources(provenance),report,skippedPages,profile:{parseMs:Math.round(parseMs),mergeMs:Math.round(mergeMs),validationMs:Math.round(validationMs),serializationMs:Math.round(performance.now()-serializationClock),totalMs:Math.round(performance.now()-clock)}};
+ return {xml,provenance:compactProvenance,report,skippedPages,profile:{parseMs:Math.round(parseMs),mergeMs:Math.round(mergeMs),validationMs:Math.round(validationMs),serializationMs:Math.round(performance.now()-serializationClock),totalMs:Math.round(performance.now()-clock)}};
  }finally{output.window.close();}
  }
 }

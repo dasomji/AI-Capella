@@ -4,7 +4,7 @@ import { env } from './env.server';
 export function usageRange(from:string,to:string){
  const valid=(s:string)=>z.iso.datetime({offset:true}).safeParse(s).success;
  if(!valid(from)||!valid(to)||Date.parse(from)>=Date.parse(to))throw Error('Expected from < to as valid ISO instants with explicit offsets');
- if(Date.parse(to)-Date.parse(from)>366*86400000)throw Error('Usage range must be at most 366 days');
+ if(Date.parse(to)-Date.parse(from)>366*86400000)throw Error('Expected usage range of at most 366 days');
  return [new Date(from),new Date(to)] as const;
 }
 /** Dates are calendar labels in the centrally configured zone; instants are filtered [from,to). */
