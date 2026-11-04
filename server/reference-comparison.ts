@@ -1,7 +1,7 @@
 import { JSDOM } from 'jsdom';
 import { XMLValidator } from 'fast-xml-parser';
 import { children, text } from '../src/score-validation';
-export const categories=['notes','pitch','onset','duration','rests','measures','key','time','clef','lyrics','ties'] as const;
+export const categories=['voices','notes','pitch','onset','duration','rests','measures','key','time','clef','lyrics','ties'] as const;
 type Category=typeof categories[number];
 export type Metric={precision:number;recall:number;f1:number;matched:number;predicted:number;reference:number};
 type Measure=Record<Category,string[]>;
@@ -40,19 +40,22 @@ function parse(xml:string):Part[]{
  }
  }absolute+=end;return out;
  });
- // Voice labels are local exporter identifiers. Rank streams by their musical content.
- const voices=[...new Set(events.map(e=>e.voice))].sort((a,b)=>{
- const signature=(v:string)=>events.filter(e=>e.voice===v).map(e=>[e.pitch,round(e.duration)]).join('|');return signature(a).localeCompare(signature(b));});
- const voiceIds=new Map(voices.map((v,i)=>[v,i]));const open=new Map<string,Event>();const merged:Event[]=[];
+ // Note anchors use staff and musical time; voice labels are exporter-local.
+ const open=new Map<string,Event>();const merged:Event[]=[];
  for(const event of events){const key=event.voice+event.pitch;const prior=open.get(key);
  if(event.stop&&prior&&Math.abs(prior.absolute+prior.duration-event.absolute)<1e-5){prior.duration+=event.duration;prior.lyrics.push(...event.lyrics.filter(l=>!prior.lyrics.includes(l)));prior.start=event.start;if(!event.start)open.delete(key);continue;}
  merged.push(event);if(event.start)open.set(key,event);
  }
- for(const e of merged){const out=measures[e.m],anchor=JSON.stringify([voiceIds.get(e.voice),round(e.at)]);
+ for(const e of merged){const out=measures[e.m],anchor=JSON.stringify([e.voice.split(':')[0],round(e.at)]);
  if(e.rest){out.rests.push(JSON.stringify([anchor,round(e.duration)]));continue;}
- out.notes.push(JSON.stringify([anchor,e.pitch,round(e.duration)]));out.pitch.push(JSON.stringify([anchor,e.pitch]));out.onset.push(JSON.stringify([anchor,e.pitch]));out.duration.push(JSON.stringify([anchor,round(e.duration)]));
+ out.notes.push(JSON.stringify([anchor,e.pitch,round(e.duration)]));out.pitch.push(JSON.stringify([anchor,e.pitch]));out.onset.push(anchor);out.duration.push(JSON.stringify([anchor,round(e.duration)]));
  for(const lyric of e.lyrics)out.lyrics.push(JSON.stringify([anchor,lyric]));
  if(e.start||e.stop)out.ties.push(JSON.stringify([anchor,e.pitch,e.start,e.stop]));
+ }
+ // Compare voice streams separately, retaining multiplicity and staff boundaries.
+ for(let m=0;m<measures.length;m++)for(const voice of new Set(merged.filter(e=>e.m===m).map(e=>e.voice))){
+ const stream=merged.filter(e=>e.m===m&&e.voice===voice).map(e=>[round(e.at),e.pitch,round(e.duration)]).sort();
+ measures[m].voices.push(JSON.stringify([voice.split(':')[0],stream]));
  }
  const fingerprint=JSON.stringify([merged.filter(e=>!e.rest).map(e=>e.pitch).sort(),merged.map(e=>round(e.duration)).sort(),[...state].filter(([k])=>k.startsWith('clef'))]);
  const pitched=merged.filter(e=>!e.rest);const midis=pitched.map(e=>{const [step,alter,octave]=e.pitch.split(':');return Number(octave)*12+({C:0,D:2,E:4,F:5,G:7,A:9,B:11}[step as 'C']??0)+Number(alter);}).filter(Number.isFinite);

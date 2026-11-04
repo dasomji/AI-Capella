@@ -21,7 +21,7 @@ const note=(step='C',duration=1,extra='')=>`<note><pitch><step>${step}</step><al
 const music=(ms:string[],name='Soprano',voice='1')=>`<score-partwise><part-list><score-part id="P"><part-name>${name}</part-name></score-part></part-list><part id="P">${ms.map((m,i)=>`<measure number="${i+1}"><attributes><divisions>1</divisions></attributes>${m.replaceAll('</duration>','</duration><voice>'+voice+'</voice>')}</measure>`).join('')}</part></score-partwise>`;
 test('rests never enter pitched metrics; one beat shifts fail onset',()=>{
  const rest=music(['<note><rest/><duration>4</duration></note>']);const r=compareMusicXML(rest,rest);expect(r.metrics.notes.reference).toBe(0);expect(r.metrics.pitch.reference).toBe(0);expect(r.metrics.onset.reference).toBe(0);expect(r.metrics.duration.reference).toBe(0);expect(r.metrics.rests.reference).toBe(1);
- const ref=music([note('C')+note('D')]);expect(compareMusicXML(music(['<forward><duration>1</duration></forward>'+note('C')+note('D')]),ref).metrics.onset.f1).toBe(0);
+ const ref=music([note('C')+note('D')]);expect(compareMusicXML(music(['<forward><duration>1</duration></forward>'+note('C')+note('D')]),ref).metrics.onset.f1).toBe(.5);
 });
 test('missing first measure aligns later notes; renamed parts and voice labels align by content',()=>{
  const ref=music([note('C'),note('D'),note('E')]);const r=compareMusicXML(music([note('D'),note('E')],'Soprano 1','2'),ref);expect(r.metrics.notes.recall).toBeCloseTo(2/3);expect(r.reviewEffort.measuresNeedingEdits).toBe(1);
@@ -40,3 +40,20 @@ test('elided lyric syllables retain all text',()=>{
 test('onsets tolerate small divisions-normalization noise',()=>{const a=music(['<forward><duration>1</duration></forward>'+note()]);const b=music(['<forward><duration>1.00001</duration></forward>'+note()]);expect(compareMusicXML(a,b).metrics.onset.f1).toBe(1);});
 
 test('reordered renamed parts align by pitch range and rhythm content',()=>{const high=part('S','G').replace('<octave>4','<octave>5');const low=part('B','C').replace('<sign>G','<sign>F').replace('<octave>4','<octave>2');const ref=score([high,low]);const candidate=score([low,high]).replace('<part-name>Soprano</part-name>','<part-name>Upper choir</part-name>').replace('<part-name>Bass</part-name>','<part-name>Lower choir</part-name>');expect(compareMusicXML(candidate,ref).metrics.notes.f1).toBe(1);});
+
+const n=(s:string,o=4,v=1)=>`<note><pitch><step>${s}</step><octave>${o}</octave></pitch><duration>4</duration><voice>${v}</voice></note>`;
+test('one wrong note cannot reindex both voices; onset excludes pitch',()=>{
+ const m=(s:string,t:string)=>n(s,5)+'<backup><duration>4</duration></backup>'+n(t,4,2);
+ const ref=music([m('E','C'),m('F','D'),m('G','E')]);
+ const r=compareMusicXML(music([m('B','C'),m('F','D'),m('G','E')]),ref);
+ expect(r.metrics.notes.f1).toBeCloseTo(5/6);expect(r.metrics.onset.f1).toBe(1);expect(r.metrics.pitch.f1).toBeCloseTo(5/6);
+});
+test('repeated identical measures retain multiplicity and identical parts remain distinct',()=>{
+ const ref=music([n('C'),n('C'),n('C'),n('D')]);expect(compareMusicXML(music([n('C'),n('C'),n('D')]),ref).metrics.notes.recall).toBe(.75);
+ expect(compareMusicXML(score([part('S'),part('B')]),score([part('B'),part('S')])).metrics.notes.reference).toBe(2);
+});
+test('compares written pitch regardless of transpose metadata; staffs constrain matches',()=>{
+ const ref=music([n('C')]);expect(compareMusicXML(ref.replace('</attributes>','<transpose><chromatic>-2</chromatic></transpose></attributes>'),ref).metrics.notes.f1).toBe(1);
+ expect(compareMusicXML(music([n('D')]),ref).metrics.pitch.f1).toBe(0);
+ expect(compareMusicXML(ref.replace('</voice>','</voice><staff>2</staff>'),ref).metrics.notes.f1).toBe(0);
+});

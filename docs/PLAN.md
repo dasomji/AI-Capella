@@ -2030,11 +2030,10 @@ The following supersedes the earlier metric and remaining-work descriptions.
   reference, malformed job manifest and successful subsequent job.
 - E2: rests have a separate metric and never contribute to note/pitch/onset/
   duration totals. Empty pitched categories retain explicit zero denominators.
-- E3: onsets match musical quarter time plus pitch, with 1e-4 quarter tolerance;
+- E3: onsets match staff plus musical quarter time (without pitch), with 1e-4 quarter tolerance;
   one-beat shifts fail. Divisions and numeric alters normalize.
 - E4: measure-sequence edit DP aligns insertions/deletions; content fingerprints
-  and pitch/rhythm/clef profiles pair renamed parts; voice streams ignore exporter
-  labels. Attribute changes score once, tied halves merge, and all elided lyric
+  and pitch/rhythm/clef profiles pair renamed parts; note anchors ignore exporter voice labels, with a separate voice-stream metric. Attribute changes score once, tied halves merge, and all elided lyric
   text is retained. Tests cover all eight requested reviewer cases, renamed part
   reordering and normalization noise. Alignment remains a deterministic heuristic,
   not a measured human editing estimate or product-quality acceptance threshold.
@@ -2158,3 +2157,11 @@ before the successful run. An initial integration command ended with status 143
 after check 61; the bounded rerun completed all 77 tests. Logs are retained as
 `.review-evidence/p4c-design-{typecheck,unit,build,secrets,db,standard-browser,browser-verified,integration-final}.log`.
 No push, deployment or OpenAI calls.
+
+### Phase 4 final fixes — in progress
+
+B1: note/pitch/duration anchors use staff and measure-local quarter time, with
+multiset matching; onset excludes pitch. Pitch is scored at matching onsets.
+Voice streams have a separate content metric, independent of exporter labels.
+Comparison uses **written pitch**; transpose metadata does not convert to sounding
+pitch. Sequence alignment retains duplicate measures; parts retain multiplicity.
