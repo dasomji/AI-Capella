@@ -1,49 +1,153 @@
-name: Deploy to GitHub Pages
-
+name: Production CI (no deployment)
 on:
+  pull_request:
   push:
-    branches:
-      - claude/amazing-bardeen-c4fcke
-  workflow_dispatch:
-
+    branches: [main, production-v1]
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
 concurrency:
-  group: pages
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
-
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
 jobs:
-  build:
+  checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [typecheck, unit, build, secrets, eval, migration, backup, docker]
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          # Node 24 from 24.22.1 on: its CA bundle has the eMudhra fix (Oct 2026 security release).
-          # check-latest: don't settle for an older 24.x the runner may have cached.
-          node-version: 24
-          check-latest: true
-      - name: Node has the CA fix
-        run: node -e "const [a,b,c]=process.versions.node.split('.').map(Number); if (a*1e6+b*1e3+c < 24022001) { console.error('Node '+process.version+' predates the eMudhra CA fix'); process.exit(1) }"
+          node-version: 22
+          cache: npm
       - run: npm ci
-      - run: npm run build
-        env:
-          # The scan service's address (Settings -> Secrets and variables -> Actions -> Variables).
-          # Without it the app simply doesn't offer "Scan sheet music".
-          VITE_OMR_URL: ${{ vars.OMR_URL }}
-      - uses: actions/upload-pages-artifact@v5
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        if: matrix.task == 'migration'
         with:
-          path: dist
-
-  deploy:
-    needs: build
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        if: matrix.task == 'migration'
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ hashFiles('rules-test/package-lock.json') }}
+      - run: npm ci --prefix rules-test
+        if: matrix.task == 'migration'
+      - name: Sandbox dependencies
+        if: contains(fromJSON('["unit", "eval", "backup"]'), matrix.task)
+        run: sudo apt-get update && sudo apt-get install -y python3 libseccomp2 poppler-utils
+      - name: Run check
+        env:
+          CI: 'true'
+        run: |
+          mkdir -p .review-evidence
+          exec > >(tee .review-evidence/check-${{ matrix.task }}.log) 2>&1
+          case '${{ matrix.task }}' in
+            typecheck) npm run typecheck ;;
+            unit) npm test && TZ=America/New_York npm test ;;
+            build) npm run build ;;
+            secrets) npm run check:secrets ;;
+            eval) npm run eval:transcription -- --dry-run ;;
+            migration) npm run build && npm run test:migration ;;
+            backup) npm run test:backup ;;
+            docker) docker build -t lightscore-ci-web -f Dockerfile . && docker build -t lightscore-ci-worker -f Dockerfile.worker . && docker run --rm lightscore-ci-web npm run ops:canary && docker run --rm lightscore-ci-worker npm run ops:canary ;;
+          esac
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: checks-${{ matrix.task }}
+          include-hidden-files: true
+          path: |
+            .review-evidence/**/*.log
+            .review-evidence/**/*.png
+            .review-evidence/**/*.zip
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+  integration-browser:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    timeout-minutes: 25
+    services:
+      mailpit:
+        image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
+        ports: ['21025:1025', '28025:8025']
+      postgres:
+        image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+        env:
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: fixture
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 30
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://postgres:fixture-only@127.0.0.1:5432/fixture
+      BETTER_AUTH_SECRET: ci-fixture-only-secret-at-least-32-characters
+      BETTER_AUTH_URL: http://localhost:23001
+      TRUSTED_ORIGINS: http://localhost:23001
+      MAIL_TRANSPORT: smtp
+      MAILPIT_URL: http://127.0.0.1:28025
+      SMTP_URL: smtp://127.0.0.1:21025
+      S3_ENDPOINT: http://127.0.0.1:28333
+      S3_BUCKET: ci-fixture
+      S3_ACCESS_KEY_ID: local-only
+      S3_SECRET_ACCESS_KEY: local-only
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y python3 libseccomp2 poppler-utils
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - name: Start local S3 service
+        run: docker run -d --name ci-seaweedfs -p 127.0.0.1:28333:8333 -v "$PWD/scripts/s3-local.json:/etc/seaweedfs/s3.json:ro" chrislusf/seaweedfs:4.06@sha256:a064c6923daf4451c943cec2f437a67523d7792ee589089bc4d4c27a61d78dea server -s3 -s3.config=/etc/seaweedfs/s3.json
+      - name: Wait for S3
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --silent --output /dev/null http://127.0.0.1:28333/; then exit 0; fi
+            sleep 1
+          done
+          docker logs ci-seaweedfs
+          exit 1
+      - run: npm run db:migrate
+      - name: Schema drift
+        run: npm run db:generate && git diff --exit-code -- drizzle && test -z "$(git ls-files --others --exclude-standard drizzle)"
+      - run: mkdir -p .review-evidence && npm run build 2>&1 | tee .review-evidence/build.log
+      - run: mkdir -p .review-evidence && npm run test:ops 2>&1 | tee .review-evidence/test-ops.log
+      - run: mkdir -p .review-evidence && npm run test:integration 2>&1 | tee .review-evidence/test-integration.log
+      - run: mkdir -p .review-evidence && npm run test:browser 2>&1 | tee .review-evidence/test-browser.log
+        env:
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+      - run: mkdir -p .review-evidence && npm run test:browser:transcription 2>&1 | tee .review-evidence/test-browser-transcription.log
+        env:
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+      - name: Collect service logs
+        if: failure()
+        run: |
+          mkdir -p .review-evidence
+          docker logs ci-seaweedfs > .review-evidence/seaweedfs.log 2>&1
+      - name: Stop owned S3 service
+        if: always()
+        run: docker rm -fv ci-seaweedfs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: integration-browser
+          include-hidden-files: true
+          path: |
+            .review-evidence/**/*.log
+            .review-evidence/**/*.png
+            .review-evidence/**/*.zip
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore

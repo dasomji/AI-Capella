@@ -1,0 +1,1 @@
+ALTER TABLE "score_versions" ADD COLUMN "timing" jsonb;

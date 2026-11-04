@@ -1,3 +1,8 @@
+import { countInClickTimes, playbackSchedule } from './rehearsal/schedule';
+import { positionAt } from './rehearsal/controller';
+import { secondsAt, beatAt, type PieceTiming } from './rehearsal/timeline';
+import type { RehearsalState } from './rehearsal/contract';
+import { serverToAudioTime } from './rehearsal/client-clock';
 import type { Score } from './score';
 import { getBeatMarkers } from './score';
 import { dynamicLevels } from './dynamics';
@@ -674,7 +679,7 @@ export class AudioEngine {
     this.sound = sound;
     if (sound === 'piano') void loadPianoSamples(this.ctx);
     this.applyTone();
-    if (this.playing && !this.isCountingIn()) this.play(this.scheduledBeat(), 60 / this.secPerBeat, this.lastTranspose);
+    if (!this.canonical && this.playing && !this.isCountingIn()) this.play(this.scheduledBeat(), 60 / this.secPerBeat, this.lastTranspose);
   }
 
   /** One note in the current sound (the synthesized piano stands in until the samples are loaded). */
@@ -712,7 +717,7 @@ export class AudioEngine {
       this.pendingMetronomeReschedule = true;
       return;
     }
-    this.play(this.scheduledBeat(), 60 / this.secPerBeat, this.lastTranspose);
+    if(!this.canonical)this.play(this.scheduledBeat(), 60 / this.secPerBeat, this.lastTranspose);
   }
 
   /** Volume (0-1) for non-soloed parts while at least one part has its Solo button active. */
@@ -744,8 +749,8 @@ export class AudioEngine {
   // normally do has to wait until the count-in actually ends -- see its comment for why.
   private pendingMetronomeReschedule = false;
 
-  private clearSchedule() {
-    const now = this.ctx.currentTime;
+  private clearSchedule(at = this.ctx.currentTime) {
+    const now = Math.max(this.ctx.currentTime,at);
     for (const voice of this.scheduledVoices) {
       try {
         // Fade from wherever the gain currently is down to (near-)zero before stopping, instead
@@ -887,13 +892,102 @@ export class AudioEngine {
     this.scheduleAhead(true);
   }
 
+  private canonical: {state:RehearsalState;timing:PieceTiming;offset:number;server:number;audio:number;through:number;beat?:number;wrapped?:boolean} | null = null;
+  private previousCanonical: typeof this.canonical = null;
+  outputLatencyOffsetMs = 0;
+  sharedClockReady?: () => boolean;
+  get context() {return this.ctx;}
+  /** Canonical scheduling uses the shared tempo map and explicit effective instant.
+   * Existing voices survive until that instant; future voices are faded/cancelled there. */
+  sharedClickTimes:number[]=[];
+  scheduleShared(state:RehearsalState,timing:PieceTiming,now:number,offset:number,pitches:number[]) {
+    const decision=playbackSchedule(state,now,timing);
+    const at=serverToAudioTime(decision.effectiveAt,offset,{state:this.ctx.state,currentTime:this.ctx.currentTime,outputLatency:this.ctx.outputLatency,baseLatency:this.ctx.baseLatency,getOutputTimestamp:()=>{const t=this.ctx.getOutputTimestamp?.()??{};return {contextTime:t.contextTime??0,performanceTime:t.performanceTime??0};}})-this.outputLatencyOffsetMs/1000;
+    this.clearSchedule(at);
+    this.previousCanonical=this.canonical;
+    this.canonical={state,timing,offset,server:decision.effectiveAt,audio:at,through:0};
+    this.cancelIdleRest();this.playing=decision.playing;this.waiting=this.ctx.state!=='running';
+    this.pausedBeat=decision.beat;this.lastTranspose=state.transposition;
+    this.metronomeEnabled=state.metronome;
+    const audioAt=(server:number)=>at+(server-decision.effectiveAt)/1000;
+    if(decision.startingTones && decision.startingTones.until>decision.effectiveAt){
+      const {from,until}=decision.startingTones;
+      const start=Math.max(this.ctx.currentTime,audioAt(Math.max(from,decision.effectiveAt)));
+      for(const pitch of pitches)this.scheduledVoices.push(playDuNote(this.ctx,this.masterGain,start,Math.max(.02,(until-Math.max(decision.effectiveAt,from))/1000),pitch+state.transposition,1/Math.sqrt(Math.max(1,pitches.length))));
+    }
+    this.sharedClickTimes=[];
+    if(decision.countIn){
+      const measure=timing.measures.findLast(m=>m.startBeat<=state.anchor.beat)??timing.measures[0];
+      const localBpm=(timing.tempos.findLast(p=>p.beat<=state.anchor.beat)?.bpm??timing.baseBpm)*state.bpm/timing.baseBpm;
+      const pulse=60000/localBpm*4/(measure?.beatType??4);
+      for(const time of countInClickTimes(decision.countIn.from,decision.countIn.until,pulse,decision.effectiveAt)) {
+        this.sharedClickTimes.push(time);
+        this.scheduledVoices.push(playClick(this.ctx,this.metronomeGain,audioAt(time),Math.abs(time-decision.countIn.from)<.001));
+      }
+    }
+    this.fillShared();
+    return {serverTime:decision.musicAt,audioTime:audioAt(decision.musicAt)};
+  }
+  /** Compare the live output mapping with the mapping used to lay this schedule.
+   * Visual light/compressor compensation must never drive audio corrections. */
+  sharedDriftMs(now:number,offset:number,performanceTime=performance.now(),timeOrigin=performance.timeOrigin) {
+    const c=this.canonical;if(!c)return 0;
+    const mapped=serverToAudioTime(now,offset,this.ctx,performanceTime,timeOrigin)-this.outputLatencyOffsetMs/1000;
+    return (mapped-(c.audio+(now-c.server)/1000))*1000;
+  }
+  private sharedServerNow(c= this.canonical!) {return c.server+(this.ctx.currentTime-c.audio-this.outputDelay()-this.outputLatencyOffsetMs/1000)*1000;}
+  private fillShared() {
+    const c=this.canonical;if(!c || this.sharedClockReady?.()===false)return;this.waiting=this.ctx.state!=='running';if(this.waiting)return;
+    this.waiting=false;
+    const {state:s,timing:t}=c;
+    if(s.status!=='playing' && s.status!=='countingIn')return;
+    const musicAt=Math.max(s.anchor.serverTime,s.countInUntil??0,s.startingTonesUntil??0,c.server);
+    // Keep elapsed milliseconds and the musical cursor across refills and wraps.
+    let from=Math.max(c.through,musicAt-c.server);
+    let beat=c.beat ?? positionAt(s,c.server+from,t);
+    const horizon=Math.max(0,this.sharedServerNow(c)-c.server)+LOOKAHEAD_SEC*1000;
+    const scale=t.baseBpm/s.bpm;
+    let wrapped=c.wrapped??false;
+    let guard=0;
+    while(from<horizon && guard++<512){
+      const end=s.loop.enabled ? s.loop.endBeat??t.totalBeats : t.totalBeats;
+      if(beat>=end){if(!s.loop.enabled)break;beat=s.loop.startBeat??0;wrapped=true;}
+      const endTime=from+(secondsAt(end,t)-secondsAt(beat,t))*scale*1000;
+      const until=Math.min(horizon,endTime);
+      const endBeat=until>=endTime ? end : Math.min(end,beatAt(secondsAt(beat,t)+(until-from)/1000/scale,t));
+      const audioAt=(b:number)=>c.audio+from/1000+(secondsAt(b,t)-secondsAt(beat,t))*scale;
+      for(const note of this.score.notes){
+        if(note.startBeat>=endBeat || note.startBeat+note.durationBeats<=beat)continue;
+        // Only pick up held notes at a new schedule/loop start, never at a lookahead refill.
+        if(note.startBeat<beat && from!==musicAt-c.server && !wrapped)continue;
+        const gain=this.partGains.get(note.partId);if(!gain)continue;
+        const start=Math.max(this.ctx.currentTime,audioAt(Math.max(beat,note.startBeat)));
+        const finish=audioAt(Math.min(end,note.startBeat+note.durationBeats));
+        if(finish<=start)continue;
+        const level=this.dynamicLevel(note.partId,note.startBeat);
+        this.scheduledVoices.push(note.unpitched?playTap(this.ctx,gain,start,note.midi,level):this.playNote(gain,start,finish-start,note.midi+s.transposition,level));
+      }
+      if(s.metronome)for(const marker of this.beatMarkers)
+        if(marker.beat>=beat && marker.beat<endBeat)this.scheduledVoices.push(playClick(this.ctx,this.metronomeGain,Math.max(this.ctx.currentTime,audioAt(marker.beat)),marker.isDownbeat));
+      if(until>=endTime){
+        beat=s.loop.enabled ? s.loop.startBeat??0 : end;
+        // Relative times retain sub-millisecond progress even at epoch-scale anchors.
+        from=endTime;wrapped=s.loop.enabled;
+        if(!s.loop.enabled)break;
+      }else{from=until;beat=endBeat;wrapped=false;}
+    }
+    c.through=from;c.beat=beat;c.wrapped=wrapped;
+  }
+
   /** True while the starting tones of the most recent play() are still sounding. */
   isPlayingStartTones(): boolean {
+    if(this.canonical){const c=this.canonical,now=this.sharedServerNow(c);return now>=c.server && (c.state.startingTonesUntil??0)>now;}
     return this.playing && !this.waiting && this.heardTime() < this.startTonesEndCtxTime;
   }
 
   /** True while a count-in (or starting tones) scheduled by the most recent play() is still sounding, before the actual music starts. */
   isCountingIn(): boolean {
+    if(this.canonical){const c=this.canonical,now=this.sharedServerNow(c);return now>=c.server && Math.max(c.state.countInUntil??0,c.state.startingTonesUntil??0)>now;}
     return this.playing && !this.waiting && this.lastCountInBeats > 0 && this.heardTime() < this.playStartCtxTime;
   }
 
@@ -903,13 +997,14 @@ export class AudioEngine {
    * actually schedules anything once the already-scheduled horizon gets close.
    */
   tick() {
+    if(this.canonical){this.fillShared();return;}
     if (!this.playing || this.waiting) return;
     if (this.pendingMetronomeReschedule && !this.isCountingIn()) {
       // The count-in that blocked this in setMetronomeEnabled() has now actually finished --
       // apply the deferred toggle with a full reschedule, same as the normal (not-counting-in)
       // path would have done immediately.
       this.pendingMetronomeReschedule = false;
-      this.play(this.scheduledBeat(), 60 / this.secPerBeat, this.lastTranspose);
+      if(!this.canonical)this.play(this.scheduledBeat(), 60 / this.secPerBeat, this.lastTranspose);
       return;
     }
     const horizonBeats = LOOKAHEAD_REFILL_SEC / this.secPerBeat;
@@ -995,6 +1090,7 @@ export class AudioEngine {
   }
 
   stop() {
+    this.canonical=null;this.previousCanonical=null;
     this.clearSchedule();
     this.layToken++;
     this.waiting = false;
@@ -1003,6 +1099,12 @@ export class AudioEngine {
   }
 
   isPlaying() {
+    if(this.canonical){
+      const c=this.canonical,now=this.sharedServerNow(c);
+      if(c.state.status==='playing'||c.state.status==='countingIn')return c.state.endsAt===null || now<c.state.endsAt;
+      const previous=this.previousCanonical;
+      return !!previous && now<c.server && (previous.state.status==='playing'||previous.state.status==='countingIn');
+    }
     return this.playing;
   }
 
@@ -1060,6 +1162,7 @@ export class AudioEngine {
    * Bluetooth), so the light would otherwise hit each note before it sounds.
    */
   getCurrentBeat(): number {
+    if(this.canonical){const c=this.previousCanonical && this.sharedServerNow()<this.canonical.server?this.previousCanonical:this.canonical;return positionAt(c.state,this.sharedServerNow(c),c.timing);}
     if (!this.playing) return this.pausedBeat;
     if (this.waiting) return this.wallBeat();
     return this.beatAt(this.heardTime());
@@ -1088,6 +1191,7 @@ export class AudioEngine {
    * sound.
    */
   visualBeat(atMs: number): number {
+    if(this.canonical)return this.getCurrentBeat();
     if (!this.playing) return this.pausedBeat;
     if (this.waiting) return this.wallBeat();
     const nowSec = performance.now() / 1000;

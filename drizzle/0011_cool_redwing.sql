@@ -1,0 +1,2 @@
+CREATE INDEX "provider_calls_started_idx" ON "provider_calls" USING btree ("started_at");--> statement-breakpoint
+CREATE INDEX "provider_calls_model_started_idx" ON "provider_calls" USING btree ("model","started_at");

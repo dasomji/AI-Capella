@@ -1,3 +1,22 @@
+import { localLibrary } from './local-library';
+import { appendAdminAccountLink } from './admin-account';
+import { isOffline } from './offline-state';
+import { off } from './offline-text';
+import { registerOfflineWorker } from './offline-worker';
+import { offlineStorageAvailable, offlineAccountId, purgeAccount, purgeEnsemble, restoreIdentity } from './offline-store';
+import { preparePieces, preparePiece, unpreparePiece, isPrepared, offlineUsage, removeOfflineEnsemble } from './library';
+import { installTranscription } from './transcription';
+import { tr } from './i18n';
+import { playbackDriftMs } from './rehearsal/schedule';
+import { timingFromScore, timingMatches, secondsAt } from './rehearsal/timeline';
+import { positionAt, lateJoin } from './rehearsal/controller';
+import { PlayerSession } from './rehearsal/player-session';
+import { clearLoopCommands, preferenceCommands, SeekCoalescer } from './rehearsal/player-controls';
+import type { Command, RehearsalState } from './rehearsal/contract';
+import { io as accountSocket } from "socket.io-client";
+import { api } from './domain-client';
+import { createEnsembleSheet, membersSheet, leaveEnsemble } from './ensemble-ui';
+import { pt, domainError } from './i18n';
 // Typefaces are bundled with the app rather than loaded from Google's servers: no visitor data goes
 // to a third party (German courts have fined sites for remotely loaded Google Fonts), and they keep
 // working on weak rehearsal-room Wi-Fi.
@@ -16,13 +35,12 @@ import { StaffView } from './staffView';
 import { OverviewStrip } from './overview';
 import { colorForPart } from './palette';
 import { measureAtBeat, playedBeat, type Score } from './score';
-import { deleteImportedSong, readScoreFile, saveSongOrder, songOrder, saveImportedSong, saveScanMarks, saveSongConfig, saveSongSections, subscribeToSongs, updateSongMetadata, type ScanMark, type SongFormat, type StoredSong, type VoiceClef } from './library';
-import { ensureSignedIn, isFirebaseConfigured } from './firebase';
+import { clearLibrary, scoreBody, deleteImportedSong, readScoreFile, saveSongOrder, songOrder, saveImportedSong, saveScanMarks, saveSongConfig, saveSongSections, subscribeToSongs, updateSongMetadata, type ScanMark, type SongFormat, type StoredSong, type VoiceClef } from './library';
+const serverLibraryEnabled = true;
 import { animateRibbons, coverDataFromScore, drawCover, drawMark, prepareCanvas, type CoverData } from './artwork';
 import { icon } from './icons';
 import { countLabel, keyName, lang, setLang, t, type MessageKey } from './i18n';
 import { canvasFontsReady } from './theme';
-import { initScan, openScanSheet, scanAvailable, scanStatusLine } from './scan';
 import { WaveBackdrop } from './backdrop';
 import { DESIGN_CHOICE, onSystemDesignChange, PAPER_DESIGN, PARCHMENT, setDesignChoice, START_DRAFT, START_STAFF, START_STAGE, type DesignChoice } from './design';
 import { initPaper, paintSwatch, PAPER_KINDS, paperKind, setPaperKind, type PaperKind } from './paper';
@@ -35,32 +53,11 @@ import { createPowerHint } from './powerHint';
 import { attachReorder } from './reorder';
 import type { PdfVoice } from './exportPdf';
 import { INTRO_ON, introDue, introRunning, startIntro, stopIntro } from './intro';
-import { deviceSummary, feedbackMenuLabel, feedbackOn, initFeedback, openFeedbackInbox, openFeedbackSheet, openLeaderFeedbackMenu } from './feedback';
 import { canSwing, swingMap, swingScore } from './swing';
 import { loadScriptFont } from './goldInk';
 import { closeOverlay, confirmDialog, isNarrow, openMenu, openPopover, openSheet, promptDialog, toast } from './ui';
 import * as sync from './sync';
-import {
-  activeEnsemble,
-  ensembleById,
-  ensembleNeedsCode,
-  forgetEnsemble,
-  joinWithCode,
-  leads,
-  ensembleNeedsLeaderCode,
-  setLeaderCode,
-  MIN_CODE_LENGTH,
-  ensembleName,
-  ENSEMBLES,
-  FIRST_ENSEMBLE_ID,
-  PUBLIC_ID,
-  refreshEnsembleNames,
-  renameEnsemble,
-  setActiveEnsemble,
-  setEnsembleCode,
-  syncMemberships,
-  unlockedEnsembles,
-} from './ensembles';
+import { account, canEditPieces, canManageMembers, activeEnsemble, ensembleById, forgetEnsemble, leads, ensembleName, PUBLIC_ID, refreshEnsembleNames, renameEnsemble, setActiveEnsemble, unlockedEnsembles } from './ensembles';
 import type { PlaybackState } from './sync';
 
 interface SongEntry {
@@ -70,6 +67,7 @@ interface SongEntry {
   xml?: string; // imported songs, already in memory
   format?: SongFormat; // only meaningful alongside `xml`; built-in songs are always MusicXML
   imported?: boolean;
+  localOnly?: boolean;
   partNameOverrides?: Record<string, string>;
   savedConfig?: StoredSong['savedConfig'];
   clefOverrides?: StoredSong['clefOverrides'];
@@ -77,7 +75,8 @@ interface SongEntry {
   removedParts?: string[];
   splitParts?: string[];
   swing?: boolean;
-  scanMarks?: ScanMark[]; // a scanned song's places to check (scan.ts)
+  scanMarks?: ScanMark[]; // a scanned song's places to check (transcription review)
+  contentHash?: string;
   order?: number; // imported songs: their place in the repertoire (songOrder)
 }
 
@@ -87,6 +86,7 @@ const BUILTIN_SONGS: SongEntry[] = [
   { id: 'evening-rise', title: 'Evening Rise', url: `${import.meta.env.BASE_URL}evening-rise.musicxml` },
 ];
 let importedSongs: SongEntry[] = [];
+let privateSongs:SongEntry[]=[];
 const ACCEPTED_EXTENSIONS = ['.musicxml', '.xml', '.mxl', '.mid', '.midi'];
 const MIDI_EXTENSIONS = ['.mid', '.midi'];
 
@@ -113,8 +113,9 @@ function modeName(mode: 'solo' | 'ensemble'): string {
 // The ensemble whose folder is open (ensembles.ts). Chosen on the title screen and fixed once it is
 // left: switching to another ensemble reloads, like switching modes.
 let currentEnsemble: string = activeEnsemble() || PUBLIC_ID;
+const editable = () => canEditPieces(currentEnsemble);
 function inPublicFolder(): boolean {
-  return currentEnsemble === PUBLIC_ID;
+  return serverLibraryEnabled && currentEnsemble === PUBLIC_ID;
 }
 /** The ensemble a new song is added to: the open one. */
 function importEnsemble(): string {
@@ -127,17 +128,12 @@ app.innerHTML = `
     <h1 class="landing-name" aria-label="LightScore"><span class="ls-l">Light</span>Score</h1>
     <div class="landing-choice">
       <p class="landing-dedication" id="landing-dedication" hidden></p>
-      <form class="landing-code" id="landing-code" hidden>
-        <input id="landing-code-input" class="code-line" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${t('codePlaceholder')}" aria-label="${t('codePlaceholder')}" />
-        <button type="submit" class="mode-btn code-open">${icon('key')}<span>${t('codeOpen')}</span></button>
-        <p class="landing-code-error" id="landing-code-error" role="alert"></p>
-        <button type="button" class="link-btn landing-aside" id="landing-code-aside"></button>
-      </form>
+      <div class="landing-empty" id="landing-empty" hidden><p>${pt('noEnsemble')}</p><p class="ctl-note">${pt('invitationNeeded')}</p><button class="link-btn" id="landing-samples">${pt('viewSamples')}</button></div>
       <div class="landing-modes">
         <button type="button" class="mode-btn" id="mode-solo-btn">${icon('user')}<span>${t('practiseAlone')}</span></button>
         <button type="button" class="mode-btn" id="mode-ensemble-btn">${icon('users')}<span>${t('rehearseTogether')}</span></button>
       </div>
-      <button type="button" class="link-btn landing-aside" id="landing-enter-code" hidden>${t('enterCode')}</button>
+      <button type="button" class="link-btn landing-aside" id="landing-create">${pt('createEnsemble')}</button>
     </div>
   </section>
 
@@ -145,7 +141,6 @@ app.innerHTML = `
     <header class="lib-top">
       <span class="brand"><canvas class="mark" aria-hidden="true"></canvas><span class="wordmark" aria-label="LightScore"><span class="ls-l">Light</span>Score</span></span>
       <div class="lib-top-r">
-        <button type="button" class="badge fb-btn" data-action="feedback" aria-label="${t('fbButton')}" hidden>${icon('chat')}<span>${t('fbButton')}</span><i class="fb-count" hidden></i></button>
         <div class="seg mode-seg" id="mode-seg" role="group" aria-label="${t('mode')}">
           <button type="button" data-action="mode" data-mode="solo">${icon('user')}<span>${modeName('solo')}</span></button>
           <button type="button" data-action="mode" data-mode="ensemble">${icon('users')}<span>${modeName('ensemble')}</span><i class="live-dot" aria-hidden="true"></i></button>
@@ -161,10 +156,11 @@ app.innerHTML = `
         </div>
         <div class="lib-tools">
           <label class="search" id="lib-search-wrap" hidden>${icon('search')}<input id="lib-search" type="search" placeholder="${t('searchTitles')}" aria-label="${t('searchTitles')}" /></label>
-          <button type="button" class="scan-chip" id="scan-chip" hidden></button>
+          <button type="button" class="btn" id="transcription-entry" hidden><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H5v18h14V9M14 3v6h5M8 12h7M8 16h7M19 1v6M16 4h6"/></svg><span>${tr('entry')}</span></button>
           <button type="button" class="btn primary" id="import-btn">${icon('plus')}<span>${t('addArrangement')}</span></button>
         </div>
       </div>
+      <section id="transcription-jobs" hidden aria-label="${tr('work')}"></section>
       <div id="lib-banner" class="banner" role="status" hidden></div>
       <ul id="song-grid" class="song-grid"></ul>
       <p class="lib-tip">${icon('upload')}<span>${t('dropTip')}</span></p>
@@ -185,7 +181,6 @@ app.innerHTML = `
           <button type="button" data-action="view" data-view="roll" aria-label="${t('pianoRoll')}">${icon('roll')}<span>${t('pianoRoll')}</span></button>
           <button type="button" data-action="view" data-view="staff" aria-label="${t('sheetMusic')}">${icon('sheet')}<span>${t('sheetMusic')}</span></button>
         </div>
-        <button type="button" class="badge fb-btn" data-action="feedback" aria-label="${t('fbButton')}" hidden>${icon('chat')}<span>${t('fbButton')}</span><i class="fb-count" hidden></i></button>
         <button type="button" class="badge" id="mode-badge"></button>
         <button type="button" class="icon-btn landscape-only" data-action="open-mixer" aria-label="${t('voices')}">${icon('mixer')}</button>
         <button type="button" class="icon-btn" id="player-menu-btn" aria-label="${t('menu')}">${icon('more')}</button>
@@ -266,7 +261,6 @@ const searchWrapEl = document.querySelector<HTMLLabelElement>('#lib-search-wrap'
 const searchInput = document.querySelector<HTMLInputElement>('#lib-search')!;
 const importBtn = document.querySelector<HTMLButtonElement>('#import-btn')!;
 const importInput = document.querySelector<HTMLInputElement>('#import-input')!;
-const scanChip = document.querySelector<HTMLButtonElement>('#scan-chip')!;
 const songTitleEl = document.querySelector<HTMLHeadingElement>('#song-title')!;
 const songMetaEl = document.querySelector<HTMLSpanElement>('#song-meta')!;
 const voiceListEl = document.querySelector<HTMLUListElement>('#voice-list')!;
@@ -316,9 +310,6 @@ let loopRegion: LoopRegion | null = null;
 let manualSections: { label: string; beat: number }[] = [];
 let loopEnabled = false;
 let startTonesOn = false;
-// Leading mode (Ensemble): the device controlling playback for everyone, or null.
-let leaderId: string | null = null;
-const myDeviceId = sync.getDeviceId();
 let libraryFromCache = false;
 // Whether the next Play should count-in (see PlaybackState.freshStart's doc comment in sync.ts).
 // Kept in sync via applyPlaybackState the same way metronomeOn/loopEnabled are.
@@ -346,7 +337,7 @@ let lastAppliedTiming: { playing: boolean; originBeat: number; originServerTimeM
 let lastAppliedMetronomeOn = false;
 
 type LibraryState = 'loading' | 'ready' | 'offline' | 'unconfigured' | 'locked';
-let libraryState: LibraryState = isFirebaseConfigured ? 'loading' : 'unconfigured';
+let libraryState: LibraryState = serverLibraryEnabled ? 'loading' : 'unconfigured';
 let libraryError = '';
 
 function updateCanvasRect() {
@@ -367,6 +358,8 @@ let stopLandingRibbons: (() => void) | null = null;
  * song switches to the player.
  */
 function setViewMode(mode: 'landing' | 'library' | 'player') {
+ if(mode!=='player'&&app.classList.contains('mode-player')&&transcriptionPreviewMode){sessionMode=transcriptionPreviewMode;transcriptionPreviewMode=undefined;privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));renderModeControls();}
+  if(mode === 'landing') renderLanding(true);
   app.classList.toggle('mode-landing', mode === 'landing');
   app.classList.toggle('mode-library', mode === 'library');
   app.classList.toggle('mode-player', mode === 'player');
@@ -436,55 +429,135 @@ document.querySelector<HTMLButtonElement>('#library-back-btn')!.addEventListener
 // mode a developer's own test pass last left on that device/browser. Ordinary persistence
 // (so reopening the app mid-rehearsal doesn't re-ask every time) is unaffected going forward.
 const MODE_STORAGE_KEY = 'ai-capella-mode-v2';
-// Solo = fully local, no shared playback session at all (even though Firebase may be
-// configured) -- for practicing alone without nudging anyone else's playback. Ensemble = the
-// single shared session. The shared song *library* stays available either way; only playback sync
-// is gated by this choice. Resolved once at startup and changed only via the mode switch, which
-// just reloads -- there's no in-place teardown of an active Firestore subscription.
+// Solo keeps playback local; Together owns the authenticated ensemble session.
+// The shared library remains available in either mode. Leaving the account,
+// ensemble or mode disposes the playback owner before the next arrival.
 let sessionMode: 'solo' | 'ensemble' = 'solo';
+let transcriptionPreviewMode:'solo'|'ensemble'|undefined;
+let leavingAccount = false;
+let playerSession: PlayerSession | null = null;
+let sharedState: RehearsalState | null = null;
+let sharedReady = false;
+function restoreSharedLoopPreview(){
+ pianoRoll?.setLoopRegion(loopRegion);overview?.setLoopRegion(loopRegion);scheduleRender();
+}
+function sendShared(command:Command) {
+ if(!sharedReady || !playerSession){if(command.type==='setLoop')restoreSharedLoopPreview();return;}
+ void playerSession.send(command).then(ack=>{if(command.type==='setLoop' && ack.status==='rejected')restoreSharedLoopPreview();})
+ .catch(e=>{if(command.type==='setLoop')restoreSharedLoopPreview();sharedNotice(errorText(e));});
+}
+const sharedSeeks=new SeekCoalescer(sendShared);
+document.addEventListener('pointerup',()=>sharedSeeks.flush());
+function leavePlaybackSession() {sharedSeeks.cancel(); playerSession?.dispose(); playerSession=null; sharedState=null; sharedReady=false; }
+function sharedReadiness(ready:boolean) {
+ sharedReady=ready;
+ app.classList.toggle('sync-connecting',syncEnabled() && !ready);
+ document.querySelectorAll<HTMLButtonElement>('.transport button, [data-action=play], [data-action=stop]').forEach(b=>{b.disabled=syncEnabled() && !ready;});
+ modeBadge.title=syncEnabled() && !ready ? t('syncConnecting') : '';
+ let status=document.querySelector<HTMLElement>('#sync-status');
+ if(!status){status=document.createElement('span');status.id='sync-status';status.className='ctl-note';status.setAttribute('role','status');document.querySelector('#mode-seg')?.after(status);}
+ status.textContent=t('syncConnecting');status.hidden=!syncEnabled() || ready;
+ if(syncEnabled() && !ready)modeBadge.innerHTML=`${icon('users')}<span>${t('syncConnecting')}</span>`;else renderModeControls();
+}
+function sharedNotice(code:string) {
+ if(code==='session_expired'){leavePlaybackSession();location.replace('/?state=expired');return;}
+ if(code==='forbidden'){leavePlaybackSession();void checkMembership();return;}
+ const messages:Record<string,MessageKey>={socket_limit:'syncSocketLimit',stale:'syncStale',unavailable:'syncUnavailable',rate_limited:'syncRateLimited',connecting:'syncConnecting'};
+ toast('✎ '+(messages[code]?t(messages[code]):domainError(code)));
+}
+let sharedTiming: ReturnType<typeof timingFromScore> | null=null;
+let sharedVersion:number|null=null;
+let sharedScheduleCount=0;
+let lastScheduledStartServerMs:number|null=null;
+let lastScheduledStartAudioTime:number|null=null;
+let lastSharedDrift=0;
+async function receiveSharedState(state:RehearsalState) {
+  if(!syncEnabled())return;
+  if(!state.pieceId){sharedState=state;audioEngine?.stop();setViewMode('library');endArrival();return;}
+  if(state.pieceId!==loadedSongId || state.versionNo!==sharedVersion){
+    const meta=await api(`/ensembles/${currentEnsemble}/pieces/${state.pieceId}`);
+    const response=await fetch(`/api/ensembles/${currentEnsemble}/pieces/${state.pieceId}/versions/${state.versionNo}`,{cache:'no-store'});
+    if(!response.ok)throw new Error('not_found');
+    const xml=await response.text();
+    await loadSongLocally({id:state.pieceId,title:meta.title,format:meta.format,xml,imported:true},state.effectiveAt);
+    const canonical=await api(`/ensembles/${currentEnsemble}/pieces/${state.pieceId}/versions/${state.versionNo}?timing=1`);
+    const local=timingFromScore(currentScore!);
+    if(!timingMatches(local,canonical.timing))console.warn('rehearsal.timing_mismatch',{pieceId:state.pieceId,versionNo:state.versionNo});
+    sharedTiming=canonical.timing;
+    sharedVersion=state.versionNo;
+  }
+  sharedState=state;
+  scheduleSharedAudio();
+  bpm=state.bpm;transpose=state.transposition;metronomeOn=state.metronome;startTonesOn=state.startingTones.enabled;
+  loopEnabled=state.loop.enabled;
+  loopRegion=state.loop.startBeat!=null && state.loop.endBeat!=null?{start:state.loop.startBeat,end:state.loop.endBeat}:null;
+  pianoRoll?.setTranspose(transpose);staffView?.setTranspose(transpose);pianoRoll?.setLoopRegion(loopRegion);overview?.setLoopRegion(loopRegion);
+  refreshBindings();
+  const moving=lateJoin(state,playerSession!.clock.serverNow(),(sharedTiming ?? timingFromScore(currentScore!))).status;
+  syncPlayButtons(moving==='playing'||moving==='countingIn');
+  startRenderLoop();
+  if(state.status==='paused'||state.status==='stopped')setTimeout(()=>{if(sharedState===state){syncPlayButtons(false);renderNow();}},Math.max(0,(state.effectiveAt??state.anchor.serverTime)-playerSession!.clock.serverNow())+20);
+  if(arriveDirectly){viewOffsetBeats=0;if(arrivingAt && (arrivingAt.songId??arrivingAt.behind)===loadedSongId)restoreSongSettings(arrivingAt);endArrival();}
+  renderNow();
+}
+function recalibrateSharedAudio(){
+ if(!audioEngine || !playerSession?.clock.usable)return;
+ const clock=playerSession.clock;
+ if(Math.abs(audioEngine.sharedDriftMs(clock.serverNow(),clock.diagnostics!.offsetMs))>15)scheduleSharedAudio();
+}
+function scheduleSharedAudio(at?:number){
+ if(!audioEngine || !currentScore || !sharedState || !playerSession?.clock.usable)return;
+ const now=at??playerSession.clock.serverNow();
+ sharedScheduleCount++;
+ const result=audioEngine.scheduleShared(sharedState,(sharedTiming ?? timingFromScore(currentScore)),now,playerSession.clock.diagnostics!.offsetMs,startingPitches(positionAt(sharedState,now,(sharedTiming ?? timingFromScore(currentScore)))));
+ lastScheduledStartServerMs=result.serverTime;lastScheduledStartAudioTime=result.audioTime;
+}
+const syncDebug=new URLSearchParams(location.search).get('debug')==='sync';
+if(syncDebug || import.meta.env.MODE==='test'){
+ Object.defineProperty(window,'__lightscoreSync',{configurable:true,get:()=>{
+   const clock=playerSession?.clock, usable=clock?.usable ?? false;
+   const now=usable ? clock!.serverNow() : null;
+   return {
+     state:sharedState ? structuredClone(sharedState) : null,
+     timing:sharedTiming ? structuredClone(sharedTiming) : null,
+     serverNow:now,
+     positionAtServerTime:(at:number,state=sharedState)=>state && sharedTiming ? positionAt(state,at,sharedTiming) : null,
+     scheduledClicks:[...(audioEngine?.sharedClickTimes ?? [])],
+     driftMs:sharedState && sharedTiming && audioEngine && now!==null ? playbackDriftMs(sharedState,now,audioEngine.getCurrentBeat(),sharedTiming) : null,
+     offsetMs:clock?.diagnostics?.offsetMs ?? null,
+     uncertaintyMs:clock?.diagnostics?.uncertaintyMs ?? null,
+     sharedScheduleCount,
+     schedulingDriftMs:audioEngine && clock?.diagnostics && now!==null ? audioEngine.sharedDriftMs(now,clock.diagnostics.offsetMs) : null,
+     lastScheduledStartServerMs,lastScheduledStartAudioTime,
+     revision:sharedState?.revision ?? null,position:audioEngine?.getCurrentBeat() ?? 0,
+     status:sharedState?.status ?? null,contextState:audioEngine?.context.state ?? null,ready:sharedReady && usable,
+   };
+ }});
+}
+window.setInterval(()=>{
+ if(!syncEnabled() || !sharedState || !currentScore || !playerSession?.clock.usable || !audioEngine)return;
+ const timing=(sharedTiming ?? timingFromScore(currentScore)),now=playerSession.clock.serverNow();
+ const joined=lateJoin(sharedState,now,timing);
+ if(joined.status==='playing' && audioEngine.context.state==='running'){
+  lastSharedDrift=audioEngine.sharedDriftMs(now,playerSession.clock.diagnostics!.offsetMs);
+  if(Math.abs(lastSharedDrift)>1000 || (playerSession.clock.diagnostics!.uncertaintyMs<15 && Math.abs(lastSharedDrift)>30)){const beat=positionAt(sharedState,now,timing);const delta=(secondsAt(Math.ceil(beat+.01),timing)-secondsAt(beat,timing))*timing.baseBpm/sharedState.bpm*1000;scheduleSharedAudio(now+(delta>=80 && delta<=300?delta:80));}
+ }
+ if(joined.status==='stopped')syncPlayButtons(false);
+ if(syncDebug){let el=document.querySelector<HTMLElement>('#sync-debug');if(!el){el=document.createElement('pre');el.id='sync-debug';el.style.cssText='position:fixed;bottom:0;left:0;z-index:10000;background:var(--bg,#16151c);color:var(--ink,#eee);padding:8px;pointer-events:none';document.body.append(el);}el.textContent=JSON.stringify({offset:playerSession.clock.diagnostics?.offsetMs,uncertainty:playerSession.clock.diagnostics?.uncertaintyMs,drift:lastSharedDrift,revision:sharedState.revision});}
+},2000);
 function syncEnabled(): boolean {
-  return isFirebaseConfigured && sessionMode === 'ensemble';
+  return serverLibraryEnabled && sessionMode === 'ensemble';
 }
 
 function renderModeControls() {
   document.querySelectorAll<HTMLButtonElement>('#mode-seg [data-mode]').forEach((b) => {
     b.setAttribute('aria-pressed', String(b.dataset.mode === sessionMode));
   });
-  document.querySelector<HTMLElement>('#mode-seg')!.hidden = !isFirebaseConfigured || inPublicFolder();
-  const leading = syncEnabled() && leaderId === myDeviceId;
-  const following = isFollower();
+  document.querySelector<HTMLElement>('#mode-seg')!.hidden = !serverLibraryEnabled || inPublicFolder();
   if (sessionMode === 'solo') modeBadge.innerHTML = `${icon('user')}<span>${modeName('solo')}</span>`;
-  else if (leading) modeBadge.innerHTML = `${icon('crown')}<span>${t('leading')}</span><i class="live-dot" aria-hidden="true"></i>`;
-  else if (following && isSingAlong()) modeBadge.innerHTML = `${icon('crown')}<span>${t('led')}</span><b class="follow-pos" data-bind="pos-bar"></b><i class="live-dot" aria-hidden="true"></i>`;
-  else if (following) modeBadge.innerHTML = `${icon('users')}<span>${t('following')}</span><i class="live-dot" aria-hidden="true"></i>`;
   else modeBadge.innerHTML = `${icon('users')}<span>${modeName('ensemble')}</span><i class="live-dot" aria-hidden="true"></i>`;
-  modeBadge.classList.toggle('is-leading', leading);
-  modeBadge.title = following ? t('followingHint') : '';
-  modeBadge.hidden = !isFirebaseConfigured || inPublicFolder();
+  modeBadge.hidden = !serverLibraryEnabled || inPublicFolder();
   fillBindings(modeBadge);
-  app.classList.toggle('following', following);
-  const singAlong = isSingAlong();
-  if (singAlong !== app.classList.contains('sing-along')) {
-    app.classList.toggle('sing-along', singAlong);
-    applyAutoFit();
-    renderChipTitles();
-    if (singAlong) toast(t('singAlongOn'));
-  }
-}
-
-// Sing-along view: when someone else leads the rehearsal, this device shows only the music and
-// the voices (see style.css, #app.sing-along). The full view stays one menu tap away, and that
-// choice is remembered on this device.
-const FULL_VIEW_KEY = 'ai-capella-full-view';
-let fullViewChosen = localStorage.getItem(FULL_VIEW_KEY) === '1';
-function isSingAlong(): boolean {
-  return isFollower() && !fullViewChosen;
-}
-function setFullView(full: boolean) {
-  fullViewChosen = full;
-  if (full) localStorage.setItem(FULL_VIEW_KEY, '1');
-  else localStorage.removeItem(FULL_VIEW_KEY);
-  renderModeControls();
 }
 
 // Follow the music (piano roll rows zoom to what's being sung): on by default, remembered per
@@ -524,6 +597,7 @@ function zoomRowsByHand(factor: number, y: number) {
 }
 
 async function requestModeSwitch(mode: 'solo' | 'ensemble') {
+  if (mode === 'ensemble' && isOffline()) { toast(off('together')); return; }
   if (mode === sessionMode) return;
   const name = modeName(mode);
   const ok = await confirmDialog({
@@ -532,8 +606,8 @@ async function requestModeSwitch(mode: 'solo' | 'ensemble') {
     confirmLabel: t('switchAction'),
   });
   if (!ok) return;
-  stopPlayback();
-  if (leaderId === myDeviceId) await sync.publishPlaybackState({ leaderId: null }).catch(() => {});
+  leavePlaybackSession();
+  audioEngine?.stop();
   localStorage.setItem(MODE_STORAGE_KEY, mode);
   // After an explicit switch, go straight on in the new mode (not the title screen).
   sessionStorage.setItem(MODE_SWITCH_KEY, mode);
@@ -542,33 +616,16 @@ async function requestModeSwitch(mode: 'solo' | 'ensemble') {
 const MODE_SWITCH_KEY = 'ai-capella-mode-switch';
 modeBadge.addEventListener('click', () => {
   if (sessionMode === 'solo') {
-    openMenu(modeBadge, [{ label: t('rehearseTogether'), icon: 'users', onSelect: () => void requestModeSwitch('ensemble') }], t('mode'));
+    openMenu(modeBadge, [{ label: isOffline() ? off('together') : t('rehearseTogether'), disabled:isOffline(), icon: 'users', onSelect: () => void requestModeSwitch('ensemble') }], t('mode'));
     return;
   }
   const items: Parameters<typeof openMenu>[1] = [];
-  if (leaderId === myDeviceId) items.push({ label: t('releaseLead'), icon: 'crown', onSelect: () => pushState({ leaderId: null }, { leadershipChange: true }) });
-  else if (leaderId) items.push({ label: t('takeOverLead'), icon: 'crown', onSelect: () => void takeOverLead() });
-  else items.push({ label: t('leadRehearsal'), icon: 'crown', onSelect: () => takeLead() });
-  if (isFollower()) {
-    items.push(fullViewChosen
-      ? { label: t('singAlongView'), icon: 'users', onSelect: () => setFullView(false) }
-      : { label: t('fullView'), icon: 'mixer', onSelect: () => setFullView(true) });
-  }
   items.push({ label: t('practiseAlone'), icon: 'user', onSelect: () => void requestModeSwitch('solo') });
   openMenu(modeBadge, items, modeName('ensemble'));
 });
 
-function takeLead() {
-  pushState({ leaderId: myDeviceId }, { leadershipChange: true });
-  toast(t('nowLeading'));
-}
-
-async function takeOverLead() {
-  const ok = await confirmDialog({ title: t('takeOverTitle'), body: t('takeOverBody'), confirmLabel: t('takeOver') });
-  if (ok) takeLead();
-}
-
 function chooseMode(mode: 'solo' | 'ensemble') {
+  if (mode === 'ensemble' && isOffline()) { toast(off('together')); return; }
   // The public folder is for looking and listening only: no rehearsing together there (and the
   // choice made for an ensemble stays as it was).
   if (inPublicFolder()) mode = 'solo';
@@ -576,6 +633,7 @@ function chooseMode(mode: 'solo' | 'ensemble') {
   sessionMode = mode;
   renderModeControls();
   setViewMode('library');
+  if(mode==='ensemble'){arriveDirectly=true;app.classList.add('arriving');setTimeout(endArrival,8000);}
   void runBootstrap();
 }
 document.querySelector<HTMLButtonElement>('#mode-solo-btn')!.addEventListener('click', () => chooseMode('solo'));
@@ -587,203 +645,56 @@ document.querySelector<HTMLButtonElement>('#mode-ensemble-btn')!.addEventListene
 // ---------------------------------------------------------------------------------------------
 
 const dedicationEl = document.querySelector<HTMLParagraphElement>('#landing-dedication')!;
-const codeForm = document.querySelector<HTMLFormElement>('#landing-code')!;
-const codeInput = document.querySelector<HTMLInputElement>('#landing-code-input')!;
-const codeError = document.querySelector<HTMLParagraphElement>('#landing-code-error')!;
-const codeAside = document.querySelector<HTMLButtonElement>('#landing-code-aside')!;
-const enterCodeBtn = document.querySelector<HTMLButtonElement>('#landing-enter-code')!;
 const landingModesEl = document.querySelector<HTMLDivElement>('.landing-modes')!;
 const libTitleEl = document.querySelector<HTMLHeadingElement>('#lib-title')!;
-let askingCode = false;
-
-/** The title screen's choice: the code (no ensemble chosen yet, or another code asked for), or the
- *  dedication and the two modes. `now`: written at once (a choice made here), not after the title. */
-function renderLanding(now = false) {
-  const chosen = activeEnsemble();
-  const asking = askingCode || !chosen;
-  codeForm.hidden = !asking;
-  landingModesEl.hidden = asking;
-  enterCodeBtn.hidden = asking;
-  dedicationEl.hidden = asking || !chosen;
-  codeAside.textContent = chosen ? t('cancel') : t('codeWithout');
-  dedicationEl.style.setProperty('--ded-delay', now ? '0s' : '');
-  if (asking) {
-    // Not on the first start, where the keyboard would cover the title as it's written.
-    if (askingCode) requestAnimationFrame(() => codeInput.focus({ preventScroll: true }));
-    return;
-  }
-  currentEnsemble = chosen!;
-  document.querySelector<HTMLElement>('#mode-ensemble-btn')!.hidden = inPublicFolder();
-  // "für <name>" in gold, the device's other ensembles beside it in pencil, a tap away.
-  const others = unlockedEnsembles().filter((id) => id !== currentEnsemble);
-  const name = document.createElement('span');
-  name.className = 'ded-name';
-  name.textContent = ensembleName(currentEnsemble);
-  const parts: Node[] = [];
-  if (!inPublicFolder()) {
-    const pre = document.createElement('span');
-    pre.className = 'ded-for';
-    pre.textContent = t('dedicationFor');
-    parts.push(pre, document.createTextNode(' '));
-  }
-  parts.push(name);
-  for (const id of others) {
-    const other = document.createElement('button');
-    other.type = 'button';
-    other.className = 'ded-other';
-    other.textContent = ensembleName(id);
-    other.addEventListener('click', () => {
-      setActiveEnsemble(id);
-      renderLanding(true);
-    });
-    parts.push(other);
-  }
-  dedicationEl.replaceChildren(...parts);
-  // Written in again each time it changes.
-  dedicationEl.classList.remove('written');
-  void dedicationEl.offsetWidth;
-  dedicationEl.classList.add('written');
-  renderModeControls();
+function renderLanding(_now=false) {
+ const chosen=activeEnsemble();currentEnsemble=chosen ?? PUBLIC_ID;
+ window.dispatchEvent(new Event('ensemble:changed'));
+ const empty=!unlockedEnsembles().length && chosen!==PUBLIC_ID;
+ document.querySelector<HTMLElement>('#landing-empty')!.hidden=!empty;
+ document.querySelector('#landing')!.classList.toggle('no-ensemble',empty);
+ const create=document.querySelector<HTMLElement>('#landing-create')!;create.className=empty?'btn primary landing-aside':'link-btn landing-aside';
+ if(empty)document.querySelector('#landing-empty')!.insertBefore(create,document.querySelector('#landing-samples'));else document.querySelector('.landing-choice')!.append(create);
+ landingModesEl.hidden=empty;dedicationEl.hidden=empty;
+ dedicationEl.replaceChildren();
+ const name=document.createElement('span');name.className='ded-name';name.textContent=(inPublicFolder()?'':t('dedicationFor')+' ')+ensembleName(currentEnsemble);dedicationEl.append(name);
+ for(const id of unlockedEnsembles().filter(id=>id!==currentEnsemble)){const b=document.createElement('button');b.className='ded-other';b.textContent=ensembleName(id);b.onclick=()=>{setActiveEnsemble(id);renderLanding(true);};dedicationEl.append(b);}
+ document.querySelector<HTMLElement>('#mode-ensemble-btn')!.hidden=inPublicFolder();dedicationEl.classList.add('written');renderModeControls();
 }
-
-codeForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const code = codeInput.value.trim();
-  if (!code) return;
-  codeError.textContent = '';
-  const submit = codeForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
-  submit.disabled = true;
-  try {
-    await ensureSignedIn();
-    const joined = await joinWithCode(code);
-    if (!joined) {
-      codeError.textContent = t('codeWrong');
-      codeInput.select();
-      return;
-    }
-    setActiveEnsemble(joined.id);
-    codeInput.value = '';
-    askingCode = false;
-    renderLanding(true);
-  } catch (err) {
-    codeError.textContent = t('codeFailed', { msg: errorText(err) });
-  } finally {
-    submit.disabled = false;
-  }
-});
-codeAside.addEventListener('click', () => {
-  if (!activeEnsemble()) setActiveEnsemble(PUBLIC_ID);
-  askingCode = false;
-  codeError.textContent = '';
-  renderLanding(true);
-});
-enterCodeBtn.addEventListener('click', () => {
-  askingCode = true;
-  renderLanding(true);
-});
-
-/** The repertoire's heading: the open ensemble's name, a menu to switch. */
+const createEnsemble=()=>createEnsembleSheet(id=>{setActiveEnsemble(id);sessionStorage.setItem(MODE_SWITCH_KEY,'solo');location.reload();});
+document.querySelector('#landing-create')!.addEventListener('click',createEnsemble);
+document.querySelector('#landing-samples')!.addEventListener('click',()=>{setActiveEnsemble(PUBLIC_ID);currentEnsemble=PUBLIC_ID;setViewMode('library');void runBootstrap();});
 function renderLibraryHead() {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'ens-switch';
-  btn.setAttribute('aria-label', `${t('ensembleLabel')}: ${ensembleName(currentEnsemble)}`);
-  const name = document.createElement('span');
-  name.textContent = ensembleName(currentEnsemble);
-  btn.append(name);
-  btn.insertAdjacentHTML('beforeend', icon('chevronDown'));
-  btn.addEventListener('click', () => void openEnsembleMenu(btn));
-  libTitleEl.replaceChildren(btn);
-  libTitleEl.classList.add('ens-title');
-  importBtn.hidden = inPublicFolder();
-  document.querySelector<HTMLElement>('.lib-tip')!.hidden = inPublicFolder();
+ const btn=document.createElement('button');btn.className='ens-switch';btn.textContent=ensembleName(currentEnsemble);btn.insertAdjacentHTML('beforeend',icon('chevronDown'));btn.onclick=()=>void openEnsembleMenu(btn);libTitleEl.replaceChildren(btn);libTitleEl.classList.add('ens-title');
+ importBtn.disabled=isOffline();importBtn.title=isOffline()?off('online'):'';
+ importBtn.hidden=inPublicFolder();importBtn.querySelector('span')!.textContent=editable()?t('addArrangement'):pt('openLocal');document.querySelector<HTMLElement>('.lib-tip')!.hidden=!editable();
 }
-
-async function openEnsembleMenu(anchor: HTMLElement) {
-  const items: Parameters<typeof openMenu>[1] = [];
-  for (const id of [...unlockedEnsembles(), PUBLIC_ID]) {
-    items.push({ label: ensembleName(id), icon: id === PUBLIC_ID ? 'globe' : 'users', checked: id === currentEnsemble, onSelect: () => switchEnsemble(id) });
-  }
-  items.push({ label: t('enterCode'), icon: 'key', onSelect: () => void enterCodeInApp() });
-  // Its leaders change the ensemble's name and codes; while it has no leaders' code yet, any member
-  // may set that (and leads it then).
-  if (!inPublicFolder()) {
-    const name = ensembleName(currentEnsemble);
-    if (leads(currentEnsemble)) {
-      if (feedbackOn(currentEnsemble)) items.push({ label: feedbackMenuLabel(), icon: 'chat', onSelect: () => openFeedbackInbox(anchor) });
-      items.push({ label: t('renameEnsemble'), icon: 'pencil', onSelect: () => void renameCurrentEnsemble() });
-      items.push({ label: t('changeCodeFor', { name }), icon: 'key', onSelect: () => void setCodeFor(currentEnsemble) });
-      items.push({ label: t('changeLeaderCodeFor', { name }), icon: 'crown', onSelect: () => void setLeaderCodeFor(currentEnsemble) });
-    } else if (await ensembleNeedsLeaderCode(currentEnsemble)) {
-      items.push({ label: t('setLeaderCodeFor', { name }), icon: 'crown', onSelect: () => void setLeaderCodeFor(currentEnsemble) });
-    }
-  }
-  // An ensemble nobody guards yet gets its first code here -- from the public folder too, which is
-  // where setting up the very first one starts.
-  const locked = ENSEMBLES.filter((e) => e.id !== PUBLIC_ID && !unlockedEnsembles().includes(e.id));
-  const withoutCode = await Promise.all(locked.map(async (e) => ((await ensureSignedIn().then(() => ensembleNeedsCode(e.id)).catch(() => false)) ? e.id : null)));
-  for (const id of withoutCode) if (id) items.push({ label: t('setCodeFor', { name: ensembleName(id) }), icon: 'key', onSelect: () => void setCodeFor(id) });
-  openMenu(anchor, items, t('ensembleLabel'));
+async function openEnsembleMenu(anchor:HTMLElement) {
+ const items:Parameters<typeof openMenu>[1]=[...unlockedEnsembles(),PUBLIC_ID].map(id=>({label:ensembleName(id),icon:'users',checked:id===currentEnsemble,onSelect:()=>void switchEnsemble(id)}));
+ items.push({label:pt('createEnsemble'),disabled:isOffline(),icon:'plus',onSelect:createEnsemble});
+ if(leads(currentEnsemble)||ensembleById(currentEnsemble)?.capabilities.manageMembers)items.push({label:pt('membersInvitations')+(isOffline()?' · '+off('online'):''),disabled:isOffline(),icon:'users',onSelect:()=>void membersSheet(currentEnsemble,anchor)});
+ if(leads(currentEnsemble))items.push({disabled:isOffline(),label:t('renameEnsemble'),icon:'pencil',onSelect:()=>void renameCurrentEnsemble()});
+ if(!inPublicFolder()) {
+ let last=false;if(leads(currentEnsemble)&&!isOffline()){const members=await api(`/ensembles/${currentEnsemble}/members`);last=members.filter((m:any)=>m.isLead).length===1;}
+ items.push({label:last?pt('leaveEnsemble')+' · '+pt('lastLead'):pt('leaveEnsemble'),disabled:last||isOffline(),icon:'users',onSelect:()=>void leaveEnsemble(currentEnsemble,()=>{localStorage.removeItem(`lightscore-ensemble:${account?.id}`);location.reload();})});
+ }
+ if(!inPublicFolder()) {
+ const usage=offlineUsage();
+ items.push({label:`${usage.count} ${off('usage')} · ${(usage.bytes/1048576).toLocaleString(lang,{maximumFractionDigits:1})} MB offline${usage.quota?` / ${(usage.quota/1048576).toLocaleString(lang,{maximumFractionDigits:0})} MB`:''} · ${lang==='de'?(usage.persistent?'dauerhaft gespeichert':'Speicher kann freigegeben werden'):(usage.persistent?'persistent storage':'storage may be evicted')}`,disabled:true,onSelect:()=>{}});
+ items.push({label:off('prepare'),icon:'file',disabled:isOffline()||!offlineStorageAvailable()||!!preparing,onSelect:()=>void prepareRepertoire()});
+ if(preparing)items.push({label:off('cancel'),onSelect:()=>preparing?.abort()});
+ items.push({label:off('remove'),icon:'trash',onSelect:()=>void removeOfflineEnsemble().catch(e=>toast(errorText(e),'error'))});
+ }
+ openMenu(anchor,items,t('ensembleLabel'));
 }
-
-/** Opens another ensemble's folder: like a mode switch, by reloading straight into the repertoire. */
-async function switchEnsemble(id: string) {
-  if (id === currentEnsemble) return;
-  stopPlayback();
-  if (syncEnabled() && leaderId === myDeviceId) await sync.publishPlaybackState({ leaderId: null }).catch(() => {});
-  setActiveEnsemble(id);
-  sessionStorage.setItem(MODE_SWITCH_KEY, localStorage.getItem(MODE_STORAGE_KEY) === 'ensemble' ? 'ensemble' : 'solo');
-  location.reload();
+let preparing: AbortController | undefined;
+async function prepareRepertoire() {
+ const controller=new AbortController();preparing=controller;
+ try {const {failed,skipped}=await preparePieces(importedSongs.map(song=>song.id),controller.signal,(index,total)=>toast(`${off('progress')} ${index}/${total}`));if(failed+skipped)toast(`${failed+skipped} ${lang==='de'?'Stücke übersprungen/fehlgeschlagen':'pieces skipped/failed'}`,'error'); }
+ catch(e){if(!controller.signal.aborted)toast(errorText(e),'error');}
+ finally{preparing=undefined;renderSongList();}
 }
-
-async function enterCodeInApp() {
-  const code = await promptDialog(t('enterCode'), '', t('codeOpen'));
-  if (!code) return;
-  try {
-    await ensureSignedIn();
-    const joined = await joinWithCode(code);
-    if (!joined) {
-      toast(t('codeWrong'), 'error');
-      return;
-    }
-    toast(t(joined.leader ? 'leaderWelcome' : 'codeWelcome', { name: ensembleName(joined.id) }));
-    await switchEnsemble(joined.id);
-  } catch (err) {
-    toast(t('codeFailed', { msg: errorText(err) }), 'error');
-  }
-}
-
-async function setCodeFor(id: string) {
-  const code = await promptDialog(t(unlockedEnsembles().includes(id) ? 'changeCodeFor' : 'setCodeFor', { name: ensembleName(id) }), '', t('save'));
-  if (!code) return;
-  try {
-    const result = await setEnsembleCode(id, code);
-    if (result !== 'ok') {
-      toast(result === 'short' ? t('codeShort', { n: MIN_CODE_LENGTH }) : t('codeTaken'), 'error');
-      return;
-    }
-    toast(t('codeSaved'));
-    // Set up from the public folder (the very first code): open it.
-    if (inPublicFolder()) await switchEnsemble(id);
-  } catch (err) {
-    toast(t('codeSaveFailed', { msg: errorText(err) }), 'error');
-  }
-}
-
-async function setLeaderCodeFor(id: string) {
-  const code = await promptDialog(t(leads(id) ? 'changeLeaderCodeFor' : 'setLeaderCodeFor', { name: ensembleName(id) }), '', t('save'));
-  if (!code) return;
-  try {
-    const result = await setLeaderCode(id, code);
-    if (result !== 'ok') {
-      toast(result === 'short' ? t('codeShort', { n: MIN_CODE_LENGTH }) : t('codeInUse'), 'error');
-      return;
-    }
-    toast(t('leaderCodeSaved', { name: ensembleName(id) }));
-  } catch (err) {
-    toast(t('codeSaveFailed', { msg: errorText(err) }), 'error');
-  }
-}
+async function switchEnsemble(id:string) {if(id===currentEnsemble)return;leavePlaybackSession();audioEngine?.stop();clearLibrary();setActiveEnsemble(id);sessionStorage.setItem(MODE_SWITCH_KEY,'solo');location.reload();}
 
 async function renameCurrentEnsemble() {
   const id = currentEnsemble;
@@ -797,22 +708,7 @@ async function renameCurrentEnsemble() {
   }
 }
 
-/** A library song's menu: move it into another of this device's ensembles. */
-function moveItems(song: SongEntry): Parameters<typeof openMenu>[1] {
-  if (!song.imported) return [];
-  return unlockedEnsembles()
-    .filter((id) => id !== currentEnsemble)
-    .map((id) => ({
-      label: t('moveTo', { name: ensembleName(id) }),
-      icon: 'swap' as const,
-      onSelect: () => {
-        // The live list drops it once the write lands (it no longer belongs here).
-        updateSongMetadata(song.id, { ensemble: id })
-          .then(() => toast(t('movedTo', { name: ensembleName(id) })))
-          .catch((err) => toast(t('moveFailed', { msg: errorText(err) }), 'error'));
-      },
-    }));
-}
+function moveItems(_song:SongEntry):Parameters<typeof openMenu>[1] {return [];}
 
 // Playback sound, chosen per device (not synced -- each singer may prefer another).
 const SOUND_KEY = 'ai-capella-sound';
@@ -827,6 +723,16 @@ let lightOffsetMs = (() => {
   }
 })();
 
+const OUTPUT_LATENCY_KEY='ai-capella-output-latency-ms';
+let outputLatencyMs=(()=>{try{return Math.max(-500,Math.min(500,Number(localStorage.getItem(OUTPUT_LATENCY_KEY))||0));}catch{return 0;}})();
+function openOutputLatencySheet(opener:HTMLElement|null){
+ const body=document.createElement('div');body.className='sheet-body offset-body';
+ body.innerHTML=`<p class="ctl-note">${t('outputLatencyHint')}</p><div class="offset-row"><span>−500 ms</span><input type="range" min="-500" max="500" step="5" value="${outputLatencyMs}" aria-label="${t('outputLatency')}"><span>500 ms</span></div><p class="offset-value"><output>${outputLatencyMs} ms</output></p>`;
+ const input=body.querySelector('input')!,out=body.querySelector('output')!;
+ input.addEventListener('change',()=>{outputLatencyMs=Number(input.value);out.textContent=`${outputLatencyMs} ms`;try{localStorage.setItem(OUTPUT_LATENCY_KEY,String(outputLatencyMs));}catch{}if(audioEngine)audioEngine.outputLatencyOffsetMs=outputLatencyMs;scheduleSharedAudio();});
+ openSheet(t('outputLatency'),body,opener);
+}
+
 /** The "?" by the bar numbers of a scanned song's places to check, in both rulers. */
 function renderScanMarks() {
   const bars = new Set((currentSong?.scanMarks ?? []).map((mk) => parseInt(mk.measure, 10)).filter((n) => Number.isFinite(n)));
@@ -835,7 +741,7 @@ function renderScanMarks() {
 }
 
 /**
- * A scanned song's places to check (scan.ts): where the scan wasn't sure, with a picture of the bar
+ * A scanned song's places to check (transcription review): where the scan wasn't sure, with a picture of the bar
  * on the scanned page. "Go there" jumps to the bar; "It's right" takes it off the list, for everyone.
  */
 function openScanMarksSheet(opener: HTMLElement | null) {
@@ -1080,9 +986,8 @@ function appearanceItems() {
 }
 
 async function reloadForDesign() {
-  stopPlayback();
-  if (syncEnabled() && leaderId === myDeviceId) await sync.publishPlaybackState({ leaderId: null }).catch(() => {});
-  if (!app.classList.contains('mode-landing')) sessionStorage.setItem(MODE_SWITCH_KEY, sessionMode);
+  if(syncEnabled()){leavePlaybackSession();audioEngine?.stop();}else stopPlayback();
+  if (!app.classList.contains('mode-landing')) sessionStorage.setItem(MODE_SWITCH_KEY, transcriptionPreviewMode??sessionMode);
   location.reload();
 }
 
@@ -1112,7 +1017,7 @@ function languageItems() {
 }
 document.querySelector<HTMLButtonElement>('#lib-menu-btn')!.addEventListener('click', (e) => {
   const anchor = e.currentTarget as HTMLElement;
-  openMenu(anchor, [...feedbackItems(anchor), ...appearanceItems(), ...paperItems(anchor), ...languageItems(), ...introItems('library')], t('language'));
+  openMenu(anchor, [...appearanceItems(), ...paperItems(anchor), ...languageItems(), ...introItems('library'), {label:t('accountArea'),icon:'users',onSelect:()=>{void openAccountArea(anchor);}}], t('language'));
 });
 
 /** The paper design's paper, to choose on this device (paper.ts). */
@@ -1168,36 +1073,6 @@ function openPaperSheet(opener: HTMLElement | null) {
   );
 }
 
-/** In an ensemble that asks for feedback: giving it (and, for its leaders, reading it). */
-function feedbackItems(anchor: HTMLElement) {
-  if (!feedbackOn(currentEnsemble)) return [];
-  const items: Parameters<typeof openMenu>[1] = [{ label: t('fbGive'), icon: 'chat', onSelect: () => openFeedbackSheet(anchor) }];
-  if (leads(currentEnsemble)) items.push({ label: feedbackMenuLabel(), icon: 'users', onSelect: () => openFeedbackInbox(anchor) });
-  return items;
-}
-
-/** Where this device is now, sent along with feedback so a problem can be found again. */
-function feedbackContext(): string {
-  const parts: string[] = [];
-  if (app.classList.contains('mode-player') && currentScore) {
-    const measure = measureAtBeat(currentScore, engineBeat());
-    parts.push(`„${currentScore.title}“`, `Takt ${measure?.number ?? 1}`, activeView === 'staff' ? 'Noten' : 'Klavierrolle');
-    if (transpose) parts.push(`Tonart ${transpose > 0 ? '+' : ''}${transpose}`);
-  } else parts.push('Repertoire');
-  parts.push(syncEnabled() ? (leaderId === myDeviceId ? 'gemeinsam, leitet' : isFollower() ? 'gemeinsam, folgt' : 'gemeinsam') : 'allein');
-  if (app.classList.contains('sing-along')) parts.push('Mitsing-Ansicht');
-  parts.push(deviceSummary(), lang);
-  return parts.join(' · ');
-}
-
-function showFeedbackCount(n: number) {
-  document.querySelectorAll<HTMLElement>('.fb-btn .fb-count').forEach((c) => {
-    c.hidden = !n;
-    c.textContent = n ? String(n) : '';
-  });
-  document.querySelectorAll<HTMLElement>('.fb-btn').forEach((b) => b.setAttribute('aria-label', n ? `${t('fbButton')} (${t('fbReadNew', { n })})` : t('fbButton')));
-}
-
 /** The introduction, to see again (intro.ts) -- while it's a draft, only where it's switched on. */
 function introItems(tour: 'library' | 'player') {
   return INTRO_ON ? [{ label: t('introMenu'), icon: 'help' as const, onSelect: () => window.setTimeout(() => startIntro(tour), 250) }] : [];
@@ -1208,11 +1083,6 @@ function introItems(tour: 'library' | 'player') {
  * place, no dialog or menu open, nothing playing, and not in the sing-along view.
  */
 function offerIntro(tour: 'library' | 'player') {
-  // Someone who saw the repertoire's tour before feedback was asked for: its one step, on its own.
-  if (tour === 'library' && !introDue('library') && introDue('feedback') && feedbackOn(currentEnsemble)) {
-    offerFeedbackIntro();
-    return;
-  }
   if (!introDue(tour)) return;
   const until = performance.now() + 15000;
   const check = () => {
@@ -1224,18 +1094,6 @@ function offerIntro(tour: 'library' | 'player') {
       !app.classList.contains('sing-along') &&
       (tour === 'player' ? !!currentScore : !!document.querySelector('#song-grid .song-card:not(.skeleton)'));
     if (ready) startIntro(tour);
-    else window.setTimeout(check, 400);
-  };
-  window.setTimeout(check, 900);
-}
-
-function offerFeedbackIntro() {
-  const until = performance.now() + 15000;
-  const check = () => {
-    if (!app.classList.contains('mode-library') || performance.now() > until || introRunning() || !introDue('feedback')) return;
-    const button = document.querySelector<HTMLElement>('#library .fb-btn');
-    const ready = !document.querySelector('.overlay') && !!button && !button.hidden && !!document.querySelector('#song-grid .song-card:not(.skeleton)');
-    if (ready) startIntro('feedback');
     else window.setTimeout(check, 400);
   };
   window.setTimeout(check, 900);
@@ -1255,8 +1113,8 @@ function drawMarks() {
 
 function allSongs(): SongEntry[] {
   // The bundled samples belong to the public folder and to the first ensemble (which has everything).
-  const builtins = currentEnsemble === PUBLIC_ID || currentEnsemble === FIRST_ENSEMBLE_ID ? BUILTIN_SONGS : [];
-  return [...builtins, ...importedSongs];
+  const builtins = currentEnsemble === PUBLIC_ID ? BUILTIN_SONGS : [];
+  return [...builtins, ...importedSongs, ...privateSongs];
 }
 
 interface SongMeta {
@@ -1272,7 +1130,7 @@ const coverCanvases = new Map<HTMLCanvasElement, CoverData>();
 let metaQueue: Promise<unknown> = Promise.resolve();
 
 async function readSongText(song: SongEntry): Promise<string> {
-  return song.xml !== undefined ? song.xml : await fetch(song.url!).then((r) => r.text());
+  return song.xml ? song.xml : song.imported ? scoreBody(song.id) : await fetch(song.url!).then(r=>r.text());
 }
 
 function parseSong(song: SongEntry, text: string): Score {
@@ -1312,7 +1170,7 @@ function timeSignatureList(score: Score): string {
 
 /** Voices, bars, key, time signature and cover for a library card -- parsed once per song version, one at a time so a big library doesn't freeze the page. */
 function songMeta(song: SongEntry): Promise<SongMeta | null> {
-  const key = `${song.id}:${song.xml?.length ?? 0}`;
+  const key = `${song.id}:${song.contentHash ?? song.xml?.length ?? 0}`;
   let cached = metaCache.get(key);
   if (!cached) {
     cached = (metaQueue = metaQueue.then(
@@ -1392,6 +1250,11 @@ function songCard(song: SongEntry): HTMLLIElement {
   body.append(title, meta);
   open.append(cover, body);
   li.appendChild(open);
+  if(song.imported && isPrepared(song.id)) {
+    const mark=document.createElement('span');mark.className='offline-mark';mark.style.color='var(--gold, #b49a5b)';mark.title=off('available');mark.setAttribute('aria-label',off('available'));
+    mark.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25"><path d="M7 17H6a4 4 0 0 1-1-8 6 6 0 0 1 11-2 5 5 0 0 1 2 10h-1M9 16l2 2 4-5"/></svg>';li.append(mark);
+  }
+  if(song.imported && isOffline() && !isPrepared(song.id)){open.disabled=true;li.style.opacity='.45';open.title=off('unavailable');meta.textContent=off('unavailable');}
   if (song.imported) {
     const more = document.createElement('button');
     more.type = 'button';
@@ -1399,13 +1262,13 @@ function songCard(song: SongEntry): HTMLLIElement {
     more.setAttribute('aria-label', t('moreFor', { title: song.title }));
     more.innerHTML = icon('more');
     li.appendChild(more);
-  } else {
+  } else if(!song.imported) {
     const tag = document.createElement('span');
     tag.className = 'tag';
-    tag.textContent = t('sample');
+    tag.textContent = song.localOnly ? pt('privatePractice') : t('sample');
     li.appendChild(tag);
   }
-  void songMeta(song).then((m) => {
+  if (!isOffline() || !song.imported || isPrepared(song.id)) void songMeta(song).then((m) => {
     if (!m) return;
     const parts = [countLabel(m.voices, 'voicesOne', 'voicesMany'), countLabel(m.bars, 'barsOne', 'barsMany'), m.key].filter(Boolean);
     meta.replaceChildren(voiceDots(m.voices), document.createTextNode(parts.join(' · ')));
@@ -1442,13 +1305,15 @@ function renderSongList() {
   }
   coverCanvases.clear();
   songGridEl.replaceChildren(...items);
+  if (!songs.length && libraryState === 'ready') {const empty=document.createElement('li');empty.className='empty-note';empty.textContent=pt(editable()?'emptyEditable':'emptyPieces');songGridEl.append(empty);}
   const count = countLabel(songs.length, 'arrangementsOne', 'arrangementsMany');
-  libCountEl.textContent = inPublicFolder() ? t('publicCount', { count }) : libraryState === 'ready' ? t('sharedWithChoir', { count }) : t('onThisDevice', { count });
+  libCountEl.textContent = !serverLibraryEnabled ? t('onThisDevice', { count }) : inPublicFolder() ? t('publicCount', { count }) : libraryState === 'ready' ? t('sharedWithChoir', { count }) : t('onThisDevice', { count });
   renderLibraryBanner();
 }
 
 function renderLibraryBanner() {
   libBannerEl.replaceChildren();
+  if (isOffline()) {libBannerEl.hidden=false;libBannerEl.classList.add('muted');libBannerEl.textContent=off('banner');return;}
   libBannerEl.hidden = libraryState === 'ready' && !libraryFromCache;
   if (libraryState === 'ready') {
     if (libraryFromCache) {
@@ -1459,20 +1324,6 @@ function renderLibraryBanner() {
   }
   libBannerEl.classList.toggle('muted', libraryState !== 'offline' && libraryState !== 'locked');
   const text = document.createElement('div');
-  if (libraryState === 'locked') {
-    const b = document.createElement('b');
-    b.textContent = t('codeAgainTitle');
-    const p = document.createElement('span');
-    p.textContent = t('codeAgainBody', { name: ensembleName(currentEnsemble) });
-    text.append(b, p);
-    const again = document.createElement('button');
-    again.type = 'button';
-    again.className = 'btn';
-    again.textContent = t('enterCode');
-    again.addEventListener('click', () => void enterCodeInApp());
-    libBannerEl.append(text, again);
-    return;
-  }
   if (libraryState === 'loading') text.textContent = t('loadingLibrary');
   else if (libraryState === 'unconfigured') text.textContent = t('notConfigured');
   else {
@@ -1504,9 +1355,12 @@ songGridEl.addEventListener('click', (e) => {
     openMenu(
       more,
       [
-        { label: t('rename'), icon: 'pencil', onSelect: () => void renameSong(song) },
+        {label: isPrepared(song.id)?off('remove'):off('prepare'),icon:'file',disabled:isOffline()&&!isPrepared(song.id),onSelect:()=>void (isPrepared(song.id)?unpreparePiece(song.id):preparePiece(song.id)).catch(e=>toast(errorText(e),'error'))},
+        ...(editable() ? [
+        { label: t('rename'), icon: 'pencil' as const, onSelect: () => void renameSong(song) },
         ...moveItems(song),
-        { label: t('delete'), icon: 'trash', danger: true, onSelect: () => void confirmDelete(song) },
+        { label: t('delete'), icon: 'trash' as const, danger: true, onSelect: () => void confirmDelete(song) },
+        ] : []),
       ],
       song.title,
     );
@@ -1552,12 +1406,13 @@ function applySongTitle(songId: string, value: string, previousTitle: string) {
   };
   setLocal(value);
   void updateSongMetadata(songId, { title: value }).catch((err) => {
-    setLocal(previousTitle);
+    if((err as {status?:number}).status!==409)setLocal(previousTitle);
     toast(t('renameFailed', { msg: errorText(err) }), 'error');
   });
 }
 
 function errorText(err: unknown): string {
+  if(err && typeof err==='object' && 'code' in err && typeof err.code==='string')return domainError(String(err.code));
   return err instanceof Error ? err.message : String(err);
 }
 
@@ -1570,11 +1425,8 @@ function titleFromFileName(name: string): string {
 }
 
 async function importFiles(files: FileList | File[]) {
-  if (!isFirebaseConfigured) {
-    toast(t('notConfigured'), 'error');
-    return;
-  }
-  if (inPublicFolder()) return; // look and listen only
+  if(isOffline()){toast(off('online'));return;}
+  if (serverLibraryEnabled && inPublicFolder()) return; // look and listen only
   // In the order of their names, numbers counted as numbers ("2." before "10."): a show's
   // numbered pieces arrive in the repertoire in running order.
   const list = Array.from(files)
@@ -1608,8 +1460,8 @@ async function importFiles(files: FileList | File[]) {
         format = 'musicxml';
       }
       const id = await saveImportedSong({ title, xml, format, ensemble: importEnsemble() });
-      lastImported = { id, title, xml, format, imported: true };
-      toast(t('added', { title }));
+      lastImported = { id, title, xml, format, imported: editable(),localOnly:!editable() };
+      if(!editable()){privateSongs.push(lastImported);toast(pt('privatePractice'));}else toast(t('added', { title }));
     } catch (err) {
       toast(t('addFailed', { name: file.name, msg: err instanceof Error ? err.message : 'invalid file' }), 'error');
     }
@@ -1624,25 +1476,12 @@ async function importFiles(files: FileList | File[]) {
 // is only part of the order, so nothing moves then.
 let songListStale = false;
 const reorder = attachReorder(songGridEl, document.querySelector<HTMLElement>('.lib-scroll')!, {
-  movable: (card) => !inPublicFolder() && leads(currentEnsemble) && libraryState === 'ready' && !searchInput.value.trim() && !!importedSongs.find((s) => s.id === card.dataset.id),
-  onDrop: (ids, movedId) => {
-    const at = (id: string | undefined) => importedSongs.find((s) => s.id === id)?.order ?? 0;
-    const i = ids.indexOf(movedId);
-    const prev = ids[i - 1];
-    const next = ids[i + 1];
-    let places: { id: string; sortKey: number }[];
-    const between = prev && next ? (at(prev) + at(next)) / 2 : prev ? at(prev) + 1000 : at(next) - 1000;
-    if (prev && next && !(at(prev) < between && between < at(next))) {
-      // No room left between them: number the whole list afresh.
-      const base = at(ids[0]);
-      places = ids.map((id, j) => ({ id, sortKey: base + j * 1000 }));
-    } else places = [{ id: movedId, sortKey: between }];
-    for (const { id, sortKey } of places) {
-      const song = importedSongs.find((s) => s.id === id);
-      if (song) song.order = sortKey;
-    }
-    importedSongs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    saveSongOrder(places).catch((err) => toast(t('moveFailed', { msg: errorText(err) }), 'error'));
+  movable: (card) => !inPublicFolder() && editable() && libraryState === 'ready' && !searchInput.value.trim() && !!importedSongs.find((s) => s.id === card.dataset.id),
+  onDrop: (ids) => {
+    const places=ids.filter(id=>importedSongs.some(song=>song.id===id)).map((id,sortKey)=>({id,sortKey}));
+    for(const place of places){const song=importedSongs.find(s=>s.id===place.id);if(song)song.order=place.sortKey;}
+    importedSongs.sort((a,b)=>(a.order??0)-(b.order??0));
+    saveSongOrder(places).catch(err=>{toast(t('moveFailed',{msg:errorText(err)}),'error');location.reload();});
   },
   onEnd: () => {
     if (songListStale) {
@@ -1676,36 +1515,7 @@ songGridEl.addEventListener('pointerout', (e) => {
   card.style.removeProperty('--ry');
 });
 
-// With the scan service configured, "Add arrangement" offers importing a file or scanning sheet music.
-importBtn.addEventListener('click', () => {
-  if (!scanAvailable()) {
-    importInput.click();
-    return;
-  }
-  openMenu(importBtn, [
-    { label: t('importFile'), icon: 'upload', onSelect: () => importInput.click() },
-    { label: t('scanMenu'), icon: 'camera', onSelect: () => openScanSheet(importBtn) },
-  ], t('addArrangement'));
-});
-scanChip.addEventListener('click', () => openScanSheet(scanChip));
-
-/** Shows a running or finished scan next to "Add arrangement". */
-function renderScanChip() {
-  const status = scanStatusLine();
-  scanChip.hidden = !status;
-  if (!status) return;
-  scanChip.textContent = status.text;
-  scanChip.classList.toggle('busy', status.busy);
-  scanChip.classList.toggle('ready', !status.busy && status.text === t('scanReady'));
-}
-
-/** A checked scan goes into the repertoire like an imported MusicXML file. */
-async function importScannedScore(title: string, xml: string, marks: ScanMark[]) {
-  parseMusicXML(xml); // throws on anything the player couldn't open
-  const id = await saveImportedSong({ title, xml, format: 'musicxml', ensemble: importEnsemble(), scanMarks: marks });
-  toast(t('added', { title }));
-  void selectSong({ id, title, xml, format: 'musicxml', imported: true, scanMarks: marks.length ? marks : undefined });
-}
+importBtn.addEventListener('click', () => importInput.click());
 importInput.addEventListener('change', () => {
   if (importInput.files?.length) void importFiles(importInput.files);
   importInput.value = '';
@@ -1740,6 +1550,12 @@ libraryEl.addEventListener('drop', (e) => {
  */
 /** Opens a song at its start -- or, `at`, where it was left (back after a reload: see notePlace). */
 async function selectSong(song: SongEntry, at?: { beat: number; bpm: number; transpose: number }) {
+  if(syncEnabled()){
+    if(!sharedReady)return;
+    if(song.id===loadedSongId && currentScore){setViewMode('player');renderNow();return;}
+    const piece=await api(`/ensembles/${currentEnsemble}/pieces/${song.id}`);
+    sendShared({type:'selectPiece',pieceId:piece.id,versionNo:piece.versionNo});return;
+  }
   // The piece already open (the repertoire was only looked at): back to it as it was. The shared
   // state wouldn't change, so going through it wouldn't bring the player back.
   if (song.id === loadedSongId && currentScore) {
@@ -1773,7 +1589,7 @@ async function selectSong(song: SongEntry, at?: { beat: number; bpm: number; tra
 const fontsReady = canvasFontsReady();
 
 /** Does the actual work of loading a song locally. Only ever called from applyPlaybackState(). */
-async function loadSongLocally(song: SongEntry) {
+async function loadSongLocally(song: SongEntry, replaceAt?:number) {
   stopRenderLoop();
   const score = parseSong(song, await readSongText(song));
   if (song.splitParts?.length) splitStaves(score, song.splitParts);
@@ -1788,14 +1604,17 @@ async function loadSongLocally(song: SongEntry) {
     }
   }
   applyVoiceSetup(score, song);
+  if(replaceAt && playerSession?.clock.usable){const delay=replaceAt-playerSession.clock.serverNow();if(delay>0)await new Promise(resolve=>setTimeout(resolve,delay));}
   // The library title wins over the title embedded in the file -- it's what the repertoire shows,
   // and the only one a rename changes.
   if (song.title) score.title = song.title;
   currentScore = score;
   currentSong = song;
   loadedSongId = song.id;
+  document.querySelector('#local-practice-note')?.remove();
+  if(song.localOnly){const note=document.createElement('p');note.id='local-practice-note';note.className='ctl-note';note.textContent=pt('privatePractice');songMetaEl.after(note);}
   // Saving tempo, key and sections as the song's default (laptop: beside the key; library songs only).
-  document.querySelector<HTMLElement>('.t-save')!.hidden = !song.imported;
+  document.querySelector<HTMLElement>('.t-save')!.hidden = !song.imported || !editable();
   notesByPart = new Map(score.parts.map((p) => [p.id, score.notes.filter((n) => n.partId === p.id).sort((a, b) => a.startBeat - b.startBeat)]));
   // Only relevant when the source has no rehearsal marks of its own (see renderSections) --
   // reloaded fresh from this song's saved config every time, never carried over from whatever the
@@ -1822,6 +1641,8 @@ async function loadSongLocally(song: SongEntry) {
   audioEngine?.dispose();
   audioEngine = new AudioEngine(played, playbackSound);
   audioEngine.setLightOffsetMs(lightOffsetMs);
+  audioEngine.outputLatencyOffsetMs=outputLatencyMs;
+  audioEngine.sharedClockReady=()=>!syncEnabled() || !!playerSession?.clock.usable;
   audioEngine.setDuckedVolume(duckVolume);
   const partColor = (partId: string) => colorForPart(score.parts.findIndex((p) => p.id === partId), score.parts.length);
   currentPartColor = partColor;
@@ -1843,7 +1664,7 @@ async function loadSongLocally(song: SongEntry) {
   // with its own fresh, all-normal mix.
   partMix = new Map(score.parts.map((p) => [p.id, 'normal' as PartMixState]));
   songTitleEl.textContent = score.title;
-  songTitleEl.title = song.imported ? t('renameSong') : '';
+  songTitleEl.title = song.imported && editable() ? t('renameSong') : '';
   const first = score.measures[0];
   songMetaEl.textContent = first
     ? [song.format === 'score' ? '' : keyName(first.fifths, first.mode), timeSignatureList(score), countLabel(barCount(score), 'barsOne', 'barsMany')]
@@ -1878,7 +1699,7 @@ function currentStateSnapshot(): PlaybackState {
     freshStart,
     startTonesOn,
     startTones: [],
-    leaderId,
+    leaderId: null,
   };
 }
 
@@ -1892,17 +1713,9 @@ function currentStateSnapshot(): PlaybackState {
  * one exception -- deliberately local-only, see PlaybackState's doc comment in sync.ts -- so they
  * mutate state directly instead of going through here.
  */
-function pushState(patch: Partial<PlaybackState>, opts?: { leadershipChange?: boolean }) {
-  // Following another device's lead: transport changes are locked (the leader's device is the only
-  // one that moves playback for everyone). Taking over the lead itself is the one exception.
-  if (isFollower() && !opts?.leadershipChange) {
-    toast(t('followingHint'));
-    return;
-  }
+function pushState(patch: Partial<PlaybackState>) {
   if (syncEnabled()) {
-    void sync.publishPlaybackState(patch).catch((err) => {
-      toast(t('syncFailed', { msg: errorText(err) }), 'error');
-    });
+    if(sharedState) for(const command of preferenceCommands(patch,sharedState,currentScore?.totalBeats)) sendShared(command);
   } else {
     // The sync-buffer skip below only applies when there's no count-in or starting tones: those
     // need real scheduling room even with nobody else to sync with, so they keep a real future
@@ -1922,27 +1735,14 @@ function pushState(patch: Partial<PlaybackState>, opts?: { leadershipChange?: bo
  * to play before it -- see sync.computeFutureOriginServerTimeMs's doc comment.
  */
 async function publishPlayingAt(originBeat: number, extra: Partial<PlaybackState> = {}, extraLeadMs = 0) {
-  if (isFollower()) {
-    toast(t('followingHint'));
-    return;
-  }
-  await sync.ensureCalibrated();
+  if(syncEnabled()){if(sharedState)for(const command of preferenceCommands(extra,sharedState,currentScore?.totalBeats))sendShared(command);return;}
   // startTones explicitly empty unless this is a fresh Play that asked for them (merge-write rule).
   pushState({ startTones: [], ...extra, playing: true, originBeat, originServerTimeMs: sync.computeFutureOriginServerTimeMs(extraLeadMs) });
 }
 
-function isFollower(): boolean {
-  return syncEnabled() && leaderId != null && leaderId !== myDeviceId;
-}
-
-// Development builds only: lets automated tests show this device as following someone else's lead
-// without writing to the shared session.
+// Development-only local playback diagnostics.
 if (import.meta.env.DEV) {
   (window as unknown as { __aiCapellaDev: unknown }).__aiCapellaDev = {
-    setLeader(id: string | null) {
-      leaderId = id;
-      renderModeControls();
-    },
     // For the sync tests: where playback is on this device, against the wall clock.
     position: () => ({ at: Date.now(), beat: engineBeat(), playing: !!audioEngine?.isPlaying(), heldUp: !!audioEngine?.isHeldUp(), drift: audioEngine?.clockDrift() ?? 0, offset: sync.getServerTimeOffsetMs(), bpm, applying: applying !== null, song: loadedSongId }),
   };
@@ -1985,7 +1785,8 @@ async function applyPlaybackStateNow(state: PlaybackState) {
       if (arrivingAt?.mode === 'ensemble') endArrival();
       return;
     }
-    const song = allSongs().find((s) => s.id === state.songId);
+    let song = allSongs().find((s) => s.id === state.songId);
+    if(!song && !inPublicFolder()){try{await scoreBody(state.songId);song=allSongs().find(s=>s.id===state.songId);}catch{}}
     if (!song) {
       pendingSongId = state.songId;
       toast(t('waitingForSong'));
@@ -2007,7 +1808,6 @@ async function applyPlaybackStateNow(state: PlaybackState) {
   // unconditional/undedup'd so it's never staler than necessary.
   freshStart = state.freshStart;
   startTonesOn = state.startTonesOn;
-  leaderId = syncEnabled() ? state.leaderId : null;
   renderModeControls();
 
   if (!audioEngine) {
@@ -2097,6 +1897,7 @@ function signed(n: number): string {
 
 /** Pushes the current tempo/key/loop/metronome state into every control bound to it (transport, dock, sheets, popovers). */
 function refreshBindings() {
+  document.querySelectorAll('[data-bind="count-in"]').forEach(el=>el.textContent=t('syncCountIn',{bars:sharedState?.countIn.bars??0}));
   document.querySelectorAll('[data-bind="bpm"]').forEach((el) => (el.textContent = String(bpm)));
   document.querySelectorAll('[data-bind="transpose"]').forEach((el) => (el.textContent = signed(transpose)));
   const keyNow = transposedKeyName();
@@ -2106,7 +1907,7 @@ function refreshBindings() {
   // Skipped while a field has focus -- otherwise a remote BPM change (another device's preset
   // click, in Ensemble mode) would overwrite whatever this device is still mid-typing.
   document.querySelectorAll<HTMLInputElement>('.bpm-input').forEach((input) => {
-    if (document.activeElement !== input) input.value = String(bpm);
+    if (document.activeElement !== input || syncEnabled()) input.value = String(bpm);
   });
   document.querySelectorAll<HTMLElement>('[data-action="metronome"]').forEach((el) => {
     el.setAttribute(el.getAttribute('role') === 'switch' ? 'aria-checked' : 'aria-pressed', String(metronomeOn));
@@ -2197,7 +1998,7 @@ function voiceRow(partId: string, name: string, color: string): HTMLLIElement {
     b.setAttribute('aria-pressed', 'false');
     li.appendChild(b);
   }
-  if (currentSong?.imported) {
+  if (currentSong?.imported && editable()) {
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'icon-btn small voice-more';
@@ -2324,7 +2125,7 @@ function toggleMix(partId: string, action: PartMixState) {
 
 async function renameVoice(partId: string) {
   const part = currentScore?.parts.find((p) => p.id === partId);
-  if (!part || !currentSong?.imported) return;
+  if (!part || (!currentSong?.imported || !editable())) return;
   const songId = currentSong.id;
   const previousName = part.name;
   const value = await promptDialog(t('renameVoice'), previousName, t('save'));
@@ -2377,7 +2178,7 @@ function applyVoiceSetup(score: Score, song: SongEntry) {
 let percussionParts = new Set<string>();
 
 function voiceSetupKey(song: SongEntry): string {
-  return JSON.stringify([song.removedParts ?? [], song.splitParts ?? [], song.clefOverrides ?? {}, song.percussion ?? {}, !!song.swing]);
+  return JSON.stringify([song.contentHash,song.removedParts ?? [], song.splitParts ?? [], song.clefOverrides ?? {}, song.percussion ?? {}, !!song.swing]);
 }
 
 // Swing (swing.ts): a library song's choice is stored with it, for everyone; the bundled samples
@@ -2435,7 +2236,7 @@ function currentClef(partId: string): VoiceClef {
 
 function openVoiceMenu(anchor: HTMLElement, partId: string) {
   const part = currentScore?.parts.find((p) => p.id === partId);
-  if (!part || !currentSong?.imported) return;
+  if (!part || (!currentSong?.imported || !editable())) return;
   const items: Parameters<typeof openMenu>[1] = [{ label: t('renameVoice'), icon: 'pencil', onSelect: () => void renameVoice(partId) }];
   // Clefs only matter for the sheet music view, which MIDI imports don't have; a part on several
   // staves keeps theirs.
@@ -2473,7 +2274,7 @@ function openVoiceMenu(anchor: HTMLElement, partId: string) {
 /** Writes which parts' staves are voices of their own, for everyone, and reloads the open song. */
 async function setSplitParts(splitParts: string[]) {
   const song = currentSong;
-  if (!song?.imported) return;
+  if (!song?.imported || !editable()) return;
   const previous = song.splitParts;
   song.splitParts = splitParts;
   const entry = importedSongs.find((s) => s.id === song.id);
@@ -2493,7 +2294,7 @@ async function setSplitParts(splitParts: string[]) {
 /** Plays a voice as claps and stamps, or as notes again -- for everyone; the open song reloads. */
 async function setVoicePercussion(partId: string, on: boolean) {
   const song = currentSong;
-  if (!song?.imported) return;
+  if (!song?.imported || !editable()) return;
   const previous = { ...(song.percussion ?? {}) };
   song.percussion = { ...previous, [partId]: on };
   const entry = importedSongs.find((s) => s.id === song.id);
@@ -2529,7 +2330,7 @@ async function setVoiceClef(partId: string, clef: VoiceClef) {
 
 async function confirmRemoveVoice(partId: string) {
   const part = currentScore?.parts.find((p) => p.id === partId);
-  if (!part || !currentSong?.imported || !currentScore) return;
+  if (!part || (!currentSong?.imported || !editable()) || !currentScore) return;
   if (currentScore.parts.length <= 1) {
     toast(t('lastVoice'), 'error');
     return;
@@ -2542,7 +2343,7 @@ async function confirmRemoveVoice(partId: string) {
 /** Writes the song's removed-voice list for everyone and reloads the open song with it. */
 async function setRemovedParts(removedParts: string[]) {
   const song = currentSong;
-  if (!song?.imported) return;
+  if (!song?.imported || !editable()) return;
   const previous = song.removedParts;
   song.removedParts = removedParts;
   const entry = importedSongs.find((s) => s.id === song.id);
@@ -2622,7 +2423,7 @@ function tempoBlock(): HTMLElement {
     <div class="presets">
       ${BPM_PRESETS.map((b) => `<button type="button" class="bpm-preset" data-action="bpm-preset" data-bpm="${b}" aria-pressed="false">${b}</button>`).join('')}
     </div>
-    <label class="custom-tempo"><span>${t('customTempo')}</span><input class="bpm-input field" type="number" min="${MIN_BPM}" max="${MAX_BPM}" step="1" inputmode="numeric" /></label>`;
+    <label class="custom-tempo"><span>${t('customTempo')}</span><input class="bpm-input field" type="number" min="${MIN_BPM}" max="${MAX_BPM}" step="0.1" inputmode="decimal" /></label>`;
   return block;
 }
 
@@ -2716,6 +2517,7 @@ function openControlsSheet(opener: HTMLElement) {
   const body = document.createElement('div');
   body.className = 'sheet-body';
   body.append(tempoBlock(), keyBlock(), metronomeBlock(), startTonesBlock());
+  if(syncEnabled()){const count=document.createElement('button');count.className='mode-btn';count.dataset.bind='count-in';count.textContent=t('syncCountIn',{bars:sharedState?.countIn.bars??0});count.onclick=()=>sendShared({type:'setCountIn',bars:sharedState?.countIn.bars?0:1});body.append(count);}
   const sections = sectionsBlock();
   if (sections) body.appendChild(sections);
   body.appendChild(gotoBlock());
@@ -2728,6 +2530,7 @@ function openControlsSheet(opener: HTMLElement) {
 // ---------------------------------------------------------------------------------------------
 
 function togglePlay() {
+  if(syncEnabled()){sendShared({type:sharedState?.status==='playing'||sharedState?.status==='countingIn'?'pause':'play'});return;}
   if (!audioEngine || !currentScore) return;
   if (audioEngine.isPlaying()) {
     // A plain Pause -- resuming from here later should NOT count in, only a genuinely fresh start
@@ -2780,6 +2583,7 @@ function startingPitches(beat: number): number[] {
 
 /** Stops playback and resets to the loop region's start, the last ruler-set start point, or the beginning. */
 function stopPlayback() {
+  if(syncEnabled()){sendShared({type:'stop'});return;}
   if (!audioEngine || !currentScore) return;
   const wasPlaying = audioEngine.isPlaying();
   const priorPausedBeat = audioEngine.getPausedBeat();
@@ -2792,7 +2596,7 @@ function stopPlayback() {
 }
 
 function applyBpm(newBpm: number) {
-  const clamped = Math.min(Math.max(Math.round(newBpm), MIN_BPM), MAX_BPM);
+  const clamped = Math.min(Math.max(Math.round(newBpm*10)/10, MIN_BPM), MAX_BPM);
   if (clamped === bpm) return;
   if (audioEngine?.isPlaying()) {
     // Explicitly zeroed, not omitted: publishPlaybackState is a merge write, so an omitted
@@ -2808,7 +2612,7 @@ function applyBpm(newBpm: number) {
  *  to MIN_BPM, so clearing the field to retype doesn't briefly apply a wrong tempo. */
 function applyBpmInput(input: HTMLInputElement) {
   if (!input.value.trim()) return;
-  const n = Math.min(Math.max(parseInt(input.value, 10) || bpm, MIN_BPM), MAX_BPM);
+  const n = Math.min(Math.max(parseFloat(input.value) || bpm, MIN_BPM), MAX_BPM);
   input.value = String(n);
   applyBpm(n);
 }
@@ -2932,7 +2736,7 @@ function sectionButton(label: string, index: number): HTMLButtonElement {
 
 /** Hand-set marks can be removed; marks printed in the source file can't. */
 function sectionsEditable(): boolean {
-  return !!currentSong?.imported && !currentScore?.rehearsalMarks.length;
+  return !(!currentSong?.imported || !editable()) && !currentScore?.rehearsalMarks.length;
 }
 
 /**
@@ -2946,7 +2750,7 @@ function sectionsChanged() {
   renderSections();
   renderNow();
   const song = currentSong;
-  if (!song?.imported) return;
+  if (!song?.imported || !editable()) return;
   const saved = manualSections.map((s) => ({ ...s }));
   song.savedConfig = { ...song.savedConfig, sections: saved, played: true };
   saveSongSections(song.id, saved).catch((err) => toast(t('saveDefaultsFailed', { msg: errorText(err) }), 'error'));
@@ -3040,12 +2844,12 @@ function renderSections() {
   );
   // Hand-adding marks only makes sense when the source didn't already provide a complete set --
   // and only for a song this device can write a saved default back to.
-  sectionAddBtn.hidden = !currentSong?.imported || (currentScore?.rehearsalMarks.length ?? 0) > 0;
+  sectionAddBtn.hidden = (!currentSong?.imported || !editable()) || (currentScore?.rehearsalMarks.length ?? 0) > 0;
 }
 
 function openPlayerMenu(anchor: HTMLElement) {
   const items: Parameters<typeof openMenu>[1] = [];
-  if (currentSong?.imported) {
+  if (currentSong?.imported && editable()) {
     items.push({ label: t('renameSong'), icon: 'pencil', onSelect: () => currentSong && void renameSong(currentSong) });
     const removed = currentSong.removedParts?.length ?? 0;
     if (removed) items.push({ label: t('restoreVoices', { n: removed }), icon: 'users', onSelect: () => void setRemovedParts([]) });
@@ -3057,25 +2861,26 @@ function openPlayerMenu(anchor: HTMLElement) {
   items.push(...soundItems());
   // The sheet music as a PDF, from the file (not offered for MIDI imports: no notation in them).
   if (currentSong && currentSong.format !== 'score') items.push({ label: t('exportItem'), icon: 'file', onSelect: () => openExportSheet(anchor) });
-  items.push({ label: t('settings'), icon: 'gear', onSelect: () => openSettingsMenu(anchor) }, ...feedbackItems(anchor), ...languageItems(), ...introItems('player'));
+  items.push({ label: t('settings'), icon: 'gear', onSelect: () => openSettingsMenu(anchor) }, ...languageItems(), ...introItems('player'));
+  items.push({ label: t('accountArea'), icon: 'users', onSelect: () => { void openAccountArea(anchor); } });
   openMenu(anchor, items, t('menu'));
 }
 
 /** The player's settings, a menu of their own: swing, light and sound, paper. */
 function openSettingsMenu(anchor: HTMLElement) {
   const items: Parameters<typeof openMenu>[1] = [];
-  // Swing or straight, for this song (not in 6/8 and the like). In a rehearsal only the leader -- or
-  // anyone, while nobody leads -- changes it for everyone.
-  if (currentSong && currentScore && canSwing(currentScore) && (currentSong.imported ? !isFollower() : true)) {
+  // Swing or straight, for this song (not in 6/8 and the like). Imported scores require
+  // permission to edit.
+  if (currentSong && currentScore && canSwing(currentScore) && (currentSong.imported ? editable() : true)) {
     const on = swingChosen(currentSong);
     items.push({ label: t('swingItem'), icon: 'quarter', checked: on, onSelect: () => void setSwing(!on) });
   }
-  items.push({ label: t('lightOffset'), icon: 'metronome', onSelect: () => openLightOffsetSheet(anchor) }, ...appearanceItems(), ...paperItems(anchor));
+  items.push({label:t('outputLatency'),icon:'metronome',onSelect:()=>openOutputLatencySheet(anchor)}, { label: t('lightOffset'), icon: 'metronome', onSelect: () => openLightOffsetSheet(anchor) }, ...appearanceItems(), ...paperItems(anchor));
   openMenu(anchor, items, t('settings'));
 }
 
 function saveDefaults() {
-  if (!currentSong?.imported) return;
+  if ((!currentSong?.imported || !editable())) return;
   saveSongConfig(currentSong.id, { transpose, bpm, sections: manualSections })
     .then(() => toast(t('savedDefaults')))
     .catch((err) => toast(t('saveDefaultsFailed', { msg: errorText(err) }), 'error'));
@@ -3107,10 +2912,6 @@ document.addEventListener('click', (e) => {
   const el = target.closest<HTMLElement>('[data-action]');
   if (!el) return;
   switch (el.dataset.action) {
-    case 'feedback':
-      if (leads(currentEnsemble)) openLeaderFeedbackMenu(el);
-      else openFeedbackSheet(el);
-      break;
     case 'save-defaults':
       saveDefaults();
       break;
@@ -3193,7 +2994,7 @@ document.addEventListener('click', (e) => {
       break;
     }
     case 'section-add':
-      if (currentSong?.imported && audioEngine) {
+      if (currentSong?.imported && editable() && audioEngine) {
         manualSections.push({ label: '', beat: engineBeat() });
         sectionsChanged();
       }
@@ -3205,7 +3006,7 @@ voiceListEl.addEventListener('dblclick', (e) => {
   const row = (e.target as HTMLElement).closest<HTMLElement>('.voice-row');
   if (row && (e.target as HTMLElement).closest('.voice-name')) void renameVoice(row.dataset.part!);
 });
-songTitleEl.addEventListener('dblclick', () => currentSong?.imported && void renameSong(currentSong));
+songTitleEl.addEventListener('dblclick', () => currentSong?.imported && editable() && void renameSong(currentSong));
 
 window.addEventListener('keydown', (e) => {
   if (!app.classList.contains('mode-player') || document.querySelector('.overlay')) return;
@@ -3299,6 +3100,7 @@ function panByBeats(deltaBeats: number) {
  * there from wherever it is (see applyPlaybackState).
  */
 function seekToBeat(beat: number) {
+  if(syncEnabled()){if(sharedReady && sharedState)sharedSeeks.seek(Math.max(0,Math.min(currentScore?.totalBeats??0,beat)),sharedState);return;}
   if (!audioEngine || !currentScore) return;
   const clamped = Math.max(0, Math.min(currentScore.totalBeats, beat));
   if (audioEngine.isPlaying()) {
@@ -3314,7 +3116,8 @@ function seekToBeat(beat: number) {
 
 function clearLoopRegion() {
   if (!loopRegion) return;
-  pushState({ loopRegion: null });
+  if(syncEnabled()){if(sharedState)for(const command of clearLoopCommands(sharedState))sendShared(command);}
+  else pushState({ loopRegion: null });
 }
 
 function finalizeLoopSelection(beatA: number, beatB: number) {
@@ -3694,6 +3497,7 @@ let audioTickIntervalId: number | null = null;
 function audioTick() {
   if (!audioEngine || !currentScore) return;
   audioEngine.tick();
+  if(syncEnabled())return;
   const beat = audioEngine.getCurrentBeat();
   // A loop region, once marked, bounds playback; the Loop button decides whether hitting that
   // bound (or the end of the piece, when no region is marked) wraps around or stops there.
@@ -3701,11 +3505,7 @@ function audioTick() {
   if (beat < boundary) return;
 
   if (loopEnabled) {
-    // In a rehearsal the loop comes round at the same instant on every device (sharedAnchor);
-    // alone, from where this device is.
-    const shared = sharedAnchor(boundary);
-    if (shared) audioEngine.play(shared.beat, bpm, transpose, shared.atMs);
-    else audioEngine.play(loopRegion ? loopRegion.start : 0, bpm, transpose);
+    audioEngine.play(loopRegion ? loopRegion.start : 0, bpm, transpose);
     return;
   }
 
@@ -3718,59 +3518,8 @@ function audioTick() {
   stopRenderLoop();
   renderNow();
 }
-/**
- * Where the rehearsal's shared timeline is: a beat and the instant it sounds, on this device's
- * clock -- the last start, or, once the loop (or the whole piece, with Loop on) has come round since,
- * its latest round. The same on every device, so they wrap together. Null alone (nothing shared).
- */
-function sharedAnchor(reached = 0): { beat: number; atMs: number } | null {
-  const t = lastAppliedTiming;
-  if (!t?.playing || !(t.originServerTimeMs > 0) || !currentScore) return null;
-  const atMs = t.originServerTimeMs - sync.getServerTimeOffsetMs();
-  const msPerBeat = 60_000 / t.bpm;
-  const start = loopRegion ? loopRegion.start : 0;
-  const end = loopRegion ? loopRegion.end : currentScore.totalBeats;
-  // (At the loop's end, `reached`: the sound got there a hair before this device's wall clock did.)
-  const raw = Math.max(reached, t.originBeat + (Date.now() - atMs) / msPerBeat);
-  if (!loopEnabled || end - start <= 0 || t.originBeat >= end || raw < end) return { beat: t.originBeat, atMs };
-  const rounds = Math.floor((raw - end) / (end - start));
-  return { beat: start, atMs: atMs + (end - t.originBeat + rounds * (end - start)) * msPerBeat };
-}
-
-/**
- * Lays this device's schedule again from the shared timeline -- after its sound fell out of step
- * (see the check below) or its idea of the server's clock moved. Before the start, with the start's
- * count-in and starting tones.
- */
-function relaySchedule() {
-  const t = lastAppliedTiming;
-  const shared = sharedAnchor();
-  if (!audioEngine || !t || !shared) return;
-  const before = shared.beat === t.originBeat && shared.atMs > Date.now();
-  audioEngine.play(shared.beat, t.bpm, t.transpose, shared.atMs, before ? t.countInBeats : 0, before ? t.countInPulseBeats : 1, before ? t.startTones : []);
-}
-
-// A rehearsal keeps every device on the shared timeline: once a second the sound's clock is held
-// against the page's, and when they've parted by more than DRIFT_LIMIT_SEC twice running (the
-// output started late or stalled, the device's audio clock runs off) the schedule is laid again.
-const DRIFT_LIMIT_SEC = 0.05;
-let driftStrikes = 0;
 let heldUpSince = 0;
-window.setInterval(() => {
-  updateSoundPrompt();
-  if (!audioEngine?.isPlaying() || !sharedAnchor()) {
-    driftStrikes = 0;
-    return;
-  }
-  driftStrikes = Math.abs(audioEngine.clockDrift()) > DRIFT_LIMIT_SEC ? driftStrikes + 1 : 0;
-  if (driftStrikes >= 2) {
-    driftStrikes = 0;
-    relaySchedule();
-  }
-}, 1000);
-sync.onOffsetChange(() => {
-  if (audioEngine?.isPlaying() && sharedAnchor()) relaySchedule();
-});
+window.setInterval(updateSoundPrompt, 1000);
 
 // Browsers let sound start only in answer to a touch, click or key: any of them lets it (and a
 // device that follows a rehearsal untouched gets a button for it, below).
@@ -3778,7 +3527,7 @@ for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'])
 
 /** "Tap for sound": shown while the music plays here but the browser holds its sound up. */
 function updateSoundPrompt() {
-  const held = !!audioEngine?.isHeldUp();
+  const held = !!audioEngine?.isHeldUp() || (syncEnabled() && (sharedState?.status==='playing' || sharedState?.status==='countingIn') && audioEngine?.context.state==='suspended');
   heldUpSince = held ? heldUpSince || performance.now() : 0;
   let el = document.getElementById('sound-prompt');
   const show = held && performance.now() - heldUpSince > 700;
@@ -3793,15 +3542,19 @@ function updateSoundPrompt() {
     button.innerHTML = `${icon('play')}<span></span>`;
     button.addEventListener('click', () => {
       unlockAudio();
+      if(syncEnabled())void playerSession?.resume().then(()=>scheduleSharedAudio());
       button.classList.remove('show');
     });
     document.body.appendChild(button);
     el = button;
   }
-  el.querySelector('span')!.textContent = t('tapForSound');
+  el.querySelector('span')!.textContent = syncEnabled() ? t('syncListen') : t('tapForSound');
   el.classList.add('show');
 }
-onAudioStateChange(updateSoundPrompt);
+onAudioStateChange(()=>{
+ updateSoundPrompt();
+ if(syncEnabled() && audioEngine?.context.state==='running')scheduleSharedAudio();
+});
 
 function startAudioTick() {
   if (audioTickIntervalId == null) audioTickIntervalId = window.setInterval(audioTick, AUDIO_TICK_INTERVAL_MS);
@@ -4033,48 +3786,27 @@ staffCanvas.addEventListener('pointercancel', endStaffDrag);
  * the shared playback session.
  */
 async function runBootstrap() {
-  if (!isFirebaseConfigured) {
-    importBtn.hidden = true;
-    renderSongList();
-    return;
-  }
   if (inPublicFolder()) {
     // The bundled samples only: nothing to load, nothing to add, nobody to rehearse with.
     importBtn.hidden = true;
     libraryState = 'ready';
     renderLibraryHead();
     renderSongList();
-    void ensureSignedIn().then(refreshEnsembleNames).then(renderLibraryHead).catch(() => {});
+    void refreshEnsembleNames().then(renderLibraryHead).catch(() => {});
     return;
   }
-  const ensemble = ensembleById(currentEnsemble);
-  if (ensemble?.channel) sync.setSessionChannel(ensemble.channel);
 
   try {
-    // Sign in first: the security rules require request.auth != null (and a membership of the
-    // ensemble, joined with its code on the title screen).
-    await ensureSignedIn();
     void refreshEnsembleNames().then(renderLibraryHead).catch(() => {});
-    initScan({ onImport: importScannedScore, onStatusChange: renderScanChip });
-    if (feedbackOn(currentEnsemble)) {
-      document.querySelectorAll<HTMLElement>('.fb-btn').forEach((b) => (b.hidden = false));
-      initFeedback({
-        ensemble: currentEnsemble,
-        context: feedbackContext,
-        // Not while music plays, nor in a rehearsal someone leads.
-        isBusy: () => !!audioEngine?.isPlaying() || (syncEnabled() && leaderId != null),
-        onNewCount: showFeedbackCount,
-      });
-      offerIntro('library');
-    }
     subscribeToSongs(
       (songs, fromCache) => {
         libraryState = 'ready';
-        libraryFromCache = fromCache && !navigator.onLine;
+        libraryFromCache = fromCache;
         importedSongs = songs.map((s) => ({
           id: s.id,
           title: s.title,
           xml: s.xml,
+          contentHash:s.contentHash,
           format: s.format,
           imported: true,
           partNameOverrides: s.partNameOverrides,
@@ -4092,8 +3824,9 @@ async function runBootstrap() {
         // Clef changes and removed voices from another device apply to the open song too (once
         // it's paused -- reloading mid-playback would cut the music off).
         const fresh = currentSong && importedSongs.find((s) => s.id === currentSong!.id);
-        if (fresh && currentSong && voiceSetupKey(fresh) !== voiceSetupKey(currentSong) && !audioEngine?.isPlaying()) void reloadCurrentSong();
+        if (fresh && currentSong && voiceSetupKey(fresh) !== voiceSetupKey(currentSong) && !audioEngine?.isPlaying() && !syncEnabled()) void reloadCurrentSong();
         // Places to check ticked off on another device.
+        if(fresh && currentSong){songTitleEl.textContent=fresh.title;currentSong.title=fresh.title;}
         if (fresh && currentSong && fresh.scanMarks !== currentSong.scanMarks) {
           currentSong.scanMarks = fresh.scanMarks;
           renderScanMarks();
@@ -4106,29 +3839,15 @@ async function runBootstrap() {
         }
       },
       (err) => {
-        // Refused by the rules: this device isn't in the ensemble (any more) -- ask for its code.
-        if ((err as { code?: string }).code === 'permission-denied') {
-          forgetEnsemble(currentEnsemble);
-          libraryState = 'locked';
-        } else libraryState = 'offline';
+        libraryState = 'offline';
         libraryError = errorText(err);
         renderSongList();
       },
       currentEnsemble,
     );
-    if (syncEnabled()) {
-      sync.startPeriodicCalibration();
-      sync.subscribePlaybackState(
-        (state) => {
-          if (!state) {
-            if (arrivingAt?.mode === 'ensemble') endArrival();
-            return;
-          }
-          lastReceivedPlaybackState = state;
-          void applyPlaybackState(state);
-        },
-        (err) => toast(t('syncFailed', { msg: errorText(err) }), 'error'),
-      );
+    if (syncEnabled() && !playerSession) {
+      sharedReadiness(false);
+      playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice,recalibrateSharedAudio);
     }
   } catch (err) {
     libraryState = 'offline';
@@ -4146,7 +3865,7 @@ async function runBootstrap() {
 // others at the same volume. Away counts from the last moment the app was on screen -- noted, with
 // where it was, every half minute while it is, and whenever it is left.
 const SEEN_KEY = 'ai-capella-seen';
-const PLACE_KEY = 'ai-capella-place';
+const PLACE_KEY = `lightscore-place:${account?.id}`;
 const TITLE_AFTER_MS = 30 * 60 * 1000;
 type Place = {
   ensemble: string;
@@ -4176,6 +3895,7 @@ const lastPlace = ((): Place | null => {
   }
 })();
 function noteSeen() {
+  if(leavingAccount)return;
   try {
     localStorage.setItem(SEEN_KEY, String(Date.now()));
     notePlace();
@@ -4185,8 +3905,10 @@ function noteSeen() {
 }
 /** Where the app is: in the repertoire, or in a song. */
 function notePlace() {
+  if(leavingAccount || offlineAccountId()!==account?.id)return;
   const inPlayer = app.classList.contains('mode-player');
   if (!inPlayer && !app.classList.contains('mode-library')) return;
+  if(currentSong?.id.startsWith('transcription-preview-'))return;
   const song = inPlayer ? currentSong : null;
   const mix = Object.fromEntries([...partMix].filter(([, state]) => state !== 'normal'));
   const place: Place = {
@@ -4246,6 +3968,7 @@ function endArrival() {
   requestAnimationFrame(() => app.classList.remove('arriving'));
 }
 function comeBackToPlace(fromCache: boolean) {
+  if(syncEnabled())return;
   const place = placeToRestore;
   if (!place?.songId) return;
   const song = allSongs().find((s) => s.id === place.songId);
@@ -4276,12 +3999,12 @@ const storedMode = localStorage.getItem(MODE_STORAGE_KEY);
 const switchedMode = sessionStorage.getItem(MODE_SWITCH_KEY);
 sessionStorage.removeItem(MODE_SWITCH_KEY);
 if (storedMode === 'solo' || storedMode === 'ensemble') sessionMode = storedMode;
-if (inPublicFolder()) sessionMode = 'solo';
+if (inPublicFolder() || isOffline()) sessionMode = 'solo';
 const lastMode = storedMode === 'solo' || storedMode === 'ensemble' ? storedMode : inPublicFolder() ? 'solo' : null;
 const comeBack = (chosen: 'solo' | 'ensemble') => {
-  const mode = inPublicFolder() ? 'solo' : chosen; // (as chooseMode will have it)
+  const mode = inPublicFolder() || isOffline() ? 'solo' : chosen; // (as chooseMode will have it)
   const place = recentlyHere && lastPlace?.ensemble === currentEnsemble && (lastPlace.mode ?? 'solo') === mode ? lastPlace : null;
-  if (place && (mode === 'solo' ? place.songId : isFirebaseConfigured && (place.songId || place.behind))) {
+  if (place && (mode === 'solo' ? place.songId : serverLibraryEnabled && (place.songId || place.behind))) {
     // Alone, the song is opened again (comeBackToPlace); together, it comes with the rehearsal's state.
     if (mode === 'solo') placeToRestore = place;
     else {
@@ -4297,23 +4020,17 @@ const comeBack = (chosen: 'solo' | 'ensemble') => {
   }
   chooseMode(mode);
 };
-if (isFirebaseConfigured && (switchedMode === 'solo' || switchedMode === 'ensemble') && activeEnsemble()) {
+if (serverLibraryEnabled && (switchedMode === 'solo' || switchedMode === 'ensemble') && activeEnsemble()) {
   comeBack(switchedMode);
-} else if (isFirebaseConfigured && recentlyHere && lastMode && activeEnsemble()) {
+} else if (serverLibraryEnabled && recentlyHere && lastMode && activeEnsemble()) {
   comeBack(lastMode);
-} else if (isFirebaseConfigured) {
+} else if (serverLibraryEnabled) {
   renderLanding();
-  // Ensembles opened on this device before the codes were checked in Firestore are dropped.
-  void ensureSignedIn()
-    .then(syncMemberships)
-    .then((changed) => {
-      if (changed && app.classList.contains('mode-landing') && !askingCode) renderLanding();
-    })
-    .catch(() => {});
   document.querySelector(storedMode === 'ensemble' ? '#mode-ensemble-btn' : '#mode-solo-btn')?.classList.toggle('last-used', storedMode === 'solo' || storedMode === 'ensemble');
   setViewMode('landing');
 } else {
   setViewMode('library');
+
   void runBootstrap();
 }
 renderModeControls();
@@ -4326,11 +4043,209 @@ void loadScriptFont().then(() => renderNow());
 window.addEventListener('online', renderSongList);
 window.addEventListener('offline', renderSongList);
 
-// Offline support: the service worker keeps the app itself (code, fonts, icons, the sample song)
-// on the device; the songs come from Firestore's own offline copy (see firebase.ts). Production
-// only -- in development it would serve stale modules.
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => {});
-  });
+void registerOfflineWorker().catch(console.error);
+function offlineControls() {
+ const together=document.querySelector<HTMLButtonElement>('#mode-ensemble-btn')!;
+ together.disabled=isOffline();together.title=isOffline()?off('together'):'';
+ const create=document.querySelector<HTMLButtonElement>('#landing-create');if(create){create.disabled=isOffline();create.title=isOffline()?off('online'):'';}
+ document.querySelector<HTMLButtonElement>('#transcription-entry')!.disabled=isOffline();document.querySelector<HTMLButtonElement>('#transcription-entry')!.title=isOffline()?off('online'):'';
+ renderLibraryHead();renderSongList();refreshBindings();
 }
+window.addEventListener('offline:changed',offlineControls);
+window.addEventListener('offline',offlineControls);
+window.addEventListener('online',()=>void checkMembership());
+window.addEventListener('storage',async event=>{if(event.key==='lightscore-offline-account' && event.newValue!==account?.id){leavePlaybackSession();accountEvents.disconnect();audioEngine?.stop();clearPrivateContext();if(account)await purgeAccount(account.id);location.replace('/?state=expired');}});
+queueMicrotask(offlineControls);
+
+
+async function openAccountArea(anchor: HTMLElement) {
+  const body = document.createElement("div");
+  body.className = "sheet-body domain-sheet account-sheet";
+  const email = document.createElement("p");
+  email.className = "member-email";
+  email.textContent = account?.email ?? "";
+  body.append(email);
+  if(!offlineStorageAvailable()){const note=document.createElement('p');note.textContent=lang==='de'?'Offline-Speicher nicht verfügbar':'Offline storage unavailable';body.append(note);}
+  const sharedLabel=document.createElement('label'), sharedToggle=document.createElement('input');
+  sharedToggle.type='checkbox';sharedToggle.checked=localStorage.getItem('lightscore-shared-device')==='1';
+  sharedToggle.onchange=()=>localStorage.setItem('lightscore-shared-device',sharedToggle.checked?'1':'0');
+  sharedLabel.append(sharedToggle,document.createTextNode(lang==='de'?'Dieses Gerät wird geteilt (24 h offline)':'This device is shared (24 h offline)'));body.append(sharedLabel);
+
+  void appendAdminAccountLink(body);
+  const signout = document.createElement("button");
+  signout.className = "btn primary";
+  signout.textContent = t("accountSignOut");
+  signout.onclick = async () => {
+    if(leavingAccount)return;
+    sessionStorage.removeItem("lightscore-invite");
+    leavingAccount = true;
+    leavePlaybackSession();
+    audioEngine?.stop();
+    accountEvents.disconnect();
+    localStorage.setItem('lightscore-pending-signout','1');
+    clearPrivateContext();
+    if(account)await purgeAccount(account.id);
+    if(isOffline()) {location.replace('/app');return;}
+    try {
+    const r = await fetch("/api/auth/sign-out", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (r.ok) {
+      localStorage.removeItem('lightscore-pending-signout');
+      clearLibrary();
+      if(account)await purgeAccount(account.id);
+      localStorage.removeItem(PLACE_KEY);
+      localStorage.removeItem(`lightscore-ensemble:${account?.id}`);
+      sessionStorage.removeItem(MODE_SWITCH_KEY);
+      location.replace("/?state=signed-out");
+    } else {location.replace('/app');}
+    } catch {location.replace('/app');}
+  };
+  body.append(signout);
+  const remove = document.createElement("button");
+  remove.className = "link-btn";
+  remove.textContent = t("accountDelete");
+  remove.disabled=isOffline();remove.title=isOffline()?off("online"):"";
+  remove.onclick = async () => {
+    const plan = await api("/account/deletion");
+    const sheet = document.createElement("div");
+    sheet.className = "sheet-body domain-sheet";
+    const note = document.createElement("p");
+    note.textContent = t("accountDeleteEnsembles");
+    sheet.append(note);
+    for (const e of plan.deleteEnsembles) {
+      const row = document.createElement("p");
+      row.textContent = e.name;
+      sheet.append(row);
+    }
+    if (plan.lastLead.length) {
+      const warning = document.createElement("p");
+      warning.textContent = pt("lastLead");
+      sheet.append(warning);
+    }
+    const label = document.createElement("label");
+    label.textContent = t("accountPassword");
+    const password = document.createElement("input");
+    password.type = "password";
+    password.autocomplete = "current-password";
+    label.append(password);
+    sheet.append(label);
+    const inlineError = document.createElement("p");
+    inlineError.setAttribute("role","alert");
+    inlineError.className="account-error";
+    sheet.append(inlineError);
+    const confirm = document.createElement("button");
+    confirm.textContent = t("accountDeleteConfirm");
+    confirm.disabled = !!plan.lastLead.length;
+    confirm.onclick = async () => {
+      if(leavingAccount)return;
+      inlineError.textContent="";
+      leavingAccount=true;
+      leavePlaybackSession();
+    audioEngine?.stop();
+    accountEvents.disconnect();
+      try {
+        await api("/account", "DELETE", {
+          deleteEnsembleIds: plan.deleteEnsembles.map((e: any) => e.id),
+          password: password.value,
+        });
+        clearLibrary();
+        if(account)await purgeAccount(account.id);
+        location.replace("/?state=signed-out");
+      } catch (e) {
+        leavingAccount=false;
+        if((e as Error).message === "SESSION_EXPIRED") {location.replace("/?state=expired");return;}
+        accountEvents.connect();
+        inlineError.textContent = (e as Error).message === "recent_auth_required" ? t("accountPasswordInvalid") : domainError((e as Error).message);
+      }
+    };
+    sheet.append(confirm);
+    openSheet(remove.textContent, sheet);
+  };
+  body.append(remove);
+  openSheet(t("accountArea"), body, anchor);
+  const heading = document.createElement("h3");
+  heading.className = "domain-heading";
+  heading.textContent = pt("devices");
+  body.append(heading);
+  if(isOffline()){const note=document.createElement("p");note.textContent=off("online");body.append(note);return;}
+  const response = await fetch("/api/auth/list-sessions");
+  if (!response.ok) {
+    toast(pt("errorGeneric"), "error");
+    return;
+  }
+  const sessions = await response.json();
+  for (const session of sessions) {
+    const row = document.createElement("p");
+    row.textContent =
+      deviceLabel(session.userAgent) +
+      (session.current ? " · " + pt("thisDevice") : "");
+    const revoke = document.createElement("button");
+    revoke.className = "link-btn";
+    revoke.textContent = t("accountRevoke");
+    revoke.onclick = async () => {
+      const result = await fetch("/api/auth/revoke-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: session.id }),
+      });
+      if (result.ok) row.remove();
+      else toast(pt("errorGeneric"), "error");
+    };
+    if (!session.current) row.append(revoke);
+    body.append(row);
+  }
+}
+
+function deviceLabel(ua:string='') { const browser=/Edg/.test(ua)?'Edge':/Firefox/.test(ua)?'Firefox':/Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':t('accountDevice'); const os=/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iOS':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':'';return [browser,os].filter(Boolean).join(' · '); }
+window.addEventListener('piece:conflict',()=>{toast(pt('conflict'));if(currentSong)void reloadCurrentSong();});
+function clearPrivateContext() {
+ clearLibrary();localLibrary.clear();audioEngine?.dispose();audioEngine=null;
+ importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;metaCache.clear();coverCanvases.clear();notesByPart.clear();partMix.clear();
+ pianoRoll=null;staffView=null;overview=null;songTitleEl.textContent='';songGridEl.replaceChildren();
+}
+function clearRevokedEnsemble(id: string) {
+ if(id!==currentEnsemble)return;
+ const name=ensembleById(id)?.name ?? libTitleEl.querySelector('.ens-switch')?.textContent ?? id;
+ leavePlaybackSession();clearPrivateContext();renderSongList();forgetEnsemble(id);setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));
+}
+window.addEventListener('offline:ensemble-purged',event=>{const detail=(event as CustomEvent).detail;if(detail.revoked!==false && detail.user===account?.id)clearRevokedEnsemble(detail.ensemble);});
+window.addEventListener('offline:refresh-failed',()=>toast(lang==='de'?'Offline-Kopie konnte nicht aktualisiert werden':'Could not update offline copy'));
+window.addEventListener('offline:unavailable',()=>toast(lang==='de'?'Offline-Speicher nicht verfügbar':'Offline storage unavailable'));
+let checkingMembership=false;
+async function checkMembership(){if(checkingMembership || leavingAccount)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(leavingAccount)return;if(me.user.id!==account?.id){clearPrivateContext();if(account)await purgeAccount(account.id);location.reload();return;}await refreshEnsembleNames();window.dispatchEvent(new Event('membership:changed'));if(!inPublicFolder()&&!ensembleById(currentEnsemble)){leavePlaybackSession();audioEngine?.stop();clearLibrary();if(account)await purgeEnsemble(account.id,currentEnsemble);importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;metaCache.clear();coverCanvases.clear();notesByPart.clear();partMix.clear();audioEngine?.dispose();audioEngine=null;pianoRoll=null;staffView=null;overview=null;songTitleEl.textContent='';renderSongList();setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{if(isOffline() && !(await restoreIdentity())){leavePlaybackSession();audioEngine?.stop();clearLibrary();location.replace('/?state=expired');}}finally{checkingMembership=false;}}
+setInterval(()=>void checkMembership(),60000);
+window.addEventListener('membership:refresh',()=>void checkMembership());
+
+window.addEventListener('pagehide',leavePlaybackSession);
+window.addEventListener('pageshow',event=>{
+ if(event.persisted && !leavingAccount && syncEnabled() && currentEnsemble && !playerSession){
+  sharedReadiness(false);
+  playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice,recalibrateSharedAudio);
+ }
+});
+window.addEventListener('domain:error', async (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED' && !leavingAccount){leavePlaybackSession();audioEngine?.stop();clearPrivateContext();if(account)await purgeAccount(account.id);location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
+
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void checkMembership();});
+
+// Keep account/ensemble changes live even while the title has no library subscription.
+const accountEvents = accountSocket({autoConnect:!isOffline(),withCredentials:true,transports:['websocket']});
+accountEvents.on('connect',()=>{
+  for(const id of unlockedEnsembles())accountEvents.emit('ensemble:join',id);
+  void checkMembership();
+});
+accountEvents.on('membership:changed',()=>void checkMembership());
+accountEvents.on('disconnect',(reason)=>{if(reason==='io server disconnect')void checkMembership();});
+
+const transcriptionUi=installTranscription({beforeListen:()=>!syncEnabled()||!playerSession||confirm(tr('leaveRehearsal')),reviewCleanup:()=>{const existing=new Set(privateSongs.filter(song=>song.id.startsWith('transcription-preview-')).map(song=>song.id));return ()=>{privateSongs=privateSongs.filter(song=>!existing.has(song.id));};},socket:accountEvents,ensemble:()=>currentEnsemble,entry:document.querySelector('#transcription-entry')!,jobs:document.querySelector('#transcription-jobs')!,open:async(xml,title,id)=>{
+ if(!id)transcriptionPreviewMode??=sessionMode;leavePlaybackSession();audioEngine?.stop();sessionMode='solo';renderModeControls();
+ privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));
+ if(id){await scoreBody(id);const song=allSongs().find(s=>s.id===id);if(song){await selectSong(song);return;}}
+ const song:SongEntry={id:id??'transcription-preview-'+crypto.randomUUID(),title,xml,format:'musicxml',imported:!!id,localOnly:!id};privateSongs.push(song);await selectSong(song);
+}});
+window.addEventListener('pagehide',()=>transcriptionUi.dispose(),{once:true});
+
+window.addEventListener('offline',()=>accountEvents.disconnect());
+window.addEventListener('online',()=>{if(!leavingAccount)accountEvents.connect();});

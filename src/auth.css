@@ -1,0 +1,35 @@
+.account-stage { min-height:100svh; color:var(--paper); background-color:var(--ink-0); background-image:var(--fibre); overflow:auto; position:relative; font-family:'Atkinson Hyperlegible Next Variable',sans-serif; }
+.account-content { position:relative; z-index:1; width:min(100% - 48px, 560px); margin:0 auto; padding:clamp(68px,12vh,120px) 0 64px; }
+.account-ribbons { position:absolute; inset:0; width:100%; height:100%; opacity:.28; pointer-events:none; }
+.account-wordmark { font:500 clamp(52px,8vw,80px)/1.2 var(--f-display); text-align:center; height:130px; margin:0 0 28px; position:relative; }
+.auth-shell { width:min(100%,360px); margin:auto; color:var(--paper); }
+.auth-shell h2 { font:500 28px/1.2 'Bodoni Moda Variable',serif; text-align:center; margin:0 0 28px; }
+.auth-shell p { line-height:1.55; text-align:center; color:var(--paper-dim); }
+.auth-shell label { display:block; font:500 11px/1.5 'Atkinson Hyperlegible Mono Variable',monospace; text-transform:uppercase; letter-spacing:.1em; color:var(--paper-dim); margin:20px 0; }
+.auth-shell input { display:block; box-sizing:border-box; width:100%; padding:10px 0; border:0; border-bottom:1px solid var(--paper-dim); border-radius:0; background:transparent; color:var(--paper); font:400 17px/1.5 'Atkinson Hyperlegible Next Variable',sans-serif; }
+.auth-shell input:focus { outline:0; border-color:var(--gold); box-shadow:0 1px var(--gold); }
+.auth-shell .primary { width:100%; margin-top:10px; min-height:44px; }
+.account-links { text-align:center; margin-top:22px; color:var(--paper-dim); line-height:1.8; }
+.account-links button, .language-toggle button, .password-toggle { border:0; padding:4px 0; background:none; color:var(--paper-dim); font:inherit; cursor:pointer; }
+.account-links button:hover { color:var(--paper); text-decoration:underline; }
+.account-email { font-family:'Atkinson Hyperlegible Mono Variable',monospace; overflow-wrap:anywhere; }
+.account-hint { font-size:14px; }
+.auth-shell .account-error { color:var(--danger); }
+.password-line { display:block; position:relative; }
+.password-line input { padding-right:76px; }
+.password-toggle { position:absolute; right:0; bottom:10px; text-transform:none; letter-spacing:0; font:400 12px 'Atkinson Hyperlegible Mono Variable',monospace; }
+.account-stage > .language-toggle { position:absolute; top:22px; right:24px; z-index:2; }
+.language-toggle { color:var(--paper-dim); font:400 12px 'Atkinson Hyperlegible Mono Variable',monospace; }
+.language-toggle button { min-height:32px; min-width:28px; }
+.language-toggle [aria-pressed=true] { color:var(--paper); }
+.account-stage :focus-visible, .domain-sheet :focus-visible { outline:2px solid var(--gold); outline-offset:4px; }
+.auth-shell > a { display:block; text-align:center; color:var(--paper-dim); }
+@media (max-width:600px) { .account-content { padding-top:70px; } .account-wordmark { height:110px; margin-bottom:12px; } }
+.account-wordmark .ls-name { position:relative; display:block; margin:0 auto !important; animation:none; }
+.account-wordmark .ls-light, .account-wordmark .ls-score { position:absolute; display:block; }
+.account-wordmark .ls-score { filter:drop-shadow(0 3px 4px #0003); }
+.account-wordmark .ls-light { animation:none !important; }
+.auth-shell .invitation-title { color:var(--gold); font-size:32px; }
+.account-links button:disabled { opacity:.6; cursor:default; }
+:root[data-ground='pergament'] .auth-shell .invitation-title { color:#795315; }
+.invitation-kicker { display:block; font-size:20px; margin-bottom:8px; }

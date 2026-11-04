@@ -1,0 +1,1 @@
+DROP INDEX "provider_calls_model_started_idx";

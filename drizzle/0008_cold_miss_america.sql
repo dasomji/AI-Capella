@@ -1,0 +1,2 @@
+ALTER TABLE "job_pages" DROP CONSTRAINT "page_state_check";--> statement-breakpoint
+ALTER TABLE "job_pages" ADD CONSTRAINT "page_state_check" CHECK ("job_pages"."state" IN ('queued','running','completed','skipped','failed','cancelled'));

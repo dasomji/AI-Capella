@@ -1,0 +1,26 @@
+name: lightscore-foundation
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: lightscore
+      POSTGRES_PASSWORD: local-only
+      POSTGRES_DB: lightscore
+    ports: ['127.0.0.1:25432:5432']
+    volumes: ['postgres:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lightscore']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports: ['127.0.0.1:21025:1025', '127.0.0.1:28025:8025']
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.06
+    command: 'server -dir=/data -s3 -s3.config=/etc/seaweedfs/s3.json'
+    ports: ['127.0.0.1:28333:8333']
+    volumes: ['seaweed:/data', './scripts/s3-local.json:/etc/seaweedfs/s3.json:ro']
+volumes:
+  postgres:
+  seaweed:

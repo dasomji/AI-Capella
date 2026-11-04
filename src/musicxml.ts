@@ -1,3 +1,4 @@
+import { metronomeBpm } from './score';
 import type { MeasureInfo, NoteEvent, PartInfo, RehearsalMark, Score, ScoreMark, SlurArc } from './score';
 import { t } from './i18n';
 
@@ -419,7 +420,9 @@ function readDirection(el: Element, partId: string, beat: number, result: PartRe
   }
   const text = words.join(' ');
   const isTempo = !!metronome || !!el.querySelector(':scope > sound[tempo]') || TEMPO_WORDS.test(text);
-  if (isTempo && (text || metronome)) result.marks.push({ kind: 'tempo', partId, beat, text, metronome });
+  const soundBpm=Number(el.querySelector(':scope > sound[tempo]')?.getAttribute('tempo'));
+  const tempoBpm=Number.isFinite(soundBpm)&&soundBpm>0?soundBpm:undefined;
+  if (isTempo && (text || metronome || tempoBpm)) result.marks.push({ kind: 'tempo', partId, beat, text, metronome, tempoBpm });
   else if (text) result.marks.push({ kind: 'words', partId, beat, text, below: below || undefined });
 }
 
@@ -824,8 +827,5 @@ function readTempo(doc: Document): number | undefined {
   const perMinute = parseFloat(metronome?.querySelector('per-minute')?.textContent ?? '');
   if (!Number.isFinite(perMinute) || perMinute <= 0) return undefined;
   const unit = metronome?.querySelector('beat-unit')?.textContent?.trim() ?? 'quarter';
-  const quarters: Record<string, number> = { whole: 4, half: 2, quarter: 1, eighth: 0.5, '16th': 0.25 };
-  let factor = quarters[unit] ?? 1;
-  if (metronome?.querySelector('beat-unit-dot')) factor *= 1.5;
-  return Math.round(perMinute * factor);
+  return Math.round(metronomeBpm(perMinute,unit,metronome?.querySelectorAll('beat-unit-dot').length ?? 0));
 }

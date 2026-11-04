@@ -102,6 +102,7 @@ export interface ScoreMark {
   beat: number;
   text: string; // the dynamic ('mf'), 'crescendo' / 'diminuendo' for a wedge, or the printed words
   endBeat?: number; // wedges: where the hairpin closes
+  tempoBpm?: number; // MusicXML sound tempo, already in quarter units
   metronome?: { unit: string; dots: number; perMinute: string }; // tempo: e.g. quarter = 76
   below?: boolean; // printed below the staff in the source (words only)
 }
@@ -177,4 +178,10 @@ export function playedBeat(score: Score, writtenBeat: number): number {
   const EPS = 1e-6;
   const pass = order.find((p) => writtenBeat >= p.writtenStart - EPS && writtenBeat < p.writtenStart + p.length - EPS);
   return pass ? pass.start + (writtenBeat - pass.writtenStart) : writtenBeat;
+}
+
+/** Convert a printed metronome mark into the quarter-note units used throughout playback. */
+export function metronomeBpm(perMinute:number,unit:string,dots=0):number {
+ const quarters:Record<string,number>={whole:4,half:2,quarter:1,eighth:.5,'16th':.25,'32nd':.125};
+ return perMinute*(quarters[unit] ?? 1)*(2-2**(-dots));
 }

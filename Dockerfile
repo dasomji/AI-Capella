@@ -1,0 +1,23 @@
+FROM node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends python3 libseccomp2 poppler-utils && rm -rf /var/lib/apt/lists/*
+ENV MALLOC_ARENA_MAX=2
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev --omit=peer && rm -rf node_modules/vite node_modules/vitest node_modules/playwright node_modules/drizzle-kit node_modules/firebase-admin && node -e "for (const name of ['vite','vitest','playwright','drizzle-kit','firebase-admin']) { try { require.resolve(name); throw Error(name + ' present in runtime'); } catch (e) { if(e.code !== 'MODULE_NOT_FOUND') throw e; } }"
+COPY --from=build /app/dist ./dist
+COPY server ./server
+COPY src/api ./src/api
+COPY src/rehearsal/contract.ts src/rehearsal/controller.ts src/rehearsal/timeline.ts ./src/rehearsal/
+COPY src/score.ts src/score-validation.ts src/musicxml.ts src/i18n.ts src/admin-time.ts ./src/
+COPY drizzle ./drizzle
+COPY scripts/migrate.ts scripts/renderer-smoke.mjs scripts/ops-canary.ts ./scripts/
+RUN mkdir -p .transcription-tmp && chown node:node .transcription-tmp
+USER node
+CMD ["node", "--import", "tsx", "server/entry.ts"]
