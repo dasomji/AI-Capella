@@ -263,3 +263,11 @@ test('assembly poison fails only its job and recovery proceeds',async()=>{
  assert.equal((await view(e.id,lead.cookie,bad.id)).failure_reason,'assembly_failed');
  await new TranscriptionWorker().recoverAssembly();await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,good.id)).state,'completed');
 });
+test('job projection excludes source internals and large result fragments',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
+ await pool.query("update transcription_jobs set result_xml=$2 where id=$1",[j.id,'x'.repeat(100000)]);
+ await pool.query("update job_pages set metrics=$2,result_xml=$3 where job_id=$1",[j.id,{result:'x'.repeat(100000)},'x'.repeat(100000)]);
+ const projection=await view(e.id,lead.cookie,j.id);assert.ok(JSON.stringify(projection).length<20000);
+ for(const key of ['result_xml','request_hash','options','provenance'])assert.equal(key in projection,false);
+ assert.equal('metrics' in projection.pages[0],false);
+});

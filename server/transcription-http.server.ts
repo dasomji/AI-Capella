@@ -7,7 +7,7 @@ import { uploadOriginal } from './originals.server';
 import { storage } from './storage.server';
 import { uploadAdmission as slots } from './upload-admission.server';
 import { env } from './env.server';
-import { createJob,jobView,cancelJob,retryJob,processingPaused,transcriptionMetrics } from './transcription.server';
+import { createJob,jobView,jobResult,cancelJob,retryJob,processingPaused,transcriptionMetrics } from './transcription.server';
 export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string;email:string;name:string}}}>) {
  app.post('/ensembles/:ensemble/originals',async c=>{
  const slot=slots.take(c.get('user').id);if('code' in slot)return c.json({code:'upload_busy'},slot.code);
@@ -27,7 +27,7 @@ export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string
  const job=await createJob(c.get('user').id,c.req.param('ensemble'),key,body.sourceObjects,body.options);return c.json({id:job.id,state:job.state,stage:await processingPaused()?'processing_paused':job.state},201);
  });
  app.get('/ensembles/:ensemble/transcriptions/:job',async c=>c.json(await jobView(c.get('user').id,c.req.param('ensemble'),c.req.param('job'))));
- app.get('/ensembles/:ensemble/transcriptions/:job/result',async c=>{const j=await jobView(c.get('user').id,c.req.param('ensemble'),c.req.param('job'));if(j.state!=='completed')throw new DomainError('result_unavailable',409);return c.body(j.result_xml,200,{'Content-Type':'application/xml','Cache-Control':'no-store'});});
+ app.get('/ensembles/:ensemble/transcriptions/:job/result',async c=>{const xml=await jobResult(c.get('user').id,c.req.param('ensemble'),c.req.param('job'));return c.body(xml,200,{'Content-Type':'application/xml','Cache-Control':'no-store'});});
  app.post('/ensembles/:ensemble/transcriptions/:job/cancel',async c=>{await cancelJob(c.get('user').id,c.req.param('ensemble'),c.req.param('job'));return c.json({state:'cancelled'});});
  app.post('/ensembles/:ensemble/transcriptions/:job/retry',async c=>c.json(await retryJob(c.get('user').id,c.req.param('ensemble'),c.req.param('job'))));
  app.put('/admin/transcription/control',async c=>{

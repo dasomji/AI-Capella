@@ -1,4 +1,4 @@
-import { jobView } from './transcription.server';
+import { jobProgress } from './transcription.server';
 import { logError as transcriptionLogError } from './logger.server';
 import {
   authorize,
@@ -93,10 +93,11 @@ export function attachSockets(server: ServerType) {
     },
   );
   const deliverTranscription=async (ensemble:string,job:string)=>{
+    const progress=await jobProgress(ensemble,job);
     for(const socket of connected){
       if(!socket.rooms.has(`ensemble:${ensemble}`))continue;
-      const r=await pool.query("select 1 from memberships m join session s on s.user_id=m.user_id where m.ensemble_id=$1 and m.user_id=$2 and s.token=$3 and s.expires_at>now() and (m.is_lead or m.ai_transcription)",[ensemble,socket.data.userId,socket.data.token]);
-      if(r.rowCount){const progress=await jobView(socket.data.userId,ensemble,job);socket.emit('transcription:progress',{ensembleId:ensemble,jobId:job,state:progress.state,stage:progress.stage,pages:progress.pages});}
+      try{const r=await pool.query("select 1 from memberships m join session s on s.user_id=m.user_id where m.ensemble_id=$1 and m.user_id=$2 and s.token=$3 and s.expires_at>now() and (m.is_lead or m.ai_transcription)",[ensemble,socket.data.userId,socket.data.token]);
+      if(r.rowCount){socket.emit('transcription:progress',{ensembleId:ensemble,jobId:job,state:progress.state,stage:progress.stage,pages:progress.pages});}}catch(error){transcriptionLogError('transcription.recipient',error);}
     }
   };
   let notificationClient:import('pg').Client|undefined;

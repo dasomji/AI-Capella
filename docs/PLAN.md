@@ -1498,3 +1498,9 @@ unknown/render/storage/database errors use bounded infrastructure_error retries.
 S3: assembly exceptions fail only their job (assembly_failed); deleted-job and
 nullable-metrics guards added. Cleanup/recovery have independent error boundaries;
 worker slots each claim again immediately after their own completion.
+
+S8: explicit progress fields exclude XML, metrics, raw options and request hashes;
+page context/assembly reads result_xml separately. The result endpoint alone
+returns the final XML. Model and prompt pins must match the worker; mismatches
+fail model_unavailable and can be manually retried after a matching deployment.
+Socket progress is projected once and per-recipient failures are isolated.
