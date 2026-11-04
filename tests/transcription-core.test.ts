@@ -153,3 +153,8 @@ test('synthetic rests retain each parts own divisions and never copy another ins
  const s=dom.window.document.querySelector('part[id="S"]')!;expect(s.querySelector('transpose, staves')).toBeNull();expect(s.querySelector('measure[number="3"] divisions')?.textContent).toBe('4');expect(s.querySelector('measure[number="3"] duration')?.textContent).toBe('16');
  }finally{dom.window.close();}
 });
+
+test('structural validity does not hide unreadable or all-rest transcription',()=>{
+ const d=scoreDocument(page(['S']).replace(/<pitch>[\s\S]*?<\/pitch>/g,'<rest/>'));
+ try{const r=validateMusicDocument(d.window.document,[],[{flag:'unreadable',page:1}]);expect(r.structurallyValid).toBe(true);expect(r.accuracy).toBe('unknown');expect(r.warnings.map(w=>w.code)).toEqual(expect.arrayContaining(['all_rest_part','all_rest_score','unreadable_page']));}finally{d.window.close();}
+});

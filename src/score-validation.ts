@@ -6,7 +6,8 @@ export const children=(e:Element,name:string)=>Array.from(e.children).filter(c=>
 export const text=(e:Element,selector:string)=>e.querySelector(selector)?.textContent??'';
 export function validateMusicDocument(doc:Document,sources:MeasureSource[]=[],uncertainties:unknown[]=[]):ValidationReport {
  const errors:Diagnostic[]=[],warnings:Diagnostic[]=[];
- const add=(list:Diagnostic[],code:string,part?:string,measure?:number,voice?:string)=>list.push({code,part,measure,voice,source:sources.find(s=>s.part===part&&s.measure===measure)});
+ const sourceIndex=new Map(sources.map(s=>[s.part+':'+s.measure,s]));
+ const add=(list:Diagnostic[],code:string,part?:string,measure?:number,voice?:string)=>list.push({code,part,measure,voice,source:sourceIndex.get(part+':'+measure)});
  const root=doc.documentElement;
  if(root.tagName!=='score-partwise'||doc.querySelector('parsererror'))add(errors,'invalid_xml');
  const declarations=Array.from(doc.querySelectorAll('part-list > score-part'));const ids=declarations.map(p=>p.id);
@@ -17,7 +18,8 @@ export function validateMusicDocument(doc:Document,sources:MeasureSource[]=[],un
  const count=Math.max(0,...parts.map(p=>children(p,'measure').length));
  for(const part of parts){const id=part.id;if(!ids.includes(id))add(errors,'unknown_part',id);
  const measures=children(part,'measure');if(measures.length!==count)add(warnings,'discontinuous_part',id);
- if(!part.querySelector('note'))add(errors,'empty_part',id);
+ if(!part.querySelector('note'))add(warnings,'empty_part',id);
+ if(part.querySelector('note')&&!part.querySelector('note > pitch, note > unpitched'))add(warnings,'all_rest_part',id);
  let divisions=0,beats=0,beatType=0,meter=0;let key=false,clef=false;const ties=new Map<string,number>();const slurs=new Map<string,number>();
  for(const [index,m] of measures.entries()){
  const number=index+1;const attr=children(m,'attributes');
@@ -50,5 +52,7 @@ export function validateMusicDocument(doc:Document,sources:MeasureSource[]=[],un
  }
  for(const [measure,parts] of alignment)if(parts.some(p=>Math.abs(p.duration-parts[0].duration)>1e-6))for(const p of parts)add(warnings,'cross_part_alignment',p.part,measure);
  for(const lyric of Array.from(doc.querySelectorAll('lyric')))if(lyric.parentElement?.tagName!=='note')add(warnings,'unattached_lyric',lyric.closest('part')?.id);
+ if(doc.querySelector('note')&&!doc.querySelector('note > pitch, note > unpitched'))add(warnings,'all_rest_score');
+ for(const u of uncertainties){if(u&&typeof u==='object'&&'flag' in u&&u.flag==='unreadable')add(warnings,'unreadable_page');}
  return {structurallyValid:errors.length===0,accuracy:'unknown',reviewRequired:true,errors,warnings,uncertainties};
 }
