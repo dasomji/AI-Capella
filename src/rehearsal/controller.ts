@@ -34,7 +34,7 @@ export function apply(s: State, e: Envelope, ctx: {
         return { code: 'not_found' };
     if ('pieceId' in c && c.type !== 'selectPiece' && (c.pieceId !== s.pieceId || c.versionNo !== s.versionNo)) return { code: 'stale' };
     if (c.type === 'play' && c.fromBeat === undefined && (s.status === 'playing' || s.status === 'countingIn') && (s.loop.enabled || positionAt(s,at,t) < t.totalBeats)) return s;
-    if (c.type === 'pause' && s.status === 'paused' && s.countInUntil === null && s.startingTonesUntil === null) return s;
+    if (c.type === 'pause' && (s.status === 'paused' || s.status === 'stopped') && s.countInUntil === null && s.startingTonesUntil === null) return s;
     let beat = positionAt(s, at, t);
     let status: State['status'] = s.status === 'countingIn' && (s.countInUntil ?? 0) <= at ? 'playing' : s.status;
     let pieceId = s.pieceId, versionNo = s.versionNo, bpm = s.bpm, transposition = s.transposition;
@@ -54,7 +54,8 @@ export function apply(s: State, e: Envelope, ctx: {
         enabled = false;
     }
     if (c.type === 'play') {
-        beat = c.fromBeat ?? beat;
+        beat = Math.min(t.totalBeats,c.fromBeat ?? beat);
+        if(c.fromBeat!==undefined && loop.enabled && (beat<loop.startBeat! || beat>=loop.endBeat!)) loop={enabled:false,startBeat:null,endBeat:null};
         if (!loop.enabled && beat >= t.totalBeats) beat = 0;
         const wasPlaying = s.status === 'playing' || s.status === 'countingIn';
         status = 'playing';

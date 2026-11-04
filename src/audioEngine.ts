@@ -899,7 +899,7 @@ export class AudioEngine {
    * Existing voices survive until that instant; future voices are faded/cancelled there. */
   scheduleShared(state:RehearsalState,timing:PieceTiming,now:number,offset:number,pitches:number[]) {
     const decision=playbackSchedule(state,now,timing);
-    const at=serverToAudioTime(decision.effectiveAt,offset,{currentTime:this.ctx.currentTime,outputLatency:this.ctx.outputLatency,baseLatency:this.ctx.baseLatency,getOutputTimestamp:()=>{const t=this.ctx.getOutputTimestamp?.()??{};return {contextTime:t.contextTime??0,performanceTime:t.performanceTime??0};}});
+    const at=serverToAudioTime(decision.effectiveAt,offset,{state:this.ctx.state,currentTime:this.ctx.currentTime,outputLatency:this.ctx.outputLatency,baseLatency:this.ctx.baseLatency,getOutputTimestamp:()=>{const t=this.ctx.getOutputTimestamp?.()??{};return {contextTime:t.contextTime??0,performanceTime:t.performanceTime??0};}});
     this.clearSchedule(at);
     this.previousCanonical=this.canonical;
     this.canonical={state,timing,offset,server:decision.effectiveAt,audio:at,through:decision.effectiveAt};

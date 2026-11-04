@@ -55,7 +55,7 @@ it('rejects invalid loop/beat, future revision and expired envelopes', () => {
     expect(commandSchema.safeParse({ type:'setTempo',pieceId:'piece',versionNo:1, bpm: 0 }).success).toBe(false);
 });
 it('uses lowest RTT samples and bounds unknowable asymmetry with jitter', () => {
-    expect(estimateClock(Array(7).fill({ t0: 0, tServer: 0, t1: 0 }))).toBeNull();
+    expect(estimateClock(Array(3).fill({ t0: 0, tServer: 0, t1: 0 }))).toBeNull();
     const samples = Array.from({ length: 24 }, (_, i) => { const t0 = i * 1000, up = 10 + i % 3, down = i < 8 ? 30 + i % 4 : 300 + i * 5; return { t0, tServer: t0 + up + 250, t1: t0 + up + down }; });
     const result = estimateClock(samples)!;
     expect(Math.abs(result.offsetMs - 250)).toBeLessThanOrEqual(result.uncertaintyMs);
@@ -97,7 +97,7 @@ it('socket transport drops disconnected commands, awaits application, and snapsh
 
 it('maps server instants through output timestamps with a latency fallback',async()=>{
  const {serverToAudioTime}=await import('../src/rehearsal/client-clock');
- expect(serverToAudioTime(102500,500,{currentTime:10,getOutputTimestamp:()=>({contextTime:9.9,performanceTime:1000})},1000,100000)).toBeCloseTo(10.9);
+ expect(serverToAudioTime(102500,500,{state:'running',currentTime:10,getOutputTimestamp:()=>({contextTime:9.9,performanceTime:1000})},1000,100000)).toBeCloseTo(10.9);
  expect(serverToAudioTime(102500,500,{currentTime:10,outputLatency:.1},1000,100000)).toBeCloseTo(10.9);
 });
 it('plans future and late starts, skips expired pre-roll and preserves effective-time tempo position',async()=>{
@@ -111,7 +111,7 @@ it('plans future and late starts, skips expired pre-roll and preserves effective
  expect(playbackSchedule(setting,1000,t)).toMatchObject({effectiveAt:1400,musicAt:4400,beat:0});
  const countOnly=run({...s,countIn:{bars:1}},{type:'play'});
  const countSetting=run(countOnly,{type:'setMetronome',enabled:true},1000);
- expect(playbackSchedule(countSetting,1000,t).countIn?.from).toBe(1400);
+ expect(playbackSchedule(countSetting,1000,t).countIn?.from).toBe(400);
  const tempo=run(playing,{type:'setTempo',pieceId:'piece',versionNo:1,bpm:60},3000);
  expect(playbackSchedule(tempo,3000,t).beat).toBe(positionAt(playing,tempo.anchor.serverTime,t));
  expect(playbackSchedule(playing,400,t).secondsFromBeat(6)).toBe(4);
@@ -287,4 +287,38 @@ it('drift uses musical milliseconds and the shortest distance over a loop wrap',
  const state={...s,status:'playing' as const,anchor:{beat:2,serverTime:0},loop:{enabled:true,startBeat:2,endBeat:6}};
  expect(playbackDriftMs(state,3010,5.99,t)).toBeCloseTo(20);
  expect(playbackDriftMs({...state,loop:{enabled:false,startBeat:null,endBeat:null}},1000,3.9,t)).toBeCloseTo(50);
+});
+
+it('keeps calibration through dropped pings and starts a fresh round after reconnect',async()=>{
+ const {PlaybackClock}=await import('../src/rehearsal/client-clock');
+ let count=0,release!:()=>void;let block=false;
+ const clock=new PlaybackClock(async()=>{count++;if(block){block=false;await new Promise<void>(r=>release=r);}if(count===9)throw Error('dropped');return 1500;},()=>{},()=>1000);
+ await clock.refresh();await clock.refresh();expect(clock.usable).toBe(true);expect(clock.diagnostics?.sampleCount).toBe(7);
+ block=true;const old=clock.refresh();const fresh=clock.reconnect();release();await Promise.all([old,fresh]);expect(count).toBeGreaterThan(24);expect(clock.usable).toBe(true);
+});
+it('isolates a throwing subscriber and repairs an invalid broadcast with a snapshot',async()=>{
+ const {SocketPlaybackTransport}=await import('../src/rehearsal/socket-transport');
+ const handlers=new Map<string,any>();const events:string[]=[];
+ const socket:any={connected:true,on:(e:string,fn:any)=>handlers.set(e,fn),off:()=>{},disconnect:()=>{},volatile:{emit:(e:string,_input:any,ack:any)=>{events.push(e);ack({state:s});}}};
+ const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000);let calls=0;
+ transport.subscribe(()=>{throw Error('listener');});transport.subscribe(()=>{calls++;});
+ await transport.join();expect(transport.ready).toBe(true);expect(calls).toBe(1);
+ expect(()=>handlers.get('playback:state')({invalid:true})).not.toThrow();
+ await vi.waitFor(()=>expect(events).toContain('rehearsal:snapshot'));transport.dispose();
+});
+it('rejects stale and suspended output timestamps',async()=>{
+ const {serverToAudioTime}=await import('../src/rehearsal/client-clock');
+ for(const state of ['running','suspended'])expect(serverToAudioTime(145000,0,{state,currentTime:10,outputLatency:.1,getOutputTimestamp:()=>({contextTime:0,performanceTime:1000})},44000,100000)).toBeCloseTo(10.9);
+});
+it('clamps the first tempo mark and keeps pre-roll grid origin after a preference change',async()=>{
+ const timing=timingFromScore({tempo:120,totalBeats:16,measures:[],marks:[{kind:'tempo',beat:0,tempoBpm:2000}]} as any);
+ expect(timing.baseBpm).toBe(1000);
+ const {playbackSchedule}=await import('../src/rehearsal/schedule');
+ const state={...s,status:'countingIn' as const,bpm:120,anchor:{beat:0,serverTime:2400},effectiveAt:3550,countInUntil:4400};
+ expect(playbackSchedule(state,3500,t).countIn?.from).toBe(2400);
+});
+it('keeps stopped pause stopped and disables loop for paused play outside loop',()=>{
+ expect(run({...s,status:'stopped'},{type:'pause'}).status).toBe('stopped');
+ const next=run({...s,status:'paused',loop:{enabled:true,startBeat:2,endBeat:4}},{type:'play',fromBeat:6,pieceId:'piece',versionNo:1});
+ expect(next.loop.enabled).toBe(false);expect(next.anchor.beat).toBe(6);
 });

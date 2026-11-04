@@ -9,11 +9,11 @@ export function playbackSchedule(state: RehearsalState, now: number, timing: Pie
   const musicAt=Math.max(effectiveAt,state.countInUntil ?? 0,state.startingTonesUntil ?? 0);
   const beat=positionAt(state,musicAt,timing);
   return {
-    revision:state.revision, effectiveAt, musicAt, beat,
+    revision:state.revision, effectiveAt, musicAt, beat, status:joined.status, endsAt:state.endsAt, loop:state.loop,
     playing:joined.status==='playing'||joined.status==='countingIn',
     tempoFactor:state.bpm/timing.baseBpm, transposition:state.transposition,
-    countIn:joined.countInUntil===null ? null : {from:Math.max(effectiveAt,state.startingTonesUntil ?? state.anchor.serverTime),until:joined.countInUntil},
-    startingTones:joined.startingTonesUntil===null ? null : {from:effectiveAt,until:joined.startingTonesUntil},
+    countIn:joined.countInUntil===null ? null : {from:state.startingTonesUntil ?? state.anchor.serverTime,until:joined.countInUntil},
+    startingTones:joined.startingTonesUntil===null ? null : {from:state.anchor.serverTime,until:joined.startingTonesUntil},
     // Each note's scheduled offset must integrate the source tempo map, not divide beats by one BPM.
     secondsFromBeat:(targetBeat:number)=>(secondsAt(targetBeat,timing)-secondsAt(beat,timing))*timing.baseBpm/state.bpm,
   };

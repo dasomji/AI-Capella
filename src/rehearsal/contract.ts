@@ -1,11 +1,11 @@
 import { z } from 'zod';
 const n = z.number().finite();
 const beat = n.nonnegative();
-const selection = { pieceId: z.string().min(1).max(200), versionNo: n.int().positive() };
+const selection = { pieceId: z.string().min(1).max(200), versionNo: n.int().positive().max(2147483647) };
 const id = z.string().min(1).max(200);
 export const commandSchema = z.discriminatedUnion('type', [
-    z.object({ type: z.literal('selectPiece'), pieceId: id, versionNo: n.int().positive() }).strict(),
-    z.object({ type: z.literal('play'), fromBeat: beat.optional(), pieceId: id.optional(), versionNo: n.int().positive().optional() }).strict().refine(c => c.fromBeat === undefined || (c.pieceId !== undefined && c.versionNo !== undefined)),
+    z.object({ type: z.literal('selectPiece'), pieceId: id, versionNo: n.int().positive().max(2147483647) }).strict(),
+    z.object({ type: z.literal('play'), fromBeat: beat.optional(), pieceId: id.optional(), versionNo: n.int().positive().max(2147483647).optional() }).strict().refine(c => c.fromBeat === undefined || (c.pieceId !== undefined && c.versionNo !== undefined)),
     ...(['pause', 'stop', 'playStartingTones'] as const).map(type => z.object({ type: z.literal(type) }).strict()),
     z.object({ type: z.literal('seek'), ...selection, beat }).strict(),
     z.object({ type: z.literal('setTempo'), ...selection, bpm: n.min(1).max(1000) }).strict(),
@@ -17,7 +17,7 @@ export const commandSchema = z.discriminatedUnion('type', [
 ]);
 export const envelopeSchema = z.object({ ensembleId: id, commandId: z.uuid(), baseRevision: n.int().nonnegative(), clientSentAt: n, command: commandSchema }).strict();
 export const stateSchema = z.object({
-    ensembleId: id, revision: n.int().nonnegative(), pieceId: id.nullable(), versionNo: n.int().positive().nullable(),
+    ensembleId: id, revision: n.int().nonnegative(), pieceId: id.nullable(), versionNo: n.int().positive().max(2147483647).nullable(),
     effectiveAt: n.optional(), // Legacy persisted states fall back to anchor.serverTime.
     status: z.enum(['stopped', 'countingIn', 'playing', 'paused']), anchor: z.object({ serverTime: n, beat }),
     bpm: n.min(1).max(1000), transposition: n.int().min(-48).max(48),

@@ -1,3 +1,9 @@
+function randomCommandId() {
+  if(crypto.randomUUID) return crypto.randomUUID();
+  const bytes=crypto.getRandomValues(new Uint8Array(16));bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
+  const h=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
 import { stateSchema, ackSchema, snapshotAckSchema, type Ack, type Command, type Envelope, type RehearsalState, type RehearsalTransport } from './contract';
 /** A small socket boundary supports real Socket.IO and deterministic client tests. */
 export interface PlaybackSocket {
@@ -21,13 +27,15 @@ export class SocketPlaybackTransport implements RehearsalTransport {
   constructor(private socket: PlaybackSocket, readonly ensembleId: string,
     private now: () => number,
     private onReady: (ready: boolean) => void = () => {},
-    private notice: (code: string) => void = () => {}) {
+    private notice: (code: string) => void = () => {},
+    private beforeJoin: () => Promise<void> = async()=>{}) {
     socket.on('connect', this.reconnect);
     socket.on('disconnect', this.disconnected);
     socket.on('playback:state', this.received);
   }
   private setReady(value: boolean) { this.ready = value; this.onReady(value); }
-  private disconnected = () => {
+  private disconnected = (reason?: string) => {
+    if(reason==='io server disconnect') {this.notice('session_expired');this.socket.disconnect();}
     this.epoch++; this.snapshotApplied = false; this.latest = null; this.setReady(false);
     for (const reject of this.pending) reject(new Error('disconnected'));
     this.pending.clear();
@@ -35,17 +43,17 @@ export class SocketPlaybackTransport implements RehearsalTransport {
   private reconnect = () => {
     const epoch=this.epoch;
     void (async()=>{
-      for(let attempt=0;attempt<4;attempt++){
+      for(let attempt=0;;attempt++){
         if(this.closed || epoch!==this.epoch || !this.socket.connected)return;
         try{await this.join();return;}catch(error){
           const code=error instanceof Error?error.message:'connecting';
-          if(code!=='unavailable' || attempt===3){this.notice(code);return;}
-          await new Promise(resolve=>setTimeout(resolve,100*2**attempt));
+          if(!['unavailable','timeout','clock_unavailable','rate_limited'].includes(code)){this.notice(code);return;}
+          await new Promise(resolve=>setTimeout(resolve,Math.min(10000,250*2**Math.min(attempt,6))));
         }
       }
     })();
   };
-  private received = (raw: unknown) => { void this.apply(raw).catch(() => {this.setReady(false);this.notice('invalid');}); };
+  private received = (raw: unknown) => { void this.apply(raw).catch(() => {this.setReady(false);this.notice('invalid');void this.snapshot().catch(()=>this.reconnect());}); };
   private request(event: string, input?: unknown): Promise<any> {
     if (!this.socket.connected || this.closed) return Promise.reject(new Error('disconnected'));
     const epoch = this.epoch;
@@ -63,12 +71,12 @@ export class SocketPlaybackTransport implements RehearsalTransport {
       else this.socket.volatile.emit(event, input, ack);
     });
   }
-  private apply(raw: unknown): Promise<void> {
+  private async apply(raw: unknown): Promise<void> {
     const state = stateSchema.parse(raw), epoch = this.epoch;
     if (state.ensembleId !== this.ensembleId) return Promise.resolve();
     const result = this.applying.catch(() => {}).then(async () => {
       if (epoch !== this.epoch || this.closed || (this.latest && state.revision <= this.latest.revision)) return;
-      for (const listener of this.listeners) await listener(state);
+      for (const listener of this.listeners) {try {await listener(state);} catch(error) {this.notice(error instanceof Error ? error.message : 'invalid');console.error('rehearsal.listener',error);}}
       if (epoch === this.epoch && !this.closed) this.latest = state;
     });
     this.applying = result;
@@ -77,6 +85,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
   async join() {
     this.setReady(false); this.snapshotApplied = false;
     const epoch = this.epoch;
+    await this.beforeJoin();
     const result = snapshotAckSchema.parse(await this.request('rehearsal:join', {ensembleId:this.ensembleId}));
     if (!('state' in result)) {this.notice(result.code);throw new Error(result.code);}
     await this.apply(result.state);
@@ -114,9 +123,9 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     }
     return ack;
   }
-  send(command: Command) {
+  async send(command: Command) {
     if (!this.ready || !this.latest) return Promise.reject(new Error('connecting'));
-    return this.command({ensembleId:this.ensembleId,commandId:crypto.randomUUID(),baseRevision:this.latest.revision,clientSentAt:this.now(),command});
+    return this.command({ensembleId:this.ensembleId,commandId:randomCommandId(),baseRevision:this.latest.revision,clientSentAt:this.now(),command});
   }
   subscribe(listener: (state: RehearsalState) => void | Promise<void>) {
     this.listeners.add(listener); return () => {this.listeners.delete(listener);};
