@@ -1,3 +1,4 @@
+import { ZodError } from 'zod';
 import type { PoolClient } from 'pg';
 import type { Namespace, Socket } from 'socket.io';
 import { performance } from 'node:perf_hooks';
@@ -29,7 +30,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
     }
     function errorCode(error: any): Ack['code'] {
         const code = error?.code ?? error?.message;
-        if (/^22/.test(String(code)) || code === 'ZodError') return 'invalid';
+        if (/^22/.test(String(code)) || error instanceof ZodError || error?.name === 'ZodError') return 'invalid';
         if (['invalid_score','invalid_xml','empty_score','invalid_text','nesting_limit'].includes(code)) return 'invalid';
         return ['forbidden','session_expired','not_found','rate_limited','invalid'].includes(code) ? code : 'unavailable';
     }

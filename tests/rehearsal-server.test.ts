@@ -262,3 +262,11 @@ it('reconciles deletions received while ownership is unavailable on recovery',as
  mocks.locked=true;await vi.advanceTimersByTimeAsync(1000);
  expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).state).toMatchObject({pieceId:null,revision:3});
 });
+
+it('maps actual Zod errors from timing validation to invalid',async()=>{
+ const {z}=await import('zod');const bad=z.number().safeParse('bad');
+ const normal=mocks.query.getMockImplementation()!;
+ mocks.query.mockImplementation(async(sql,args)=>{if(sql.startsWith('select content_hash'))throw bad.error;return normal(sql,args);});
+ const c=setup().socket('zod');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ expect((await c.emit('rehearsal:command',command('selectPiece',{command:{type:'selectPiece',pieceId:'p',versionNo:1}}))).code).toBe('invalid');
+});
