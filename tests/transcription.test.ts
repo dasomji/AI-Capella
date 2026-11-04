@@ -213,7 +213,7 @@ test('sysadmin stop and metrics APIs enforce platform role, and sole-member clos
 });
 test('durable progress notifications reach only current transcribers on authenticated sockets',async()=>{
  const {lead,e,source}=await setup();const ordinary=await account();await pool.query('insert into memberships(ensemble_id,user_id) values($1,$2)',[e.id,ordinary.id]);
- const sockets=[];
+ const sockets:ReturnType<typeof connect>[]=[];
  try{
  for(const user of [lead,ordinary]){
  const socket=connect(base,{transports:['websocket'],extraHeaders:{cookie:user.cookie,origin:base}});sockets.push(socket);

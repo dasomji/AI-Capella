@@ -1330,10 +1330,104 @@ hardware/operational limitations documented above. Every review item has its
 own local commit; follow-up test/harness commits preserve the intermediate
 failure evidence. All commits remain on `production-v1`; nothing was pushed.
 
-### Phase 4a — private originals and durable transcription (in progress)
+### Phase 4a — private originals and durable transcription
 
 Storage uses a server-only S3 adapter, private scoped random keys, a maximum
 60-second signed GET, and ensemble/hash deduplication for ready originals.
 `stored_objects.kind` separates indefinite originals from disposable derivatives.
 A durable object-deletion outbox supports ensemble deletion without losing keys.
 No infrastructure has been provisioned. Plane MCP is unavailable in this session.
+
+Phase 4a implementation details:
+
+- Storage layout: `ensembles/{ensembleId}/originals/{uuid}`. Keys are never
+  credentials. Originals are magic-sniffed, hashed during streaming, staged on
+  private local disk and inspected in a worker with a 192 MiB JS heap and a
+  10-second deadline. PDF parsing is bounded, without rendering; photo metadata
+  has a 40-million-pixel guard. Native parser memory also depends on worker-image
+  resource limits. HEIC requires libvips HEIF support. Ordered photo source sets
+  are the job's immutable `provenance.sources` array; each page stores its source
+  ID/page number and zero-based job order. One PDF or up to 60 photos per job.
+- API: POST `/api/ensembles/:ensemble/originals` accepts a raw streamed body and
+  `X-Original-Filename`; response returns an object ID. GET `originals/:object`
+  streams an attachment, or `?signed=1` redirects to a signed GET valid at most
+  60 seconds. Each authorized access is audited without content. Current
+  transcribe/lead is required. Signed links are bearer grants for their short
+  lifetime and cannot enforce a revocation that occurs after issuance.
+- POST `transcriptions`, with `Idempotency-Key`, `{sourceObjects:[ids], options}`
+  creates and queues the job in the original destination ensemble. Options are
+  currently limited to language. GET `transcriptions/:job`, GET `:job/result`,
+  POST `:job/cancel`, POST `:job/retry` recheck current transcribe/lead. POST
+  `:job/import` requires **editPieces alone**, by the explicit Phase 4a import
+  decision; importer need not initiate the job. It uses the existing score
+  validator, timing derivation, version insert and library notification path.
+  Ensemble + job locks and imported-piece reference make imports idempotent.
+- State machine (persisted):
+  `queued -> running -> completed | failed | cancelled`
+  `failed | cancelled -> queued` (explicit retry, retain completed pages)
+  Pages: `queued -> running(lease) -> completed | failed | queued(backoff)`;
+  expired running leases can be reclaimed; a unique claim token fences stale
+  workers. Cancellation invalidates claims and keeps already complete pages.
+  A bounded worker loop performs repeatable assembly and checkpoints final XML.
+  Emergency stop overlays `processing_paused` on queued/running progress;
+  in-flight calls may finish, but assembly and new provider calls pause.
+- `npm run worker` runs a separate process; `TranscriptionWorker.tick()` is also
+  callable in dev/tests. PostgreSQL `FOR UPDATE SKIP LOCKED`, timestamptz leases,
+  heartbeat and claim tokens provide crash recovery without Redis. Pages within
+  one job are sequential for previous-page context; different jobs run in
+  parallel. Admission is serialized per initiator and ensemble (2/4 active jobs
+  by default), with 2 globally active pages, a 20-second provider timeout and
+  at most 3 automatic attempts with capped exponential backoff. Upload admission
+  uses the Phase 3b UploadSlots implementation and configured limits.
+- Every worker provider step rechecks the initiating user's current capability.
+  Departed/deleted initiators fail permission checks; ensemble ownership remains.
+  Cancellation and failed attempts have distinct stored reasons. The only shipped
+  provider is FakeProvider: no OpenAI client, paid call, model substitution or
+  Audiveris fallback. Fake assembly produces a demonstrative MusicXML score.
+- `TRANSCRIPTION_EMERGENCY_STOP=1` always pauses. A sysadmin-only PUT
+  `/api/admin/transcription/control` with `{paused:boolean}` controls a DB toggle
+  and writes an audit event; leads have no implicit platform rights. Resume
+  preserves all work. GET `/api/admin/transcription/metrics?from=...&to=...`
+  requires sysadmin and offset-qualified instants, using half-open ranges.
+- Page metrics record attempts, retries, latency, model/prompt, usage, estimated
+  USD and result uncertainties; jobs record summary metrics. Price table entries
+  use `{input,output}` USD/million tokens, keyed by model. Fake usage/cost is zero.
+- Originals have no age-based expiry. Account closure deleting a sole-member
+  ensemble transactionally queues its object keys for physical deletion; all
+  other account closures leave originals with the ensemble. Worker cleanup
+  drains unreferenced deletion-outbox keys after a one-hour safety interval.
+  Derived cleanup selects only `kind='derived'`; originals cannot match it.
+  Failed uploads enqueue orphan keys before storage upload; private staging
+  files are removed on normal success/failure. Crash-left local staging is cleaned in bounded batches after one hour by the
+  worker; this staging directory never contains retained object-store originals.
+- Socket `transcription:progress` events (stage and page states) cross worker/API processes through
+  PostgreSQL NOTIFY. Recipients are rechecked for valid session and current
+  transcribe/lead; HTTP supplies durable progress after missed notifications.
+
+4b plugs in `TranscriptionProvider`, `PageRenderer` and `JobAssembler`: real model
+ID/access verification, bounded PDF rasterization, faithful musical assembly,
+notation validation and evaluation. 4c consumes the APIs and socket progress events
+for upload/progress/review/import UI; no transcription UI is introduced here.
+The fake XML checks are deliberately limited to the fake contract; they are not
+musical quality validation.
+
+Phase 4a verification (2026-11-04): `npm run typecheck` passed; `npm test`
+passed 107 tests; `npm run build` passed (also rebuilt by the browser/secret
+harnesses); `npm run test:integration` passed 49 scenarios against disposable
+Postgres and a dedicated SeaweedFS bucket, with real verified sessions;
+`npm run test:browser` passed the account/library/theme suite plus synchronized
+playback and acceptance scenarios; `npm run db:generate` reported no drift.
+The final `npm run check:secrets` passed its positive control and clean-client
+artifact scan. New migration 0005 is committed; no production migration occurred.
+
+The new integration scenarios cover sniffing, streaming size enforcement,
+page/pixel limits, deduplication, authorized downloads and signed URL expiry,
+source-order preservation, immutable tenant destination, provider failures,
+bounded retries, completed-page reuse, SIGKILL/reclaim under a frozen clock and
+non-UTC TZ, cancellation checkpoints, current permission revocation, user and
+ensemble admission limits, concurrent import, edit/transcribe independence,
+emergency DB/env stops, admin metrics/authorization, private socket progress,
+derived cleanup exclusion of originals, and account-closure deletion outbox.
+Temporary check logs are in gitignored `.transcription-tmp/`; browser evidence is
+in gitignored `.review-evidence/`. No push, provisioning, paid AI or real mail.
+Separate read-only review and independent verification belong to the parent run.

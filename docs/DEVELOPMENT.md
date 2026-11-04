@@ -157,3 +157,22 @@ It exposes this signed-in device's canonical rehearsal state, clock uncertainty,
 scheduled clicks and output position; it adds no authorization or control API.
 Use it for the device's own diagnostics. Closing/reloading without the query
 removes the hook; signout also clears the active account/session state.
+
+Phase 4a transcription: run `npm run worker` alongside `npm run dev` (or construct
+TranscriptionWorker in-process). Only FakeProvider is installed; no AI key is
+needed. In development the adapter creates a missing configured bucket; tests
+explicitly create/remove a dedicated `transcription-test-*` bucket on local
+SeaweedFS. Start `docker compose up -d seaweedfs mailpit` before integration tests.
+Production never creates buckets. An authorized operator must configure a private
+Railway bucket and set `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`,
+`S3_SECRET_ACCESS_KEY` in both API and worker environments. Use an endpoint
+reachable by browsers if signed links are enabled. Do not configure public bucket
+access or age-based lifecycle expiry for originals. No bucket was provisioned.
+
+Transcription limits, lease duration, concurrency, timeout, attempts, price table
+and emergency flag are listed in `.env.example`. Set process memory/disk limits
+in the eventual worker image too. The local staging directory is
+`.transcription-tmp/` (gitignored, private files); the worker reaps abandoned upload dirs older than one hour in bounded batches. DB/object-store backups
+must cover originals together with references. Original deletion after sole-member
+ensemble account closure is eventual via the worker deletion outbox; allow at
+least one hour plus the next successful cleanup pass.
