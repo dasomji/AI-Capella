@@ -505,7 +505,7 @@ if(syncDebug || import.meta.env.MODE==='test'){
      state:sharedState ? structuredClone(sharedState) : null,
      timing:sharedTiming ? structuredClone(sharedTiming) : null,
      serverNow:now,
-     positionAtServerTime:(at:number)=>sharedState && sharedTiming ? positionAt(sharedState,at,sharedTiming) : null,
+     positionAtServerTime:(at:number,state=sharedState)=>state && sharedTiming ? positionAt(state,at,sharedTiming) : null,
      scheduledClicks:[...(audioEngine?.sharedClickTimes ?? [])],
      driftMs:sharedState && sharedTiming && audioEngine && now!==null ? playbackDriftMs(sharedState,now,audioEngine.getCurrentBeat(),sharedTiming) : null,
      offsetMs:clock?.diagnostics?.offsetMs ?? null,
@@ -4049,6 +4049,7 @@ const lastPlace = ((): Place | null => {
   }
 })();
 function noteSeen() {
+  if(leavingAccount)return;
   try {
     localStorage.setItem(SEEN_KEY, String(Date.now()));
     notePlace();
@@ -4058,6 +4059,7 @@ function noteSeen() {
 }
 /** Where the app is: in the repertoire, or in a song. */
 function notePlace() {
+  if(leavingAccount)return;
   const inPlayer = app.classList.contains('mode-player');
   if (!inPlayer && !app.classList.contains('mode-library')) return;
   const song = inPlayer ? currentSong : null;
@@ -4222,6 +4224,7 @@ async function openAccountArea(anchor: HTMLElement) {
     if (r.ok) {
       clearLibrary();
       localStorage.removeItem(PLACE_KEY);
+      localStorage.removeItem(`lightscore-ensemble:${account?.id}`);
       sessionStorage.removeItem(MODE_SWITCH_KEY);
       location.replace("/?state=signed-out");
     } else {leavingAccount=false;accountEvents.connect();toast(pt("errorGeneric"), "error");}
