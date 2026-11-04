@@ -249,3 +249,11 @@ test('cancel aborts provider and retains its independent ledger entry',async()=>
  await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);await work;
  assert.equal(aborted,true);const calls=(await pool.query('select * from provider_calls where job_id=$1',[j.id])).rows;assert.equal(calls.length,1);assert.ok(calls[0].finished_at);
 });
+test('transient authorization infrastructure error retries exactly once then succeeds',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
+ const original=pool.query;let injected=false;
+ (pool as any).query=function(...args:any[]){if(!injected && typeof args[0]==='string' && args[0].includes('from memberships')){injected=true;return Promise.reject(new Error('connection terminated'));}return (original as any).apply(pool,args);};
+ try{await new TranscriptionWorker().tick();}finally{pool.query=original;}
+ const failed=await view(e.id,lead.cookie,j.id);assert.equal(failed.pages[0].failure_reason,'infrastructure_error');assert.equal(failed.pages[0].state,'queued');assert.equal(failed.pages[0].attempts,1);
+ await pool.query("update job_pages set next_attempt_at=now() where job_id=$1",[j.id]);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+});

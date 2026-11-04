@@ -1491,3 +1491,6 @@ S1: added an independent provider_calls ledger, written at call entry and on
 settlement before result fencing. Expired leases mark running calls abandoned
 with lease_expired; stale returns retain their usage. Heartbeats abort on lost
 ownership, cancellation and pause. Admin metrics aggregate the ledger.
+
+S2: only explicit authorization DomainError 403/404 becomes permission_revoked;
+unknown/render/storage/database errors use bounded infrastructure_error retries.

@@ -48,10 +48,10 @@ export class TranscriptionWorker {
  const started=Date.now();let result:PageResult|undefined;let failure:ProviderError|undefined;let paused=false;
  try {
  if(page.attempts>=env.TRANSCRIPTION_MAX_ATTEMPTS)throw new ProviderError('abandoned');
- await authorize(pool,page.user_id,page.ensemble_id,'transcribe').catch(()=>{throw new ProviderError('permission_revoked');});
+ await authorize(pool,page.user_id,page.ensemble_id,'transcribe').catch(error=>{if(error instanceof DomainError && [403,404].includes(error.status))throw new ProviderError('permission_revoked');throw error;});
  paused=await processingPaused();if(!paused){
  const input=await this.renderer.render({objectKey:page.object_key,contentType:page.content_type,sourcePage:page.source_page,pageIndex:page.page_number},abort.signal);
- await authorize(pool,page.user_id,page.ensemble_id,'transcribe').catch(()=>{throw new ProviderError('permission_revoked');});
+ await authorize(pool,page.user_id,page.ensemble_id,'transcribe').catch(error=>{if(error instanceof DomainError && [403,404].includes(error.status))throw new ProviderError('permission_revoked');throw error;});
  paused=await processingPaused();
  if(!paused){
  const context=(await pool.query("select metrics from job_pages where job_id=$1 and state='completed' order by page_number",[page.job_id])).rows.map(r=>r.metrics.result as PageResult);
@@ -67,7 +67,7 @@ export class TranscriptionWorker {
  if(!result.musicxmlFragment.endsWith('</measure>'))throw new ProviderError(result.musicxmlFragment.startsWith('<measure')?'truncated':'invalid_output');
  }
  }
- }catch(error){failure=error instanceof ProviderError?error:new ProviderError('invalid_output');}
+ }catch(error){failure=error instanceof ProviderError?error:new ProviderError('infrastructure_error',true);}
  finally{clearTimeout(timeout);clearInterval(heartbeat);}
  await transaction(async db=>{
  await db.query('select id from transcription_jobs where id=$1 for update',[page.job_id]);
@@ -90,7 +90,7 @@ export class TranscriptionWorker {
  await transaction(async db=>{
  const j=(await db.query('select * from transcription_jobs where id=$1 for update',[id])).rows[0];if(!j || !['queued','running'].includes(j.state))return;
  const pages=(await db.query('select * from job_pages where job_id=$1 order by page_number',[id])).rows;if(!pages.length || pages.some(p=>p.state!=='completed'))return;
- try{await authorize(db,j.user_id,j.ensemble_id,'transcribe');}catch{await db.query("update transcription_jobs set state='failed',failure_reason='permission_revoked' where id=$1",[id]);return;}
+ try{await authorize(db,j.user_id,j.ensemble_id,'transcribe');}catch(error){if(!(error instanceof DomainError) || ![403,404].includes(error.status))throw error;await db.query("update transcription_jobs set state='failed',failure_reason='permission_revoked' where id=$1",[id]);return;}
  if(await processingPaused())return;
  const xml=await this.assembler.assemble(pages.map(p=>p.metrics.result));
  await db.query("update transcription_jobs set state='completed',result_xml=$2,metrics=$3 where id=$1",[id,xml,{pages:pages.length,attempts:pages.reduce((n,p)=>n+p.metrics.attempts,0),latency:pages.reduce((n,p)=>n+p.metrics.latency,0),estimatedCost:pages.reduce((n,p)=>n+p.metrics.estimatedCost,0),usage:pages.reduce((n,p)=>({inputTokens:n.inputTokens+p.metrics.usage.inputTokens,outputTokens:n.outputTokens+p.metrics.usage.outputTokens}),{inputTokens:0,outputTokens:0}),model:j.model,promptVersion:j.prompt_version,outcome:'completed'}]);
