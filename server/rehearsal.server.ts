@@ -176,6 +176,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         }
         if(owner!==client || closed) throw Error('unavailable');
         ownershipReady=true;failures=0;
+        for(const state of committed.values())if(ns.adapter.rooms.get(`rehearsal:${state.ensembleId}`)?.size)ns.to(`rehearsal:${state.ensembleId}`).emit('playback:state',state);
       } catch(error) {
         logError('rehearsal.recovery',error);if(owner===client)loseOwnership();else if(!owner)retryOwnership();throw error;
       }

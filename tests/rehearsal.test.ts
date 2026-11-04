@@ -313,6 +313,7 @@ it('rejects stale and suspended output timestamps',async()=>{
 it('clamps the first tempo mark and keeps pre-roll grid origin after a preference change',async()=>{
  const timing=timingFromScore({tempo:120,totalBeats:16,measures:[],marks:[{kind:'tempo',beat:0,tempoBpm:2000}]} as any);
  expect(timing.baseBpm).toBe(1000);
+ expect(timingFromScore({tempo:2000,totalBeats:16,measures:[]} as any).baseBpm).toBe(1000);
  const {playbackSchedule}=await import('../src/rehearsal/schedule');
  const state={...s,status:'countingIn' as const,bpm:120,anchor:{beat:0,serverTime:2400},effectiveAt:3550,countInUntil:4400};
  expect(playbackSchedule(state,3500,t).countIn?.from).toBe(2400);

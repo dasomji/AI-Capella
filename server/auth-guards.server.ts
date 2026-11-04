@@ -9,12 +9,18 @@ export async function allowAccountMail(email:string, kind:'verify'|'reset', requ
   const digest=(s:string)=>createHash('sha256').update(s).digest('hex');
   const key='account-mail:'+digest(email.trim().toLowerCase())+':'+kind;
   const ip=request?.headers.get('x-lightscore-socket-ip') ?? requesters.getStore() ?? 'internal';
-  const budgets = [[key+':interval',60000,1],[key+':day',86400000,100],[key+':ip:'+digest(ip),86400000,5]] as const;
+  const budgets = [[key+':interval',60000,1],[key+':ip:'+digest(ip),86400000,2]] as const;
   const db=await pool.connect();
   try {
     await db.query('begin');
     await db.query('select pg_advisory_xact_lock(hashtextextended($1,0))',[key]);
     const now=Date.now();
+    // Each delivery expires independently; the 24-hour recipient ceiling rolls.
+    await db.query('delete from rate_limit where key like $1 and last_request <= $2',[key+':sent:%',now-86400000]);
+    const sent=(await db.query('select count(*)::int as count from rate_limit where key like $1 and last_request > $2',[key+':sent:%',now-86400000])).rows[0].count;
+    // Conservatively retain pre-upgrade fixed-window usage until its window expires.
+    const legacy=(await db.query('select count,last_request from rate_limit where key=$1',[key+':day'])).rows[0];
+    if(sent+(legacy && Number(legacy.last_request)>now-86400000?legacy.count:0)>=100){await db.query('rollback');return false;}
     for(const [budget,window,max] of budgets){
       const row=(await db.query('select count,last_request from rate_limit where key=$1',[budget])).rows[0];
       if(row && Number(row.last_request)>now-window && row.count>=max){
@@ -24,6 +30,7 @@ export async function allowAccountMail(email:string, kind:'verify'|'reset', requ
       }
     }
     for(const [budget,window] of budgets) await db.query(`insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request <= $2-$3 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request <= $2-$3 then $2 else rate_limit.last_request end`,[budget,now,window]);
+    await db.query('insert into rate_limit(key,count,last_request) values($1,1,$2)',[key+':sent:'+crypto.randomUUID(),now]);
     await db.query('commit');return true;
   } catch(error){await db.query('rollback');throw error;} finally{db.release();}
 }

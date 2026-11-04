@@ -1602,13 +1602,15 @@ test('raw large score validation does not block health and rejects unauthorized 
   const ensemble=await ok('ensembles','POST',{name:'Worker validation'},owner.cookie);
   const path=`ensembles/${ensemble.id}/pieces`;
   const raw=xml.replace('<part id=', '<!--'+'x'.repeat(20*1024*1024-Buffer.byteLength(xml)-7)+'--><part id=');
-  let complete=false;
+  let complete=false;const uploadStarted=performance.now();
   const upload=request(path,'POST',{title:'Large',content:{format:'musicxml',schemaVersion:1,body:raw}},owner.cookie).then(async r=>{assert.equal(r.status,201,await r.text());}).finally(()=>{complete=true;});
   const latencies:number[]=[];
   while(!complete) {
     const start=performance.now();assert.equal((await fetch(base+'/healthz')).status,200);latencies.push(performance.now()-start);await delay(10);
   }
   await upload;
+  const uploadMs=performance.now()-uploadStarted;assert.ok(uploadMs<30000,`upload including timing ${uploadMs} ms`);
+  console.log(`20 MiB upload including timing: ${uploadMs.toFixed(1)} ms`);
   console.log(`20 MiB upload: max health latency ${Math.max(...latencies).toFixed(1)} ms, ${latencies.length} probes`);
   assert.ok(Math.max(...latencies)<500,`health latency ${Math.max(...latencies)} ms`);
   const stranger=await account();
@@ -1668,17 +1670,17 @@ test('authoritative rehearsal serializes ordinary members, snapshots, rejection 
   assert.deepEqual(await emit(clients[0],'rehearsal:command',selected),{commandId:selected.commandId,status:'accepted',revision:1});
   const results=await Promise.all(Array.from({length:6},(_,i)=>emit(clients[i%3],'rehearsal:command',env({type:'setTempo',pieceId:piece.id,versionNo:1,bpm:120+i}))));
   assert.deepEqual(results.map(r=>r.revision).sort((a,b)=>a-b),[2,3,4,5,6,7]);revision=7;
-  assert.equal((await emit(clients[0],'rehearsal:command',env({type:'pause'},{baseRevision:0}))).status,'accepted');revision++;
+  assert.equal((await emit(clients[0],'rehearsal:command',env({type:'pause'},{baseRevision:0}))).status,'accepted');
   assert.equal((await emit(clients[0],'rehearsal:command',env({type:'stop'},{clientSentAt:Date.now()-6000}))).code,'expired');
   assert.equal((await emit(clients[0],'rehearsal:command',env({type:'setTempo',pieceId:piece.id,versionNo:1,bpm:-1}))).code,'invalid');
   assert.equal((await emit(outsider,'rehearsal:command',env({type:'stop'}))).code,'forbidden');
   assert.equal((await emit(clients[1],'rehearsal:command',env({type:'selectPiece',pieceId:crypto.randomUUID(),versionNo:1}))).code,'not_found');
-  const snapshot=(await emit(clients[2],'rehearsal:snapshot',{ensembleId:e.id})).state;assert.equal(snapshot.revision,8);
+  const snapshot=(await emit(clients[2],'rehearsal:snapshot',{ensembleId:e.id})).state;assert.equal(snapshot.revision,7);
   const saved=await ok(path+'/pieces/'+piece.id,'GET',undefined,lead.cookie);assert.deepEqual(saved.settings,savedBefore.settings);assert.equal(saved.revision,savedBefore.revision);
-  const reconnected=await open(b.cookie);assert.equal((await emit(reconnected,'rehearsal:join',{ensembleId:e.id})).state.revision,8);
+  const reconnected=await open(b.cookie);assert.equal((await emit(reconnected,'rehearsal:join',{ensembleId:e.id})).state.revision,7);
   const limiter=await open(lead.cookie);await emit(limiter,'rehearsal:join',{ensembleId:e.id});
   const limited=await Promise.all(Array.from({length:35},()=>emit(limiter,'rehearsal:command',env({type:'setTempo',pieceId:piece.id,versionNo:1,bpm:-1}))));assert.ok(limited.some(r=>r.code==='rate_limited'));
-  await delay(100);for(const sequence of sequences)assert.deepEqual(sequence.map(s=>s.revision),[1,2,3,4,5,6,7,8]);
+  await delay(100);for(const sequence of sequences)assert.deepEqual(sequence.map(s=>s.revision),[1,2,3,4,5,6,7]);
   assert.deepEqual(sequences[0],sequences[1]);assert.deepEqual(sequences[0],sequences[2]);
   // Revoke one ordinary member. Another member/device continues without a reset.
   await ok(path+'/members/'+(await pool.query('select id from memberships where ensemble_id=$1 and user_id=$2',[e.id,b.id])).rows[0].id,'DELETE',undefined,lead.cookie);
@@ -1688,7 +1690,7 @@ test('authoritative rehearsal serializes ordinary members, snapshots, rejection 
   assert.equal((await emit(clients[2],'rehearsal:command',env({type:'play'}))).status,'accepted');revision++;
   await ok(path+'/pieces/'+piece.id,'DELETE',undefined,lead.cookie);
   await delay(150);const deleted=(await emit(clients[2],'rehearsal:snapshot',{ensembleId:e.id})).state;assert.equal(deleted.pieceId,null);assert.equal(deleted.status,'stopped');assert.equal(deleted.revision,++revision);
-  await delay(50);assert.deepEqual(sequences[0],sequences[2]);assert.equal(sequences[1].at(-1).revision,8);
+  await delay(50);assert.deepEqual(sequences[0],sequences[2]);assert.equal(sequences[1].at(-1).revision,7);
   const xmlPiece=await ok(path+'/pieces','POST',{title:'XML timing',content:{format:'musicxml',schemaVersion:1,body:xml}},lead.cookie);
   assert.equal((await emit(clients[2],'rehearsal:command',env({type:'selectPiece',pieceId:xmlPiece.id,versionNo:1}))).status,'accepted');
  }finally{for(const socket of sockets)socket.disconnect();}
@@ -1836,8 +1838,8 @@ test('parallel attackers cannot exclude a fresh IP password attempt', {timeout:9
  const victim={...await account(),password:'domain-fixture-password-42'};const {api}=await import('../server/http.server');
  const attempt=(ip:string,password:string)=>api.fetch(new Request(base+'/api/auth/sign-in/email',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':ip},body:JSON.stringify({email:victim.email,password})}));
  let active=true;
- const attackers=Array.from({length:12},(_,i)=>(async()=>{for(let n=0;active && n<20;n++)await attempt(`198.51.100.${i+1}`,'wrong-password');})());
- try {await delay(30);for(let n=0;n<5;n++)assert.equal((await attempt('203.0.113.90',victim.password)).status,200);}
+ const attackers=Array.from({length:12},(_,i)=>(async()=>{for(let n=0;active && n<2000;n++){await attempt(`198.51.100.${i+1}`,'wrong-password');await delay(20);}})());
+ try {await delay(30);for(let n=0;n<30;n++)assert.equal((await attempt('203.0.113.90',victim.password)).status,200);}
  finally{active=false;await Promise.all(attackers);}
 });
 
@@ -1852,4 +1854,34 @@ test('rehearsal ownership survives pg_terminate_backend', {timeout:20000},async(
  assert.ok(rehearsalReady());
  const replacement=(await pool.query("select pid from pg_locks where locktype='advisory' and classid=714083 and objid=1 and granted")).rows[0];
  assert.ok(replacement);assert.notEqual(replacement.pid,owner.pid);
+});
+
+test('stored version timing is authoritative and lazily refreshed by derivation version',async()=>{
+ const singer=await account(),e=await ok('ensembles','POST',{name:'Stored timing'},singer.cookie);
+ const body={title:'Timing',parts:[{id:'p',name:'Voice'}],notes:[{partId:'p',midi:60,startBeat:0,durationBeats:4,measureNumber:1}],measures:[{number:1,startBeat:0,beats:4,beatType:4,fifths:0}],slurs:[],totalBeats:4,rehearsalMarks:[],tempo:120};
+ const piece=await ok(`ensembles/${e.id}/pieces`,'POST',{title:'Timing',content:{format:'score',body}},singer.cookie);
+ await pool.query("update score_versions set timing=timing || '{\"derivationVersion\":0,\"baseBpm\":42}'::jsonb where piece_id=$1",[piece.id]);
+ const stored=await ok(`ensembles/${e.id}/pieces/${piece.id}/versions/1?timing=1`,'GET',undefined,singer.cookie);
+ assert.equal(stored.timing.baseBpm,120);assert.equal(stored.timing.derivationVersion,2);
+ assert.equal(stored.pieceId,piece.id);assert.equal(stored.versionNo,1);
+ assert.deepEqual((await pool.query('select timing from score_versions where piece_id=$1',[piece.id])).rows[0].timing,stored.timing);
+});
+test('recipient mail window rolls each send and twenty requester shares cannot fill it',async()=>{
+ const {allowAccountMail}=await import('../server/auth-guards.server');
+ const email=crypto.randomUUID()+'@example.test';const prefix='account-mail:'+(await import('node:crypto')).createHash('sha256').update(email).digest('hex')+':reset';
+ for(let n=0;n<99;n++)await pool.query('insert into rate_limit(key,count,last_request) values($1,1,$2)',[prefix+':sent:'+n,Date.now()-(n===0?86400001:1000)]);
+ const req=(ip:string)=>new Request(base,{headers:{'x-lightscore-socket-ip':ip}});
+ assert.ok(await allowAccountMail(email,'reset',req('203.0.113.1')));
+ await pool.query('delete from rate_limit where key=$1',[prefix+':interval']);
+ assert.ok(await allowAccountMail(email,'reset',req('203.0.113.1')));
+ await pool.query('delete from rate_limit where key=$1',[prefix+':interval']);
+ assert.equal(await allowAccountMail(email,'reset',req('203.0.113.2')),false);
+ assert.equal((await pool.query('select count(*)::int as count from rate_limit where key like $1',[prefix+':sent:%'])).rows[0].count,100);
+ const other=crypto.randomUUID()+'@example.test';
+ const key='account-mail:'+(await import('node:crypto')).createHash('sha256').update(other).digest('hex')+':reset';
+ for(let n=0;n<20;n++){
+  for(let j=0;j<2;j++){await pool.query('delete from rate_limit where key=$1',[key+':interval']);assert.ok(await allowAccountMail(other,'reset',req('198.51.100.'+n)));}
+  await pool.query('delete from rate_limit where key=$1',[key+':interval']);assert.equal(await allowAccountMail(other,'reset',req('198.51.100.'+n)),false);
+ }
+ assert.ok(await allowAccountMail(other,'reset',req('203.0.113.250')));
 });

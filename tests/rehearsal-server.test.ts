@@ -205,6 +205,7 @@ it('reacquires after owner connection loss and repeats recovery',async()=>{
  recovery=[{ensemble_id:ensemble,revision:1,state:{...initialState(ensemble,'u',0),revision:1,status:'playing'}}];
  mocks.ownerError(Error('terminated'));await vi.advanceTimersByTimeAsync(1000);
  expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).state).toMatchObject({status:'paused',revision:2});
+ expect(app.broadcasts.at(-1)).toMatchObject({status:'paused',revision:2});
 });
 it('never serves the raw playing snapshot after recovery persistence failure',async()=>{
  recovery=[{ensemble_id:ensemble,revision:1,state:{...initialState(ensemble,'u',0),revision:1,status:'playing'}}];

@@ -9,6 +9,7 @@ function rendererStyle(text: string, id: string) {
   return /^@font-face\s*\{\s*font-family:\s*'(?:Leipzig|Bravura|LightScoreEngraving)';\s*src:\s*url\(data:application\/font-woff2;charset=utf-8;base64,[A-Za-z0-9+/=]+\)\s*format\('woff2'\);\s*font-weight:\s*normal;\s*font-style:\s*normal;\s*\}$/.test(text);
 }
 function decodeCss(text: string) {
+  if(text.includes('\\') || text.includes('/*'))return 'url(';
   return text.replace(/\\([0-9a-f]{1,6})\s?|\\([^\n\r\f])/gi, (_, hex, char) => hex ? String.fromCodePoint(Math.min(parseInt(hex,16),0x10ffff)) : char).replace(/\/\*[\s\S]*?\*\//g,'').replace(/[\u0000-\u0020]/g,'');
 }
 /** Parse inertly; only notation geometry, text and internal glyph references cross this boundary. */

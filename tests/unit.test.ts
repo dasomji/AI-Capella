@@ -203,7 +203,7 @@ it('SVG boundary rejects 18 executable payloads and retains real Verovio notatio
       '<animate href="#x" attributeName="href" to="javascript:evil()"/>','<set href="#x" attributeName="href" to="https://evil.test"/>',
       '<a href="javascript:evil()"><text>link</text></a>','<image href="data:image/svg+xml,bad"/>',
       '<script>evil()</script>','<g onload="evil()"/>','<g xmlns="https://evil.test"/>',
-      '<g fill="url(https://evil.test)"/>','<use href="&#106;avascript:evil()"/>','<g xml:base="https://evil.test"><use href="#glyph"/></g>',
+      '<g fill="red/*evil*/"/>','<g fill="\\110000evil"/>','<g fill="url(https://evil.test)"/>','<use href="&#106;avascript:evil()"/>','<g xml:base="https://evil.test"><use href="#glyph"/></g>',
     ];
     for(const payload of payloads){const svg=safeSvg(`<svg xmlns="http://www.w3.org/2000/svg">${payload}</svg>`);expect(svg.outerHTML).not.toMatch(/evil|foreignObject|<style|<animate|<set|onload|xml:base/);}
     expect(()=>safeSvg('<!DOCTYPE svg [<!ENTITY x "evil">]><svg xmlns="http://www.w3.org/2000/svg">&x;</svg>')).toThrow();

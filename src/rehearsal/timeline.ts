@@ -16,7 +16,7 @@ export interface PieceTiming {
     }[];
 }
 export function timingFromScore(score: Score): PieceTiming {
-    const baseBpm = score.tempo && score.tempo >= 1 && score.tempo <= 1000 ? score.tempo : 100;
+    const baseBpm = Number.isFinite(score.tempo) ? Math.min(1000,Math.max(1,score.tempo!)) : 100;
     const tempos = new Map<number, number>([[0, baseBpm]]);
     for (const mark of score.marks ?? []) {
         const m = mark.metronome;

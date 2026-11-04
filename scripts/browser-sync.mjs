@@ -172,6 +172,16 @@ try {
   fs.writeFileSync(evidence+'/sync-starts.json',JSON.stringify({aStart,bStart,differenceMs}));
   await p.locator('.play-btn').click();
   for(const page of [p,q])await page.waitForFunction(()=>window.__lightscoreSync?.status==='paused');
+  // The output correction belongs to the device, and survives a page reload.
+  await p.locator('#player-menu-btn').click();await p.getByText('Settings',{exact:true}).click();
+  await p.getByText('Output latency offset',{exact:true}).click();
+  await p.getByRole('slider',{name:'Output latency offset'}).evaluate(el=>{el.value='200';el.dispatchEvent(new Event('change',{bubbles:true}));});
+  assert.equal(await p.evaluate(()=>localStorage.getItem('ai-capella-output-latency-ms')),'200');
+  assert.equal(await q.evaluate(()=>localStorage.getItem('ai-capella-output-latency-ms')),null);
+  await p.reload();await p.waitForFunction(()=>window.__lightscoreSync?.ready);
+  await p.locator('#player-menu-btn').click();await p.getByText('Settings',{exact:true}).click();
+  await p.getByText('Output latency offset',{exact:true}).click();
+  assert.equal(await p.getByRole('slider',{name:'Output latency offset'}).inputValue(),'200');
   await q.evaluate(()=>{sessionStorage.setItem('ai-capella-mode-switch','solo');localStorage.setItem('ai-capella-mode-v2','solo');});
   await q.goto(base+'/app?debug=sync');
   await q.getByText('Evening Rise',{exact:true}).first().click();
