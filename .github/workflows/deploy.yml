@@ -30,10 +30,6 @@ jobs:
         run: node -e "const [a,b,c]=process.versions.node.split('.').map(Number); if (a*1e6+b*1e3+c < 24022001) { console.error('Node '+process.version+' predates the eMudhra CA fix'); process.exit(1) }"
       - run: npm ci
       - run: npm run build
-        env:
-          # The scan service's address (Settings -> Secrets and variables -> Actions -> Variables).
-          # Without it the app simply doesn't offer "Scan sheet music".
-          VITE_OMR_URL: ${{ vars.OMR_URL }}
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist

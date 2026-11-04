@@ -465,93 +465,12 @@ played (`playedBeat`).
   not just the one that clicked it), unlike the trust model everywhere else in this app (renames,
   playback state) of applying shared-state changes immediately with no confirmation step.
 
-### Scan sheet music (PDF / photos)
-- When the scan service is configured (`VITE_OMR_URL` at build time, from the GitHub variable
-  `OMR_URL`), **Add arrangement** opens a small menu: import a file, or **Scan sheet music**.
-  Without it, the button imports files directly as before.
-- The scan sheet (`scan.ts`) takes one PDF (≤ 30 MB, ≤ 40 pages) or up to 40 photos — taken with
-  the camera on a phone, or chosen from the device — shown as numbered thumbnails that can be
-  reordered and removed. Photos are scaled to ≤ 3000 px (EXIF orientation applied) and sent as JPEG.
-- The service (`omr-service/`, a Node server in a Docker container — on the choir's own server
-  via Docker Compose with Caddy for HTTPS, or on Google Cloud Run; its README covers both) lets
-  **GPT read the pages itself** (OpenAI Responses API, `gpt-6.1-sol` unless `OPENAI_MODEL` says
-  otherwise; Audiveris only with `OMR_ENGINE=audiveris` and `Dockerfile.audiveris`):
-  1. **Reading** (`transcribe.ts`): page 1 first — it names the parts (ids, names, staves, clefs) —
-     then the other pages, a few at a time, with that list. Per page GPT returns, under a strict
-     JSON schema, every measure of every part in a **compact notation** (`notation.ts`: one string
-     per note, `"F#4 1/2~ :Eve-|Come"` = pitch as it sounds, duration in quarters, tie, the words of
-     each verse), time and key signatures where printed, repeat signs with "3x", volta brackets,
-     rehearsal letters, tempo (with metronome mark), segno/coda/D.C./D.S./Fine, where each measure
-     and each part's row stands on the page (fractions of the image), passages with **several
-     verses stacked** under the same notes, and its own doubts.
-  2. **Putting it together** (`stitch`, then `build.ts` `buildScore` → MusicXML): measure numbers
-     where none are printed, stacked verses that have no repeat signs of their own get a repeat
-     around them **played as often as there are verses** (verse n under pass n — the app plays
-     repeats out, see "Repeats"); a voice whose notes can't be read becomes a whole-bar rest and a
-     hint. The builder works out divisions, note types/dots/tuplets, accidentals against the key,
-     beams by beat, ties (also across voices at a bar line), lyrics with syllabic/extend.
-  3. **Plausibility checks** (`checks.ts`, no GPT): bars that don't add up (not the first and last),
-     notes outside the usual range of a part by its name (soprano … bass — a clef or octave
-     misread), leaps over an octave in sung parts, ties to a different pitch, words broken off
-     before a rest.
-  4. **Second run** (`review.ts`): every page image again, next to what was read, with the hints
-     from 2 and 3 as "lookAt". GPT answers with complete corrected measures, misread words (typical
-     OCR slips: "ii" for "ü"), missed repeat signs/voltas/marks, part names, the title — and, where
-     it still can't tell, up to three **questions** per page (2–4 readings, each the complete
-     measure) and **doubts**. A correction is only written back when every voice still fills its
-     bar; otherwise the reading stays and the report lists it as not applied.
-  5. **Questions after the scan** (`POST /jobs/:id/answers`): a chosen reading is written as it is;
-     an answer in one's own words goes to GPT with the page image and the measure, which turns it
-     into notes (`voicesFromAnswer`) — also only if the bar adds up. What stays open (doubts,
-     questions left or not usable) are the **places to check**.
-- Progress (upload → reading the notes → second run → questions → done) shows in the sheet and, once
-  it's closed, as a chip next to Add arrangement (also "questions (n)" while some wait). The job id
-  is kept per device, so a reload picks the scan back up. **Questions** come as cards: the excerpt
-  of the page (fetched from `GET /jobs/:id/pages/:n` with the token, cropped on a canvas to the
-  bar and its part's row with some context, the bar outlined in gold, the rest dimmed; "Whole page"
-  shows all of it), the question, the readings as choices, **Something else:** with a text field,
-  and **Don't know – leave it**. *Apply answers* sends what was chosen; *Continue without
-  answering* leaves them open. The result shows a per-page report (corrections, confidence,
-  remarks), how many questions were answered, the places to check, an editable title, **Add to
-  repertoire** and **Download MusicXML**.
-- The places to check go with the song (`scanMarks` on its document: bar, voice, note, a small JPEG
-  of the bar for the first twelve — only as far as they fit beside the score under Firestore's
-  1 MB). In the player, the bar numbers in both rulers get a gold **?** (`drawQueryMark`), and ⋯ →
-  **Places to check (n)** lists them with their picture: **Go there** jumps to the bar, **It's
-  right** takes it off the list for everyone.
-- Requests carry the device's Firebase ID token (checked by the service with firebase-admin);
-  a job is only visible to the device that started it. The older `functions/` spike (Claude
-  vision only, one page) is superseded by this and isn't used by the app.
+### Production transcription
 
-### Feedback from people trying the app (`feedback.ts`)
-- For an ensemble flagged `feedback: true` in `ensembles.ts` — **Stolz und Vorurteil**, which the
-  Anhaltisches Theater Dessau is trying out. Everywhere else none of this shows.
-- **Feedback button** in the top bar of the repertoire and the player (on a phone only its speech
-  bubble), and *Feedback geben* in both ⋯ menus. The form: what kind (bug/problem, wish/
-  improvement, idea, remark/praise — the text field's hint follows it), the text, a name or role
-  if they like (remembered on the device), and — ticked by default, shown in full — where they
-  are: song, bar, view, key change, alone/together/leading/following, the sing-along view, device,
-  browser, window size, language. A link leads to the survey.
-- **Survey**, five questions, any of them skippable: used for (alone / together / looking up the
-  music / hardly yet), helps learning one's part (1–5), ease of use (1–5), what bothered or was
-  missing (text), keep using it for the production (yes/maybe/no). A small card offers it **once**
-  someone has come back on three days or had the app open 15 minutes: "Hast du eine Minute?" —
-  *Los* / *Später* / ×. Never while music plays or a rehearsal is led, never over a dialog or a
-  tour; at most twice (the second time after more use), × means never, sent means done.
-- **Intro:** the repertoire's tour ends on the feedback button in such an ensemble; someone who saw
-  the tour before gets that one step on its own, once.
-- **Sending:** to the `feedback` collection (ensemble, kind, text, name, context, survey, the
-  writer's uid, the server's time, done:false). If it can't go out — offline beyond what
-  Firestore queues itself, or refused (the rules not yet published) — it waits in localStorage and
-  goes out at the next start, once.
-- **Reading — leaders only** (firestore.rules: members create, only the ensemble's leaders read,
-  tick off — only `done` — or delete; nobody else reads it, not even the writer). The feedback
-  button shows a gold count of new entries for a leader and opens *Feedback geben* / *Feedback
-  lesen (n neu)*; the ensemble menu has *Feedback lesen* too. The inbox: counts per kind, the
-  survey's averages (helps learning, ease of use), keep-using and used-for tallies; filters (open,
-  all, per kind, done); each entry with kind colour, time, name, text, survey answers and context;
-  *Erledigt* / *Wieder öffnen*, *Löschen*; **CSV download** (semicolons and a BOM, so a German
-  spreadsheet opens it as is) and **copy as text**. What was open in the inbox counts as seen.
+The authenticated server and durable worker replace the prototype scan service.
+See docs/PLAN.md Phase 4a/4b and eval/fixtures/README.md. File imports remain
+available; transcription review UI follows in Phase 4c. Feedback has no server
+endpoint and its obsolete client entry points have been removed.
 
 ### Synced multi-device playback
 - Every connected device is a full remote control for one shared playback session: hitting
@@ -862,7 +781,6 @@ AI-Capella/
 │   ├── feedback.ts            # feedback form, survey, the leaders' inbox (ensembles with feedback: true)
 │   ├── backdrop.ts            # the velvet wave backdrop behind the whole app
 │   └── style.css              # all styling
-├── omr-service/            # scan service (Docker: own server or Cloud Run): GPT reads, checks, asks back
 ├── .github/workflows/deploy.yml   # builds and deploys dist/ to GitHub Pages on every push
 ├── vite.config.ts             # sets base: '/AI-Capella/' for GitHub Pages' subpath hosting
 ├── tsconfig.json
@@ -870,7 +788,6 @@ AI-Capella/
 ```
 
 No bundler plugins beyond stock Vite + TypeScript. The app itself is a single-page client-side
-bundle; the only server code is the optional scan service in `omr-service/` (with its own tests:
 `cd omr-service && npm test`).
 
 ---
@@ -1714,10 +1631,7 @@ The build runs on Node 24 with `check-latest` and a step that stops it on anythi
 24.22.1 -- the security release whose CA bundle has the eMudhra fix (October 2026; Node 20, which
 the build used before, is out of support and got no fix). The page itself is static: what it talks
 to over HTTPS (Firebase) is checked by the visitor's browser and its own certificate store, so
-for the choir that part is a browser update, not ours. The scan service (`omr-service/`) is where
-Node's own bundle matters -- it calls OpenAI and checks sign-ins with firebase-admin -- so its
 images are on `node:24-bookworm-slim` with the same check, and get rebuilt with `--pull`
-(`omr-service/README.md`). Node's `--use-system-ca` / `NODE_USE_SYSTEM_CA=1` isn't used: it adds
 the system's certificates to Node's bundle instead of replacing it, so it can't take a distrusted
 one out -- the updated Node does. npm installs are pinned by the lockfiles' integrity hashes.
 

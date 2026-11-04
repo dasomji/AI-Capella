@@ -74,15 +74,13 @@ expiry/external deletion and tolerates two consecutive database failures; no reh
 Legacy suites remain separate and unchanged:
 
 ```sh
-npm --prefix omr-service ci
-npm --prefix omr-service test
 npm --prefix rules-test ci
 npm --prefix rules-test test
 ```
 
 The rules suite uses its `demo-ls` emulator project and requires Java. Do not point
-these suites at any real Firebase project. Scan service migration belongs to a
-later phase; this application does not call it.
+this suite at any real Firebase project. The production transcription suites
+use fake provider boundaries; see eval/fixtures/README.md for explicit paid evaluation.
 
 
 Auth rate limits use PostgreSQL (`rate_limit`), enabled in all modes: sign-in and
@@ -159,8 +157,7 @@ Use it for the device's own diagnostics. Closing/reloading without the query
 removes the hook; signout also clears the active account/session state.
 
 Phase 4a transcription: run `npm run worker` alongside `npm run dev` (or construct
-TranscriptionWorker in-process). Only FakeProvider is installed; no AI key is
-needed. In development the adapter creates a missing configured bucket; tests
+TranscriptionWorker in-process). Tests use FakeProvider; development/production require the server-only AI key. In development the adapter creates a missing configured bucket; tests
 explicitly create/remove a dedicated `transcription-test-*` bucket on local
 SeaweedFS. Start `docker compose up -d seaweedfs mailpit` before integration tests.
 Production never creates buckets. An authorized operator must configure a private

@@ -75,3 +75,10 @@ test('part reorder and tacet spans retain identity; compact request state stays 
 test('SDK connection timeout is a retryable provider timeout',async()=>{
  const client=new OpenAI({apiKey:'fixture-only',fetch:async()=>{throw new OpenAI.APIConnectionTimeoutError();}});await expect(new OpenAITranscriptionProvider('gpt-6.1-sol',client).transcribePage(input,[],{},new AbortController().signal)).rejects.toMatchObject({reason:'provider_timeout',retryable:true});
 });
+// Ported legacy invariant: notation passes through without compact-notation rebuilding.
+test('legacy lyric syllables, tuplets, voices and repeats survive direct XML assembly',async()=>{
+ const xml=page(['S']).replace('<duration>4</duration>','<duration>1</duration><time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>').replace('<text>Freude</text>','<syllabic>begin</syllabic><text>Freu</text>').replace('</measure>','<barline location="right"><repeat direction="backward" times="3"/></barline></measure>');
+ const assembled=await new ScoreAssembler().assembleDetailed([result(xml)]);
+ for(const tag of ['time-modification','syllabic','repeat']){const a=scoreDocument(xml),b=scoreDocument(assembled.xml);try{expect(b.window.document.querySelector(tag)?.outerHTML).toBe(a.window.document.querySelector(tag)?.outerHTML);}finally{a.window.close();b.window.close();}}
+ const invalid=xml.replace('<duration>1</duration>','<duration>-1</duration>');const dom=scoreDocument(invalid);try{expect(validateMusicDocument(dom.window.document).structurallyValid).toBe(false);}finally{dom.window.close();}
+});

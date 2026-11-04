@@ -1,3 +1,0 @@
-{$OMR_DOMAIN} {
-	reverse_proxy omr:8080
-}

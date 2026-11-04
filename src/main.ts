@@ -32,7 +32,6 @@ import { animateRibbons, coverDataFromScore, drawCover, drawMark, prepareCanvas,
 import { icon } from './icons';
 import { countLabel, keyName, lang, setLang, t, type MessageKey } from './i18n';
 import { canvasFontsReady } from './theme';
-import { initScan, openScanSheet, scanAvailable, scanStatusLine } from './scan';
 import { WaveBackdrop } from './backdrop';
 import { DESIGN_CHOICE, onSystemDesignChange, PAPER_DESIGN, PARCHMENT, setDesignChoice, START_DRAFT, START_STAFF, START_STAGE, type DesignChoice } from './design';
 import { initPaper, paintSwatch, PAPER_KINDS, paperKind, setPaperKind, type PaperKind } from './paper';
@@ -45,7 +44,6 @@ import { createPowerHint } from './powerHint';
 import { attachReorder } from './reorder';
 import type { PdfVoice } from './exportPdf';
 import { INTRO_ON, introDue, introRunning, startIntro, stopIntro } from './intro';
-import { deviceSummary, feedbackMenuLabel, feedbackOn, initFeedback, openFeedbackInbox, openFeedbackSheet, openLeaderFeedbackMenu } from './feedback';
 import { canSwing, swingMap, swingScore } from './swing';
 import { loadScriptFont } from './goldInk';
 import { closeOverlay, confirmDialog, isNarrow, openMenu, openPopover, openSheet, promptDialog, toast } from './ui';
@@ -68,7 +66,7 @@ interface SongEntry {
   removedParts?: string[];
   splitParts?: string[];
   swing?: boolean;
-  scanMarks?: ScanMark[]; // a scanned song's places to check (scan.ts)
+  scanMarks?: ScanMark[]; // a scanned song's places to check (transcription review)
   contentHash?: string;
   order?: number; // imported songs: their place in the repertoire (songOrder)
 }
@@ -134,7 +132,6 @@ app.innerHTML = `
     <header class="lib-top">
       <span class="brand"><canvas class="mark" aria-hidden="true"></canvas><span class="wordmark" aria-label="LightScore"><span class="ls-l">Light</span>Score</span></span>
       <div class="lib-top-r">
-        <button type="button" class="badge fb-btn" data-action="feedback" aria-label="${t('fbButton')}" hidden>${icon('chat')}<span>${t('fbButton')}</span><i class="fb-count" hidden></i></button>
         <div class="seg mode-seg" id="mode-seg" role="group" aria-label="${t('mode')}">
           <button type="button" data-action="mode" data-mode="solo">${icon('user')}<span>${modeName('solo')}</span></button>
           <button type="button" data-action="mode" data-mode="ensemble">${icon('users')}<span>${modeName('ensemble')}</span><i class="live-dot" aria-hidden="true"></i></button>
@@ -150,7 +147,6 @@ app.innerHTML = `
         </div>
         <div class="lib-tools">
           <label class="search" id="lib-search-wrap" hidden>${icon('search')}<input id="lib-search" type="search" placeholder="${t('searchTitles')}" aria-label="${t('searchTitles')}" /></label>
-          <button type="button" class="scan-chip" id="scan-chip" hidden></button>
           <button type="button" class="btn primary" id="import-btn">${icon('plus')}<span>${t('addArrangement')}</span></button>
         </div>
       </div>
@@ -174,7 +170,6 @@ app.innerHTML = `
           <button type="button" data-action="view" data-view="roll" aria-label="${t('pianoRoll')}">${icon('roll')}<span>${t('pianoRoll')}</span></button>
           <button type="button" data-action="view" data-view="staff" aria-label="${t('sheetMusic')}">${icon('sheet')}<span>${t('sheetMusic')}</span></button>
         </div>
-        <button type="button" class="badge fb-btn" data-action="feedback" aria-label="${t('fbButton')}" hidden>${icon('chat')}<span>${t('fbButton')}</span><i class="fb-count" hidden></i></button>
         <button type="button" class="badge" id="mode-badge"></button>
         <button type="button" class="icon-btn landscape-only" data-action="open-mixer" aria-label="${t('voices')}">${icon('mixer')}</button>
         <button type="button" class="icon-btn" id="player-menu-btn" aria-label="${t('menu')}">${icon('more')}</button>
@@ -255,7 +250,6 @@ const searchWrapEl = document.querySelector<HTMLLabelElement>('#lib-search-wrap'
 const searchInput = document.querySelector<HTMLInputElement>('#lib-search')!;
 const importBtn = document.querySelector<HTMLButtonElement>('#import-btn')!;
 const importInput = document.querySelector<HTMLInputElement>('#import-input')!;
-const scanChip = document.querySelector<HTMLButtonElement>('#scan-chip')!;
 const songTitleEl = document.querySelector<HTMLHeadingElement>('#song-title')!;
 const songMetaEl = document.querySelector<HTMLSpanElement>('#song-meta')!;
 const voiceListEl = document.querySelector<HTMLUListElement>('#voice-list')!;
@@ -716,7 +710,7 @@ function renderScanMarks() {
 }
 
 /**
- * A scanned song's places to check (scan.ts): where the scan wasn't sure, with a picture of the bar
+ * A scanned song's places to check (transcription review): where the scan wasn't sure, with a picture of the bar
  * on the scanned page. "Go there" jumps to the bar; "It's right" takes it off the list, for everyone.
  */
 function openScanMarksSheet(opener: HTMLElement | null) {
@@ -992,7 +986,7 @@ function languageItems() {
 }
 document.querySelector<HTMLButtonElement>('#lib-menu-btn')!.addEventListener('click', (e) => {
   const anchor = e.currentTarget as HTMLElement;
-  openMenu(anchor, [...feedbackItems(anchor), ...appearanceItems(), ...paperItems(anchor), ...languageItems(), ...introItems('library'), {label:t('accountArea'),icon:'users',onSelect:()=>{void openAccountArea(anchor);}}], t('language'));
+  openMenu(anchor, [...appearanceItems(), ...paperItems(anchor), ...languageItems(), ...introItems('library'), {label:t('accountArea'),icon:'users',onSelect:()=>{void openAccountArea(anchor);}}], t('language'));
 });
 
 /** The paper design's paper, to choose on this device (paper.ts). */
@@ -1048,36 +1042,6 @@ function openPaperSheet(opener: HTMLElement | null) {
   );
 }
 
-/** In an ensemble that asks for feedback: giving it (and, for its leaders, reading it). */
-function feedbackItems(anchor: HTMLElement) {
-  if (!feedbackOn(currentEnsemble)) return [];
-  const items: Parameters<typeof openMenu>[1] = [{ label: t('fbGive'), icon: 'chat', onSelect: () => openFeedbackSheet(anchor) }];
-  if (leads(currentEnsemble)) items.push({ label: feedbackMenuLabel(), icon: 'users', onSelect: () => openFeedbackInbox(anchor) });
-  return items;
-}
-
-/** Where this device is now, sent along with feedback so a problem can be found again. */
-function feedbackContext(): string {
-  const parts: string[] = [];
-  if (app.classList.contains('mode-player') && currentScore) {
-    const measure = measureAtBeat(currentScore, engineBeat());
-    parts.push(`„${currentScore.title}“`, `Takt ${measure?.number ?? 1}`, activeView === 'staff' ? 'Noten' : 'Klavierrolle');
-    if (transpose) parts.push(`Tonart ${transpose > 0 ? '+' : ''}${transpose}`);
-  } else parts.push('Repertoire');
-  parts.push(syncEnabled() ? 'gemeinsam' : 'allein');
-  if (app.classList.contains('sing-along')) parts.push('Mitsing-Ansicht');
-  parts.push(deviceSummary(), lang);
-  return parts.join(' · ');
-}
-
-function showFeedbackCount(n: number) {
-  document.querySelectorAll<HTMLElement>('.fb-btn .fb-count').forEach((c) => {
-    c.hidden = !n;
-    c.textContent = n ? String(n) : '';
-  });
-  document.querySelectorAll<HTMLElement>('.fb-btn').forEach((b) => b.setAttribute('aria-label', n ? `${t('fbButton')} (${t('fbReadNew', { n })})` : t('fbButton')));
-}
-
 /** The introduction, to see again (intro.ts) -- while it's a draft, only where it's switched on. */
 function introItems(tour: 'library' | 'player') {
   return INTRO_ON ? [{ label: t('introMenu'), icon: 'help' as const, onSelect: () => window.setTimeout(() => startIntro(tour), 250) }] : [];
@@ -1088,11 +1052,6 @@ function introItems(tour: 'library' | 'player') {
  * place, no dialog or menu open, nothing playing, and not in the sing-along view.
  */
 function offerIntro(tour: 'library' | 'player') {
-  // Someone who saw the repertoire's tour before feedback was asked for: its one step, on its own.
-  if (tour === 'library' && !introDue('library') && introDue('feedback') && feedbackOn(currentEnsemble)) {
-    offerFeedbackIntro();
-    return;
-  }
   if (!introDue(tour)) return;
   const until = performance.now() + 15000;
   const check = () => {
@@ -1104,18 +1063,6 @@ function offerIntro(tour: 'library' | 'player') {
       !app.classList.contains('sing-along') &&
       (tour === 'player' ? !!currentScore : !!document.querySelector('#song-grid .song-card:not(.skeleton)'));
     if (ready) startIntro(tour);
-    else window.setTimeout(check, 400);
-  };
-  window.setTimeout(check, 900);
-}
-
-function offerFeedbackIntro() {
-  const until = performance.now() + 15000;
-  const check = () => {
-    if (!app.classList.contains('mode-library') || performance.now() > until || introRunning() || !introDue('feedback')) return;
-    const button = document.querySelector<HTMLElement>('#library .fb-btn');
-    const ready = !document.querySelector('.overlay') && !!button && !button.hidden && !!document.querySelector('#song-grid .song-card:not(.skeleton)');
-    if (ready) startIntro('feedback');
     else window.setTimeout(check, 400);
   };
   window.setTimeout(check, 900);
@@ -1527,36 +1474,7 @@ songGridEl.addEventListener('pointerout', (e) => {
   card.style.removeProperty('--ry');
 });
 
-// With the scan service configured, "Add arrangement" offers importing a file or scanning sheet music.
-importBtn.addEventListener('click', () => {
-  if (!scanAvailable()) {
-    importInput.click();
-    return;
-  }
-  openMenu(importBtn, [
-    { label: t('importFile'), icon: 'upload', onSelect: () => importInput.click() },
-    { label: t('scanMenu'), icon: 'camera', onSelect: () => openScanSheet(importBtn) },
-  ], t('addArrangement'));
-});
-scanChip.addEventListener('click', () => openScanSheet(scanChip));
-
-/** Shows a running or finished scan next to "Add arrangement". */
-function renderScanChip() {
-  const status = scanStatusLine();
-  scanChip.hidden = !status;
-  if (!status) return;
-  scanChip.textContent = status.text;
-  scanChip.classList.toggle('busy', status.busy);
-  scanChip.classList.toggle('ready', !status.busy && status.text === t('scanReady'));
-}
-
-/** A checked scan goes into the repertoire like an imported MusicXML file. */
-async function importScannedScore(title: string, xml: string, marks: ScanMark[]) {
-  parseMusicXML(xml); // throws on anything the player couldn't open
-  const id = await saveImportedSong({ title, xml, format: 'musicxml', ensemble: importEnsemble(), scanMarks: marks });
-  toast(t('added', { title }));
-  void selectSong({ id, title, xml, format: 'musicxml', imported: true, scanMarks: marks.length ? marks : undefined });
-}
+importBtn.addEventListener('click', () => importInput.click());
 importInput.addEventListener('change', () => {
   if (importInput.files?.length) void importFiles(importInput.files);
   importInput.value = '';
@@ -2902,7 +2820,7 @@ function openPlayerMenu(anchor: HTMLElement) {
   items.push(...soundItems());
   // The sheet music as a PDF, from the file (not offered for MIDI imports: no notation in them).
   if (currentSong && currentSong.format !== 'score') items.push({ label: t('exportItem'), icon: 'file', onSelect: () => openExportSheet(anchor) });
-  items.push({ label: t('settings'), icon: 'gear', onSelect: () => openSettingsMenu(anchor) }, ...feedbackItems(anchor), ...languageItems(), ...introItems('player'));
+  items.push({ label: t('settings'), icon: 'gear', onSelect: () => openSettingsMenu(anchor) }, ...languageItems(), ...introItems('player'));
   items.push({ label: t('accountArea'), icon: 'users', onSelect: () => { void openAccountArea(anchor); } });
   openMenu(anchor, items, t('menu'));
 }
@@ -2953,10 +2871,6 @@ document.addEventListener('click', (e) => {
   const el = target.closest<HTMLElement>('[data-action]');
   if (!el) return;
   switch (el.dataset.action) {
-    case 'feedback':
-      if (leads(currentEnsemble)) openLeaderFeedbackMenu(el);
-      else openFeedbackSheet(el);
-      break;
     case 'save-defaults':
       saveDefaults();
       break;
@@ -3843,18 +3757,6 @@ async function runBootstrap() {
 
   try {
     void refreshEnsembleNames().then(renderLibraryHead).catch(() => {});
-    initScan({ onImport: importScannedScore, onStatusChange: renderScanChip });
-    if (feedbackOn(currentEnsemble)) {
-      document.querySelectorAll<HTMLElement>('.fb-btn').forEach((b) => (b.hidden = false));
-      initFeedback({
-        ensemble: currentEnsemble,
-        context: feedbackContext,
-        // Not while music plays.
-        isBusy: () => !!audioEngine?.isPlaying(),
-        onNewCount: showFeedbackCount,
-      });
-      offerIntro('library');
-    }
     subscribeToSongs(
       (songs, fromCache) => {
         libraryState = 'ready';
