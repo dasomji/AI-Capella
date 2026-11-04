@@ -98,7 +98,7 @@ function stored(m: PieceMetadata): StoredSong {
 const prepared = new Map<string, {metadata: PieceMetadata; body: string}>();
 let generation = 0;
 const pieceEpochs=new Map<string,number>();
-window.addEventListener('offline:ensemble-purged',event=>{const d=(event as CustomEvent).detail;if(d.user!==account?.id)return;for(const [id,row] of prepared)if(row.metadata.ensembleId===d.ensemble)prepared.delete(id);generation++;notify?.();});
+window.addEventListener('offline:ensemble-purged',event=>{const d=(event as CustomEvent).detail;if(d.user!==account?.id)return;for(const [id,row] of prepared)if(row.metadata.ensembleId===d.ensemble)prepared.delete(id);notify?.();});
 export const offlineStorageStatus={persistent:false,usage:0,quota:0};
 let persistenceRequested=false;
 async function durability(){try{if(!persistenceRequested){persistenceRequested=true;offlineStorageStatus.persistent=await navigator.storage?.persist?.()??false;}const estimate=await navigator.storage?.estimate?.();offlineStorageStatus.usage=estimate?.usage??0;offlineStorageStatus.quota=estimate?.quota??0;}catch(error){storageUnavailable(error);}}

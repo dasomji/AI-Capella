@@ -197,6 +197,8 @@ try {
   // Logout through the existing account sheet must delete every account store.
   if(await p.locator('#library-back-btn:visible').count())await p.locator('#library-back-btn').click();
   await p.locator('#lib-menu-btn').click();await p.getByRole('menuitem',{name:'Account and devices',exact:true}).click();
+  // Prime a normal HTTP-cache request before logout, independently of the private store.
+  assert.equal(await p.evaluate(async url=>{const response=await fetch(url);await response.text();return response.status;},`/api/ensembles/${ensemble}/pieces/${pieceId}/versions/${updated.body.contentHash}`),200);
   const signoutResponse=p.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/sign-out');
   await p.getByRole('button',{name:'Sign out',exact:true}).click();await p.waitForURL('**/?state=signed-out');
   assert.equal(await (await signoutResponse).headerValue('clear-site-data'),'"cache"');

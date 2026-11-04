@@ -33,3 +33,10 @@ test('bulk preparation continues after a failed piece and counts failures and sk
  vi.stubGlobal('fetch',vi.fn(async(url:string)=>new Response('body',{status:url.includes('/one/')?500:200})));
  expect(await preparePieces(['one','two','missing'])).toEqual({failed:1,skipped:1});expect(isPrepared('two')).toBe(true);
 });
+
+test('evicting another ensemble does not cancel this ensemble preparation',async()=>{
+ state.saved=[{metadata:row('one'),body:'one'}];await subscribe();
+ let release!:(value:Response)=>void;vi.stubGlobal('fetch',vi.fn(()=>new Promise<Response>(resolve=>release=resolve)));
+ const pending=preparePiece('two');window.dispatchEvent(new CustomEvent('offline:ensemble-purged',{detail:{user:'A',ensemble:'different',revoked:false}}));
+ release(new Response('two'));await pending;expect(isPrepared('two')).toBe(true);
+});
