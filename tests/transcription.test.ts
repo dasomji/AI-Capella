@@ -227,7 +227,7 @@ test('durable progress notifications reach only current transcribers on authenti
  }finally{for(const socket of sockets)socket.disconnect();}
 });
 test('sandbox bounds PDF object-stream bombs without growing API memory',async()=>{
- const {createDeflate}=await import('node:zlib');const {once}=await import('node:events');
+ const {createDeflate}=await import('node:zlib');const once=(emitter:any,event:string)=>new Promise<void>((resolve,reject)=>{emitter.once(event,resolve);emitter.once('error',reject);});
  const {writeFile,mkdtemp,rm}=await import('node:fs/promises');const {inspectSource}=await import('../server/originals.server');
  const dir=await mkdtemp('.transcription-tmp/bomb-');
  try{for(const mb of [512,2048]){
@@ -292,4 +292,11 @@ test('slow object upload never holds the ensemble transaction lock',async()=>{
  const put=store.put.bind(store);const wrapped={put:async(...args:Parameters<typeof put>)=>{entered();await gate;await put(...args);}};
  const upload=uploadOriginal(lead.id,e.id,new ReadableStream({start(c){c.enqueue(photo);c.close();}}),'safe.png',{...wrapped} as any);
  try{await ready;await Promise.race([transaction(db=>lockEnsemble(db,e.id)),delay(1000).then(()=>{throw Error('upload held ensemble lock');})]);}finally{release();await upload;}
+});
+test('unsupported image formats, animation, truncated PDFs and mixed sources have distinct codes',async()=>{
+ const {lead,e,source}=await setup();
+ for(const brand of ['heic','heif','avif']){const r=await upload(e.id,lead.cookie,Buffer.from(`\0\0\0\x18ftyp${brand}\0\0\0\0${brand}`));assert.equal((await r.json()).code,'unsupported_image_format');}
+ const r=await upload(e.id,lead.cookie,Buffer.from('%PDF-1.7\ntruncated'));assert.equal((await r.json()).code,'invalid_source');
+ const pdf=await PDFDocument.create();pdf.addPage();const p=await (await upload(e.id,lead.cookie,await pdf.save())).json();
+ const mixed=await request(`ensembles/${e.id}/transcriptions`,'POST',{sourceObjects:[p.id,source.id]},lead.cookie);assert.equal((await mixed.json()).code,'mixed_sources');
 });

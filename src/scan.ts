@@ -167,7 +167,7 @@ async function api(path: string, init: RequestInit = {}): Promise<Response> {
   if (!res.ok) {
     let message = `${res.status}`;
     try {
-      message = (await res.json()).error ?? message;
+      const error=await res.json();message=error.code==='unsupported_image_format'?t('scanUnsupportedImage'):error.error??error.code??message;
     } catch {
       // not JSON
     }
@@ -211,7 +211,7 @@ async function preparePhoto(file: File): Promise<Blob> {
 }
 
 async function addPhotos(files: FileList | File[]) {
-  const list = Array.from(files).filter((f) => f.type.startsWith('image/') || /\.(jpe?g|png|heic|webp)$/i.test(f.name));
+  const list = Array.from(files).filter((f) => f.type.startsWith('image/') || /\.(jpe?g|png|webp)$/i.test(f.name));
   if (!list.length) return;
   if (pdf) pdf = null;
   const room = MAX_PAGES - pages.length - preparing;
@@ -379,8 +379,8 @@ function renderCompose(): HTMLElement {
   wrap.appendChild(el('p', 'scan-lead', t('scanLead')));
 
   const pickPdf = filePicker('application/pdf,.pdf', false, false, (f) => setPdf(f[0]));
-  const pickImages = filePicker('image/*', true, false, (f) => void addPhotos(f));
-  const takePhoto = filePicker('image/*', false, true, (f) => void addPhotos(f));
+  const pickImages = filePicker('application/pdf,image/jpeg,image/png,image/webp', true, false, (f) => void addPhotos(f));
+  const takePhoto = filePicker('application/pdf,image/jpeg,image/png,image/webp', false, true, (f) => void addPhotos(f));
   const sources = el('div', 'scan-sources');
   if (window.matchMedia('(pointer: coarse)').matches) {
     sources.appendChild(button(t('scanTakePhoto'), 'primary', () => takePhoto.click(), 'camera'));
