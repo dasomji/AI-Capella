@@ -27,7 +27,38 @@ try{
  await page.getByRole('button',{name:'Start reading',exact:true}).click();await page.locator('.tx-job').first().waitFor();await shot('jobs-running');
  await page.getByRole('button',{name:'Review',exact:true}).first().waitFor({timeout:30000});await review();assert.ok(await page.locator('.tx-mark').count()>=2);
  await page.locator('.tx-review-item').first().click();await page.locator('.tx-original img').waitFor({timeout:30000});
- for(const scheme of ['dark','light'])for(const width of [1440,390]){const c=await browser.newContext({storageState:await context.storageState(),colorScheme:scheme,viewport:{width,height:1000}}),p=await c.newPage();await library(p);await p.locator('#transcription-entry').click();await shot(`start-${width}-${scheme}`,p);await assertPlayerContrast(p,['.transcription-dialog h1','.tx-pencil'],false);await p.locator('.transcription-dialog header button').click();await p.getByRole('button',{name:'Review',exact:true}).first().click();await p.locator('.tx-mark').first().waitFor();await shot(`review-${width}-${scheme}`,p);await assertPlayerContrast(p,['.transcription-dialog h1','.tx-review-panel h2','.tx-pencil'],false);await c.close();}
+ // Visual fixtures reuse a real completed job/result; only job-list states are overridden.
+ // No provider call is made for the failed/paused/cancelled matrix examples.
+ const completed=(await req(context,`/ensembles/${e}/transcriptions`)).find(j=>j.state==='completed');
+ const pngFixture=await sharp({create:{width:140,height:180,channels:3,background:'#eee3c7'}}).png().toBuffer();
+ for(const theme of [{name:'dark',scheme:'dark'},{name:'light',scheme:'light'},{name:'papier',scheme:'light',design:'papier'}])for(const width of [1440,390])for(const language of ['de','en']){
+  const c=await browser.newContext({storageState:await context.storageState(),colorScheme:theme.scheme,viewport:{width,height:1000}});
+  await c.addInitScript(({language,design})=>{localStorage.setItem('ai-capella-lang',language);if(design)localStorage.setItem('ai-capella-design',design);else localStorage.removeItem('ai-capella-design');},{language,design:theme.design});
+  const p=await c.newPage(),prefix=`${theme.name}-${width}-${language}`;
+  const states=['running','completed','failed','paused','cancelled'];
+  await p.route(`**/api/ensembles/${e}/transcriptions`,route=>route.request().method()==='GET'?route.fulfill({json:states.map((state,i)=>({...completed,id:state==='completed'?completed.id:`visual-${state}`,state:state==='paused'?'queued':state,stage:state==='paused'?'processing_paused':state,options:{title:language==='de'?'Abendlied':'Evening song'},failure_reason:state==='failed'?'provider_timeout':undefined,pages:completed.pages.map((page,n)=>({...page,state:state==='running'?(n===0?'completed':'running'):state==='paused'?'queued':state}))}))}):route.continue());
+  await library(p);await p.locator('.tx-job').nth(4).waitFor();
+  await shot(`jobs-all-${prefix}`,p);await assertPlayerContrast(p,['.tx-job h3','.tx-job .tx-pencil','.tx-job .primary']);
+  assert.equal(await p.locator('.tx-job .primary').count(),1);assert.equal(await p.locator('.tx-job svg').count(),0);
+  await p.locator('#transcription-entry').click();await shot(`start-empty-${prefix}`,p);
+  await assertPlayerContrast(p,['.transcription-dialog h1','.tx-label','.tx-pencil','.tx-language-chip']);
+  assert.equal(await p.locator('.tx-start').isDisabled(),true);
+  await p.locator('.tx-language-chip[data-value="de"]').click();assert.equal(await p.locator('.tx-language-chip[data-value="de"]').getAttribute('aria-pressed'),'true');
+  await p.locator('input[accept="image/jpeg,image/png,image/webp"]').setInputFiles([1,2].map(n=>({name:`Photo ${n}.png`,mimeType:'image/png',buffer:pngFixture})));
+  await p.locator('#tx-title').fill(language==='de'?'Abendlied':'Evening song');await shot(`start-photos-${prefix}`,p);
+  assert.equal(await p.locator('.tx-tile[aria-pressed=true]').count(),1);assert.equal(await p.locator('.tx-start').isEnabled(),true);
+  await p.locator('input[accept="image/jpeg,image/png,image/webp"]').setInputFiles({name:'photo.heic',mimeType:'image/heic',buffer:Buffer.from('heic')});
+  await shot(`start-error-${prefix}`,p);assert.equal(await p.locator('.tx-start').isDisabled(),true);await assertPlayerContrast(p,['.tx-error']);
+  await p.locator('.transcription-dialog header button').click();await p.getByRole('button',{name:language==='de'?'Prüfen':'Review',exact:true}).click();await p.locator('.tx-mark').first().waitFor();
+  await shot(`review-off-${prefix}`,p);await assertPlayerContrast(p,['.transcription-dialog h1','.tx-review-panel h2','.tx-pencil','.tx-review-item','.tx-glyph','.tx-score-page svg','.tx-link','.tx-review-actions .primary']);
+  assert.equal(await p.locator('.tx-score-page .note').first().evaluate(el=>getComputedStyle(el).fill),await p.locator('.tx-score-page').first().evaluate(el=>getComputedStyle(el).color));
+  assert.equal(await p.locator('.tx-glyph.warning').first().innerText(),'!');assert.equal(await p.locator('.tx-mark.warning').first().textContent(),'!');
+  assert.match(await p.locator('.tx-review-panel > .tx-pencil').innerText(),language==='de'?/1 Warnung · 2 Unsicherheiten/:/1 warning · 2 uncertainties/);
+  await p.getByRole('switch').check();await p.locator('.tx-original img').waitFor();await shot(`review-on-${prefix}`,p);
+  assert.equal(await p.getByRole('switch').getAttribute('aria-checked'),'true');
+  assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await c.close();
+ }
  await page.setViewportSize({width:1440,height:1000});await page.getByRole('button',{name:'Listen',exact:true}).click();await page.locator('.play-btn').waitFor();await page.locator('.play-btn').click();await page.waitForFunction(()=>document.querySelector('.play-btn')?.getAttribute('aria-label')?.toLowerCase().includes('pause'));await page.locator('.play-btn').click();assert.equal((await req(context,`/ensembles/${e}/pieces`)).length,0);
  await page.locator('#library-back-btn').click();await review();const imported=page.waitForResponse(r=>r.url().endsWith('/import')&&r.request().method()==='POST');await page.getByRole('button',{name:'Add to repertoire',exact:true}).evaluate(b=>{b.click();b.click();});await imported;await page.locator('.play-btn').waitFor();assert.equal((await req(context,`/ensembles/${e}/pieces`)).length,1);
  await page.locator('#library-back-btn').click();
@@ -45,5 +76,5 @@ try{
 }catch(error){console.error('Browser failure',error,await page.locator('body').innerText());await shot('failure');throw error;}finally{
  if(worker){worker.kill('SIGTERM');await new Promise(r=>worker.once('exit',r));}await browser.close();await db.end();const objects=await s3.send(new ListObjectsV2Command({Bucket:process.env.S3_BUCKET}));if(objects.Contents?.length)await s3.send(new DeleteObjectsCommand({Bucket:process.env.S3_BUCKET,Delete:{Objects:objects.Contents.map(o=>({Key:o.Key}))}}));await s3.send(new DeleteBucketCommand({Bucket:process.env.S3_BUCKET}));s3.destroy();
  if(fs.existsSync(shots+'/failure.png'))fs.unlinkSync(shots+'/failure.png');
- const files=fs.readdirSync(shots).filter(n=>n.endsWith('.png'));fs.writeFileSync(shots+'/index.html',`<!doctype html><meta charset="utf-8"><title>Phase 4c</title><style>body{background:#28232a;color:#eee;font:16px sans-serif}main{display:flex;flex-wrap:wrap}figure{width:380px;margin:12px}img{width:100%}</style><h1>Phase 4c acceptance</h1><main>${files.map(n=>`<figure><a href="${n}"><img src="${n}"></a><figcaption>${n}</figcaption></figure>`).join('')}</main>`);
+ const files=fs.readdirSync(shots).filter(n=>n.endsWith('.png'));fs.mkdirSync(shots+'/thumbs',{recursive:true});await Promise.all(files.map(n=>sharp(`${shots}/${n}`).resize({width:380,withoutEnlargement:true}).webp({quality:75}).toFile(`${shots}/thumbs/${n.replace('.png','.webp')}`)));fs.writeFileSync(shots+'/index.html',`<!doctype html><meta charset="utf-8"><title>Phase 4c design pass</title><style>body{font:14px var(--font-sans,sans-serif);color:var(--foreground,inherit);margin:0}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}figure{min-width:0;margin:0}img{width:100%;height:280px;object-fit:contain;border-radius:8px}figcaption{overflow-wrap:anywhere;padding:8px 0;color:var(--muted-foreground,inherit)}</style><h1>Phase 4c design pass</h1><p>DE/EN · 390/1440 · dark/light/explicit Papier. Job-list visual fixtures reuse the real FakeProvider result.</p><main>${files.map(n=>`<figure><a href="${n}"><img loading="lazy" src="thumbs/${n.replace('.png','.webp')}"></a><figcaption>${n}</figcaption></figure>`).join('')}</main>`);
 }

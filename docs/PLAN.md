@@ -2118,3 +2118,43 @@ Verification:
 
 No live model/account availability, real-score accuracy, acceptance threshold or
 production cost is established by these tests. All commits remain local.
+
+### Phase 4c design pass — 2026-11-04
+
+Start sheets now follow the members sheet heading/× close, ruled title field,
+mono pencil labels, DE·EN-style lyric-language chips, existing file/camera icons,
+gold selection borders and a full-width primary pill. Job cards use repertoire
+card grounds/borders, pencil stage text, a ready-only Review pill and quiet ⋯ menus.
+Review uses theme ink on the player's paper ground, crops to engraved content
+(including annotations), fits width with a 1.8× natural-scale/900 px cap and places
+short systems in the upper third. Circled warm-red exclamations replace warning
+ticks; gold questions identify uncertainty. Primary import and a compact secondary
+row replace the stacked actions. The shared capability switch remains gold on.
+Counts and page totals handle singular/plural in DE/EN; German sizes use commas.
+
+Evidence: `/tmp/aicap-p4c-design/shots/index.html` (77 PNGs, linked lightweight
+WebP thumbnails). Matrix: DE/EN × 390/1440 × auto dark/auto light/explicit Papier;
+empty/photo/error start sheets, running/ready/failed/paused/cancelled job cards,
+and review with original off/on. Terminal job-list visual fixtures reuse a real
+FakeProvider result so every state is reproducible without a paid provider.
+Existing functional acceptance still exercises actual upload/reorder, pause,
+cancel/retry, playback, idempotent import and live capability changes. Contrast
+assertions include labels, chips, errors, cards, primary/secondary actions,
+warning/uncertainty glyphs and notation; six unit cases cover zero/one/two counts.
+Existing file/camera icons were reused because they already match the requested
+stroke style. Provider-authored free text remains verbatim, as in Phase 4c.
+
+Validation: `npm run typecheck` passed; `npm test` passed 233/233;
+`npm run build` passed; `npm run test:integration` completed 77/77 with no
+failures; `npm run test:browser` passed Phase 2b/theme, two-account and full sync
+acceptance (including loops/restart/account isolation); and
+`PATH="$PWD/.review-evidence/bin:$PATH" BROWSER_EVIDENCE=/tmp/aicap-p4c-design npm run test:browser:transcription`
+passed all transcription acceptance and visual/contrast assertions. The PATH
+prefix uses the checkout's existing local Poppler runtime for original PDFs.
+`npm run check:secrets` passed the positive control and clean-client checks;
+`npm run db:generate` reported no schema changes. The initial browser attempts
+exposed missing Poppler on PATH and contrast/fixture-assertion issues, corrected
+before the successful run. An initial integration command ended with status 143
+after check 61; the bounded rerun completed all 77 tests. Logs are retained as
+`.review-evidence/p4c-design-{typecheck,unit,build,secrets,db,standard-browser,browser-verified,integration-final}.log`.
+No push, deployment or OpenAI calls.
