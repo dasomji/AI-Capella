@@ -1557,3 +1557,25 @@ The full integration pass exposed a test setup error: two same-account uploads
 correctly hit per-user upload admission. The dedupe race now uses two authorized
 accounts uploading a fresh identical hash, exercising concurrent insertion while
 preserving the intended admission limit.
+
+Final Phase 4a fix verification (2026-11-04):
+
+- `npm run typecheck`: passed.
+- `npm test`: 111 tests passed.
+- `npm run build`: passed (also rebuilt by secrets/browser harnesses).
+- `npm run test:integration`: 69/69 passed on the final full rerun.
+- `npm run check:secrets`: passed positive control and clean client-artifact scan.
+- `npm run test:browser`: passed account/library/theme matrix, two-account sync
+  and full three-client acceptance including restart, revocation and shared-device
+  isolation; no browser errors.
+- `npm run db:generate`: no schema drift; migrations 0006 and 0007 committed.
+- `git diff 3eed5dd --check`: passed.
+
+Both 512 MiB and 2 GiB object-stream expansion probes terminate in the limited
+child within the deadline; parent RSS is sampled during inspection and remains
+below the 100 MiB growth bound. Sandbox limit/network checks are automated.
+No code-review finding remains deferred. Railway image/runtime smoke validation
+is a deployment prerequisite, not performed here. No push, production migration,
+provisioning, paid provider calls or real email occurred. Failed and successful
+local check logs remain in gitignored `.transcription-tmp/`; browser evidence is
+in gitignored `.review-evidence/browser/`.
