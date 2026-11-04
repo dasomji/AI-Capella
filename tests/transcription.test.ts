@@ -334,7 +334,7 @@ test('emergency pause aborts in-flight calls without spending an attempt',async(
  const p=(await view(e.id,lead.cookie,j.id)).pages[0];assert.equal(p.state,'queued');assert.equal(p.attempts,0);await new TranscriptionWorker().tick();
 });
 test('parallel uploads dedupe and cross-ensemble/idempotency mismatches fail',async()=>{
- const {lead,e,source}=await setup();const same=await Promise.all([upload(e.id,lead.cookie,png),upload(e.id,lead.cookie,png)]);assert.deepEqual(await Promise.all(same.map(async r=>(await r.json()).id)),[source.id,source.id]);
+ const {lead,e,source}=await setup();const member=await account();await pool.query('insert into memberships(ensemble_id,user_id,ai_transcription) values($1,$2,true)',[e.id,member.id]);const photo=await sharp({create:{width:31,height:32,channels:3,background:'red'}}).png().toBuffer();const same=await Promise.all([upload(e.id,lead.cookie,photo),upload(e.id,member.cookie,photo)]);for(const r of same)assert.equal(r.status,201,await r.clone().text());const ids=await Promise.all(same.map(async r=>(await r.json()).id));assert.equal(ids[0],ids[1]);assert.notEqual(ids[0],source.id);
  const other=await ok('ensembles','POST',{name:'Other',kind:'band'},lead.cookie);
  assert.equal((await request(`ensembles/${other.id}/transcriptions`,'POST',{sourceObjects:[source.id]},lead.cookie)).status,404);
  const key=crypto.randomUUID();await job(e.id,lead.cookie,source.id,key);

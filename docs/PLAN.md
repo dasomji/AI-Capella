@@ -1552,3 +1552,8 @@ confirmed RLIMIT_AS=1610612736 bytes, RLIMIT_CPU=5/6 seconds and socket creation
 fails EPERM. Railway runtime compatibility itself remains a deployment smoke
 check; lack of Python/seccomp fails closed. Size the service memory and upload
 concurrency to leave parent-process headroom alongside these per-child limits.
+
+The full integration pass exposed a test setup error: two same-account uploads
+correctly hit per-user upload admission. The dedupe race now uses two authorized
+accounts uploading a fresh identical hash, exercising concurrent insertion while
+preserving the intended admission limit.
