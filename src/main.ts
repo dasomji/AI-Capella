@@ -638,6 +638,7 @@ const landingModesEl = document.querySelector<HTMLDivElement>('.landing-modes')!
 const libTitleEl = document.querySelector<HTMLHeadingElement>('#lib-title')!;
 function renderLanding(_now=false) {
  const chosen=activeEnsemble();currentEnsemble=chosen ?? PUBLIC_ID;
+ window.dispatchEvent(new Event('ensemble:changed'));
  const empty=!unlockedEnsembles().length && chosen!==PUBLIC_ID;
  document.querySelector<HTMLElement>('#landing-empty')!.hidden=!empty;
  document.querySelector('#landing')!.classList.toggle('no-ensemble',empty);

@@ -72,6 +72,13 @@ try{
  await req(context,`/ensembles/${e}/members/${membership.id}`,'PATCH',{editPieces:true});await memberPage.waitForFunction(()=>document.querySelector('.tx-review-actions .primary')?.disabled===false);
  await req(context,`/ensembles/${e}/members/${membership.id}`,'PATCH',{editPieces:false});await memberPage.waitForFunction(()=>document.querySelector('.tx-review-actions .primary')?.disabled===true);
  await req(context,`/ensembles/${e}/members/${membership.id}`,'PATCH',{transcribe:false});await memberPage.locator('dialog.transcription-review').waitFor({state:'detached'});assert.ok(await memberPage.locator('#transcription-entry').isHidden());assert.ok(await memberPage.locator('#transcription-jobs').isHidden());assert.equal((await memberContext.request.get(base+`/api/ensembles/${e}/transcriptions`)).status(),403);await memberContext.close();
+ const next=await req(context,'/ensembles','POST',{name:'Destination Choir'});
+ await page.reload();await page.locator('.ded-other').filter({hasText:'Destination Choir'}).click();
+ await page.locator('#transcription-entry').click();assert.match(await page.locator('dialog h1').innerText(),/Destination Choir/);
+ await page.locator('input[accept="image/jpeg,image/png,image/webp"]').setInputFiles({name:'destination.png',mimeType:'image/png',buffer:png});
+ const created=page.waitForResponse(r=>r.url().endsWith(`/ensembles/${next.id}/transcriptions`)&&r.request().method()==='POST');
+ await page.getByRole('button',{name:'Start reading',exact:true}).click();assert.equal((await created).status(),201);
+ assert.equal((await req(context,`/ensembles/${next.id}/transcriptions`)).length,1);
  assert.deepEqual(errors,[]);console.log('Phase 4c browser acceptance passed');
 }catch(error){console.error('Browser failure',error,await page.locator('body').innerText());await shot('failure');throw error;}finally{
  if(worker){worker.kill('SIGTERM');await new Promise(r=>worker.once('exit',r));}await browser.close();await db.end();const objects=await s3.send(new ListObjectsV2Command({Bucket:process.env.S3_BUCKET}));if(objects.Contents?.length)await s3.send(new DeleteObjectsCommand({Bucket:process.env.S3_BUCKET,Delete:{Objects:objects.Contents.map(o=>({Key:o.Key}))}}));await s3.send(new DeleteBucketCommand({Bucket:process.env.S3_BUCKET}));s3.destroy();
