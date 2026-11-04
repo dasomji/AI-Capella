@@ -102,7 +102,7 @@ async function account() {
 const { S3Client,CreateBucketCommand,ListObjectsV2Command,DeleteObjectsCommand,DeleteBucketCommand }=await import('@aws-sdk/client-s3');
 const {PDFDocument}=await import('pdf-lib');
 const sharp=(await import('sharp')).default;
-const {TranscriptionWorker,transcriptionClock}=await import('../server/transcription.server');
+const {TranscriptionWorker}=await import('../server/transcription.server');
 const {FakeProvider,FakeAssembler}=await import('../server/transcription-provider.server');
 const {sourceLimits,cleanupDerived,cleanupObjects}=await import('../server/originals.server');
 const {env}=await import('../server/env.server');
@@ -140,7 +140,7 @@ test('failure reasons, bounded automatic retry and explicit retry preserves comp
  for(const reason of ['provider_refusal','provider_timeout','rate_limited','invalid_output','truncated'] as const){
  const j=await job(e.id,lead.cookie,source.id);const worker=new TranscriptionWorker(new FakeProvider(()=>reason));
  for(let n=0;n<env.TRANSCRIPTION_MAX_ATTEMPTS;n++){await pool.query('update job_pages set next_attempt_at=$2 where job_id=$1',[j.id,new Date(0)]);await worker.tick();}
- const state=await view(e.id,lead.cookie,j.id);assert.equal(state.state,'failed');assert.equal(state.failure_reason,reason);assert.equal(state.pages[0].attempts,['provider_timeout','rate_limited'].includes(reason)?3:1);
+ const state=await view(e.id,lead.cookie,j.id);assert.equal(state.state,'failed');assert.equal(state.failure_reason,reason);assert.equal(state.pages[0].attempts,['provider_timeout','rate_limited'].includes(reason)?3:reason==='invalid_output'?2:1);
  await ok(`ensembles/${e.id}/transcriptions/${j.id}/retry`,'POST',{},lead.cookie);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
  }
  const second=await sharp({create:{width:17,height:16,channels:3,background:'white'}}).png().toBuffer();const src=await (await upload(e.id,lead.cookie,second)).json();
@@ -171,8 +171,8 @@ test('worker process death recovers expired leases under a frozen non-UTC clock'
  for(let i=0;i<150;i++){const p=(await pool.query('select state from job_pages where job_id=$1',[j.id])).rows[0];if(p.state==='running' && (await pool.query('select 1 from provider_calls where job_id=$1',[j.id])).rowCount)break;await delay(20);}
  assert.equal((await pool.query('select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running',errors);
  child.kill('SIGKILL');await exited;
- await pool.query("update job_pages set lease_expires_at=now()-interval '1 second' where job_id=$1",[j.id]);const now=transcriptionClock.now;transcriptionClock.now=()=>new Date(Date.now()+600000);
- try{await new TranscriptionWorker().tick();}finally{transcriptionClock.now=now;}
+ await pool.query("update job_pages set lease_expires_at=now()-interval '1 second' where job_id=$1",[j.id]);const now=Date;globalThis.Date=skewDate(now,600000);
+ try{await new TranscriptionWorker().tick();}finally{globalThis.Date=now;}
  const done=await view(e.id,lead.cookie,j.id);assert.equal(done.state,'completed');assert.equal(done.pages[0].attempts,2);assert.equal((await pool.query("select outcome from provider_calls where job_id=$1 order by started_at",[j.id])).rows[0].outcome,'abandoned');
  }finally{child.kill('SIGKILL');await exited;}
 });
@@ -283,7 +283,7 @@ test('job projection excludes source internals and large result fragments',async
 test('worker wall clock skew cannot steal a live database lease',async()=>{
  const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
  await pool.query("update job_pages set state='running',lease_owner='other',lease_expires_at=now()+interval '5 minutes' where job_id=$1",[j.id]);
- const original=transcriptionClock.now;try{for(const delta of [-600000,600000]){transcriptionClock.now=()=>new Date(Date.now()+delta);assert.equal(await new TranscriptionWorker().tick(),false);}}finally{transcriptionClock.now=original;}
+ const original=Date;try{for(const delta of [-600000,600000]){globalThis.Date=skewDate(original,delta);assert.equal(await new TranscriptionWorker().tick(),false);}}finally{globalThis.Date=original;}
  await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);
 });
 test('result downloads are inert attachments and shared validation rejects active XML',async()=>{
@@ -414,4 +414,12 @@ test('assembly validation_busy backs off and explicit retry resets completed pag
  const worker=new TranscriptionWorker(new FakeProvider(),undefined,assembler);await worker.tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'running');
  fail=false;await pool.query("update transcription_jobs set provenance=provenance-'assemblyRetryAt' where id=$1",[j.id]);await worker.recoverAssembly();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
  await pool.query("update transcription_jobs set state='failed',failure_reason='assembly_failed' where id=$1",[j.id]);await retryJob(lead.id,e.id,j.id);assert.equal((await view(e.id,lead.cookie,j.id)).pages[0].state,'queued');await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+});
+
+function skewDate(original:DateConstructor,delta:number):DateConstructor{return new Proxy(original,{construct(target,args){return args.length?Reflect.construct(target,args):new original(original.now()+delta);},get(target,key){return key==='now'?()=>original.now()+delta:Reflect.get(target,key);}});}
+
+test('timeout ledger marks unknown usage and orphan cancellation abandons running calls',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);const provider=new FakeProvider();provider.transcribePage=async()=>{throw new (await import('../server/transcription-provider.server')).ProviderError('provider_timeout',true);};await new TranscriptionWorker(provider).tick();
+ const calls=(await pool.query('select usage from provider_calls where job_id=$1',[j.id])).rows;assert.equal(calls[0].usage.usage_unknown,true);
+ const p=(await pool.query('select id from job_pages where job_id=$1',[j.id])).rows[0];await pool.query("insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version) values($1,$2,2,$3,'fixture','v1')",[j.id,p.id,crypto.randomUUID()]);await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);assert.equal((await pool.query("select count(*)::int as n from provider_calls where job_id=$1 and outcome='running'",[j.id])).rows[0].n,0);
 });

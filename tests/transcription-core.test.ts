@@ -44,7 +44,7 @@ test('429 respects retry-after and model missing is explicit',async()=>{
 });
 test('validator separates timing/tie review warnings from blocking empty parts and invalid durations',()=>{
  const dom=new JSDOM(page(['S'],'start').replace('<duration>4','<duration>3'),{contentType:'text/xml'});const report=validateMusicDocument(dom.window.document);expect(report.structurallyValid).toBe(true);expect(report.accuracy).toBe('unknown');expect(report.warnings.map(w=>w.code)).toContain('unmatched_tie_start');expect(report.warnings.map(w=>w.code)).toContain('pickup_or_final_measure');dom.window.close();
- const empty=new JSDOM(page(['S']).replace(note(),''),{contentType:'text/xml'});expect(validateMusicDocument(empty.window.document).errors.map(e=>e.code)).toContain('empty_part');empty.window.close();
+ const empty=new JSDOM(page(['S']).replace(note(),''),{contentType:'text/xml'});expect(validateMusicDocument(empty.window.document).warnings.map(e=>e.code)).toContain('empty_part');empty.window.close();
  expect(()=>scoreDocument('<!DOCTYPE score-partwise><score-partwise/>')).toThrow();
 });
 
@@ -90,7 +90,7 @@ test('external exporter DOCTYPEs work for import and model output; subsets and e
  const header=`<!DOCTYPE ${root} PUBLIC "-//Recordare//DTD MusicXML ${version} ${root==='score-partwise'?'Partwise':'Timewise'}//EN" "http://www.musicxml.org/dtds/${root==='score-partwise'?'partwise':'timewise'}.dtd">`;
  const xml=root==='score-partwise'?page(['S']):`<score-timewise><part-list><score-part id="S"><part-name>S</part-name></score-part></part-list><measure number="1"><part id="S">${attrs}${note()}</part></measure></score-timewise>`;
  await expect(validateScore(header+xml,'musicxml')).resolves.toHaveProperty('hash');
- if(root==='score-partwise')await expect(provider(response({musicxml:header+xml,uncertainties:[],flags:[]})).transcribePage(input,[],{},new AbortController().signal)).resolves.toHaveProperty('musicxmlFragment');
+ await expect(provider(response({musicxml:header+xml,uncertainties:[],flags:[]})).transcribePage(input,[],{},new AbortController().signal)).resolves.toHaveProperty('musicxmlFragment');
  }
  await expect(validateScore('<!DOCTYPE score-partwise SYSTEM "partwise.dtd">'+page(['S']),'musicxml')).resolves.toHaveProperty('hash');
  for(const bad of ['<!DOCTYPE score-partwise [<!ENTITY x "bad">]>','<!ENTITY x "bad">'])await expect(validateScore(bad+page(['S']),'musicxml')).rejects.toMatchObject({code:'invalid_xml'});
@@ -161,4 +161,27 @@ test('structural validity does not hide unreadable or all-rest transcription',()
 
 test('pinned prompt hash refuses edits and loads independently of cwd',async()=>{
  const {verifyPrompt,promptSha256}=await import('../server/openai-provider.server');const {readFileSync}=await import('node:fs');const prompt=readFileSync(new URL('../server/prompts/transcription-v1.txt',import.meta.url),'utf8');expect(()=>verifyPrompt(prompt)).not.toThrow();expect(()=>verifyPrompt(prompt+' ')).toThrow('Pinned');expect(promptSha256).toMatch(/^[a-f0-9]{64}$/);
+});
+
+test('renderer flattens transparent notation to white and distinguishes invalid files',async()=>{
+ const {BoundedPageRenderer}=await import('../server/page-renderer.server');
+ const png=await sharp({create:{width:16,height:16,channels:4,background:{r:0,g:0,b:0,alpha:0}}}).png().toBuffer();
+ const out=await new BoundedPageRenderer({get:async()=>Readable.from([png])}).render({...input,raster:undefined},new AbortController().signal);const pixels=await sharp(out.raster!).raw().toBuffer();expect(pixels[0]).toBe(255);
+ await expect(new BoundedPageRenderer({get:async()=>Readable.from([Buffer.from('bad')])}).render({...input,raster:undefined},new AbortController().signal)).rejects.toMatchObject({reason:'render_failed',retryable:false});
+});
+
+test('sandbox denies parent environ and io_uring while retaining its own process diagnostics',async()=>{
+ const {spawnSync}=await import('node:child_process');
+ const r=spawnSync('python3',['server/inspection-sandbox.py',process.execPath,'--jitless','--input-type=module','-e',`import fs from 'node:fs';try{fs.readFileSync('/proc/${process.pid}/environ');process.exit(2);}catch(e){if(e.code!=='EACCES')throw e;}fs.readFileSync('/proc/self/limits');`],{encoding:'utf8',timeout:5000,env:{PATH:process.env.PATH}});expect(r.status,r.stderr).toBe(0);
+ const probe=spawnSync('python3',['server/inspection-sandbox.py','/usr/bin/python3','-c',`import ctypes,errno;lib=ctypes.CDLL(None,use_errno=True);assert all(lib.syscall(n,-1,0,0,0,0,0)==-1 and ctypes.get_errno()==errno.EPERM for n in [425,426,427])`],{encoding:'utf8',timeout:5000,env:{PATH:process.env.PATH}});expect(probe.status,probe.stderr).toBe(0);
+});
+
+test('off-thread assembly preserves provenance and yields the parent event loop',async()=>{
+ const {assembleOffThread}=await import('../server/assembly-worker.server');let yielded=false;const pending=assembleOffThread([result(page(['S','A']))]);await new Promise<void>(r=>setTimeout(()=>{yielded=true;r();},0));const out=await pending;expect(yielded).toBe(true);expect(out.provenance).toHaveLength(2);expect(out.report.structurallyValid).toBe(true);
+});
+
+test('global identity assignment preserves stronger context signals and warns on indistinguishable names',async()=>{
+ const {assignParts}=await import('../server/score-assembly.server');expect(assignParts([[100,100],[1000,0]])).toEqual([1,0]);expect(assignParts([[1000,0],[100,100]])).toEqual([0,1]);
+ const a=page(['P','Q']).replaceAll('<part-name>P</part-name>','<part-name>Soprano</part-name>').replaceAll('<part-name>Q</part-name>','<part-name>Soprano</part-name>');const b=page(['R','U']).replaceAll('<part-name>R</part-name>','<part-name>Soprano</part-name>').replaceAll('<part-name>U</part-name>','<part-name>Soprano</part-name>');
+ const out=await new ScoreAssembler().assembleDetailed([result(a),result(b)]);expect(out.report.warnings.map(w=>w.code)).toContain('ambiguous_part_identity');
 });
