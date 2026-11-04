@@ -72,7 +72,8 @@ limited to the chosen original and expire in 60 seconds.
 
 Migration 0013 adds ordering/audit indexes and `pg_trgm` substring-search indexes;
 the migration role must be able to install the PostgreSQL `pg_trgm` extension.
-The UI receives `APP_TIME_ZONE` from the server and uses `adminInstant` for all
+Admin JSON instants carry the configured business-zone offset; array responses
+name the zone in `X-Display-Time-Zone`. The UI receives `APP_TIME_ZONE` from the server and uses `adminInstant` for all
 instants, including a numeric UTC offset. The configured zone defaults to UTC.
 
 ## Verification

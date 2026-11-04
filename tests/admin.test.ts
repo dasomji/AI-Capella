@@ -66,6 +66,7 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     assert.equal(found.items.length, 1);
     assert.equal(found.items[0].id, sys.id);
     assert.equal(found.timeZone,'Europe/Berlin');
+    assert.match(found.items[0].created_at,/[+]0[12]:00$/);
     for(const [i,u] of [member,lead,manager].entries())await pool.query('update "user" set created_at=$2::timestamptz where id=$1',[u.id,`2026-03-29T00:30:00.00000${i+1}Z`]);
     const precise='users?sort=created&limit=1&from=2026-03-29T00:30:00Z&to=2026-03-29T00:30:00.001Z';
     const a=await json(precise,sys.cookie),b=await json(precise+'&cursor='+a.nextCursor,sys.cookie),c=await json(precise+'&cursor='+b.nextCursor,sys.cookie);
@@ -93,4 +94,9 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     await pool.query("insert into rate_limit(key,count,last_request) values($1,10,$2) on conflict(key) do update set count=10,last_request=$2", ['admin:content:' + sys.id, Date.now()]);
     assert.equal((await req('/api/admin/pieces/' + p + '/content', sys.cookie, 'POST', {})).status, 429);
 });
-test('admin time displays explicit offset through DST independently of process zone', () => { assert.match(adminInstant('2026-03-29T00:30:00Z', 'Europe/Berlin'), /GMT\+01:00/); assert.match(adminInstant('2026-03-29T01:30:00Z', 'Europe/Berlin'), /GMT\+02:00/); assert.match(adminInstant('2026-10-25T00:30:00Z', 'Europe/Berlin'), /GMT\+02:00/); assert.match(adminInstant('2026-10-25T01:30:00Z', 'Europe/Berlin'), /GMT\+01:00/); assert.throws(() => adminInstant('2026-01-01T00:00:00', 'Europe/Berlin')); });
+test('admin time displays explicit offset through DST independently of process zone', async () => {
+ const {offsetInstant}=await import('../server/time.server');
+ assert.equal(offsetInstant(new Date('2026-03-28T23:30:00Z')),'2026-03-29T00:30:00.000+01:00');
+ assert.equal(offsetInstant(new Date('2026-03-29T01:30:00Z')),'2026-03-29T03:30:00.000+02:00');
+ assert.equal(offsetInstant(new Date('2026-10-25T01:30:00Z')),'2026-10-25T02:30:00.000+01:00');
+ assert.match(adminInstant('2026-03-29T00:30:00Z', 'Europe/Berlin'), /GMT\+01:00/); assert.match(adminInstant('2026-03-29T01:30:00Z', 'Europe/Berlin'), /GMT\+02:00/); assert.match(adminInstant('2026-10-25T00:30:00Z', 'Europe/Berlin'), /GMT\+02:00/); assert.match(adminInstant('2026-10-25T01:30:00Z', 'Europe/Berlin'), /GMT\+01:00/); assert.throws(() => adminInstant('2026-01-01T00:00:00', 'Europe/Berlin')); });

@@ -1,4 +1,6 @@
-import { Hono } from 'hono';
+import { Hono,type Context } from 'hono';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { offsetInstant } from './time.server';
 import { z } from 'zod';
 import { pool } from './db/index.server';
 import { adminSession } from './admin-auth.server';
@@ -9,21 +11,27 @@ import { processingPaused, transcriptionMetrics } from './transcription.server';
 import { storage } from './storage.server';
 import { env } from './env.server';
 import { logError } from './logger.server';
+/** Only actual database Date values are formatted; score bodies remain opaque. */
+function adminJSON(c:Context,data:any,status:ContentfulStatusCode=200){
+ const convert=(value:any):any=>value instanceof Date?offsetInstant(value):Array.isArray(value)?value.map(convert):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,k==='body'?v:convert(v)])):value;
+ const body=convert(data);c.header('X-Display-Time-Zone',env.APP_TIME_ZONE);
+ return c.json(body&&typeof body==='object'&&!Array.isArray(body)?{...body,timeZone:env.APP_TIME_ZONE}:body,status);
+}
 export const admin = new Hono<{
     Variables: {
         actor: string;
     };
 }>();
 admin.onError((e, c) => { if (e instanceof DomainError)
-    return c.json({ code: e.code }, e.status as 400); if (e instanceof z.ZodError || e instanceof SyntaxError)
-    return c.json({ code: 'invalid_input', message: 'Use bounded filters and ISO instants with offset or Z.' }, 422); logError('admin.http', e); return c.json({ code: 'service_unavailable' }, 500); });
+    return adminJSON(c, { code: e.code }, e.status as 400); if (e instanceof z.ZodError || e instanceof SyntaxError)
+    return adminJSON(c, { code: 'invalid_input', message: 'Use bounded filters and ISO instants with offset or Z.' }, 422); logError('admin.http', e); return adminJSON(c, { code: 'service_unavailable' }, 500); });
 export async function adminLimit(actor: string, kind = 'read', max = 120) {
     const r = await pool.query(`insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request<=$2-60000 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request<=$2-60000 then $2 else rate_limit.last_request end returning count`, ['admin:' + kind + ':' + actor, Date.now()]);
     if (r.rows[0].count > max)
         throw new DomainError('rate_limited', 429);
 }
 admin.use('*', async (c, next) => { c.header('Cache-Control', 'no-store'); const s = await adminSession(c.req.raw.headers); if (!s)
-    return c.json({ code: 'not_found' }, 404); c.set('actor', s.user.id); await adminLimit(s.user.id); await next(); });
+    return adminJSON(c, { code: 'not_found' }, 404); c.set('actor', s.user.id); await adminLimit(s.user.id); await next(); });
 export async function adminAudit(actor: string, type: string, target: string, action = 'detail', reason = '') {
     await pool.query("insert into audit_events(actor_id,action,target_id,outcome,metadata) values($1,$2,$3,'ok',$4)", [actor, 'admin.' + type + '.' + action, target, { targetType: type, reason }]);
 }
@@ -89,7 +97,7 @@ for (const kind of Object.keys(sources) as (keyof typeof sources)[])
             delete row._cursor;
         if (['memberships', 'invitations'].includes(kind))
             await adminAudit(c.get('actor'), q.user ? 'user' : 'ensemble', q.user ?? q.ensemble ?? 'all');
-        return c.json({ items, nextCursor: cursor, timeZone: env.APP_TIME_ZONE });
+        return adminJSON(c, { items, nextCursor: cursor, timeZone: env.APP_TIME_ZONE });
     });
 admin.get('/users/:id', async (c) => {
     const id = c.req.param('id');
@@ -100,35 +108,35 @@ admin.get('/users/:id', async (c) => {
     const devices = (await pool.query(`select case when user_agent ~* 'mobile|android|iphone|ipad' then 'Mobile' else 'Desktop / other' end as device,count(*)::int as count,max(updated_at) as last_active from session where user_id=$1 and expires_at>now() group by 1`, [id])).rows;
     const roles = (await pool.query('select role,created_at from platform_roles where user_id=$1', [id])).rows;
     await adminAudit(c.get('actor'), 'user', id);
-    return c.json({ profile: u, sessions, devices, roles, timeZone: env.APP_TIME_ZONE });
+    return adminJSON(c, { profile: u, sessions, devices, roles, timeZone: env.APP_TIME_ZONE });
 });
 admin.get('/ensembles/:id', async (c) => { const id = c.req.param('id'); const row = (await pool.query('select id,name,kind,created_at from ensembles where id=$1', [id])).rows[0]; if (!row)
-    throw new DomainError('not_found', 404); await adminAudit(c.get('actor'), 'ensemble', id); return c.json({ profile: row, timeZone: env.APP_TIME_ZONE }); });
+    throw new DomainError('not_found', 404); await adminAudit(c.get('actor'), 'ensemble', id); return adminJSON(c, { profile: row, timeZone: env.APP_TIME_ZONE }); });
 admin.get('/pieces/:id', async (c) => {
     const id = c.req.param('id'), row = (await pool.query("select id,title,ensemble_id,format,current_version_id,created_at,updated_at,provenance->>'jobId' as transcription_job_id from music_pieces where id=$1", [id])).rows[0];
     if (!row)
         throw new DomainError('not_found', 404);
     await adminAudit(c.get('actor'), 'piece', id);
-    return c.json({ profile: row, timeZone: env.APP_TIME_ZONE });
+    return adminJSON(c, { profile: row, timeZone: env.APP_TIME_ZONE });
 });
-admin.get('/pieces/:id/versions', async (c) => { const q = adminQuery.parse(c.req.query()); const rows = (await pool.query('select id,version_no,created_by,format,content_hash,size,created_at from score_versions where piece_id=$1 and ($2::text is null or id>$2) order by id limit $3', [c.req.param('id'), q.cursor ?? null, q.limit + 1])).rows; await adminAudit(c.get('actor'), 'piece', c.req.param('id')); return c.json({ items: rows.slice(0, q.limit), nextCursor: rows.length > q.limit ? rows[q.limit - 1].id : null }); });
-admin.get('/pieces/:id/originals', async (c) => { const q = adminQuery.parse(c.req.query()); const rows = (await pool.query(`select distinct o.id,o.original_filename,o.size,o.content_type,o.sha256,o.created_at from music_pieces p join transcription_jobs j on j.id=p.provenance->>'jobId' and j.ensemble_id=p.ensemble_id join job_pages pg on pg.job_id=j.id join stored_objects o on o.id=pg.object_id and o.kind='original' and o.state='ready' where p.id=$1 and ($2::text is null or o.id>$2) order by o.id limit $3`, [c.req.param('id'), q.cursor ?? null, q.limit + 1])).rows; await adminAudit(c.get('actor'), 'piece', c.req.param('id')); return c.json({ items: rows.slice(0, q.limit), nextCursor: rows.length > q.limit ? rows[q.limit - 1].id : null }); });
+admin.get('/pieces/:id/versions', async (c) => { const q = adminQuery.parse(c.req.query()); const rows = (await pool.query('select id,version_no,created_by,format,content_hash,size,created_at from score_versions where piece_id=$1 and ($2::text is null or id>$2) order by id limit $3', [c.req.param('id'), q.cursor ?? null, q.limit + 1])).rows; await adminAudit(c.get('actor'), 'piece', c.req.param('id')); return adminJSON(c, { items: rows.slice(0, q.limit), nextCursor: rows.length > q.limit ? rows[q.limit - 1].id : null }); });
+admin.get('/pieces/:id/originals', async (c) => { const q = adminQuery.parse(c.req.query()); const rows = (await pool.query(`select distinct o.id,o.original_filename,o.size,o.content_type,o.sha256,o.created_at from music_pieces p join transcription_jobs j on j.id=p.provenance->>'jobId' and j.ensemble_id=p.ensemble_id join job_pages pg on pg.job_id=j.id join stored_objects o on o.id=pg.object_id and o.kind='original' and o.state='ready' where p.id=$1 and ($2::text is null or o.id>$2) order by o.id limit $3`, [c.req.param('id'), q.cursor ?? null, q.limit + 1])).rows; await adminAudit(c.get('actor'), 'piece', c.req.param('id')); return adminJSON(c, { items: rows.slice(0, q.limit), nextCursor: rows.length > q.limit ? rows[q.limit - 1].id : null }); });
 admin.post('/pieces/:id/content', async (c) => { const input = adminAccess.parse(await c.req.json()); await adminLimit(c.get('actor'), 'content', 10); const row = (await pool.query('select v.format,v.musicxml,v.native_score from music_pieces p join score_versions v on v.id=p.current_version_id and v.piece_id=p.id where p.id=$1', [c.req.param('id')])).rows[0]; if (!row)
-    throw new DomainError('not_found', 404); await adminAudit(c.get('actor'), 'piece', c.req.param('id'), 'content', input.reason); return c.json({ format: row.format, body: row.musicxml ?? row.native_score }); });
+    throw new DomainError('not_found', 404); await adminAudit(c.get('actor'), 'piece', c.req.param('id'), 'content', input.reason); return adminJSON(c, { format: row.format, body: row.musicxml ?? row.native_score }); });
 admin.post('/pieces/:id/originals/:object/download', async (c) => { const input = adminAccess.parse(await c.req.json()); await adminLimit(c.get('actor'), 'content', 10); const row = (await pool.query(`select o.id,o.object_key,o.original_filename from music_pieces p join transcription_jobs j on j.id=p.provenance->>'jobId' and j.ensemble_id=p.ensemble_id join job_pages pg on pg.job_id=j.id join stored_objects o on o.id=pg.object_id where p.id=$1 and o.id=$2 and o.kind='original' and o.state='ready' limit 1`, [c.req.param('id'), c.req.param('object')])).rows[0]; if (!row)
-    throw new DomainError('not_found', 404); await adminAudit(c.get('actor'), 'original', row.id, 'download', input.reason); return c.json({ url: await storage().signedGet(row.object_key, 60, row.original_filename ?? 'original'), expiresIn: 60 }); });
-admin.get('/transcription/control', async (c) => { const last = (await pool.query("select actor_id,created_at,metadata->>'reason' as reason from audit_events where action='transcription.control' order by created_at desc,id desc limit 1")).rows[0] ?? null; return c.json({ paused: await processingPaused(), last, timeZone: env.APP_TIME_ZONE }); });
-admin.put('/transcription/control', async (c) => { const input = adminControl.parse(await c.req.json()); await transaction(async (db) => { await db.query('insert into transcription_control(id,paused) values(1,$1) on conflict(id) do update set paused=$1,updated_at=now()', [input.paused]); await db.query("insert into audit_events(actor_id,action,outcome,metadata) values($1,'transcription.control','ok',$2)", [c.get('actor'), input]); }); return c.json({ paused: await processingPaused() }); });
+    throw new DomainError('not_found', 404); await adminAudit(c.get('actor'), 'original', row.id, 'download', input.reason); return adminJSON(c, { url: await storage().signedGet(row.object_key, 60, row.original_filename ?? 'original'), expiresIn: 60 }); });
+admin.get('/transcription/control', async (c) => { const last = (await pool.query("select actor_id,created_at,metadata->>'reason' as reason from audit_events where action='transcription.control' order by created_at desc,id desc limit 1")).rows[0] ?? null; return adminJSON(c, { paused: await processingPaused(), last, timeZone: env.APP_TIME_ZONE }); });
+admin.put('/transcription/control', async (c) => { const input = adminControl.parse(await c.req.json()); await transaction(async (db) => { await db.query('insert into transcription_control(id,paused) values(1,$1) on conflict(id) do update set paused=$1,updated_at=now()', [input.paused]); await db.query("insert into audit_events(actor_id,action,outcome,metadata) values($1,'transcription.control','ok',$2)", [c.get('actor'), input]); }); return adminJSON(c, { paused: await processingPaused() }); });
 admin.get('/transcription/usage', async (c) => { try {
-    return c.json(await transcriptionUsage(c.req.query('from') ?? '', c.req.query('to') ?? ''));
+    return adminJSON(c, await transcriptionUsage(c.req.query('from') ?? '', c.req.query('to') ?? ''));
 }
 catch (e) {
     if (e instanceof Error && e.message.startsWith('Expected'))
-        return c.json({code:'invalid_range',message:e.message},422);
+        return adminJSON(c, {code:'invalid_range',message:e.message},422);
     throw e;
 } });
 admin.get('/transcription/metrics', async (c) => { const q = adminQuery.parse(c.req.query()); if (!q.from || !q.to)
-    throw new DomainError('invalid_range', 422); return c.json(await transcriptionMetrics(new Date(q.from), new Date(q.to))); });
+    throw new DomainError('invalid_range', 422); return adminJSON(c, await transcriptionMetrics(new Date(q.from), new Date(q.to))); });
 admin.get('/transcription/failures', async (c) => { const q = adminQuery.parse(c.req.query()); if (!q.from || !q.to)
-    throw new DomainError('invalid_range', 422); return c.json({ items: (await pool.query("select coalesce(error_kind,'unknown') as reason,count(*)::int as calls from provider_calls where started_at >= $1 and started_at < $2 and outcome='failed' group by error_kind order by calls desc limit 100", [q.from, q.to])).rows }); });
-admin.all('*', c => c.json({ code: 'not_found' }, 404));
+    throw new DomainError('invalid_range', 422); return adminJSON(c, { items: (await pool.query("select coalesce(error_kind,'unknown') as reason,count(*)::int as calls from provider_calls where started_at >= $1 and started_at < $2 and outcome='failed' group by error_kind order by calls desc limit 100", [q.from, q.to])).rows }); });
+admin.all('*', c => adminJSON(c, { code: 'not_found' }, 404));
