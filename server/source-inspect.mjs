@@ -2,6 +2,7 @@ const workerData=JSON.parse(process.argv[2]);
 const parentPort={postMessage:value=>process.stdout.write(JSON.stringify(value))};
 import { readFile, open } from 'node:fs/promises';
 import sharp from 'sharp';
+sharp.concurrency(1);sharp.cache(false);
 import { PDFDocument } from 'pdf-lib';
 try {
  const {path,maxPages,maxPixels}=workerData;

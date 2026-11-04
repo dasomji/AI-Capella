@@ -14,3 +14,8 @@ export function logProviderError(reason:string,status?:number,code?:string|null,
  const safe=(v:string|undefined|null)=>v&&/^[a-zA-Z0-9_-]{1,160}$/.test(v)?v:undefined;
  console.error(JSON.stringify({timestamp:new Date().toISOString(),level:'error',event:'transcription.provider',reason:safe(reason),status,code:safe(code),requestId:safe(requestId)}));
 }
+
+/** Native child diagnostics only; provider errors use the metadata-only logger above. */
+export function logChildError(event:string,stderr:string,code?:number|null){
+ console.error(JSON.stringify({timestamp:new Date().toISOString(),level:'error',event,code,stderr:stderr.replace(/[\x00-\x08\x0b-\x1f\x7f]/g,'').replace(/\.transcription-tmp\/[a-zA-Z0-9_-]+/g,'[staging]').slice(-2048)}));
+}
