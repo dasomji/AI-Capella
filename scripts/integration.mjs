@@ -13,6 +13,6 @@ try {
   for (let i=0;i<60;i++) { const r = spawnSync('docker',['exec',name,'pg_isready','-h','127.0.0.1','-U','postgres']); if (r.status === 0) break; await new Promise(r => setTimeout(r, 250)); }
   const migration = spawnSync(process.execPath,['--import','tsx','scripts/migrate.ts'], { env, stdio: 'inherit' });
   if (migration.status !== 0) throw new Error('Fixture migration failed');
-  const child = spawn(process.execPath,['--import','tsx','--test',...(process.env.AICAP_TEST_PATTERN?['--test-name-pattern',process.env.AICAP_TEST_PATTERN]:[]),'--test-concurrency=1','tests/integration.test.ts','tests/hosting.test.ts','tests/domain.test.ts','tests/transcription.test.ts'], {env, stdio: 'inherit'});
+  const child = spawn(process.execPath,['--import','tsx','--test',...(process.env.AICAP_TEST_PATTERN?['--test-name-pattern',process.env.AICAP_TEST_PATTERN]:[]),'--test-concurrency=1','tests/admin.test.ts','tests/integration.test.ts','tests/hosting.test.ts','tests/domain.test.ts','tests/transcription.test.ts'], {env, stdio: 'inherit'});
   process.exitCode = await new Promise(resolve => child.on('exit', code => resolve(code ?? 1)));
 } finally { docker(['rm','-fv',name]); }

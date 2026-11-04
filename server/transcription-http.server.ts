@@ -1,16 +1,15 @@
 import { optionalTitle } from '../src/api/title';
 import { registerTranscriptionUi } from './transcription-ui.server';
-import { transcriptionUsage } from './usage.server';
 import type { Hono } from 'hono';
 import { Readable } from 'node:stream';
 import { z } from 'zod';
 import { pool } from './db/index.server';
-import { authorize, audit, DomainError, transaction } from './domain.server';
+import { authorize, audit, DomainError } from './domain.server';
 import { sourceLimits,uploadOriginal } from './originals.server';
 import { storage } from './storage.server';
 import { uploadAdmission as slots } from './upload-admission.server';
 import { env } from './env.server';
-import { createJob,jobView,jobResult,jobReport,cancelJob,retryJob,processingPaused,transcriptionMetrics } from './transcription.server';
+import { createJob,jobView,jobResult,jobReport,cancelJob,retryJob,processingPaused } from './transcription.server';
 export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string;email:string;name:string}}}>) {
  registerTranscriptionUi(app);
  app.get('/transcription/config',c=>{c.header('Cache-Control','no-store');return c.json({pdf:sourceLimits.pdf,photo:sourceLimits.photo,pages:sourceLimits.pages});});
@@ -37,10 +36,4 @@ export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string
  app.get('/ensembles/:ensemble/transcriptions/:job/report',async c=>{c.header('Cache-Control','no-store');c.header('Content-Disposition','attachment; filename="transcription-report.json"');return c.json(await jobReport(c.get('user').id,c.req.param('ensemble'),c.req.param('job')));});
  app.post('/ensembles/:ensemble/transcriptions/:job/cancel',async c=>{await cancelJob(c.get('user').id,c.req.param('ensemble'),c.req.param('job'));return c.json({state:'cancelled'});});
  app.post('/ensembles/:ensemble/transcriptions/:job/retry',async c=>c.json(await retryJob(c.get('user').id,c.req.param('ensemble'),c.req.param('job'))));
- app.put('/admin/transcription/control',async c=>{
- const input=z.object({paused:z.boolean()}).strict().parse(await c.req.json());
- await transaction(async db=>{if(!(await db.query("select 1 from platform_roles where user_id=$1 and role='sysadmin'",[c.get('user').id])).rowCount)throw new DomainError('not_found',404);await db.query('insert into transcription_control(id,paused) values(1,$1) on conflict(id) do update set paused=$1,updated_at=now()',[input.paused]);await db.query("insert into audit_events(actor_id,action,outcome,metadata) values($1,'transcription.control','ok',$2)",[c.get('user').id,input]);});return c.json({paused:await processingPaused()});
- });
- app.get('/admin/transcription/usage',async c=>{if(!(await pool.query("select 1 from platform_roles where user_id=$1 and role='sysadmin'",[c.get('user').id])).rowCount)throw new DomainError('not_found',404);try{return c.json(await transcriptionUsage(c.req.query('from')??'',c.req.query('to')??''));}catch(e){if(e instanceof Error&&e.message.startsWith('Expected'))return c.json({code:'invalid_range',message:e.message},422);throw e;}});
- app.get('/admin/transcription/metrics',async c=>{if(!(await pool.query("select 1 from platform_roles where user_id=$1 and role='sysadmin'",[c.get('user').id])).rowCount)throw new DomainError('not_found',404);const from=z.iso.datetime({offset:true}).parse(c.req.query('from')),to=z.iso.datetime({offset:true}).parse(c.req.query('to'));if(new Date(from).getTime()>=new Date(to).getTime())throw new DomainError('invalid_range',422);return c.json(await transcriptionMetrics(new Date(from),new Date(to)));});
 }

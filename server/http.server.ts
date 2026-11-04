@@ -1,3 +1,5 @@
+import { admin } from './admin.server';
+import { adminSession,isSysadmin } from './admin-auth.server';
 import { sandboxReady } from './sandbox.server';
 void sandboxReady();
 import { rehearsalReady } from './rehearsal.server';
@@ -41,6 +43,12 @@ api.use("*", async (c, next) => {
       "Content-Security-Policy",
       "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; form-action 'self'; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
     );
+  }
+  // Conceal the administration surface before origin/body validation, including encoded/unknown paths.
+  let accessPath=c.req.path;try {accessPath=decodeURIComponent(accessPath);}catch {/* Normal route validation owns malformed encodings. */}
+  if (/^\/(?:api\/admin|admin)(?:\/|$)/.test(accessPath) && !await adminSession(c.req.raw.headers)) {
+    c.header("Cache-Control", "no-store");
+    return c.req.path.startsWith("/api/") ? c.json({code:"not_found"},404) : c.html('<main><h1>404</h1><p>Not found</p></main>',404);
   }
   if (
     !["GET", "HEAD", "OPTIONS"].includes(c.req.method) &&
@@ -292,8 +300,11 @@ api.get("/api/me", async (c) => {
       id: session.user.id,
       name: session.user.name,
       email: session.user.email,
+      sysadmin: await isSysadmin(session.user.id),
     },
   });
 });
 
+api.route("/api/admin", admin);
+api.all("/api/admin/*", c=>c.json({code:"not_found"},404));
 api.route("/api", domain);

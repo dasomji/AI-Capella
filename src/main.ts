@@ -1,3 +1,4 @@
+import { appendAdminAccountLink } from './admin-account';
 import { installTranscription } from './transcription';
 import { tr } from './i18n';
 import { playbackDriftMs } from './rehearsal/schedule';
@@ -4018,6 +4019,7 @@ async function openAccountArea(anchor: HTMLElement) {
   email.className = "member-email";
   email.textContent = account?.email ?? "";
   body.append(email);
+  void appendAdminAccountLink(body);
   const signout = document.createElement("button");
   signout.className = "btn primary";
   signout.textContent = t("accountSignOut");

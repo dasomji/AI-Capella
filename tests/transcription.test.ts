@@ -209,11 +209,11 @@ test('permission revoked between pages prevents the next provider call and ensem
 });
 test('sysadmin stop and metrics APIs enforce platform role, and sole-member closure deletes originals',async()=>{
  const {lead,e,source}=await setup();
- assert.equal((await request('admin/transcription/control','PUT',{paused:true},lead.cookie)).status,404);
+ assert.equal((await request('admin/transcription/control','PUT',{paused:true,reason:'Integration emergency stop'},lead.cookie)).status,404);
  await pool.query("insert into platform_roles(user_id) values($1)",[lead.id]);
- assert.equal((await ok('admin/transcription/control','PUT',{paused:true},lead.cookie)).paused,true);
+ assert.equal((await ok('admin/transcription/control','PUT',{paused:true,reason:'Integration emergency stop'},lead.cookie)).paused,true);
  const j=await job(e.id,lead.cookie,source.id);assert.equal(await new TranscriptionWorker().tick(),false);
- await ok('admin/transcription/control','PUT',{paused:false},lead.cookie);env.TRANSCRIPTION_EMERGENCY_STOP='1';try{assert.equal(await new TranscriptionWorker().tick(),false);}finally{env.TRANSCRIPTION_EMERGENCY_STOP='0';}await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+ await ok('admin/transcription/control','PUT',{paused:false,reason:'Integration resume'},lead.cookie);env.TRANSCRIPTION_EMERGENCY_STOP='1';try{assert.equal(await new TranscriptionWorker().tick(),false);}finally{env.TRANSCRIPTION_EMERGENCY_STOP='0';}await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
  const range='admin/transcription/metrics?from=2000-01-01T00:00:00Z&to=2100-01-01T00:00:00Z';const metrics=await ok(range,'GET',undefined,lead.cookie);assert.ok(metrics.some((r:any)=>r.model==='fake-transcription-v1'));
  const key=(await pool.query('select object_key from stored_objects where id=$1',[source.id])).rows[0].object_key;
  await ok('account','DELETE',{deleteEnsembleIds:[e.id]},lead.cookie);assert.equal((await pool.query('select 1 from stored_objects where id=$1',[source.id])).rowCount,0);assert.equal((await pool.query('select 1 from object_deletions where object_key=$1',[key])).rowCount,1);
@@ -396,7 +396,7 @@ test('usage sysadmin gate and SQL DST half-open buckets retain failed attempts',
  const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
  const path='admin/transcription/usage?from=2026-03-08T05:00:00Z&to=2026-03-09T04:00:00Z';
  assert.equal((await request(path,'GET',undefined,lead.cookie)).status,404);
- assert.equal((await request(path)).status,401);
+ assert.equal((await request(path)).status,404);
  await pool.query("insert into platform_roles(user_id,role) values($1,'sysadmin')",[lead.id]);
  assert.equal((await request('admin/transcription/usage?from=2026-03-08&to=2026-03-09','GET',undefined,lead.cookie)).status,422);
  const excessive=await request('admin/transcription/usage?from=2025-01-01T00:00:00Z&to=2026-02-01T00:00:00Z','GET',undefined,lead.cookie);assert.equal(excessive.status,422);assert.match((await excessive.json()).message,/366 days/);

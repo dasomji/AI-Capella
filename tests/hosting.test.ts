@@ -1,10 +1,12 @@
+import { createServer } from 'node:net';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { io } from 'socket.io-client';
+async function availablePort(){const s=createServer();await new Promise<void>(r=>s.listen(0,'127.0.0.1',r));const port=(s.address() as {port:number}).port;await new Promise<void>(r=>s.close(()=>r()));return port;}
 for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start, auth and Socket.IO on one HTTP origin`, { timeout: 30000 }, async () => {
- const port = mode === 'dev' ? 23002 : 23003; const base = `http://localhost:${port}`;
+ const port = await availablePort(); const base = `http://localhost:${port}`;
  let child = spawn('npm', mode === 'dev' ? ['run','dev','--','--port',String(port)] : ['start'], { detached: true, env: { ...process.env, NODE_ENV:'test', PORT:String(port), BETTER_AUTH_URL:base, TRUSTED_ORIGINS:base, MAIL_TRANSPORT:'smtp' }, stdio:'pipe' });
  let logs = ''; child.stdout.on('data',v => { logs += v; }); child.stderr.on('data',v => { logs += v; });
  try {
@@ -49,7 +51,7 @@ for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start
 test('standby admits HTTP while rehearsal ownership remains unavailable', {timeout:30000},async()=>{
  const {default:pg}=await import('pg');const owner=new pg.Client({connectionString:process.env.DATABASE_URL});await owner.connect();
  assert.equal((await owner.query('select pg_try_advisory_lock(714083,1) as locked')).rows[0].locked,true);
- const base='http://localhost:23004';const child=spawn('npm',['start'],{detached:true,env:{...process.env,NODE_ENV:'test',PORT:'23004',BETTER_AUTH_URL:base,TRUSTED_ORIGINS:base,MAIL_TRANSPORT:'smtp'},stdio:'pipe'});
+ const standbyPort=await availablePort();const base='http://localhost:'+standbyPort;const child=spawn('npm',['start'],{detached:true,env:{...process.env,NODE_ENV:'test',PORT:String(standbyPort),BETTER_AUTH_URL:base,TRUSTED_ORIGINS:base,MAIL_TRANSPORT:'smtp'},stdio:'pipe'});
  let logs='';child.stdout.on('data',v=>logs+=v);child.stderr.on('data',v=>logs+=v);
  try{
   let response:Response|undefined;
