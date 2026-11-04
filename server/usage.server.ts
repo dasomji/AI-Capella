@@ -7,11 +7,11 @@ export function usageRange(from:string,to:string){
 }
 /** Dates are calendar labels in the centrally configured zone; instants are filtered [from,to). */
 export const usageSQL=`select to_char(c.started_at at time zone $3,'YYYY-MM-DD') as day,
- c.model,c.prompt_version,j.ensemble_id,c.outcome,count(*)::int as calls,
+ c.model,c.prompt_version,j.ensemble_id,c.outcome,c.error_kind,count(*)::int as calls,
  count(*) filter(where c.attempt>1)::int as retries,
  coalesce(sum((c.usage->>'inputTokens')::numeric),0) as input_tokens,
  coalesce(sum((c.usage->>'outputTokens')::numeric),0) as output_tokens,
- count(*) filter(where c.usage is null or c.usage->>'inputTokens' is null)::int as unknown_usage_calls,
+ count(*) filter(where c.usage is null or c.usage->>'inputTokens' is null or c.usage->>'usage_unknown'='true')::int as unknown_usage_calls,
  percentile_cont(0.5) within group(order by extract(epoch from(c.finished_at-c.started_at))*1000) as latency_p50_ms,
  percentile_cont(0.95) within group(order by extract(epoch from(c.finished_at-c.started_at))*1000) as latency_p95_ms,
  count(distinct c.page_id)::int as pages,count(distinct c.job_id)::int as jobs,
@@ -21,5 +21,5 @@ export const usageSQL=`select to_char(c.started_at at time zone $3,'YYYY-MM-DD')
  case when count(*) filter(where c.estimated_cost is null)>0 then null else sum(c.estimated_cost::text::numeric)/nullif(count(distinct c.job_id),0) end as estimated_cost_per_job_usd
  from provider_calls c join transcription_jobs j on j.id=c.job_id
  where c.started_at >= $1 and c.started_at < $2
- group by day,c.model,c.prompt_version,j.ensemble_id,c.outcome order by day,c.model,c.prompt_version,j.ensemble_id,c.outcome`;
+ group by day,c.model,c.prompt_version,j.ensemble_id,c.outcome,c.error_kind order by day,c.model,c.prompt_version,j.ensemble_id,c.outcome`;
 export async function transcriptionUsage(from:string,to:string){const range=usageRange(from,to);return {timeZone:env.APP_TIME_ZONE,currency:'USD',range:'[from,to)',groups:(await pool.query(usageSQL,[...range,env.APP_TIME_ZONE])).rows};}

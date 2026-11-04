@@ -64,6 +64,13 @@
       "when": 1793763510087,
       "tag": "0008_cold_miss_america",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793763669346,
+      "tag": "0009_striped_cyclops",
+      "breakpoints": true
     }
   ]
 }

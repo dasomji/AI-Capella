@@ -45,6 +45,7 @@ export function parseEnv(input: NodeJS.ProcessEnv) {
     TRANSCRIPTION_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
     TRANSCRIPTION_LEASE_MS: z.coerce.number().int().min(1000).default(30000),
     TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(180000),
+    TRANSCRIPTION_UNCLAIMED_MS: z.coerce.number().int().positive().default(15*60*1000),
     TRANSCRIPTION_MAX_ATTEMPTS: z.coerce.number().int().positive().max(10).default(3),
     TRANSCRIPTION_EMERGENCY_STOP: z.enum(['0','1']).default('0'),
     TRANSCRIPTION_PRICE_TABLE: z.string().default('{}').refine(value=>{try{return z.record(z.string(),z.object({input:z.number().nonnegative().finite(),output:z.number().nonnegative().finite()}).strict()).safeParse(JSON.parse(value)).success;}catch{return false;}}),

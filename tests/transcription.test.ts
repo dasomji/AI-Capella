@@ -361,7 +361,7 @@ test('parallel claim race invokes the provider only once for a page',async()=>{
 });
 test('worker refuses a model/prompt pin it does not serve',async()=>{
  const {createJob}=await import('../server/transcription.server');const {lead,e,source}=await setup();const provider=new FakeProvider();provider.model='unserved';
- const j=await createJob(lead.id,e.id,crypto.randomUUID(),[source.id],{},provider);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).failure_reason,'model_unavailable');assert.equal((await pool.query('select 1 from provider_calls where job_id=$1',[j.id])).rowCount,0);
+ const j=await createJob(lead.id,e.id,crypto.randomUUID(),[source.id],{},provider);assert.equal(await new TranscriptionWorker().tick(),false);assert.equal((await view(e.id,lead.cookie,j.id)).state,'queued');await pool.query("update transcription_jobs set created_at=now()-interval '1 day' where id=$1",[j.id]);await new TranscriptionWorker().recoverAssembly();assert.equal((await view(e.id,lead.cookie,j.id)).failure_reason,'model_unavailable');assert.equal((await pool.query('select 1 from provider_calls where job_id=$1',[j.id])).rowCount,0);
 });
 test('inspection child inherits hard address/CPU limits and cannot open sockets',async()=>{
  const {spawnSync}=await import('node:child_process');

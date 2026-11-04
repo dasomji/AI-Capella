@@ -1,0 +1,1 @@
+CREATE INDEX "provider_calls_job_idx" ON "provider_calls" USING btree ("job_id");
