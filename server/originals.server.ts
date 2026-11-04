@@ -1,5 +1,5 @@
 import { sandboxReady,sandboxEnv } from './sandbox.server';
-import { logError } from './logger.server';
+import { logError,logChildError } from './logger.server';
 import { mkdir, mkdtemp, open, rm, readdir, lstat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
@@ -19,11 +19,12 @@ export async function inspectSource(path:string):Promise<{type:string;pages:numb
  child.stdout.on('data',chunk=>{output+=chunk;if(output.length>4096)child.kill('SIGKILL');});
  child.once('error',()=>{clearTimeout(timer);logError('sandbox.launch');reject(new DomainError('sandbox_unavailable',503));});
  child.once('close',(code,signal)=>{clearTimeout(timer);
- if(expired || code || signal){reject(new DomainError('source_too_complex',422));return;}
+ if(expired || code || signal){logChildError('transcription.inspect',stderr,code);reject(new DomainError('source_too_complex',422));return;}
  try{const r=JSON.parse(output);r.error?reject(new DomainError(['pixel_limit','page_limit','invalid_magic','invalid_source','unsupported_image_format','animated_image','encrypted_pdf'].includes(r.error)?r.error:'invalid_source',422)):resolve(r);}catch{reject(new DomainError('invalid_source',422));}
  });
  });
 }
+export function sanitizeOriginalFilename(value:string){try{value=decodeURIComponent(value);}catch{}return value.replace(/[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,'').replace(/[\x00-\x1f\x7f/\\]/g,'_').slice(0,200)||'original';}
 export async function uploadOriginal(user:string,ensemble:string,body:ReadableStream<Uint8Array>,filename:string,store:ObjectStorage=storage()) {
  await authorize(pool,user,ensemble,'transcribe');
  if(env.NODE_ENV==='development' && 'initialize' in store)await (store as import('./storage.server').S3Storage).initialize();
@@ -48,7 +49,7 @@ export async function uploadOriginal(user:string,ensemble:string,body:ReadableSt
  const old=(await db.query("select * from stored_objects where ensemble_id=$1 and sha256=$2 and kind='original' and state='ready'",[ensemble,digest])).rows[0];if(old)return old;
  const used=(await db.query("select coalesce(sum(size),0)::text as bytes from stored_objects where ensemble_id=$1 and kind='original' and state='ready'",[ensemble])).rows[0];
  if(Number(used.bytes)+size>env.TRANSCRIPTION_STORAGE_MAX_BYTES)throw new DomainError('storage_limit',413);
- const row=(await db.query("insert into stored_objects(ensemble_id,user_id,object_key,kind,size,content_type,sha256,original_filename,provenance,state) values($1,$2,$3,'original',$4,$5,$6,$7,$8,'ready') returning *",[ensemble,user,key,size,info.type,digest,filename.replace(/[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,'').replace(/[\x00-\x1f\x7f/\\]/g,'_').slice(0,200),JSON.stringify(info)])).rows[0];
+ const row=(await db.query("insert into stored_objects(ensemble_id,user_id,object_key,kind,size,content_type,sha256,original_filename,provenance,state) values($1,$2,$3,'original',$4,$5,$6,$7,$8,'ready') returning *",[ensemble,user,key,size,info.type,digest,sanitizeOriginalFilename(filename),JSON.stringify(info)])).rows[0];
  await db.query('delete from object_deletions where object_key=$1',[key]);await audit(db,ensemble,user,'original.upload',row.id);return row;
  });
  } finally {clearTimeout(timer);clearTimeout(idle);await reader.cancel().catch(()=>{});reader.releaseLock();await file.close().catch(()=>{});await rm(dir,{recursive:true,force:true});}
@@ -57,7 +58,7 @@ export async function uploadOriginal(user:string,ensemble:string,body:ReadableSt
 export async function cleanupObjects(store:ObjectStorage=storage()) {
  await cleanupStaging();
  const rows=await pool.query("select object_key from object_deletions where created_at<now()-interval '1 hour' and not exists(select 1 from stored_objects s where s.object_key=object_deletions.object_key)");
- for(const r of rows.rows){await store.delete(r.object_key);await pool.query('delete from object_deletions where object_key=$1',[r.object_key]);}
+ for(const r of rows.rows){try{await store.delete(r.object_key);await pool.query('delete from object_deletions where object_key=$1',[r.object_key]);}catch(error){logError('transcription.object_cleanup',error);await pool.query('update object_deletions set created_at=now() where object_key=$1',[r.object_key]);}}
 }
 
 export async function cleanupDerived(before:Date,store:ObjectStorage=storage()) {
