@@ -777,8 +777,6 @@ AI-Capella/
 │   ├── firebase.ts            # disabled scan/feedback compatibility (no Firebase SDK)
 │   ├── firebaseConfig.ts      # Firebase web app config (not secret; see file comment)
 │   ├── pinGate.ts             # the PIN screen
-│   ├── scan.ts                # "Scan sheet music" sheet: pages, upload, progress, questions, result
-│   ├── feedback.ts            # feedback form, survey, the leaders' inbox (ensembles with feedback: true)
 │   ├── backdrop.ts            # the velvet wave backdrop behind the whole app
 │   └── style.css              # all styling
 ├── .github/workflows/deploy.yml   # builds and deploys dist/ to GitHub Pages on every push
@@ -787,8 +785,7 @@ AI-Capella/
 └── package.json
 ```
 
-No bundler plugins beyond stock Vite + TypeScript. The app itself is a single-page client-side
-`cd omr-service && npm test`).
+Production uses TanStack Start with server and worker boundaries.
 
 ---
 

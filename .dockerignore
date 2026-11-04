@@ -7,5 +7,3 @@ dist
 .transcription-tmp
 .browser*
 coverage
-omr-service/node_modules
-omr-service/dist

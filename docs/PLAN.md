@@ -1710,3 +1710,119 @@ concurrently with running app/browser tests in this shared checkout.
 Plane project mapping was verified through the connected tool. Ticket reads were
 unavailable because the tool rejected its arguments; no ticket state was changed.
 No paid calls, deployments, pushes, prototype edits or Audiveris removals occurred.
+
+### Phase 4b-2 — explicit evaluation, usage reporting and legacy removal
+
+Implemented on production-v1 from aed7b20. No paid request, deployment, production
+mutation, push or endpoint retirement. The upstream prototype is untouched.
+
+Metric (`server/reference-comparison.ts`): precision/recall/F1 are exact multiset
+matches by named part, ordinal measure and staff/voice. Categories: complete
+note events (pitch/onset/duration, including rests), pitch at onset, onset by
+voice event ordinal, duration at onset, rests, measure presence, effective key,
+time and clef, lyric verse/syllabic/text at onset, and pitch-specific tie endpoints.
+Durations/onsets are quarter-note units rounded to 1e-6; divisions normalize.
+Part order and printed measure numbers do not affect scores. Duplicate named
+parts prefer identical notation fingerprints and expose ambiguity. Review effort
+counts distinct ordinal measures with any mismatch (including missing/extra
+measures), and separately counts affected part-measure positions; it is a proxy,
+not measured editor time. This is local exact alignment,
+not edit-distance reflow across inserted/deleted measures; shifted sequences may
+therefore count several edits. Voice/staff identifiers and normalized part names
+must correspond; renamed or ambiguous parts require human review. Empty
+categories score 1 only when both are absent. Valid XML is never a quality pass:
+qualityPass/qualityThresholds remain null, and shared validation stays separate.
+
+Evaluation:
+
+- `npm run eval:transcription -- --dry-run`: offline recorded rasters/responses,
+  real bounded image renderer, real provider prompt/parser with injected SDK HTTP,
+  real assembly/validation and comparison. No DB/S3 and no network/provider call.
+  PDF rasterization itself is covered by the existing worker renderer smoke check.
+- Live: `npm run eval:transcription -- --set eval/fixtures --confirm-paid --pages
+  --limit 1 --out reports/eval-example.json` with OPENAI_API_KEY in the environment.
+  Refuses without key/confirmation or whenever CI is set. Original PDFs require
+  worker Python3/libseccomp2/Poppler prerequisites. Default model is unchanged.
+- Local file storage outside the app DB. Up to three attempts per page, bounded
+  rendering and 180-second per-attempt deadline. Retry-After above 30 seconds
+  terminates this evaluation page rather than retrying early. CLI limit is jobs.
+- JSON retains per-page/job accuracy, validation diagnostics/counts, uncertainties,
+  refusal/truncation outcomes, attempts, tokens, retries and latency. JSON and
+  Markdown summary reports are written; --pages adds page rows to terminal output.
+- TRANSCRIPTION_PRICE_TABLE supplies USD per million input/output tokens (same
+  contract as worker). No rates are invented: unknown prices are null/unknown.
+  Reports store rate basis, model, prompt and UTC capture time. No monetary quotas.
+
+Fixture policy: eval/fixtures/README.md defines the manifest and extension process.
+All new material is original synthetic notation dedicated to CC0-1.0; regeneration
+uses Verovio engraving, pdf-lib and sharp deterministic degradation (skew, rotation,
+blur, noise, JPEG). Six two-page jobs cover PDF/photo versions of named SATB,
+divisi/piano and band exercises. They are deliberately simple smoke material,
+not realistic dense-score quality evidence; more varied legally redistributable
+material is needed before product acceptance. No bundled song's redistribution
+rights were assumed and no copyrighted score was newly included.
+
+Usage: GET /api/admin/transcription/usage?from=<offset-instant>&to=<offset-instant>
+requires an authenticated verified sysadmin role on every request; ordinary leads
+receive 404, signed-out callers 401. Invalid/naive/reversed ranges receive 422.
+SQL filters [from,to), buckets started_at in central APP_TIME_ZONE, and groups by
+calendar day/model/prompt/ensemble/outcome. Includes calls, retries, input/output
+tokens, missing-usage counts, latency p50/p95, distinct pages/jobs, estimated USD
+and per-page/job averages within each group. Group page/job counts are not additive
+across outcomes/days. Unknown historical costs are not reconstructed with current
+prices; null costs and missing usage are explicit. Running calls have no finished
+latency. Worker now records failed-response usage costs and leaves missing prices
+unknown instead of zero. No schema change required. Unit tests cover 23/25-hour
+New York DST days; integration tests exercise actual SQL boundaries, costs and
+HTTP authorization with real sessions. Phase 5 builds the admin UI.
+
+Ported versus deleted:
+
+- Ported legacy test intentions into transcription-core: preserve lyric syllabic
+  text, tuplets/time-modification, repeats verbatim; reject invalid durations.
+  Existing 4b-1 tests already cover Evening Rise source fidelity, page continuity,
+  changing part counts/divisi/accompaniment and ties. The reference suite adds
+  wrong pitches, rests, lyrics, divisions, voices/onsets and missing/extra measures.
+- Deleted the entire legacy scan service: compact notation builder/correction
+  pipeline, second paid review/answer pass, HTTP service, in-memory/file jobs,
+  authentication bypass tests, provider/recognizer mocks, dependencies/lockfile,
+  both Dockerfiles, compose, Caddyfile, environment and deployment README.
+  The replacement keeps Poppler and sharp solely for bounded rendering.
+- Deleted src/scan.ts, src/feedback.ts, firebase.ts and legacy-store.ts; removed
+  scan menu/chip, feedback buttons/menus/tour and initialization. Existing imported
+  scanMarks and their review display remain to preserve repertoire metadata.
+- No feedback server endpoint exists; feedback remains follow-up work requiring
+  authenticated server persistence before a new UI entry is added.
+- Removed obsolete scan CI env and development/project instructions and Docker
+  ignores. Historical spec/plan snapshots and immutable transcription-v1 prompt
+  still name the retired recognizer; these are not executable dependencies.
+- functions/, firestore.rules and rules-test/ remain untouched for Phase 6.
+  Source deletion does not retire any deployed legacy endpoint.
+
+Open questions: product owner must set acceptance thresholds after the first
+explicit live evaluation. Actual model/account availability, realistic dense SATB,
+independent divisi, grand-staff piano, transposing bands and genuine phone-photo
+accuracy/cost remain unverified. No live score-quality claim is made here.
+
+Phase 4b-2 acceptance (2026-11-04):
+
+- `npm run typecheck`: passed on final sources.
+- `npm test`: 138/138 passed; DST suite also passed under TZ=America/New_York.
+- `npm run build`: passed.
+- `npm run test:integration`: 72/72 passed, including actual SQL DST boundaries,
+  failed-call cost aggregation and real-session sysadmin authorization.
+- `npm run check:secrets`: passed positive control and final clean client scan;
+  forbidden-string list was preserved.
+- `npm run test:browser`: passed account/design matrix, two-account sync and full
+  three-client acceptance (loops, offline, count-in, sleep, process restart,
+  revocation and shared-device isolation).
+- `npm run db:generate`: no schema drift, nothing to migrate.
+- `npm run eval:transcription -- --dry-run`: all six jobs/twelve pages completed,
+  reference note F1 1 with zero edit measures, as expected for synthetic replay.
+  Token counters are labeled synthetic; this is not measured live quality/cost.
+- `git diff --check`: passed. No remaining imports of deleted client modules.
+- `git diff aed7b20 -- functions firestore.rules rules-test`: empty.
+
+Check logs remain in gitignored `.transcription-tmp/4b2-*`; browser artifacts
+remain in `.review-evidence/browser/`. Plane AICAP-14 tracking was updated through
+the plane-project-management skill; no product quality threshold was invented.

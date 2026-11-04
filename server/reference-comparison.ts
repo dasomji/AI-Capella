@@ -61,5 +61,5 @@ export function compareMusicXML(predictedXML:string,referenceXML:string){
  const a=p?.measures[m]?.[category]??[],b=r?.measures[m]?.[category]??[];const matched=intersection(a,b);const t=totals[category];t.matched+=matched;t.predicted+=a.length;t.reference+=b.length;if(matched<a.length||matched<b.length)edits.add(part+':'+m);
  }});
  const metrics=Object.fromEntries(categories.map(c=>{const t=totals[c];const precision=t.predicted?t.matched/t.predicted:t.reference?0:1;const recall=t.reference?t.matched/t.reference:t.predicted?0:1;return [c,{...t,precision,recall,f1:precision+recall?2*precision*recall/(precision+recall):0}];})) as Record<Category,Metric>;
- return {metrics,reviewEffort:{measuresNeedingEdits:edits.size,partMeasurePositions:[...edits]},ambiguities,qualityPass:null};
+ return {metrics,reviewEffort:{measuresNeedingEdits:new Set([...edits].map(e=>e.split(':')[1])).size,partMeasuresNeedingEdits:edits.size,partMeasurePositions:[...edits]},ambiguities,qualityPass:null};
 }

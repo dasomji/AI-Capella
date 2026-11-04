@@ -390,3 +390,19 @@ test('renderer respects photo EXIF orientation and bounds',async()=>{
  const {BoundedPageRenderer}=await import('../server/page-renderer.server');const {Readable}=await import('node:stream');const image=await sharp({create:{width:80,height:40,channels:3,background:'white'}}).jpeg().withMetadata({orientation:6}).toBuffer();
  const renderer=new BoundedPageRenderer({get:async()=>Readable.from([image])} as any);const out=await renderer.render({objectKey:'fake',sourcePage:1,pageIndex:0,contentType:'image/jpeg'},new AbortController().signal);const meta=await sharp(out.raster!).metadata();assert.equal(meta.width,40);assert.equal(meta.height,80);assert.equal(meta.orientation,undefined);
 });
+
+test('usage sysadmin gate and SQL DST half-open buckets retain failed attempts',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
+ const path='admin/transcription/usage?from=2026-03-08T05:00:00Z&to=2026-03-09T04:00:00Z';
+ assert.equal((await request(path,'GET',undefined,lead.cookie)).status,404);
+ assert.equal((await request(path)).status,401);
+ await pool.query("insert into platform_roles(user_id,role) values($1,'sysadmin')",[lead.id]);
+ assert.equal((await request('admin/transcription/usage?from=2026-03-08&to=2026-03-09','GET',undefined,lead.cookie)).status,422);
+ const page=(await pool.query('select id from job_pages where job_id=$1',[j.id])).rows[0];
+ for(const [i,instant] of ['2026-03-08T04:59:59Z','2026-03-08T05:00:00Z','2026-03-09T03:59:59Z','2026-03-09T04:00:00Z'].entries())await pool.query(`insert into provider_calls(job_id,page_id,attempt,lease_owner,started_at,finished_at,outcome,model,prompt_version,usage,estimated_cost) values($1,$2,$3,$4,$5::timestamptz,$5::timestamptz+interval '1 second','failed','usage-fixture','v1',$6,$7)`,[j.id,page.id,i+1,crypto.randomUUID(),instant,{inputTokens:10,outputTokens:20},.25]);
+ const {usageSQL}=await import('../server/usage.server');
+ const rows=(await pool.query(usageSQL,[new Date('2026-03-08T05:00:00Z'),new Date('2026-03-09T04:00:00Z'),'America/New_York'])).rows.filter(r=>r.model==='usage-fixture');
+ assert.equal(rows.length,1);assert.equal(rows[0].day,'2026-03-08');assert.equal(rows[0].calls,2);assert.equal(rows[0].retries,2);assert.equal(Number(rows[0].input_tokens),20);assert.equal(Number(rows[0].estimated_cost_usd),.5);assert.equal(Number(rows[0].estimated_cost_per_page_usd),.5);assert.equal(Number(rows[0].latency_p95_ms),1000);
+ const response=await ok(path,'GET',undefined,lead.cookie);assert.equal(response.timeZone,env.APP_TIME_ZONE);assert.equal(response.groups.filter((r:any)=>r.model==='usage-fixture').reduce((n:number,r:any)=>n+r.calls,0),2);
+ const fall=(await pool.query(`select to_char(t at time zone $1,'YYYY-MM-DD') as day,count(*)::int as calls from unnest(array['2026-11-01T04:00:00Z'::timestamptz,'2026-11-02T04:59:59Z'::timestamptz,'2026-11-02T05:00:00Z'::timestamptz]) t where t >= '2026-11-01T04:00:00Z'::timestamptz and t < '2026-11-02T05:00:00Z'::timestamptz group by day`,['America/New_York'])).rows;assert.deepEqual(fall,[{day:'2026-11-01',calls:2}]);
+});
