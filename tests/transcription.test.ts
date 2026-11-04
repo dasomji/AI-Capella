@@ -204,10 +204,25 @@ test('sysadmin stop and metrics APIs enforce platform role, and sole-member clos
  await pool.query("insert into platform_roles(user_id) values($1)",[lead.id]);
  assert.equal((await ok('admin/transcription/control','PUT',{paused:true},lead.cookie)).paused,true);
  const j=await job(e.id,lead.cookie,source.id);assert.equal(await new TranscriptionWorker().tick(),false);
- await ok('admin/transcription/control','PUT',{paused:false},lead.cookie);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+ await ok('admin/transcription/control','PUT',{paused:false},lead.cookie);env.TRANSCRIPTION_EMERGENCY_STOP='1';try{assert.equal(await new TranscriptionWorker().tick(),false);}finally{env.TRANSCRIPTION_EMERGENCY_STOP='0';}await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
  const range='admin/transcription/metrics?from=2000-01-01T00:00:00Z&to=2100-01-01T00:00:00Z';const metrics=await ok(range,'GET',undefined,lead.cookie);assert.ok(metrics.some((r:any)=>r.model==='fake-transcription-v1'));
  const key=(await pool.query('select object_key from stored_objects where id=$1',[source.id])).rows[0].object_key;
  await ok('account','DELETE',{deleteEnsembleIds:[e.id]},lead.cookie);assert.equal((await pool.query('select 1 from stored_objects where id=$1',[source.id])).rowCount,0);assert.equal((await pool.query('select 1 from object_deletions where object_key=$1',[key])).rowCount,1);
  await pool.query('update object_deletions set created_at=$2 where object_key=$1',[key,new Date(0)]);await cleanupObjects();
  const {storage}=await import('../server/storage.server');await assert.rejects(()=>storage().head(key));
+});
+test('durable progress notifications reach only current transcribers on authenticated sockets',async()=>{
+ const {lead,e,source}=await setup();const ordinary=await account();await pool.query('insert into memberships(ensemble_id,user_id) values($1,$2)',[e.id,ordinary.id]);
+ const sockets=[];
+ try{
+ for(const user of [lead,ordinary]){
+ const socket=connect(base,{transports:['websocket'],extraHeaders:{cookie:user.cookie,origin:base}});sockets.push(socket);
+ await new Promise<void>((resolve,reject)=>{socket.once('connect',resolve);socket.once('connect_error',reject);});
+ const ack=await socket.timeout(2000).emitWithAck('ensemble:join',e.id);assert.equal(ack.ok,true);
+ }
+ let ordinaryEvents=0;sockets[1].on('transcription:progress',()=>ordinaryEvents++);
+ const j=await job(e.id,lead.cookie,source.id);
+ const received=new Promise<any>((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('missing progress notification')),3000);sockets[0].once('transcription:progress',data=>{clearTimeout(timer);resolve(data);});});
+ await new TranscriptionWorker().tick();const progress=await received;assert.equal(progress.jobId,j.id);assert.equal(progress.state,'completed');assert.equal(progress.pages[0].state,'completed');await delay(100);assert.equal(ordinaryEvents,0);
+ }finally{for(const socket of sockets)socket.disconnect();}
 });
