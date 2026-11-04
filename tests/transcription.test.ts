@@ -220,7 +220,7 @@ test('sysadmin stop and metrics APIs enforce platform role, and sole-member clos
  const {storage}=await import('../server/storage.server');await assert.rejects(()=>storage().head(key));
 });
 test('durable progress notifications reach only current transcribers on authenticated sockets',async()=>{
- const {lead,e,source}=await setup();const ordinary=await account();await pool.query('insert into memberships(ensemble_id,user_id) values($1,$2)',[e.id,ordinary.id]);
+ const {lead,e,source}=await setup();const ordinary=await account();await pool.query('insert into memberships(ensemble_id,user_id,ai_transcription) values($1,$2,true)',[e.id,ordinary.id]);
  const sockets:ReturnType<typeof connect>[]=[];
  try{
  for(const user of [lead,ordinary]){
