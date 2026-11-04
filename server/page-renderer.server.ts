@@ -9,7 +9,7 @@ export class BoundedPageRenderer implements PageRenderer {
  await mkdir('.transcription-tmp',{recursive:true,mode:0o700});const dir=await mkdtemp('.transcription-tmp/render-');
  try{
  if(signal.aborted)throw new ProviderError('provider_timeout',true);
- const stream=await (this.store??storage()).get(input.objectKey);const abort=()=>stream.destroy(new Error('aborted'));signal.addEventListener('abort',abort,{once:true});
+ const stream=await (this.store??storage()).get(input.objectKey);const abort=()=>stream.destroy(new Error('aborted'));signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
  const file=await open(dir+'/source','wx',0o600);let bytes=0;
  const timer=setTimeout(abort,15000);
  try{for await(const chunk of stream){bytes+=chunk.length;if(bytes>50*1024*1024)throw new ProviderError('invalid_output');await file.writeFile(chunk);}}finally{clearTimeout(timer);signal.removeEventListener('abort',abort);stream.destroy();await file.close();}

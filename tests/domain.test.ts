@@ -92,7 +92,7 @@ async function account() {
   return signin(a);
 }
 const xml =
-  '<score-partwise><part id="P1"><measure><note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration></note></measure></part></score-partwise>';
+  '<score-partwise><part-list><score-part id="P1"><part-name>Voice</part-name></score-part></part-list><part id="P1"><measure><attributes><divisions>1</divisions></attributes><note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration></note></measure></part></score-partwise>';
 test(
   "ensemble capabilities, invitation journey, lead races, library isolation and sockets",
   { timeout: 90000 },

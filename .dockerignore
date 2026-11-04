@@ -1,0 +1,11 @@
+.git
+node_modules
+dist
+.env
+.env.*
+!.env.example
+.transcription-tmp
+.browser*
+coverage
+omr-service/node_modules
+omr-service/dist

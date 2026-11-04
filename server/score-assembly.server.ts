@@ -17,7 +17,7 @@ export class ScoreAssembler implements JobAssembler {
  for(const [pageIndex,page] of pages.entries()){
  const dom=scoreDocument(page.musicxmlFragment);
  try{
- const source=dom.window.document;const mapped=new Map<string,Element>();
+ const source=dom.window.document;if(pageIndex===0)for(const child of Array.from(source.documentElement.children))if(!['part','part-list'].includes(child.tagName))root.insertBefore(doc.importNode(child,true),list);const mapped=new Map<string,Element>();
  for(const declaration of Array.from(source.querySelectorAll('part-list > score-part'))){
  const local=children(source.documentElement,'part').find(p=>p.id===declaration.id);if(!local)throw new ProviderError('invalid_output');
  const name=identity(declaration),clef=text(local,'clef');
@@ -37,7 +37,7 @@ export class ScoreAssembler implements JobAssembler {
  for(let i=0;i<width;i++){
  const measure=measures[i];const copy=measure?doc.importNode(measure,true):restMeasure(doc,templates[i],total+i+1,entry.attributes);
  copy.setAttribute('number',String(total+i+1));entry.element.append(copy);
- const attributes=copy.querySelector('attributes');if(attributes)entry.attributes=attributes;
+ const attributes=copy.querySelector('attributes');if(attributes)entry.attributes=mergeAttributes(doc,entry.attributes,attributes);
  provenance.push({measure:total+i+1,part:entry.id,page:pageIndex+1,localMeasure:measure?.getAttribute('number')??templates[i].getAttribute('number')??String(i+1),model:page.model,promptVersion:page.promptVersion??'transcription-v1',synthetic:!measure});
  }
  }
@@ -47,14 +47,28 @@ export class ScoreAssembler implements JobAssembler {
  // Backfilled measures also receive explicit synthetic provenance.
  for(const entry of registry)for(let i=0;i<total;i++)if(!provenance.some(p=>p.part===entry.id&&p.measure===i+1)){const template=provenance.find(p=>p.measure===i+1)!;provenance.push({...template,part:entry.id,synthetic:true});}
  const report=validateMusicDocument(doc,provenance,pages.flatMap(p=>[...p.uncertainties,...(p.flags??[]).map(flag=>({flag}))]));
+ for(const source of provenance)if(source.synthetic)report.warnings.push({code:'inferred_tacet_rest',part:source.part,measure:source.measure,source});
  return {xml:root.outerHTML,provenance,report};
  }finally{output.window.close();}
  }
 }
 function restMeasure(doc:Document,template:Element,number:number,attributes?:Element){
  const measure=doc.createElement('measure');measure.setAttribute('number',String(number));
- const a=attributes??template.querySelector('attributes');if(a)measure.append(doc.importNode(a,true));
+ const templateAttrs=effectiveAttributes(doc,template);if(attributes?.querySelector('clef'))for(const c of children(templateAttrs,'clef'))c.remove();
+ const a=mergeAttributes(doc,attributes,templateAttrs);if(a)measure.append(doc.importNode(a,true));
  const note=doc.createElement('note');const rest=doc.createElement('rest');rest.setAttribute('measure','yes');note.append(rest);
  const div=Number(a?text(a,'divisions'):1)||1;const beats=Number(a?text(a,'time > beats'):4)||4;const beatType=Number(a?text(a,'time > beat-type'):4)||4;
  const duration=doc.createElement('duration');duration.textContent=String(div*beats*4/beatType);note.append(duration);const voice=doc.createElement('voice');voice.textContent='1';note.append(voice);measure.append(note);return measure;
+}
+
+function mergeAttributes(doc:Document,prior:Element|undefined,next:Element|undefined|null){
+ const out=doc.createElement('attributes');
+ for(const source of [prior,next])if(source)for(const child of Array.from(source.children)){
+ const number=child.getAttribute('number');const old=Array.from(out.children).find(c=>c.tagName===child.tagName&&c.getAttribute('number')===number);old?.remove();out.append(doc.importNode(child,true));
+ }return out;
+}
+function effectiveAttributes(doc:Document,measure:Element){
+ let state:Element|undefined;const siblings=measure.parentElement?children(measure.parentElement,'measure'):[measure];
+ for(const sibling of siblings){state=mergeAttributes(doc,state,sibling.querySelector('attributes'));if(sibling===measure)break;}
+ return state;
 }

@@ -9,6 +9,7 @@ import sys
 resource.setrlimit(resource.RLIMIT_AS, (1536 * 1024 * 1024,) * 2)
 resource.setrlimit(resource.RLIMIT_CPU, (5, 6))
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+resource.setrlimit(resource.RLIMIT_FSIZE, (64 * 1024 * 1024,) * 2)
 lib = ctypes.CDLL('libseccomp.so.2', use_errno=True)
 lib.seccomp_init.restype = ctypes.c_void_p
 lib.seccomp_syscall_resolve_name.argtypes = [ctypes.c_char_p]

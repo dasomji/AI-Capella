@@ -1,24 +1,25 @@
 import OpenAI from 'openai';
+import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { ProviderError, type TranscriptionProvider, type PageInput, type PageResult } from './transcription-provider.server';
-const prompt=readFileSync(new URL('./prompts/transcription-v1.txt',import.meta.url),'utf8');
+const prompt=readFileSync(resolve('server/prompts/transcription-v1.txt'),'utf8');
 export const responseSchema=z.object({musicxml:z.string().min(1),uncertainties:z.array(z.object({measure:z.string(),part:z.string(),voice:z.string(),reason:z.string()})),flags:z.array(z.enum(['refusal','partial','truncated','unreadable']))}).strict();
 const array=<T>(v:T|T[]|undefined):T[]=>v===undefined?[]:Array.isArray(v)?v:[v];
 /** Retain only state in effect, never previous notation or full responses. */
 export function compactContext(pages:PageResult[]) {
  const parts=new Map<string,Record<string,unknown>>();let lastMeasure=0;let tempo='';let lyricLanguage='';
  for(const page of pages){
- const score=new XMLParser({ignoreAttributes:false,processEntities:false}).parse(page.musicxmlFragment)['score-partwise'];if(!score)continue;
+ let pageMeasures=0;const score=new XMLParser({ignoreAttributes:false,processEntities:false}).parse(page.musicxmlFragment)['score-partwise'];if(!score)continue;
  for(const item of array<any>(score['part-list']?.['score-part'])){const id=String(item['@_id']);parts.set(id,{...parts.get(id),id,name:item['part-name'],instrument:item['score-instrument']});}
  for(const part of array<any>(score.part)){
  const id=String(part['@_id']);const state=parts.get(id)??{id};const ties=new Set<string>(state.openTies as string[]??[]);const slurs=new Set<string>(state.openSlurs as string[]??[]);
- for(const m of array<any>(part.measure)){lastMeasure=Math.max(lastMeasure,Number(m['@_number'])||0);for(const a of array<any>(m.attributes))for(const key of ['divisions','key','time','clef'])if(a[key]!==undefined)state[key]=a[key];
+ for(const m of array<any>(part.measure)){pageMeasures=Math.max(pageMeasures,array<any>(part.measure).length);for(const a of array<any>(m.attributes))for(const key of ['divisions','key','time','clef'])if(a[key]!==undefined)state[key]=a[key];
  for(const d of array<any>(m.direction))if(d['direction-type']?.metronome)tempo=JSON.stringify(d['direction-type'].metronome);
- for(const n of array<any>(m.note)){const key=JSON.stringify([n.voice??'1',n.staff??'1',n.pitch]);for(const t of array<any>(n.tie)){if(t['@_type']==='stop')ties.delete(key);if(t['@_type']==='start')ties.add(key);}for(const slur of array<any>(n.notations?.slur)){const k=String(slur['@_number']??1);if(slur['@_type']==='stop')slurs.delete(k);if(slur['@_type']==='start')slurs.add(k);}for(const lyric of array<any>(n.lyric))if(lyric['@_xml:lang'])lyricLanguage=lyric['@_xml:lang'];}}
+ for(const n of array<any>(m.note)){const key=JSON.stringify([n.voice??'1',n.staff??'1',n.pitch]);for(const t of array<any>(n.tie)){if(t['@_type']==='stop')ties.delete(key);if(t['@_type']==='start')ties.add(key);}for(const slur of array<any>(n.notations?.slur)){const k=JSON.stringify([n.voice??'1',n.staff??'1',slur['@_number']??1]);if(slur['@_type']==='stop')slurs.delete(k);if(slur['@_type']==='start')slurs.add(k);}for(const lyric of array<any>(n.lyric))if(lyric['@_xml:lang'])lyricLanguage=lyric['@_xml:lang'];}}
  state.openTies=[...ties];state.openSlurs=[...slurs];parts.set(id,state);
- }}return {parts:[...parts.values()],lastMeasure,tempo,lyricLanguage};
+ }lastMeasure+=pageMeasures;}return {parts:[...parts.values()],lastMeasure,tempo,lyricLanguage};
 }
 export class OpenAITranscriptionProvider implements TranscriptionProvider {
  readonly promptVersion='transcription-v1';

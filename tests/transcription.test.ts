@@ -368,3 +368,25 @@ test('inspection child inherits hard address/CPU limits and cannot open sockets'
  const r=spawnSync('python3',['server/inspection-sandbox.py',process.execPath,'--jitless','--max-old-space-size=192','--input-type=module','-e',`import net from 'node:net';import fs from 'node:fs';const limits=fs.readFileSync('/proc/self/limits','utf8');if(!/Max address space\\s+1610612736\\s+1610612736/.test(limits)||!/Max cpu time\\s+5\\s+6/.test(limits))process.exit(2);net.createConnection({host:'127.0.0.1',port:9}).on('connect',()=>process.exit(3)).on('error',e=>process.exit(e.code==='EPERM'?0:4));`],{timeout:3000,encoding:'utf8'});
  assert.equal(r.status,0,r.stderr);
 });
+
+test('Sol HTTP boundary fake completes durable multipage job, imports idempotently and derives player timing',async()=>{
+ const {OpenAITranscriptionProvider}=await import('../server/openai-provider.server');const {default:OpenAI}=await import('openai');const {BoundedPageRenderer}=await import('../server/page-renderer.server');const {ScoreAssembler}=await import('../server/score-assembly.server');const {createJob}=await import('../server/transcription.server');
+ const {lead,e,source}=await setup();let calls=0;
+ const provider=new OpenAITranscriptionProvider('gpt-6.1-sol',new OpenAI({apiKey:'fixture-only',maxRetries:0,fetch:async(_url,init)=>{
+ const body=JSON.parse(String(init?.body));assert.equal(body.model,'gpt-6.1-sol');assert.match(body.input[0].content[1].image_url,/^data:image\/png;base64,/);calls++;
+ const names=calls===1?['S','A','T','B']:calls===2?['S','A','T','B','Piano']:['S','S2','A','T','B','Piano'];
+ const xml=`<score-partwise><part-list>${names.map(n=>`<score-part id="${n}"><part-name>${n}</part-name></score-part>`).join('')}</part-list>${names.map(n=>`<part id="${n}"><measure number="1"><attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes><note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration><type>whole</type><lyric><text>Freude</text></lyric></note></measure></part>`).join('')}</score-partwise>`;
+ return new Response(JSON.stringify({object:'response',id:`resp_${calls}`,status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify({musicxml:xml,uncertainties:[],flags:[]}),annotations:[]}]}],usage:{input_tokens:100,output_tokens:200}}),{headers:{'content-type':'application/json'}});
+ }}));
+ const key=crypto.randomUUID();const j=await createJob(lead.id,e.id,key,[source.id,source.id,source.id],{},provider);assert.equal((await createJob(lead.id,e.id,key,[source.id,source.id,source.id],{},provider)).id,j.id);
+ const worker=new TranscriptionWorker(provider,new BoundedPageRenderer(),new ScoreAssembler());for(let i=0;i<3;i++)await worker.tick();assert.equal(calls,3);assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');await worker.tick();assert.equal(calls,3);
+ const saved=(await pool.query('select provenance,result_xml from transcription_jobs where id=$1',[j.id])).rows[0];assert.equal(saved.provenance.measures.length,18);assert.equal(saved.provenance.validation.structurallyValid,true);
+ const {validateScore}=await import('../server/score-validation.server');assert.ok((await validateScore(saved.result_xml,'musicxml',true)).timing);
+ const imported=await ok(`ensembles/${e.id}/transcriptions/${j.id}/import`,'POST',{},lead.cookie);assert.equal((await ok(`ensembles/${e.id}/transcriptions/${j.id}/import`,'POST',{},lead.cookie)).id,imported.id);
+ const ledger=(await pool.query('select usage from provider_calls where job_id=$1',[j.id])).rows;assert.equal(ledger.length,3);assert.ok(ledger.every(r=>r.usage.outputTokens===200));
+});
+
+test('renderer respects photo EXIF orientation and bounds',async()=>{
+ const {BoundedPageRenderer}=await import('../server/page-renderer.server');const {Readable}=await import('node:stream');const image=await sharp({create:{width:80,height:40,channels:3,background:'white'}}).jpeg().withMetadata({orientation:6}).toBuffer();
+ const renderer=new BoundedPageRenderer({get:async()=>Readable.from([image])} as any);const out=await renderer.render({objectKey:'fake',sourcePage:1,pageIndex:0,contentType:'image/jpeg'},new AbortController().signal);const meta=await sharp(out.raster!).metadata();assert.equal(meta.width,40);assert.equal(meta.height,80);assert.equal(meta.orientation,undefined);
+});

@@ -69,7 +69,7 @@ export async function cleanupDerived(before:Date,store:ObjectStorage=storage()) 
 export async function cleanupStaging(now=new Date()) {
  let entries:string[];
  try{entries=await readdir('.transcription-tmp');}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return;throw error;}
- for(const name of entries.filter(name=>name.startsWith('upload-')).slice(0,100)){
+ for(const name of entries.filter(name=>(name.startsWith('upload-') || name.startsWith('render-'))).slice(0,100)){
  const path='.transcription-tmp/'+name;
  try{const info=await lstat(path);if(info.isDirectory() && info.mtimeMs<now.getTime()-3600000)await rm(path,{recursive:true,force:true});}
  catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}

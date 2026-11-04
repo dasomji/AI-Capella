@@ -72,7 +72,7 @@ export class TranscriptionWorker {
  await pool.query('insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version) values($1,$2,$3,$4,$5,$6)',[page.job_id,page.id,page.attempts+1,token,this.provider.model,this.provider.promptVersion]);
  const call=Promise.resolve().then(()=>this.provider.transcribePage(input,context,page.options??{},abort.signal)).then(async value=>{
  const price=JSON.parse(env.TRANSCRIPTION_PRICE_TABLE)[this.provider.model]??{input:0,output:0};
- await pool.query("update provider_calls set finished_at=now(),outcome='completed',usage=$2,estimated_cost=$3,error_kind=null where lease_owner=$1",[token,value.usage,JSON.stringify((value.usage.inputTokens*price.input+value.usage.outputTokens*price.output)/1000000)]);return value;
+ await pool.query("update provider_calls set finished_at=now(),outcome='completed',usage=$2,estimated_cost=$3,error_kind=null where lease_owner=$1",[token,{...value.usage,requestId:value.requestId},JSON.stringify((value.usage.inputTokens*price.input+value.usage.outputTokens*price.output)/1000000)]);return value;
  },async error=>{await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2,usage=$3 where lease_owner=$1",[token,error instanceof ProviderError?error.reason:'infrastructure_error',error instanceof ProviderError?error.usage??{}:{}]);throw error;});
  try{result=await Promise.race([call,deadline]);}catch(error){await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2 where lease_owner=$1 and outcome='running'",[token,error instanceof ProviderError?error.reason:'infrastructure_error']);throw error;}finally{abort.signal.removeEventListener('abort',timeoutReject);}
 

@@ -34,9 +34,9 @@ export function validateMusicDocument(doc:Document,sources:MeasureSource[]=[],un
  if(!Number.isFinite(duration)||(!grace&&duration<=0))add(errors,'invalid_duration',id,number,voice);
  const pitch=node.querySelector('pitch');if(pitch&&(!/^[A-G]$/.test(text(pitch,'step'))||!/^\d$/.test(text(pitch,'octave')) || !Number.isFinite(Number(text(pitch,'alter')||0))))add(errors,'invalid_pitch',id,number,voice);
  if(!pitch&&!node.querySelector('rest, unpitched'))add(errors,'missing_pitch',id,number,voice);
- if(node.querySelector('rest lyric'))add(errors,'unattached_lyric',id,number,voice);
+ if((node.querySelector('rest')&&node.querySelector('lyric')))add(errors,'unattached_lyric',id,number,voice);
  const start=node.querySelector('chord')?lastStart:cursor;end.set(v,Math.max(end.get(v)??0,start+duration));if(!node.querySelector('chord')){lastStart=cursor;cursor+=duration;}
- const k=v+':'+(pitch?.textContent??'');for(const tie of children(node,'tie')){if(tie.getAttribute('type')==='stop'){if(!ties.delete(k))add(warnings,'unmatched_tie_stop',id,number,voice);}if(tie.getAttribute('type')==='start'){if(ties.has(k))add(warnings,'duplicate_tie_start',id,number,voice);ties.set(k,number);}}
+ const k=v+':'+(pitch?['step','alter','octave'].map(k=>text(pitch,k)||'0').join(':'):'');for(const tie of children(node,'tie')){if(tie.getAttribute('type')==='stop'){if(!ties.delete(k))add(warnings,'unmatched_tie_stop',id,number,voice);}if(tie.getAttribute('type')==='start'){if(ties.has(k))add(warnings,'duplicate_tie_start',id,number,voice);ties.set(k,number);}}
  for(const slur of Array.from(node.querySelectorAll('notations > slur'))){const k=v+':'+(slur.getAttribute('number')??'1');if(slur.getAttribute('type')==='stop'&&!slurs.delete(k))add(warnings,'unmatched_slur_stop',id,number,voice);if(slur.getAttribute('type')==='start')slurs.set(k,number);}
  }
  const expected=beats*4/beatType;
