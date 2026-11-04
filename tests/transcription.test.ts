@@ -423,3 +423,9 @@ test('timeout ledger marks unknown usage and orphan cancellation abandons runnin
  const calls=(await pool.query('select usage from provider_calls where job_id=$1',[j.id])).rows;assert.equal(calls[0].usage.usage_unknown,true);
  const p=(await pool.query('select id from job_pages where job_id=$1',[j.id])).rows[0];await pool.query("insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version) values($1,$2,2,$3,'fixture','v1')",[j.id,p.id,crypto.randomUUID()]);await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);assert.equal((await pool.query("select count(*)::int as n from provider_calls where job_id=$1 and outcome='running'",[j.id])).rows[0].n,0);
 });
+
+test('original filenames decode safely and failed cleanup rows do not block later objects',async()=>{
+ const {sanitizeOriginalFilename}=await import('../server/originals.server');assert.equal(sanitizeOriginalFilename('Caf%C3%A9%E2%80%AE%2Fscore.png'),'Café_score.png');
+ const {lead,e,source}=await setup();const download=await request(`ensembles/${e.id}/originals/${source.id}`,'GET',undefined,lead.cookie);assert.match(download.headers.get('content-disposition')!,/score.png/);
+ const bad='fixture/bad/'+crypto.randomUUID(),good='fixture/good/'+crypto.randomUUID();await pool.query("insert into object_deletions(object_key,created_at) values($1,now()-interval '2 hours'),($2,now()-interval '2 hours')",[bad,good]);let deleted=false;await cleanupObjects({delete:async(key:string)=>{if(key===bad)throw Error('fixture');if(key===good)deleted=true;}} as any);assert.equal(deleted,true);assert.equal((await pool.query('select 1 from object_deletions where object_key=$1',[good])).rowCount,0);assert.equal((await pool.query("select 1 from object_deletions where object_key=$1 and created_at>now()-interval '1 minute'",[bad])).rowCount,1);
+});
