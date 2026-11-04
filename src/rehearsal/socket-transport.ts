@@ -44,7 +44,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     if(this.joining?.epoch===epoch)return this.joining.promise;
     const promise=(async()=>{
       for(let attempt=0;;attempt++){
-        if(this.closed || epoch!==this.epoch || !this.socket.connected)return;
+        if(this.closed || epoch!==this.epoch || !this.socket.connected || this.ready)return;
         try{await this.join();return;}catch(error){
           const code=error instanceof Error?error.message:'connecting';
           if(!['unavailable','timeout','clock_unavailable','rate_limited','apply_failed'].includes(code)){this.notice(code);return;}
@@ -54,7 +54,16 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     })().finally(()=>{if(this.joining?.promise===promise)this.joining=null;});
     this.joining={epoch,promise};return promise;
   };
-  private received = (raw: unknown) => { void this.apply(raw).catch(() => {this.setReady(false);console.warn('rehearsal.state.invalid');this.notice('invalid');void this.snapshot().catch(()=>this.reconnect());}); };
+  private repair: Promise<void> | null = null;
+  private repairApplication() {
+    if(this.repair || this.closed || !this.socket.connected)return;
+    const epoch=this.epoch;
+    const repair=Promise.resolve().then(()=>this.snapshot()).then(()=>{},()=>{
+      if(epoch===this.epoch && !this.closed)void this.reconnect();
+    }).finally(()=>{if(this.repair===repair)this.repair=null;});
+    this.repair=repair;
+  }
+  private received = (raw: unknown) => { void this.apply(raw).catch(() => {}); };
   private request(event: string, input?: unknown): Promise<any> {
     if (!this.socket.connected || this.closed) return Promise.reject(new Error('disconnected'));
     const epoch = this.epoch;
@@ -73,6 +82,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     });
   }
   private async apply(raw: unknown): Promise<void> {
+    try {
     const state = stateSchema.parse(raw), epoch = this.epoch;
     if (state.ensembleId !== this.ensembleId) return Promise.resolve();
     const result = this.applying.catch(() => {}).then(async () => {
@@ -81,7 +91,15 @@ export class SocketPlaybackTransport implements RehearsalTransport {
       if (epoch === this.epoch && !this.closed) this.latest = state;
     });
     this.applying = result;
-    return result;
+    await result;
+    } catch(error) {
+      this.snapshotApplied=false;this.setReady(false);
+      if(!(error instanceof Error) || error.message!=='apply_failed') {
+        console.warn('rehearsal.state.invalid');this.notice('invalid');
+      }
+      this.repairApplication();
+      throw error;
+    }
   }
   async join() {
     this.setReady(false); this.snapshotApplied = false;

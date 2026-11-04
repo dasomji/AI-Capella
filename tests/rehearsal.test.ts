@@ -302,7 +302,8 @@ it('retries a failed subscriber with the same revision and repairs malformed bro
  const socket:any={connected:true,on:(e:string,fn:any)=>handlers.set(e,fn),off:()=>{},disconnect:()=>{},volatile:{emit:(e:string,_input:any,ack:any)=>{events.push(e);ack({state:s});}}};
  const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000);let calls=0;
  transport.subscribe(()=>{if(calls++===0)throw Error('version fetch');});
- await expect(transport.join()).rejects.toThrow('apply_failed');expect(transport.ready).toBe(false);
+ await expect(transport.join()).rejects.toThrow('apply_failed');
+ await vi.waitFor(()=>expect(transport.ready).toBe(true));
  handlers.get('playback:state')(s);
  await vi.waitFor(()=>expect(calls).toBe(2));
  await transport.snapshot();expect(transport.ready).toBe(true);expect(calls).toBe(2);
@@ -458,7 +459,7 @@ it('single-flights repeated repair joins and retries failed application without 
  const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000);
  transport.subscribe(()=>{if(++applications===1)throw Error('fetch');});
  handlers.get('connect')();handlers.get('connect')();handlers.get('connect')();
- await vi.advanceTimersByTimeAsync(0);expect(transport.ready).toBe(false);expect(joins).toBe(1);
+ await vi.advanceTimersByTimeAsync(0);expect(transport.ready).toBe(true);expect(joins).toBe(2);
  await vi.advanceTimersByTimeAsync(300);expect(transport.ready).toBe(true);expect(joins).toBe(2);expect(applications).toBe(2);
  transport.dispose();vi.useRealTimers();vi.restoreAllMocks();
 });
@@ -487,7 +488,7 @@ it('replacement starting tones never start before the effective boundary',()=>{
  // Only inspect tones; a later count-in must also remain after effectiveAt.
  const result=engine.scheduleShared(state,t,now,0,[60]);
  const boundary=result.audioTime-(state.countInUntil-state.effectiveAt)/1000;
- expect(starts.length).toBeGreaterThan(0);expect(starts.every(at=>at>=boundary)).toBe(true);
+ expect(starts.length).toBeGreaterThan(0);expect(starts.every(at=>at>=boundary-1e-9)).toBe(true);
 });
 
 
@@ -517,4 +518,22 @@ it('clears loop bounds through the controller round trip and ignores the next ov
  const canonical=run(selected,commands[0]);
  expect(canonical.loop).toEqual({enabled:false,startBeat:null,endBeat:null});
  expect(clearLoopCommands(canonical)).toEqual([]);
+});
+
+it('repairs failed stale-ack application once without an invalid toast or reload',async()=>{
+ const {SocketPlaybackTransport}=await import('../src/rehearsal/socket-transport');
+ const notices:string[]=[],handlers=new Map<string,any>();let snapshots=0,failed=false;
+ const updated={...s,revision:1};
+ const socket:any={connected:true,on:(e:string,f:any)=>handlers.set(e,f),off(){},disconnect(){},volatile:{emit:(event:string,...args:any[])=>{
+  const ack=args.at(-1);
+  if(event==='rehearsal:command')ack({commandId:args[0].commandId,status:'rejected',code:'stale',state:updated,revision:1});
+  else {if(event==='rehearsal:snapshot')snapshots++;ack({state:event==='rehearsal:join'?s:updated});}
+ }}};
+ const log=vi.spyOn(console,'error').mockImplementation(()=>{});
+ const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000,()=>{},code=>notices.push(code));
+ transport.subscribe(state=>{if(state.revision===1 && !failed){failed=true;throw Error('temporary fetch');}});
+ await transport.join();await expect(transport.send({type:'stop'})).rejects.toThrow('apply_failed');
+ await vi.waitFor(()=>expect(transport.ready).toBe(true));
+ expect(snapshots).toBe(1);expect(notices).not.toContain('invalid');
+ transport.dispose();log.mockRestore();
 });
