@@ -163,7 +163,7 @@ test('worker process death recovers expired leases under a frozen non-UTC clock'
  for(let i=0;i<150;i++){const p=(await pool.query('select state from job_pages where job_id=$1',[j.id])).rows[0];if(p.state==='running')break;await delay(20);}
  assert.equal((await pool.query('select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running',errors);
  child.kill('SIGKILL');await exited;
- const now=transcriptionClock.now;transcriptionClock.now=()=>new Date(Date.now()+env.TRANSCRIPTION_LEASE_MS+1000);
+ await pool.query("update job_pages set lease_expires_at=now()-interval '1 second' where job_id=$1",[j.id]);const now=transcriptionClock.now;transcriptionClock.now=()=>new Date(Date.now()+600000);
  try{await new TranscriptionWorker().tick();}finally{transcriptionClock.now=now;}
  const done=await view(e.id,lead.cookie,j.id);assert.equal(done.state,'completed');assert.equal(done.pages[0].attempts,2);
  }finally{child.kill('SIGKILL');await exited;}
@@ -270,4 +270,10 @@ test('job projection excludes source internals and large result fragments',async
  const projection=await view(e.id,lead.cookie,j.id);assert.ok(JSON.stringify(projection).length<20000);
  for(const key of ['result_xml','request_hash','options','provenance'])assert.equal(key in projection,false);
  assert.equal('metrics' in projection.pages[0],false);
+});
+test('worker wall clock skew cannot steal a live database lease',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
+ await pool.query("update job_pages set state='running',lease_owner='other',lease_expires_at=now()+interval '5 minutes' where job_id=$1",[j.id]);
+ const original=transcriptionClock.now;try{for(const delta of [-600000,600000]){transcriptionClock.now=()=>new Date(Date.now()+delta);assert.equal(await new TranscriptionWorker().tick(),false);}}finally{transcriptionClock.now=original;}
+ await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);
 });

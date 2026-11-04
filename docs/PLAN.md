@@ -1504,3 +1504,7 @@ page context/assembly reads result_xml separately. The result endpoint alone
 returns the final XML. Model and prompt pins must match the worker; mismatches
 fail model_unavailable and can be manually retried after a matching deployment.
 Socket progress is projected once and per-recipient failures are isolated.
+
+S7: claim, heartbeat, expiry and retry backoff use PostgreSQL now() and SQL
+interval arithmetic. Tests expire fixture leases directly in SQL; skewed worker
+JS clocks cannot steal live leases. No production clock override is exposed.
