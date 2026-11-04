@@ -1494,3 +1494,7 @@ ownership, cancellation and pause. Admin metrics aggregate the ledger.
 
 S2: only explicit authorization DomainError 403/404 becomes permission_revoked;
 unknown/render/storage/database errors use bounded infrastructure_error retries.
+
+S3: assembly exceptions fail only their job (assembly_failed); deleted-job and
+nullable-metrics guards added. Cleanup/recovery have independent error boundaries;
+worker slots each claim again immediately after their own completion.

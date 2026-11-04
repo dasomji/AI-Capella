@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { pool } from './db/index.server';
 import { authorize, transaction, lockEnsemble, DomainError } from './domain.server';
+import { logError } from './logger.server';
 import { env } from './env.server';
 import { FakeProvider, ReferenceRenderer, FakeAssembler, ProviderError, type TranscriptionProvider, type PageRenderer, type JobAssembler, type PageResult } from './transcription-provider.server';
 export const transcriptionClock={now:()=>new Date()};
@@ -86,14 +87,17 @@ export class TranscriptionWorker {
  await this.assemble(page.job_id);await emit(page.ensemble_id,page.job_id);return true;
  }
  async assemble(id:string){
+ try{await this.assembleJob(id);}catch(error){logError('transcription.assembly',error);await pool.query("update transcription_jobs set state='failed',failure_reason='assembly_failed' where id=$1 and state in ('queued','running')",[id]);}
+ }
+ private async assembleJob(id:string){
  // Assembly is repeatable: row lock makes the durable completion checkpoint unique.
  await transaction(async db=>{
  const j=(await db.query('select * from transcription_jobs where id=$1 for update',[id])).rows[0];if(!j || !['queued','running'].includes(j.state))return;
  const pages=(await db.query('select * from job_pages where job_id=$1 order by page_number',[id])).rows;if(!pages.length || pages.some(p=>p.state!=='completed'))return;
  try{await authorize(db,j.user_id,j.ensemble_id,'transcribe');}catch(error){if(!(error instanceof DomainError) || ![403,404].includes(error.status))throw error;await db.query("update transcription_jobs set state='failed',failure_reason='permission_revoked' where id=$1",[id]);return;}
  if(await processingPaused())return;
- const xml=await this.assembler.assemble(pages.map(p=>p.metrics.result));
- await db.query("update transcription_jobs set state='completed',result_xml=$2,metrics=$3 where id=$1",[id,xml,{pages:pages.length,attempts:pages.reduce((n,p)=>n+p.metrics.attempts,0),latency:pages.reduce((n,p)=>n+p.metrics.latency,0),estimatedCost:pages.reduce((n,p)=>n+p.metrics.estimatedCost,0),usage:pages.reduce((n,p)=>({inputTokens:n.inputTokens+p.metrics.usage.inputTokens,outputTokens:n.outputTokens+p.metrics.usage.outputTokens}),{inputTokens:0,outputTokens:0}),model:j.model,promptVersion:j.prompt_version,outcome:'completed'}]);
+ const xml=await this.assembler.assemble(pages.map(p=>p.metrics?.result));
+ await db.query("update transcription_jobs set state='completed',result_xml=$2,metrics=$3 where id=$1",[id,xml,{pages:pages.length,attempts:pages.reduce((n,p)=>n+(p.metrics?.attempts??0),0),latency:pages.reduce((n,p)=>n+(p.metrics?.latency??0),0),estimatedCost:pages.reduce((n,p)=>n+(p.metrics?.estimatedCost??0),0),usage:pages.reduce((n,p)=>({inputTokens:n.inputTokens+(p.metrics?.usage?.inputTokens??0),outputTokens:n.outputTokens+(p.metrics?.usage?.outputTokens??0)}),{inputTokens:0,outputTokens:0}),model:j.model,promptVersion:j.prompt_version,outcome:'completed'}]);
  });
  }
  async recoverAssembly(){for(const j of (await pool.query("select id from transcription_jobs where state in ('queued','running') and not exists(select 1 from job_pages where job_id=transcription_jobs.id and state!='completed')")).rows)await this.assemble(j.id);}

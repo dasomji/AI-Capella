@@ -257,3 +257,9 @@ test('transient authorization infrastructure error retries exactly once then suc
  const failed=await view(e.id,lead.cookie,j.id);assert.equal(failed.pages[0].failure_reason,'infrastructure_error');assert.equal(failed.pages[0].state,'queued');assert.equal(failed.pages[0].attempts,1);
  await pool.query("update job_pages set next_attempt_at=now() where job_id=$1",[j.id]);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
 });
+test('assembly poison fails only its job and recovery proceeds',async()=>{
+ const {lead,e,source}=await setup();const bad=await job(e.id,lead.cookie,source.id);const good=await job(e.id,lead.cookie,source.id);
+ await new TranscriptionWorker(new FakeProvider(),undefined,{assemble:async()=>{throw Error('poison');}}).tick();
+ assert.equal((await view(e.id,lead.cookie,bad.id)).failure_reason,'assembly_failed');
+ await new TranscriptionWorker().recoverAssembly();await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,good.id)).state,'completed');
+});
