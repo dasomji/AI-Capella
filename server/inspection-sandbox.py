@@ -26,6 +26,32 @@ for name in (b'socket', b'socketpair', b'connect', b'bind', b'listen', b'accept'
         raise RuntimeError('seccomp_rule_add failed')
 if lib.seccomp_load(ctx) != 0:
     raise RuntimeError('seccomp_load failed')
-# Separate sessions and minimal env are set by the parent launcher. Same-uid /proc
-# isolation additionally requires host hidepid or distinct service users (see PLAN).
+# Landlock denies /proc (including the parent's environ), /sys and device files.
+# Linux >=5.13 is required; missing kernel support fails the startup canary.
+libc = ctypes.CDLL(None, use_errno=True)
+class Ruleset(ctypes.Structure):
+    _fields_ = [('handled_access_fs', ctypes.c_uint64)]
+class PathRule(ctypes.Structure):
+    _fields_ = [('allowed_access', ctypes.c_uint64), ('parent_fd', ctypes.c_int32)]
+abi = libc.syscall(444, 0, 0, 1)
+if abi < 1:
+    raise RuntimeError('Landlock unavailable')
+access = (1 << (15 if abi >= 3 else 14 if abi >= 2 else 13)) - 1
+ruleset = Ruleset(access)
+fd = libc.syscall(444, ctypes.byref(ruleset), ctypes.sizeof(ruleset), 0)
+if fd < 0:
+    raise RuntimeError('Landlock ruleset failed')
+for path in [os.path.join('/', p) for p in os.listdir('/') if p not in ('proc', 'sys', 'dev')] + ['/dev/null', '/dev/urandom', '/dev/random', '/proc/self']:
+    try:
+        path_fd = os.open(path, os.O_PATH)
+    except OSError:
+        continue
+    allowed = access if os.path.isdir(path) else access & ((1 << 0) | (1 << 1) | (1 << 2) | (1 << 14))
+    rule = PathRule(allowed, path_fd)
+    if libc.syscall(445, fd, 1, ctypes.byref(rule), 0) != 0:
+        raise RuntimeError('Landlock path rule failed')
+    os.close(path_fd)
+if libc.prctl(38, 1, 0, 0, 0) != 0 or libc.syscall(446, fd, 0) != 0:
+    raise RuntimeError('Landlock restriction failed')
+os.close(fd)
 os.execv(sys.argv[1], sys.argv[1:])
