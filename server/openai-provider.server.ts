@@ -1,3 +1,5 @@
+// @ts-ignore shared with the plain Node score worker
+import { cleanMusicXML } from './musicxml-input.mjs';
 import OpenAI from 'openai';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -38,7 +40,8 @@ export class OpenAITranscriptionProvider implements TranscriptionProvider {
  let data:z.infer<typeof responseSchema>;try{data=responseSchema.parse(JSON.parse(response.output_text));}catch{throw new ProviderError('invalid_output');}
  if(data.flags.includes('refusal'))throw new ProviderError('provider_refusal');
  if(data.flags.includes('truncated')||data.flags.includes('partial'))throw new ProviderError('truncated');
- if(/<!DOCTYPE|<!ENTITY/i.test(data.musicxml)||XMLValidator.validate(data.musicxml)!==true || !new XMLParser().parse(data.musicxml)['score-partwise'])throw new ProviderError('invalid_output');
+ try{data.musicxml=cleanMusicXML(data.musicxml,true);}catch{throw new ProviderError('invalid_output',true);}
+ if(XMLValidator.validate(data.musicxml)!==true || !new XMLParser().parse(data.musicxml)['score-partwise'])throw new ProviderError('invalid_output');
  return {musicxmlFragment:data.musicxml,uncertainties:data.uncertainties.map(u=>({...u,page:input.pageIndex+1})),flags:data.flags,usage,requestId,model:this.model,promptVersion:this.promptVersion,latency:Date.now()-start};
  }catch(error){if(error instanceof ProviderError){error.usage=usage;error.requestId=requestId;throw error;}
  if(signal.aborted || error instanceof OpenAI.APIUserAbortError || error instanceof OpenAI.APIConnectionTimeoutError)throw new ProviderError('provider_timeout',true);

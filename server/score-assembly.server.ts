@@ -1,9 +1,12 @@
+// @ts-ignore shared with the plain Node score worker
+import { cleanMusicXML } from './musicxml-input.mjs';
 import { JSDOM } from 'jsdom';
 import { XMLValidator } from 'fast-xml-parser';
 import { children,text,validateMusicDocument,type MeasureSource } from '../src/score-validation';
 import { ProviderError,type JobAssembler,type PageResult } from './transcription-provider.server';
 export function scoreDocument(xml:string){
- if(/<!DOCTYPE|<!ENTITY/i.test(xml)||XMLValidator.validate(xml)!==true)throw new ProviderError('invalid_output');
+ try{xml=cleanMusicXML(xml,true);}catch{throw new ProviderError('invalid_output',true);}
+ if(XMLValidator.validate(xml)!==true)throw new ProviderError('invalid_output');
  const dom=new JSDOM(xml,{contentType:'text/xml'});if(dom.window.document.documentElement.tagName!=='score-partwise'){dom.window.close();throw new ProviderError('invalid_output');}return dom;
 }
 const identity=(p:Element)=>[text(p,'part-name').trim().toLowerCase(),text(p,'score-instrument > instrument-name').trim().toLowerCase()].join('|');

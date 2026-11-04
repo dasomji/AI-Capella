@@ -82,3 +82,16 @@ test('legacy lyric syllables, tuplets, voices and repeats survive direct XML ass
  for(const tag of ['time-modification','syllabic','repeat']){const a=scoreDocument(xml),b=scoreDocument(assembled.xml);try{expect(b.window.document.querySelector(tag)?.outerHTML).toBe(a.window.document.querySelector(tag)?.outerHTML);}finally{a.window.close();b.window.close();}}
  const invalid=xml.replace('<duration>1</duration>','<duration>-1</duration>');const dom=scoreDocument(invalid);try{expect(validateMusicDocument(dom.window.document).structurallyValid).toBe(false);}finally{dom.window.close();}
 });
+
+test('external exporter DOCTYPEs work for import and model output; subsets and entities fail',async()=>{
+ const {Worker}=await import('node:worker_threads');
+ const validateScore=(raw:string,format:string)=>new Promise((resolve,reject)=>{const w=new Worker(new URL('../server/score-worker.mjs',import.meta.url));w.once('message',r=>{void w.terminate();r.error?reject({code:r.error}):resolve(r);});w.once('error',reject);w.postMessage({raw,format});});
+ for(const version of ['3.0','3.1','4.0'])for(const root of ['score-partwise','score-timewise']){
+ const header=`<!DOCTYPE ${root} PUBLIC "-//Recordare//DTD MusicXML ${version} ${root==='score-partwise'?'Partwise':'Timewise'}//EN" "http://www.musicxml.org/dtds/${root==='score-partwise'?'partwise':'timewise'}.dtd">`;
+ const xml=root==='score-partwise'?page(['S']):`<score-timewise><part-list><score-part id="S"><part-name>S</part-name></score-part></part-list><measure number="1"><part id="S">${attrs}${note()}</part></measure></score-timewise>`;
+ await expect(validateScore(header+xml,'musicxml')).resolves.toHaveProperty('hash');
+ if(root==='score-partwise')await expect(provider(response({musicxml:header+xml,uncertainties:[],flags:[]})).transcribePage(input,[],{},new AbortController().signal)).resolves.toHaveProperty('musicxmlFragment');
+ }
+ await expect(validateScore('<!DOCTYPE score-partwise SYSTEM "partwise.dtd">'+page(['S']),'musicxml')).resolves.toHaveProperty('hash');
+ for(const bad of ['<!DOCTYPE score-partwise [<!ENTITY x "bad">]>','<!ENTITY x "bad">'])await expect(validateScore(bad+page(['S']),'musicxml')).rejects.toMatchObject({code:'invalid_xml'});
+});
