@@ -204,3 +204,11 @@ test('synthetic source runs retain inclusive range endpoints',async()=>{const {c
 test('a persisted checkpoint avoids parsing all prior page notation',()=>{const a=result(page(['S']));a.contextState=compactContext([a]);a.musicxmlFragment='<unparseable';expect(compactContext([a]).lastMeasure).toBe(1);expect(compactContext([a,result(page(['S']))]).lastMeasure).toBe(2);});
 
 test('octave shifts in either direction stay open until an explicit stop',()=>{for(const type of ['up','down']){const xml=page(['S']).replace('</attributes>',`</attributes><direction><direction-type><octave-shift type="${type}" size="8"/></direction-type></direction>`);const a=result(xml);a.contextState=compactContext([a]);expect(a.contextState.parts[0]['octave-shift']).toHaveProperty('1');const stop=result(page(['S']).replace('</attributes>','</attributes><direction><direction-type><octave-shift type="stop"/></direction-type></direction>'));expect(compactContext([a,stop]).parts[0]['octave-shift']).toEqual({});}});
+
+test('page preview has independent bounded admission and byte-bounded LRU',async()=>{
+ const {PreviewAdmission,PreviewCache,needsPreviewAudit}=await import('../server/page-preview.server');
+ const admission=new PreviewAdmission(),signal=new AbortController();const a=await admission.take('u',signal.signal),b=await admission.take('v',signal.signal);
+ let acquired=false;const next=admission.take('w',signal.signal).then(slot=>{acquired=true;slot.release();});await new Promise(r=>setTimeout(r,35));expect(acquired).toBe(false);a.release();await next;b.release();
+ const c=new PreviewCache(4);c.set('a',new Uint8Array(2));c.set('b',new Uint8Array(2));c.get('a');c.set('c',new Uint8Array(2));expect(c.get('b')).toBeUndefined();expect(c.get('a')).toHaveLength(2);
+ expect(needsPreviewAudit('u','o',0)).toBe(true);expect(needsPreviewAudit('u','o',1)).toBe(false);expect(needsPreviewAudit('v','o',1)).toBe(true);expect(needsPreviewAudit('u','o',600000)).toBe(true);
+});
