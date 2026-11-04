@@ -104,13 +104,13 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
     function schedule(s: RehearsalState, failures=0) {
         clearTimeout(timers.get(s.ensembleId));
         timers.delete(s.ensembleId);
-        if (s.endsAt === null || closed)
+        if (s.endsAt === null || closed || !ownershipReady)
             return;
         const timer = setTimeout(() => { void serial(s.ensembleId, async () => { const current = await load(s.ensembleId); if (current.revision !== s.revision)
             return; if (current.endsAt !== null && now() < current.endsAt) {
             schedule(current);
             return;
-        } await publish({ ...current, revision: current.revision + 1, status: 'stopped', anchor: { serverTime: current.endsAt!, beat: (await timing(current.ensembleId, current.pieceId, current.versionNo)).totalBeats }, countInUntil: null, startingTonesUntil: null, endsAt: null, updatedAt: now() }); }).catch(error => { logError('rehearsal.end', error); if (!closed) { const retry=setTimeout(()=>schedule(committed.get(s.ensembleId) ?? s,failures+1),Math.min(30000,250*2**failures)); retry.unref(); timers.set(s.ensembleId,retry); } }); }, Math.min(2147483647, Math.max(0, s.endsAt - now())));
+        } await publish({ ...current, revision: current.revision + 1, status: 'stopped', anchor: { serverTime: current.endsAt!, beat: (await timing(current.ensembleId, current.pieceId, current.versionNo)).totalBeats }, countInUntil: null, startingTonesUntil: null, endsAt: null, updatedAt: now() }); }).catch(error => { logError('rehearsal.end', error); if (!closed && ownershipReady) { const retry=setTimeout(()=>schedule(committed.get(s.ensembleId) ?? s,failures+1),Math.min(30000,250*2**failures)); retry.unref(); timers.set(s.ensembleId,retry); } }); }, Math.min(2147483647, Math.max(0, s.endsAt - now())));
         timer.unref();
         timers.set(s.ensembleId, timer);
     }
@@ -209,6 +209,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         set.add(e);
     }
     function armIdle(ensembles: Iterable<string>) {
+            if(closed || !ownershipReady)return;
             for(const e of ensembles) {
                 if(ns.adapter.rooms.get(`rehearsal:${e}`)?.size) continue;
                 if(idle.has(e)) continue;

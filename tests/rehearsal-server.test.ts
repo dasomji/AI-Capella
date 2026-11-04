@@ -244,3 +244,12 @@ it('evicts an idle committed snapshot so a later join loads persistence',async()
  stored.set(ensemble,{...initialState(ensemble,'u',0),revision:10});
  expect((await app.socket('return').emit('rehearsal:join',{ensembleId:ensemble})).state.revision).toBe(10);
 });
+it('does not rearm an in-flight end timer after ownership loss',async()=>{
+ const app=setup(),c=app.socket('end-owner');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ const selected=await c.emit('rehearsal:command',command('selectPiece',{command:{type:'selectPiece',pieceId:'p',versionNo:1}}));
+ await c.emit('rehearsal:command',command('play',{baseRevision:selected.revision}));
+ const end=stored.get(ensemble).endsAt;const normal=mocks.query.getMockImplementation()!;
+ mocks.query.mockImplementation(async(sql,args)=>{if(sql.startsWith('insert into rehearsal_sessions')){mocks.locked=false;mocks.ownerError(Error('lost'));throw Error('offline');}return normal(sql,args);});
+ app.setNow(end);await vi.advanceTimersByTimeAsync(end-1000);
+ expect(vi.getTimerCount()).toBe(1); // ownership retry only, no rehearsal/end timer
+});
