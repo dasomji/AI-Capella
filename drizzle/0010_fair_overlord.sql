@@ -1,0 +1,1 @@
+ALTER TABLE "provider_calls" ADD COLUMN "prompt_sha256" text;

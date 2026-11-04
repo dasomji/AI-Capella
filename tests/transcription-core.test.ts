@@ -158,3 +158,7 @@ test('structural validity does not hide unreadable or all-rest transcription',()
  const d=scoreDocument(page(['S']).replace(/<pitch>[\s\S]*?<\/pitch>/g,'<rest/>'));
  try{const r=validateMusicDocument(d.window.document,[],[{flag:'unreadable',page:1}]);expect(r.structurallyValid).toBe(true);expect(r.accuracy).toBe('unknown');expect(r.warnings.map(w=>w.code)).toEqual(expect.arrayContaining(['all_rest_part','all_rest_score','unreadable_page']));}finally{d.window.close();}
 });
+
+test('pinned prompt hash refuses edits and loads independently of cwd',async()=>{
+ const {verifyPrompt,promptSha256}=await import('../server/openai-provider.server');const {readFileSync}=await import('node:fs');const prompt=readFileSync(new URL('../server/prompts/transcription-v1.txt',import.meta.url),'utf8');expect(()=>verifyPrompt(prompt)).not.toThrow();expect(()=>verifyPrompt(prompt+' ')).toThrow('Pinned');expect(promptSha256).toMatch(/^[a-f0-9]{64}$/);
+});

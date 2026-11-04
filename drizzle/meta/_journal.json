@@ -71,6 +71,13 @@
       "when": 1793763669346,
       "tag": "0009_striped_cyclops",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793763824495,
+      "tag": "0010_fair_overlord",
+      "breakpoints": true
     }
   ]
 }

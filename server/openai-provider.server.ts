@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 // @ts-ignore shared with the plain Node score worker
 import { cleanMusicXML } from './musicxml-input.mjs';
 import OpenAI from 'openai';
@@ -7,6 +8,9 @@ import { z } from 'zod';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { ProviderError, type TranscriptionProvider, type PageInput, type PageResult } from './transcription-provider.server';
 const prompt=readFileSync(new URL('./prompts/transcription-v1.txt',import.meta.url),'utf8');
+export const promptSha256='d1d0abc2dd7c93678ea4efdbac93559d14b0763f025606368eff40f0e0be8308';
+export function verifyPrompt(content:string){if(createHash('sha256').update(content).digest('hex')!==promptSha256)throw Error('Pinned transcription prompt changed');}
+verifyPrompt(prompt);
 export const responseSchema=z.object({musicxml:z.string(),uncertainties:z.array(z.object({measure:z.string(),part:z.string(),voice:z.string(),reason:z.string()})),flags:z.array(z.enum(['refusal','partial','truncated','unreadable','no_music']))}).strict();
 export const strictResponseSchema=z.toJSONSchema(responseSchema);
 delete strictResponseSchema.$schema;
@@ -27,6 +31,7 @@ export function compactContext(pages:PageResult[]) {
 }
 export class OpenAITranscriptionProvider implements TranscriptionProvider {
  readonly promptVersion='transcription-v1';
+ readonly promptSha256=promptSha256;
  constructor(readonly model=process.env.OPENAI_TRANSCRIPTION_MODEL??'gpt-6.1-sol',private client?:OpenAI){}
  async transcribePage(input:PageInput,pages:PageResult[],options:Record<string,unknown>,signal:AbortSignal):Promise<PageResult>{
  const start=Date.now();if(signal.aborted)throw new ProviderError('provider_timeout',true);
