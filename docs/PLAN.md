@@ -2324,3 +2324,81 @@ Evidence: `.review-evidence/phase5a-{typecheck,unit,build,secrets,db}.log`,
 `phase5a-offline-final-verified.log` (all beneath `.review-evidence`).
 
 Phase 5a implementation commit: `61709d4`. All commits remain local on production-v1.
+
+
+### Phase 5b — sysadmin oversight (2026-11-04, AICAP-20)
+
+Implemented the separate `/admin` area with users, ensembles, pieces, audit and
+transcription tabs. The LightScore/Bodoni header, warm-red rule, mono navigation,
+search/filter tables, keyboard rows, cursor pagination and responsive detail
+panels support German/English and dark/light/Papier. The normal account sheet
+fetches a fresh online admin-link decision without blocking offline controls.
+
+Every admin page/API checks the current verified session and explicit PostgreSQL
+`sysadmin` role. The boundary conceals unauthorized/unknown admin routes with 404
+before origin/body validation; authorized mutations retain the trusted-origin
+check. No signup/ensemble capability promotes a user. Server-only provisioning:
+`npm run admin:grant -- <email>` / `npm run admin:revoke -- <email>`, requiring
+DATABASE_URL and an existing verified email. Both commands audit; revocation is
+immediate on the next request. There are no admin socket subscriptions.
+
+Safe projections expose account/session aggregates, coarse device groups,
+memberships/capabilities/leads, invitation states, piece/version/original
+metadata and job summaries. Private detail reads are audited; credentials,
+session identifiers/tokens, invitation hashes, object keys, provider prompts and
+score bodies are absent from oversight lists. Content/original actions require
+an explicit audit confirmation with optional reason. Downloads use the existing
+private-storage signing mechanism with a 60-second lifetime. There is no
+impersonation, global deletion, UI role editing or unrestricted export.
+
+The Phase 4 usage/metrics and emergency-stop APIs are now behind the unified
+boundary. Ops includes usage/cost/unknown-cost cards, per-group p50/p95 latency,
+failure counts, jobs, and stop status with actor/instant/reason. Stop changes
+require a nonempty reason and write an audit event. All admin APIs share a
+persistent 120-request/minute actor limit; content/download actions additionally
+share 10/minute. Lists default to 30 and cap at 100, with indexed search/order
+and bounded detail sub-lists. Migration 0013 adds ordering/audit and pg_trgm
+substring indexes. Timestamp cursors preserve PostgreSQL microseconds.
+
+Offset-qualified filters use half-open ranges. Admin JSON instants carry the
+configured APP_TIME_ZONE offset; array responses identify the zone in a header.
+The central admin UI formatter always renders the explicit zone and offset.
+Tests run under a non-UTC process zone and cover Berlin midnight/DST transitions.
+
+Runbook and complete endpoint table: `docs/SYSADMIN.md`. Historical last sign-in
+is limited to still-retained active sessions; earlier phases did not persist a
+historical sign-in ledger. Production provisioning/deployment and independent
+review remain operator/parent work. No paid providers, real mail, push or
+production access occurred.
+
+Verification:
+
+- `npm run typecheck`: passed, including the final API offset changes.
+- `npm test`: 248/248 passed.
+- `npm run build`: passed, also exercised by final isolated browser/secret builds.
+- `PATH="$PWD/.review-evidence/bin:$PATH" npm run test:integration`: 82/82 passed.
+  Final focused admin/security/usage/control rerun: 7/7 harness cases passed;
+  additional midnight/DST formatter and credential-sentinel checks passed.
+- `npm run check:secrets`: final isolated positive control and clean client scan
+  passed, with no public source maps.
+- `npm run db:generate`: no schema changes after committed migration 0013.
+- `BROWSER_SCRIPT=scripts/browser-admin.mjs npm run test:browser`: passed all
+  tabs, search/detail, stop/resume with reasons, audited content confirmation,
+  non-sysadmin 404, DE/EN, three themes at 1440/390, and AA text contrast >=4.5.
+  Contact sheet: `/tmp/aicap-p5b/shots/index.html` (23 screenshots).
+- `npm run test:browser`: final isolated run passed the complete account/design,
+  offline, two-account sync and three-client acceptance suites, including loops,
+  count-in, sleep, restart and account isolation.
+
+Evidence: `.review-evidence/p5b-integration-final.log`, `p5b-offset-integration.log`,
+`p5b-exposure-final.log`, `p5b-server-dst.log`, `p5b-final-unit.log`,
+`p5b-typecheck-green.log`, `p5b-secret-final.log`, `p5b-db-green.log`,
+`p5b-admin-offset-final.log` and `p5b-standard-final.log`. Earlier failed logs are
+retained: fixture setup respected signup acknowledgement/last-lead constraints;
+old anonymous usage assertions were corrected to the required 404 contract;
+concurrent builds and the Phase 5a update banner initially obstructed browser
+checks. Separate build roots and the Phase 5a banner fix resolved those failures.
+
+Implementation commits: `2c493d9`, `338474e`, `90c03c8`. Shared main/package hunks
+were staged separately from Phase 5a; its work was preserved. All commits remain
+local on production-v1. This Phase 5b plan entry is committed separately.
