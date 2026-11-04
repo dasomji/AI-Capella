@@ -1513,3 +1513,9 @@ S5: signed downloads override MIME and disposition to inert attachments. Results
 have attachment, octet-stream, sandbox/default-src none and nosniff headers.
 Assembly uses shared score validation, which rejects DOCTYPE/entities and roots
 other than score-partwise/timewise.
+
+S4: object PUT precedes the short ensemble transaction, protected by a committed
+orphan outbox key; concurrent hash dedupe leaves redundant keys for cleanup.
+Original storage has an operational ceiling, TRANSCRIPTION_STORAGE_MAX_BYTES
+(default 5 GiB per ensemble), enforced under the lock; this is not a money budget.
+Uploads allow 30 seconds idle and 10 minutes total; filenames strip bidi controls.

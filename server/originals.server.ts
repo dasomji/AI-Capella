@@ -26,9 +26,9 @@ export async function uploadOriginal(user:string,ensemble:string,body:ReadableSt
  if(env.NODE_ENV==='development' && 'initialize' in store)await (store as import('./storage.server').S3Storage).initialize();
  await mkdir('.transcription-tmp',{recursive:true,mode:0o700});const dir=await mkdtemp('.transcription-tmp/upload-');const path=dir+'/source';
  const reader=body.getReader();const file=await open(path,'wx',0o600);const hash=createHash('sha256');let size=0;let first=Buffer.alloc(0);let limit=sourceLimits.pdf;
- let timedOut=false;const timer=setTimeout(()=>{timedOut=true;void reader.cancel();},30000);
+ let timedOut=false;const expire=()=>{timedOut=true;void reader.cancel();};let idle=setTimeout(expire,30000);const timer=setTimeout(expire,600000);
  try {
- while(true){const chunk=await reader.read();if(chunk.done)break;size+=chunk.value.length;
+ while(true){const chunk=await reader.read();if(chunk.done)break;clearTimeout(idle);idle=setTimeout(expire,30000);size+=chunk.value.length;
  if(first.length<5){first=Buffer.concat([first,Buffer.from(chunk.value.subarray(0,5-first.length))]);if(first.length===5 && first.toString()!=='%PDF-')limit=sourceLimits.photo;}
  if(size>limit)throw new DomainError('body_too_large',413);
  hash.update(chunk.value);await file.writeFile(chunk.value);
@@ -36,17 +36,19 @@ export async function uploadOriginal(user:string,ensemble:string,body:ReadableSt
  if(timedOut)throw new DomainError('upload_timeout',408);
  await file.close();const info=await inspectSource(path);if(size>(info.type==='application/pdf'?sourceLimits.pdf:sourceLimits.photo))throw new DomainError('body_too_large',413);
  const digest=hash.digest('hex');
+ const key=`ensembles/${ensemble}/originals/${randomUUID()}`;
+ // Commit orphan protection before streaming; never hold an ensemble lock over I/O.
+ await pool.query('insert into object_deletions(object_key) values($1)',[key]);
+ await store.put(key,createReadStream(path),size,info.type);
  return await transaction(async db=>{
  await lockEnsemble(db,ensemble);await authorize(db,user,ensemble,'transcribe');
  const old=(await db.query("select * from stored_objects where ensemble_id=$1 and sha256=$2 and kind='original' and state='ready'",[ensemble,digest])).rows[0];if(old)return old;
- const key=`ensembles/${ensemble}/originals/${randomUUID()}`;
- // The outbox is committed before upload separately; it also catches DB rollback/crash orphans.
- await pool.query('insert into object_deletions(object_key) values($1)',[key]);
- await store.put(key,createReadStream(path),size,info.type);
- const row=(await db.query("insert into stored_objects(ensemble_id,user_id,object_key,kind,size,content_type,sha256,original_filename,provenance,state) values($1,$2,$3,'original',$4,$5,$6,$7,$8,'ready') returning *",[ensemble,user,key,size,info.type,digest,filename.replace(/[\x00-\x1f\x7f/\\]/g,'_').slice(0,200),JSON.stringify(info)])).rows[0];
+ const used=(await db.query("select coalesce(sum(size),0)::text as bytes from stored_objects where ensemble_id=$1 and kind='original' and state='ready'",[ensemble])).rows[0];
+ if(Number(used.bytes)+size>env.TRANSCRIPTION_STORAGE_MAX_BYTES)throw new DomainError('storage_limit',413);
+ const row=(await db.query("insert into stored_objects(ensemble_id,user_id,object_key,kind,size,content_type,sha256,original_filename,provenance,state) values($1,$2,$3,'original',$4,$5,$6,$7,$8,'ready') returning *",[ensemble,user,key,size,info.type,digest,filename.replace(/[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,'').replace(/[\x00-\x1f\x7f/\\]/g,'_').slice(0,200),JSON.stringify(info)])).rows[0];
  await db.query('delete from object_deletions where object_key=$1',[key]);await audit(db,ensemble,user,'original.upload',row.id);return row;
  });
- } finally {clearTimeout(timer);await reader.cancel().catch(()=>{});reader.releaseLock();await file.close().catch(()=>{});await rm(dir,{recursive:true,force:true});}
+ } finally {clearTimeout(timer);clearTimeout(idle);await reader.cancel().catch(()=>{});reader.releaseLock();await file.close().catch(()=>{});await rm(dir,{recursive:true,force:true});}
 }
 /** Only explicit outbox keys without live DB references, or explicitly selected derivatives. */
 export async function cleanupObjects(store:ObjectStorage=storage()) {

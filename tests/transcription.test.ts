@@ -284,3 +284,12 @@ test('result downloads are inert attachments and shared validation rejects activ
  const r=await request(`ensembles/${e.id}/transcriptions/${j.id}/result`,'GET',undefined,lead.cookie);
  assert.equal(r.status,200);assert.equal(r.headers.get('content-type'),'application/octet-stream');assert.match(r.headers.get('content-disposition')!,/^attachment/);assert.equal(r.headers.get('x-content-type-options'),'nosniff');assert.equal(r.headers.get('content-security-policy'),"sandbox; default-src 'none'");
 });
+test('slow object upload never holds the ensemble transaction lock',async()=>{
+ const {uploadOriginal}=await import('../server/originals.server');const {transaction,lockEnsemble}=await import('../server/domain.server');const {lead,e}=await setup();
+ const photo=await sharp({create:{width:19,height:19,channels:3,background:'red'}}).png().toBuffer();
+ let entered!:()=>void,release!:()=>void;const ready=new Promise<void>(r=>entered=r);const gate=new Promise<void>(r=>release=r);
+ const {storage}=await import('../server/storage.server');const store=storage();
+ const put=store.put.bind(store);const wrapped={put:async(...args:Parameters<typeof put>)=>{entered();await gate;await put(...args);}};
+ const upload=uploadOriginal(lead.id,e.id,new ReadableStream({start(c){c.enqueue(photo);c.close();}}),'safe.png',{...wrapped} as any);
+ try{await ready;await Promise.race([transaction(db=>lockEnsemble(db,e.id)),delay(1000).then(()=>{throw Error('upload held ensemble lock');})]);}finally{release();await upload;}
+});

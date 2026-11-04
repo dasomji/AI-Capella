@@ -35,6 +35,7 @@ export function parseEnv(input: NodeJS.ProcessEnv) {
     S3_BUCKET: z.string().optional(),
     S3_ACCESS_KEY_ID: z.string().optional(),
     S3_SECRET_ACCESS_KEY: z.string().optional(),
+    TRANSCRIPTION_STORAGE_MAX_BYTES: z.coerce.number().int().positive().default(5*1024*1024*1024),
     TRANSCRIPTION_PDF_MAX_BYTES: z.coerce.number().int().positive().default(50*1024*1024),
     TRANSCRIPTION_PHOTO_MAX_BYTES: z.coerce.number().int().positive().default(20*1024*1024),
     TRANSCRIPTION_MAX_PAGES: z.coerce.number().int().positive().max(60).default(60),
