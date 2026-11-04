@@ -1,0 +1,8 @@
+import { parseArgs } from 'node:util';
+import { readFile, writeFile } from 'node:fs/promises';
+import { readSnapshot } from '../../migration/snapshot';
+import { importSnapshot, mappingSchema } from '../../migration/import';
+import { reconcile } from '../../migration/reconcile';
+import { pool } from '../../server/db/index.server';
+const {values:v,positionals}=parseArgs({allowPositionals:true,options:{snapshot:{type:'string'},mapping:{type:'string'},'dry-run':{type:'boolean'},'send-invitations':{type:'boolean'},'apply-deletions':{type:'boolean'},report:{type:'string'}}});
+try{if(!v.snapshot)throw Error('--snapshot required');const snapshot=await readSnapshot(v.snapshot);const mode=positionals[0];if(!['import','reconcile'].includes(mode))throw Error('Unknown command');const report=mode==='import'?await importSnapshot(snapshot,mappingSchema.parse(JSON.parse(await readFile(v.mapping!,'utf8'))),{dryRun:v['dry-run'],sendInvitations:v['send-invitations'],applyDeletions:v['apply-deletions']}):await reconcile(snapshot);const path=v.report??`${v.snapshot}/${mode}-${Date.now()}`;await writeFile(path+'.json',JSON.stringify(report,null,2),{mode:0o600,flag:'wx'});await writeFile(path+'.md',`# Migration ${mode}\n\nUTC: ${report.at}; business time: ${report.businessTime} (${report.timeZone})\n\n`+report.items.map((i:any)=>'- '+JSON.stringify(i)).join('\n'),{mode:0o600,flag:'wx'});console.log(path+'.json');if(('mismatches' in report&&report.mismatches)||report.items.some((i:any)=>['ensemble_failed','conflict','deletion_conflict'].includes(i.status)))process.exitCode=1;}finally{await pool.end();}

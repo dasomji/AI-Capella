@@ -1,3 +1,4 @@
+import { insertVersion } from "./migration-content.server";
 import { pieceTitle } from '../src/api/title';
 import { gzipSync } from 'node:zlib';
 import { registerTranscriptionRoutes } from './transcription-http.server';
@@ -628,6 +629,7 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
         [e, input.email],
       )
     ).rows[0];
+    if (old?.kind === "lead") throw new DomainError("migration_invitation",409);
     await invitationBudget(db, e, input.email, u.id);
     if (old) {
       await db.query(
@@ -705,6 +707,7 @@ domain.post(
       if (cached)
         return { invitation: cached, raw: undefined as string | undefined };
       if (i.state !== "pending") throw new DomainError(i.state);
+      if (i.kind === "lead") throw new DomainError("migration_invitation",409);
       await invitationBudget(db, e, i.email, u.id);
       await db.query(
         "insert into superseded_invitations(token_hash) values($1) on conflict do nothing",
@@ -819,22 +822,23 @@ domain.post("/invitations/:token/accept", async (c) => {
           [i.ensemble_id, i.inviter_id],
         )
       ).rows[0];
-      if (!issuer || (!issuer.is_lead && !issuer.manage_members))
+      if (i.kind !== "lead" && (!issuer || (!issuer.is_lead && !issuer.manage_members)))
         throw new DomainError("revoked", 409);
-      if (!issuer.is_lead) {
+      if (i.kind !== "lead" && !issuer.is_lead) {
         i.manage_members = false;
         i.edit_music_pieces = false;
         i.ai_transcription = false;
       }
       const m = (
         await db.query(
-          "insert into memberships(ensemble_id,user_id,manage_members,edit_music_pieces,ai_transcription) values($1,$2,$3,$4,$5) on conflict(ensemble_id,user_id) do nothing returning *",
+          "insert into memberships(ensemble_id,user_id,manage_members,edit_music_pieces,ai_transcription,is_lead) values($1,$2,$3,$4,$5,$6) on conflict(ensemble_id,user_id) do update set is_lead=memberships.is_lead or excluded.is_lead where excluded.is_lead returning *",
           [
             i.ensemble_id,
             u.id,
             i.manage_members,
             i.edit_music_pieces,
             i.ai_transcription,
+            i.kind === "lead",
           ],
         )
       ).rows[0];
@@ -843,7 +847,8 @@ domain.post("/invitations/:token/accept", async (c) => {
         "update invitations set state='accepted',accepted_at=$1,accepted_by=$2 where id=$3",
         [clock.now(), u.id, i.id],
       );
-      await audit(db, i.ensemble_id, u.id, "invitation.accept", i.id);
+      if (i.kind === "lead") await db.query("update ensembles set awaiting_lead=false where id=$1",[i.ensemble_id]);
+      await audit(db, i.ensemble_id, u.id, "invitation.accept", i.id, { kind: i.kind });
       return memberView(m);
     });
   membershipChanged(String(result.ensembleId), u.id);
@@ -865,38 +870,6 @@ async function upload(req: { header: (name: string) => string | undefined; text:
   const type = req.header("content-type")?.split(";")[0];
   if (type !== "text/xml" && type !== "application/json") throw new DomainError("unsupported_score_type", 415);
   return {format: type === "text/xml" ? "musicxml" as const : "score" as const, schemaVersion: 1 as const, body: await req.text()};
-}
-async function insertVersion(
-  db: PoolClient,
-  e: string,
-  p: string,
-  u: string,
-  n: number,
-  input: { format: "score" | "musicxml"; schemaVersion: 1 },
-  data: Awaited<ReturnType<typeof content>>,
-) {
-  const v = (
-    await db.query(
-      "insert into score_versions(ensemble_id,piece_id,version_no,created_by,format,schema_version,musicxml,native_score,content_hash,size,timing) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning id",
-      [
-        e,
-        p,
-        n,
-        u,
-        input.format,
-        input.schemaVersion,
-        input.format === "musicxml" ? data.raw : null,
-        input.format === "score" ? data.raw : null,
-        data.hash,
-        data.size,
-        JSON.stringify(data.timing),
-      ],
-    )
-  ).rows[0];
-  await db.query(
-    "update music_pieces set current_version_id=$1,format=$2 where id=$3",
-    [v.id, input.format, p],
-  );
 }
 domain.get("/ensembles/:ensemble/pieces", async (c) => {
   const e = c.req.param("ensemble");

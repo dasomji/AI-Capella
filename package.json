@@ -25,7 +25,12 @@
     "test:browser:sync": "BROWSER_SCRIPT=scripts/browser-sync-acceptance.mjs node scripts/browser-isolated.mjs",
     "worker": "node --env-file-if-exists=.env --import tsx server/transcription-worker.ts",
     "eval:transcription": "node --import tsx scripts/eval-transcription.ts",
-    "eval:fixtures": "node --import tsx scripts/generate-eval-fixtures.ts"
+    "eval:fixtures": "node --import tsx scripts/generate-eval-fixtures.ts",
+    "migrate:export": "node --env-file-if-exists=.env --import tsx scripts/migrate-legacy/export.ts",
+    "migrate:import": "node --env-file-if-exists=.env --import tsx scripts/migrate-legacy/run.ts import",
+    "migrate:reconcile": "node --env-file-if-exists=.env --import tsx scripts/migrate-legacy/run.ts reconcile",
+    "migrate:rollback-rehearsal": "node scripts/migrate-legacy/rollback.mjs",
+    "test:migration": "node scripts/migrate-legacy/test.mjs"
   },
   "devDependencies": {
     "@types/jsdom": "^30.0.0",
@@ -36,6 +41,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.2.1",
     "drizzle-kit": "^0.31.11",
+    "firebase-admin": "^14.5.0",
     "playwright": "^1.64.1",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
