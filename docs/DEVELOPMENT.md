@@ -151,3 +151,9 @@ reset the count; connection error events still invalidate ownership immediately.
 This tolerates transient stalls at the cost of roughly 15–17 seconds to detect
 a silent failure. Commands still fail on database errors; the advisory lock and
 revision guard protect against simultaneous owners. Probe failures remain logged.
+
+`/app?debug=sync` intentionally enables a read-only diagnostic hook in production.
+It exposes this signed-in device's canonical rehearsal state, clock uncertainty,
+scheduled clicks and output position; it adds no authorization or control API.
+Use it for the device's own diagnostics. Closing/reloading without the query
+removes the hook; signout also clears the active account/session state.
