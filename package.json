@@ -20,7 +20,9 @@
     "test:browser": "node scripts/browser-isolated.mjs",
     "test:browser:foundation": "node scripts/browser-smoke.mjs",
     "test:browser:sync": "BROWSER_SCRIPT=scripts/browser-sync-acceptance.mjs node scripts/browser-isolated.mjs",
-    "worker": "node --env-file-if-exists=.env --import tsx server/transcription-worker.ts"
+    "worker": "node --env-file-if-exists=.env --import tsx server/transcription-worker.ts",
+    "eval:transcription": "node --import tsx scripts/eval-transcription.ts",
+    "eval:fixtures": "node --import tsx scripts/generate-eval-fixtures.ts"
   },
   "devDependencies": {
     "@types/jsdom": "^30.0.0",
