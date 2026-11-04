@@ -2779,3 +2779,65 @@ checked against action repositories. Optional Playwright preload produced PNG/ZI
 artifacts in a real local Chromium fixture. No Railway/Resend/OpenAI calls or provisioning.
 Broader integration/browser runs are concurrent with the other review agents; preserve
 .review-evidence/p6b-fixes-*.log for their final outcomes rather than implying green.
+
+
+### Final polish — 2026-11-04 (Phase 5 verification and admin UI)
+
+Implementation: `552ac65`; canonical admin browser expectations: `8dbcd31`.
+Only the assigned app/server/test paths were committed. No push, deployment,
+external infrastructure, real mail or paid provider calls.
+
+1. Offline identities retain client/server clock skew; missing/invalid HTTP Date
+   falls back to the local clock. Preparation and restore tests cover ±5 minutes,
+   missing Date, and purge after 15 days. Legacy unmeasured clock rollback still denies.
+2. Main PostgreSQL statements/query waits default to 30/35 seconds. Admin statistics
+   use a separate two-connection 120/125-second pool; worker statements retain 5s.
+   A normal Hono handler's pg_sleep(40) is cancelled around 30s and releases its
+   connection; the next query succeeds and no sleep remains active.
+3. Every score-body fetch (including Together) uses no-store; version responses use
+   private, no-store. A real browser session expired only in the database cannot
+   recover the score via only-if-cached (no sign-out/cache-clearing shortcut).
+4. Quota wording lives in DE/EN i18n; bulk preparation propagates that specific
+   error. IndexedDB errors retain event.target.error before transaction.error,
+   with a non-null fallback. Browser evidence captures the actual quota toast.
+5. Title cleaning preserves internal emoji/Persian/Indic ZWJ/ZWNJ and strips edge
+   or repeated joiners, covered by grapheme regression fixtures.
+6. /foo%zz and /% return 400 before static/SSR decoding, avoiding host.error/500.
+7. The outer worker catch abandons running provider calls; a late insert completion
+   also closes its row after abort. A delayed-insert regression verifies finished_at
+   and abandoned outcome without invoking any paid provider.
+8. Admin rate limits return structured counts/time units with DE/EN wording;
+   copy buttons use stroke SVGs; account purge removes its epoch keys; persistence
+   denial retries quietly at most weekly, with a request-count regression.
+9. Both socket owners consume server:restarting, disconnect, delay reconnect by
+   the bounded hint and cancel their timer on disposal. Playback uses its existing
+   connecting state; real-server restart remains green in three-client acceptance.
+10. Admin job/failure states and actor labels are localized. Emergency stop has one
+    last-reason line, a new-reason input and visible/accessible stopped switch label.
+    Actors show names with IDs behind copy buttons. Latency is a formatted
+    day/model/p50/p95 table with no ensemble UUIDs.
+11. Other admin enum/field labels and the time-zone note are translated; native date
+    input presentation follows the browser locale. The DE/EN desktop/mobile theme
+    matrix asserts loaded metrics, localized states/reasons and AA text contrast.
+
+Final verification (exit 0): npm run typecheck; npm test **271/271**;
+npm run build; npm run test:integration **90/90**; npm run check:secrets
+(positive control detected, clean client artifacts); npm run db:generate (no drift);
+npm run test:browser (account/theme, offline, minimal Together, all three-client
+acceptance a–n including loops/sleep/restart); npm run test:browser:transcription;
+and the admin/final-offline browser scripts via BROWSER_SCRIPT + test:browser.
+Unit tests use synthetic NODE_ENV=test / capture-mail configuration. Builds and
+integration use isolated LIGHTSCORE_BUILD_ROOT paths. PDF browser/integration
+checks use the existing .review-evidence/poppler/bin wrapper on PATH.
+
+Harness regressions: hosting respects the isolated build root; concurrent reorder
+assertions allow a legitimate stale-order 409 while requiring success and checking
+final ordering; offline account-switch acceptance waits for identity persistence
+before disconnecting. Failed intermediate logs remain retained (old rate-limit
+assertion, shared-dist churn, missing local Poppler, identity-persistence race).
+
+Evidence: .review-evidence/final-polish-{types-green,unit-green,build-final,
+integration-green,secrets,db-final,browser,transcription-browser-final,
+admin-browser-verified,offline-browser-final}.log. Contact sheet with 37 screenshots:
+/tmp/aicap-final-polish/shots/index.html (DE/EN dark/light transcription, mobile,
+offline banner and quota toast). The screenshots wait for real loaded metrics.
