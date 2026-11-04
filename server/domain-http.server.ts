@@ -1177,3 +1177,23 @@ domain.delete("/ensembles/:ensemble/pieces/:piece", async (c) => {
 });
 
 registerTranscriptionRoutes(domain);
+
+domain.post('/ensembles/:ensemble/transcriptions/:job/import',async c=>{
+ const e=c.req.param('ensemble'),u=c.get('user').id,id=c.req.param('job');
+ // Import is authorized by editPieces alone; result reading remains transcribe-gated.
+ await authorize(pool,u,e,'editPieces');
+ const job=(await pool.query('select * from transcription_jobs where id=$1 and ensemble_id=$2',[id,e])).rows[0];
+ if(!job)throw new DomainError('not_found',404);
+ if(job.state!=='completed')throw new DomainError('result_unavailable',409);
+ const data=await content({format:'musicxml',body:job.result_xml});
+ const result=await transaction(async db=>{
+ await lockEnsemble(db,e);await authorize(db,u,e,'editPieces');
+ const j=(await db.query('select * from transcription_jobs where id=$1 and ensemble_id=$2 for update',[id,e])).rows[0];
+ if(j.imported_piece_id)return metadata(db,e,j.imported_piece_id);
+ const n=(await db.query('select coalesce(max(sort_key::bigint),-1)+1 as n from music_pieces where ensemble_id=$1',[e])).rows[0].n;
+ const p=(await db.query("insert into music_pieces(ensemble_id,title,sort_key,format,provenance) values($1,$2,$3,'musicxml',$4) returning id",[e,'Transcription',String(n).padStart(12,'0'),{jobId:id,model:j.model,promptVersion:j.prompt_version}])).rows[0];
+ await insertVersion(db,e,p.id,u,1,{format:'musicxml',schemaVersion:1},data);
+ await db.query('update transcription_jobs set imported_piece_id=$2 where id=$1',[id,p.id]);await audit(db,e,u,'transcription.import',p.id,{jobId:id});return metadata(db,e,p.id);
+ });
+ await libraryChanged(e,[result]);return c.json(result);
+});

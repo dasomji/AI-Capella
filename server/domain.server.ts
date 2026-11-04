@@ -78,7 +78,7 @@ export async function protectLead(
     throw new DomainError("last_lead", 409);
 }
 export async function audit(
-  db: PoolClient,
+  db: Pick<PoolClient, "query">,
   ensemble: string,
   actor: string,
   action: string,

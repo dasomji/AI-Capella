@@ -1,3 +1,4 @@
+import { logError as transcriptionLogError } from './logger.server';
 import {
   authorize,
   onMembershipChange,
@@ -90,6 +91,23 @@ export function attachSockets(server: ServerType) {
         }
     },
   );
+  const deliverTranscription=async (ensemble:string,job:string)=>{
+    for(const socket of connected){
+      if(!socket.rooms.has(`ensemble:${ensemble}`))continue;
+      const r=await pool.query("select 1 from memberships m join session s on s.user_id=m.user_id where m.ensemble_id=$1 and m.user_id=$2 and s.token=$3 and s.expires_at>now() and (m.is_lead or m.ai_transcription)",[ensemble,socket.data.userId,socket.data.token]);
+      if(r.rowCount)socket.emit('transcription:progress',{ensembleId:ensemble,jobId:job});
+    }
+  };
+  let notificationClient:import('pg').PoolClient|undefined;
+  let notificationsClosed=false;
+  void pool.connect().then(async client=>{
+    if(notificationsClosed){client.release();return;}
+    notificationClient=client;
+    client.on('error',error=>transcriptionLogError('transcription.notifications',error));
+    client.on('notification',message=>{if(message.channel==='transcription_progress' && message.payload){const data=JSON.parse(message.payload);void deliverTranscription(data.ensemble,data.job).catch(error=>transcriptionLogError('transcription.progress',error));}});
+    await client.query('listen transcription_progress');
+  }).catch(error=>transcriptionLogError('transcription.listen',error));
+  const unsubscribeTranscription=()=>{notificationsClosed=true;if(notificationClient){const client=notificationClient;notificationClient=undefined;void client.query('unlisten transcription_progress').finally(()=>client.release());}};
   const unsubscribeLibrary = onLibraryChange(async (ensemble, changes) => {
     const recipients = [...connected].filter((s) =>
       s.rooms.has(`ensemble:${ensemble}`),
@@ -157,7 +175,7 @@ export function attachSockets(server: ServerType) {
     clearInterval(timer);
     unsubscribe();
     unsubscribeMembership();
-    unsubscribeLibrary();
+    unsubscribeLibrary();unsubscribeTranscription();
     return close(callback);
   }) as typeof io.close;
   return io;

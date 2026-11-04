@@ -18,6 +18,7 @@ export async function inspectSource(path:string):Promise<{type:string;pages:numb
 }
 export async function uploadOriginal(user:string,ensemble:string,body:ReadableStream<Uint8Array>,filename:string,store:ObjectStorage=storage()) {
  await authorize(pool,user,ensemble,'transcribe');
+ if(env.NODE_ENV==='development' && 'initialize' in store)await (store as import('./storage.server').S3Storage).initialize();
  await mkdir('.transcription-tmp',{recursive:true,mode:0o700});const dir=await mkdtemp('.transcription-tmp/upload-');const path=dir+'/source';
  const reader=body.getReader();const file=await open(path,'wx',0o600);const hash=createHash('sha256');let size=0;let first=Buffer.alloc(0);let limit=sourceLimits.pdf;
  const timer=setTimeout(()=>{void reader.cancel();},30000);
@@ -45,4 +46,13 @@ export async function uploadOriginal(user:string,ensemble:string,body:ReadableSt
 export async function cleanupObjects(store:ObjectStorage=storage()) {
  const rows=await pool.query("select object_key from object_deletions where created_at<now()-interval '1 hour' and not exists(select 1 from stored_objects s where s.object_key=object_deletions.object_key)");
  for(const r of rows.rows){await store.delete(r.object_key);await pool.query('delete from object_deletions where object_key=$1',[r.object_key]);}
+}
+
+export async function cleanupDerived(before:Date,store:ObjectStorage=storage()) {
+ // Lock selection and enqueue deletion atomically; never select originals, even failed ones.
+ return transaction(async db=>{
+ const rows=(await db.query("delete from stored_objects where kind='derived' and created_at<$1 and not exists(select 1 from job_pages where object_id=stored_objects.id) returning object_key",[before])).rows;
+ for(const row of rows)await db.query('insert into object_deletions(object_key) values($1) on conflict do nothing',[row.object_key]);
+ return rows.length;
+ });
 }
