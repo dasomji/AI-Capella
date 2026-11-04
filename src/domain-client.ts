@@ -1,3 +1,4 @@
+import { setOffline, isOffline } from './offline-state';
 export class ApiError extends Error {
   constructor(
     public code: string,
@@ -11,6 +12,7 @@ export async function api<T = any>(
   method = "GET",
   body?: unknown,
 ): Promise<T> {
+  if (method !== 'GET' && isOffline()) throw new ApiError('offline', 0);
   const upload = method === "POST" && /\/pieces(?:\/[^/]+\/versions)?$/.test(path) && (body as any)?.content;
   const input = body as any;
   const headers: Record<string,string> = upload ? {
@@ -23,7 +25,7 @@ export async function api<T = any>(
     method,
     headers,
     ...(body === undefined ? {} : { body: upload ? (input.content.format === "musicxml" ? input.content.body : JSON.stringify(input.content.body)) : JSON.stringify(body) }),
-  });
+  }).catch(error => { setOffline(true); throw error; });
   const data = await r.json();
   if (!r.ok) {
     window.dispatchEvent(

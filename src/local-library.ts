@@ -1,6 +1,7 @@
 import { randomId } from './uuid';
 import type { StoredSong, SongFormat } from './library';
 export interface LibraryRepository {
+ clear(): void;
  subscribe(listener: (songs: StoredSong[]) => void): () => void;
  get(id: string): StoredSong | undefined;
  update(id: string, patch: Partial<StoredSong>): Promise<void>;
@@ -11,6 +12,7 @@ export interface LibraryRepository {
 class LocalLibrary implements LibraryRepository {
  private songs: StoredSong[] = [];
  private listeners = new Set<(songs: StoredSong[]) => void>();
+ clear() {this.songs=[];this.listeners.forEach(listener=>listener(this.songs));}
  subscribe(listener: (songs: StoredSong[]) => void) { this.listeners.add(listener); listener(this.songs); return () => { this.listeners.delete(listener); }; }
  get(id: string) { return this.songs.find(song => song.id === id); }
  async update(id: string, patch: Partial<StoredSong>) { this.songs = this.songs.map(song => song.id === id ? { ...song, ...patch } : song); this.listeners.forEach(listener => listener(this.songs)); }

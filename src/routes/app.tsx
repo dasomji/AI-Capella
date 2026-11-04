@@ -7,20 +7,10 @@ function Rehearsal() {
     let active = true;
     let mounted = false;
     const check = async () => {
-      let response: Response;
-      try {
-        response = await fetch("/api/me");
-      } catch {
-        return;
-      }
-      if (response.status === 401) {
-        location.replace("/?state=expired");
-        return;
-      }
-      if (!response.ok) return;
       if (active && !mounted) {
         const { initializeEnsembles } = await import("../ensembles");
-        await initializeEnsembles();
+        try { await initializeEnsembles(); }
+        catch { location.replace('/?state=expired'); return; }
         mounted = true;
         setReady(true);
         await import("../main");

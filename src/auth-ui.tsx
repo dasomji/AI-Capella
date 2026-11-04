@@ -96,11 +96,12 @@ export function AuthPage() {
         );
         return;
       }
-      if (mode === "signin")
+      if (mode === "signin") {
+        localStorage.removeItem("lightscore-pending-signout");
         location.assign(
           invite ? `/invite/${encodeURIComponent(invite)}` : "/app",
         );
-      else if (mode === "reset") {
+      } else if (mode === "reset") {
         history.replaceState(null, "", "/");
         setMode("signin");
         setVerification(false);

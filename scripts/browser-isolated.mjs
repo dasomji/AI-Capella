@@ -73,6 +73,7 @@ try {
     env = {
       ...process.env,
       NODE_ENV: "test",
+      LIGHTSCORE_BUILD_ROOT: `${process.cwd()}/.review-evidence/browser-build-${process.pid}`,
       DATABASE_URL: `postgres://postgres:fixture-only@127.0.0.1:${dbPort}/fixture`,
       BETTER_AUTH_SECRET: "isolated-browser-fixture-secret-32-characters",
       BETTER_AUTH_URL: base,
@@ -116,7 +117,7 @@ try {
     await run(["node_modules/playwright/cli.js", "install", "chromium"], env);
   }
   await run([process.env.BROWSER_SCRIPT || "scripts/browser-phase2b.mjs"], env);
-  if(!process.env.BROWSER_SCRIPT) {await run(["scripts/browser-sync.mjs"],env);await run(["scripts/browser-sync-acceptance.mjs"],env);}
+  if(!process.env.BROWSER_SCRIPT) {await run(["scripts/browser-phase5a.mjs"],env);await run(["scripts/browser-sync.mjs"],env);await run(["scripts/browser-sync-acceptance.mjs"],env);}
 } finally {
   for (const c of children)
     if (c.exitCode === null) {

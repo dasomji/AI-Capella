@@ -1,3 +1,4 @@
+import { offlineAccountId, purgeAccount } from '../offline-store';
 import { AccountStage } from "../account-stage";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -124,7 +125,7 @@ function Invitation() {
               headers: { "Content-Type": "application/json" },
               body: "{}",
             });
-            if (r.ok) authenticate("signin");
+            if (r.ok) { const previous=offlineAccountId();if(previous)await purgeAccount(previous);authenticate("signin"); }
             else setState("error");
           }}
         >

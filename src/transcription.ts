@@ -1,3 +1,4 @@
+import { isOffline } from './offline-state';
 import { photoThumbnail } from './photo-thumbnail';
 import type { Socket } from 'socket.io-client';
 import { api, ApiError } from './domain-client';
@@ -8,7 +9,7 @@ import { safeSvg } from './safe-svg';
 import { jobPresentation, reorderPhotos, reviewItems, type TranscriptionJob, type ReviewItem } from './transcription-model';
 import type { MeasureSource, ValidationReport } from './score-validation';
 import './transcription.css';
-const canTranscribe=(id:string)=>{const e=ensembleById(id);return !!e&&(e.isLead||e.capabilities.transcribe);};
+const canTranscribe=(id:string)=>{const e=ensembleById(id);return !isOffline()&&!!e&&(e.isLead||e.capabilities.transcribe);};
 function el<K extends keyof HTMLElementTagNameMap>(tag:K,text?:string,cls?:string){const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e;}
 function button(text:string,run:()=>void,cls='btn'){const b=el('button',text,cls);b.type='button';b.onclick=run;return b;}
 function errorText(e:unknown){return tr(e instanceof ApiError?e.code:'error');}
@@ -75,7 +76,7 @@ export function installTranscription(options:{beforeListen:()=>boolean;reviewCle
    }
   }catch(e){console.error('Transcription review failed',e);error.textContent=errorText(e);}
  }
- entry.onclick=()=>void start().catch(e=>{host.replaceChildren(el('p',errorText(e),'tx-error'));});socket.on('connect',sync);const onProgress=(event:{ensembleId:string;jobId:string})=>{if(event.ensembleId!==scope)return;const g=generation;void api<TranscriptionJob>(`${base()}/transcriptions/${event.jobId}`).then(job=>{if(g!==generation)return;jobs=[job,...jobs.filter(j=>j.id!==job.id)].sort((a,b)=>String(b.created_at??'').localeCompare(String(a.created_at??'')));renderJobs();}).catch(()=>void refresh());};socket.on('transcription:progress',onProgress);window.addEventListener('membership:changed',sync);window.addEventListener('ensemble:changed',sync);const timer=setInterval(()=>void refresh(),8000);sync();return {refresh:sync,dispose(){clearInterval(timer);socket.off('connect',sync);socket.off('transcription:progress',onProgress);window.removeEventListener('membership:changed',sync);window.removeEventListener('ensemble:changed',sync);dialog?.close();}};
+ entry.onclick=()=>void start().catch(e=>{host.replaceChildren(el('p',errorText(e),'tx-error'));});socket.on('connect',sync);const onProgress=(event:{ensembleId:string;jobId:string})=>{if(event.ensembleId!==scope)return;const g=generation;void api<TranscriptionJob>(`${base()}/transcriptions/${event.jobId}`).then(job=>{if(g!==generation)return;jobs=[job,...jobs.filter(j=>j.id!==job.id)].sort((a,b)=>String(b.created_at??'').localeCompare(String(a.created_at??'')));renderJobs();}).catch(()=>void refresh());};socket.on('transcription:progress',onProgress);window.addEventListener('offline:changed',sync);window.addEventListener('membership:changed',sync);window.addEventListener('ensemble:changed',sync);const timer=setInterval(()=>void refresh(),8000);sync();return {refresh:sync,dispose(){clearInterval(timer);socket.off('connect',sync);socket.off('transcription:progress',onProgress);window.removeEventListener('offline:changed',sync);window.removeEventListener('membership:changed',sync);window.removeEventListener('ensemble:changed',sync);dialog?.close();}};
 }
 /** Plain language groupings cover structural diagnostic families without exposing validator codes. */
 function reason(code:string){if(code==='reviewPassage')return tr(code);if(/tie|slur/.test(code))return tr('checkTies');if(/duration|alignment|meter|pickup/.test(code))return tr('checkTiming');if(/identity|part|tacet/.test(code))return tr('checkVoice');if(/lyric/.test(code))return tr('checkLyrics');if(/key|clef|time/.test(code))return tr('checkNotation');return tr('unknown');}

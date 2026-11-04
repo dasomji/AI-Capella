@@ -151,7 +151,7 @@ try {
   if (await q.locator("#mode-solo-btn").isVisible())
     await q.locator("#mode-solo-btn").click();
   await q.getByText("Evening Rise", { exact: true }).first().waitFor();
-  assert.equal(await q.locator(".song-more").count(), 0);
+  assert.equal(await q.locator(".song-more").count(), 1); // Read-only members can prepare their private offline copy.
   await q.getByText("Evening Rise", { exact: true }).first().click();
   await q.locator(".play-btn").waitFor({ state: "visible" });
   assert.equal(await q.locator(".t-save").isVisible(), false);

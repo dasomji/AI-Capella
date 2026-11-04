@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
+const clientRoot = `${process.env.LIGHTSCORE_BUILD_ROOT || 'dist'}/client`;
 const names = ['DATABASE_URL','BETTER_AUTH_SECRET','RESEND_API_KEY','S3_ACCESS_KEY_ID','S3_SECRET_ACCESS_KEY','OPENAI_API_KEY'];
 const sentinels = Object.fromEntries(names.map(name => [name, `SENTINEL_${name}_must_never_reach_browser_284392`]));
 sentinels.DATABASE_URL = `postgres://sentinel:SENTINEL_DATABASE_URL_must_never_reach_browser_284392@localhost/test`;
@@ -16,9 +17,9 @@ async function artifacts(path) {
 }
 function build(extra = {}) { const r = spawnSync('npm',['run','build'],{env:{...process.env,...sentinels,...extra},stdio:'inherit'}); if (r.status !== 0) throw new Error('Build failed'); }
 build({VITE_LEAK_TEST:control});
-if (!(await artifacts('dist/client')).some(({data})=>data.includes(control))) throw new Error('Positive control was not detected');
+if (!(await artifacts(clientRoot)).some(({data})=>data.includes(control))) throw new Error('Positive control was not detected');
 build({VITE_LEAK_TEST:''});
-for (const {file,data} of await artifacts('dist/client')) {
+for (const {file,data} of await artifacts(clientRoot)) {
   // Source maps, if introduced, are scanned as text AND decoded sources/content.
   const decoded = file.endsWith('.map') ? JSON.parse(data) : null;
   const contents = data + (decoded ? JSON.stringify([decoded.sources,decoded.sourcesContent]) : '');

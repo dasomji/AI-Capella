@@ -1,4 +1,10 @@
+import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
+import { isOffline } from './offline-state';
+import { off } from './offline-text';
+import { registerOfflineWorker } from './offline-worker';
+import { offlineAccountId, purgeAccount, purgeEnsemble, restoreIdentity } from './offline-store';
+import { preparePiece, unpreparePiece, isPrepared, offlineUsage, removeOfflineEnsemble } from './library';
 import { installTranscription } from './transcription';
 import { tr } from './i18n';
 import { playbackDriftMs } from './rehearsal/schedule';
@@ -51,7 +57,7 @@ import { canSwing, swingMap, swingScore } from './swing';
 import { loadScriptFont } from './goldInk';
 import { closeOverlay, confirmDialog, isNarrow, openMenu, openPopover, openSheet, promptDialog, toast } from './ui';
 import * as sync from './sync';
-import { account, canEditPieces, canManageMembers, activeEnsemble, ensembleById, leads, ensembleName, PUBLIC_ID, refreshEnsembleNames, renameEnsemble, setActiveEnsemble, unlockedEnsembles } from './ensembles';
+import { account, canEditPieces, canManageMembers, activeEnsemble, ensembleById, forgetEnsemble, leads, ensembleName, PUBLIC_ID, refreshEnsembleNames, renameEnsemble, setActiveEnsemble, unlockedEnsembles } from './ensembles';
 import type { PlaybackState } from './sync';
 
 interface SongEntry {
@@ -591,6 +597,7 @@ function zoomRowsByHand(factor: number, y: number) {
 }
 
 async function requestModeSwitch(mode: 'solo' | 'ensemble') {
+  if (mode === 'ensemble' && isOffline()) { toast(off('together')); return; }
   if (mode === sessionMode) return;
   const name = modeName(mode);
   const ok = await confirmDialog({
@@ -609,7 +616,7 @@ async function requestModeSwitch(mode: 'solo' | 'ensemble') {
 const MODE_SWITCH_KEY = 'ai-capella-mode-switch';
 modeBadge.addEventListener('click', () => {
   if (sessionMode === 'solo') {
-    openMenu(modeBadge, [{ label: t('rehearseTogether'), icon: 'users', onSelect: () => void requestModeSwitch('ensemble') }], t('mode'));
+    openMenu(modeBadge, [{ label: isOffline() ? off('together') : t('rehearseTogether'), disabled:isOffline(), icon: 'users', onSelect: () => void requestModeSwitch('ensemble') }], t('mode'));
     return;
   }
   const items: Parameters<typeof openMenu>[1] = [];
@@ -618,6 +625,7 @@ modeBadge.addEventListener('click', () => {
 });
 
 function chooseMode(mode: 'solo' | 'ensemble') {
+  if (mode === 'ensemble' && isOffline()) { toast(off('together')); return; }
   // The public folder is for looking and listening only: no rehearsing together there (and the
   // choice made for an ensemble stays as it was).
   if (inPublicFolder()) mode = 'solo';
@@ -658,18 +666,33 @@ document.querySelector('#landing-create')!.addEventListener('click',createEnsemb
 document.querySelector('#landing-samples')!.addEventListener('click',()=>{setActiveEnsemble(PUBLIC_ID);currentEnsemble=PUBLIC_ID;setViewMode('library');void runBootstrap();});
 function renderLibraryHead() {
  const btn=document.createElement('button');btn.className='ens-switch';btn.textContent=ensembleName(currentEnsemble);btn.insertAdjacentHTML('beforeend',icon('chevronDown'));btn.onclick=()=>void openEnsembleMenu(btn);libTitleEl.replaceChildren(btn);libTitleEl.classList.add('ens-title');
+ importBtn.disabled=isOffline();importBtn.title=isOffline()?off('online'):'';
  importBtn.hidden=inPublicFolder();importBtn.querySelector('span')!.textContent=editable()?t('addArrangement'):pt('openLocal');document.querySelector<HTMLElement>('.lib-tip')!.hidden=!editable();
 }
 async function openEnsembleMenu(anchor:HTMLElement) {
  const items:Parameters<typeof openMenu>[1]=[...unlockedEnsembles(),PUBLIC_ID].map(id=>({label:ensembleName(id),icon:'users',checked:id===currentEnsemble,onSelect:()=>void switchEnsemble(id)}));
- items.push({label:pt('createEnsemble'),icon:'plus',onSelect:createEnsemble});
- if(canManageMembers(currentEnsemble))items.push({label:pt('membersInvitations'),icon:'users',onSelect:()=>void membersSheet(currentEnsemble,anchor)});
- if(leads(currentEnsemble))items.push({label:t('renameEnsemble'),icon:'pencil',onSelect:()=>void renameCurrentEnsemble()});
+ items.push({label:pt('createEnsemble'),disabled:isOffline(),icon:'plus',onSelect:createEnsemble});
+ if(leads(currentEnsemble)||ensembleById(currentEnsemble)?.capabilities.manageMembers)items.push({label:pt('membersInvitations')+(isOffline()?' · '+off('online'):''),disabled:isOffline(),icon:'users',onSelect:()=>void membersSheet(currentEnsemble,anchor)});
+ if(leads(currentEnsemble))items.push({disabled:isOffline(),label:t('renameEnsemble'),icon:'pencil',onSelect:()=>void renameCurrentEnsemble()});
  if(!inPublicFolder()) {
- let last=false;if(leads(currentEnsemble)){const members=await api(`/ensembles/${currentEnsemble}/members`);last=members.filter((m:any)=>m.isLead).length===1;}
- items.push({label:last?pt('leaveEnsemble')+' · '+pt('lastLead'):pt('leaveEnsemble'),disabled:last,icon:'users',onSelect:()=>void leaveEnsemble(currentEnsemble,()=>{localStorage.removeItem(`lightscore-ensemble:${account?.id}`);location.reload();})});
+ let last=false;if(leads(currentEnsemble)&&!isOffline()){const members=await api(`/ensembles/${currentEnsemble}/members`);last=members.filter((m:any)=>m.isLead).length===1;}
+ items.push({label:last?pt('leaveEnsemble')+' · '+pt('lastLead'):pt('leaveEnsemble'),disabled:last||isOffline(),icon:'users',onSelect:()=>void leaveEnsemble(currentEnsemble,()=>{localStorage.removeItem(`lightscore-ensemble:${account?.id}`);location.reload();})});
+ }
+ if(!inPublicFolder()) {
+ const usage=offlineUsage();
+ items.push({label:`${usage.count} ${off('usage')} · ${(usage.bytes/1048576).toLocaleString(lang,{maximumFractionDigits:1})} MB offline`,disabled:true,onSelect:()=>{}});
+ items.push({label:off('prepare'),icon:'file',disabled:isOffline()||!!preparing,onSelect:()=>void prepareRepertoire()});
+ if(preparing)items.push({label:off('cancel'),onSelect:()=>preparing?.abort()});
+ items.push({label:off('remove'),icon:'trash',onSelect:()=>void removeOfflineEnsemble().catch(e=>toast(errorText(e),'error'))});
  }
  openMenu(anchor,items,t('ensembleLabel'));
+}
+let preparing: AbortController | undefined;
+async function prepareRepertoire() {
+ const controller=new AbortController();preparing=controller;
+ try {const songs=importedSongs.slice();for(let i=0;i<songs.length;i++){if(controller.signal.aborted)break;toast(`${off('progress')} ${i+1}/${songs.length}`);await preparePiece(songs[i].id,controller.signal);} }
+ catch(e){if(!controller.signal.aborted)toast(errorText(e),'error');}
+ finally{preparing=undefined;renderSongList();}
 }
 async function switchEnsemble(id:string) {if(id===currentEnsemble)return;leavePlaybackSession();audioEngine?.stop();clearLibrary();setActiveEnsemble(id);sessionStorage.setItem(MODE_SWITCH_KEY,'solo');location.reload();}
 
@@ -1227,7 +1250,12 @@ function songCard(song: SongEntry): HTMLLIElement {
   body.append(title, meta);
   open.append(cover, body);
   li.appendChild(open);
-  if (song.imported && editable()) {
+  if(song.imported && isPrepared(song.id)) {
+    const mark=document.createElement('span');mark.className='offline-mark';mark.style.color='var(--gold, #b49a5b)';mark.title=off('available');mark.setAttribute('aria-label',off('available'));
+    mark.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25"><path d="M7 17H6a4 4 0 0 1-1-8 6 6 0 0 1 11-2 5 5 0 0 1 2 10h-1M9 16l2 2 4-5"/></svg>';li.append(mark);
+  }
+  if(song.imported && isOffline() && !isPrepared(song.id)){open.disabled=true;li.style.opacity='.45';open.title=off('unavailable');meta.textContent=off('unavailable');}
+  if (song.imported) {
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'icon-btn song-more';
@@ -1240,7 +1268,7 @@ function songCard(song: SongEntry): HTMLLIElement {
     tag.textContent = song.localOnly ? pt('privatePractice') : t('sample');
     li.appendChild(tag);
   }
-  void songMeta(song).then((m) => {
+  if (!isOffline() || !song.imported || isPrepared(song.id)) void songMeta(song).then((m) => {
     if (!m) return;
     const parts = [countLabel(m.voices, 'voicesOne', 'voicesMany'), countLabel(m.bars, 'barsOne', 'barsMany'), m.key].filter(Boolean);
     meta.replaceChildren(voiceDots(m.voices), document.createTextNode(parts.join(' · ')));
@@ -1285,6 +1313,7 @@ function renderSongList() {
 
 function renderLibraryBanner() {
   libBannerEl.replaceChildren();
+  if (isOffline()) {libBannerEl.hidden=false;libBannerEl.classList.add('muted');libBannerEl.textContent=off('banner');return;}
   libBannerEl.hidden = libraryState === 'ready' && !libraryFromCache;
   if (libraryState === 'ready') {
     if (libraryFromCache) {
@@ -1326,9 +1355,12 @@ songGridEl.addEventListener('click', (e) => {
     openMenu(
       more,
       [
-        { label: t('rename'), icon: 'pencil', onSelect: () => void renameSong(song) },
+        {label: isPrepared(song.id)?off('remove'):off('prepare'),icon:'file',disabled:isOffline()&&!isPrepared(song.id),onSelect:()=>void (isPrepared(song.id)?unpreparePiece(song.id):preparePiece(song.id)).catch(e=>toast(errorText(e),'error'))},
+        ...(editable() ? [
+        { label: t('rename'), icon: 'pencil' as const, onSelect: () => void renameSong(song) },
         ...moveItems(song),
-        { label: t('delete'), icon: 'trash', danger: true, onSelect: () => void confirmDelete(song) },
+        { label: t('delete'), icon: 'trash' as const, danger: true, onSelect: () => void confirmDelete(song) },
+        ] : []),
       ],
       song.title,
     );
@@ -1393,6 +1425,7 @@ function titleFromFileName(name: string): string {
 }
 
 async function importFiles(files: FileList | File[]) {
+  if(isOffline()){toast(off('online'));return;}
   if (serverLibraryEnabled && inPublicFolder()) return; // look and listen only
   // In the order of their names, numbers counted as numbers ("2." before "10."): a show's
   // numbered pieces arrive in the repertoire in running order.
@@ -3768,7 +3801,7 @@ async function runBootstrap() {
     subscribeToSongs(
       (songs, fromCache) => {
         libraryState = 'ready';
-        libraryFromCache = fromCache && !navigator.onLine;
+        libraryFromCache = fromCache;
         importedSongs = songs.map((s) => ({
           id: s.id,
           title: s.title,
@@ -3872,7 +3905,7 @@ function noteSeen() {
 }
 /** Where the app is: in the repertoire, or in a song. */
 function notePlace() {
-  if(leavingAccount)return;
+  if(leavingAccount || offlineAccountId()!==account?.id)return;
   const inPlayer = app.classList.contains('mode-player');
   if (!inPlayer && !app.classList.contains('mode-library')) return;
   if(currentSong?.id.startsWith('transcription-preview-'))return;
@@ -3966,10 +3999,10 @@ const storedMode = localStorage.getItem(MODE_STORAGE_KEY);
 const switchedMode = sessionStorage.getItem(MODE_SWITCH_KEY);
 sessionStorage.removeItem(MODE_SWITCH_KEY);
 if (storedMode === 'solo' || storedMode === 'ensemble') sessionMode = storedMode;
-if (inPublicFolder()) sessionMode = 'solo';
+if (inPublicFolder() || isOffline()) sessionMode = 'solo';
 const lastMode = storedMode === 'solo' || storedMode === 'ensemble' ? storedMode : inPublicFolder() ? 'solo' : null;
 const comeBack = (chosen: 'solo' | 'ensemble') => {
-  const mode = inPublicFolder() ? 'solo' : chosen; // (as chooseMode will have it)
+  const mode = inPublicFolder() || isOffline() ? 'solo' : chosen; // (as chooseMode will have it)
   const place = recentlyHere && lastPlace?.ensemble === currentEnsemble && (lastPlace.mode ?? 'solo') === mode ? lastPlace : null;
   if (place && (mode === 'solo' ? place.songId : serverLibraryEnabled && (place.songId || place.behind))) {
     // Alone, the song is opened again (comeBackToPlace); together, it comes with the rehearsal's state.
@@ -4010,7 +4043,20 @@ void loadScriptFont().then(() => renderNow());
 window.addEventListener('online', renderSongList);
 window.addEventListener('offline', renderSongList);
 
-// Private authenticated shell: offline caching policy arrives in Phase 5.
+void registerOfflineWorker().catch(console.error);
+function offlineControls() {
+ const together=document.querySelector<HTMLButtonElement>('#mode-ensemble-btn')!;
+ together.disabled=isOffline();together.title=isOffline()?off('together'):'';
+ const create=document.querySelector<HTMLButtonElement>('#landing-create');if(create){create.disabled=isOffline();create.title=isOffline()?off('online'):'';}
+ document.querySelector<HTMLButtonElement>('#transcription-entry')!.disabled=isOffline();document.querySelector<HTMLButtonElement>('#transcription-entry')!.title=isOffline()?off('online'):'';
+ renderLibraryHead();renderSongList();refreshBindings();
+}
+window.addEventListener('offline:changed',offlineControls);
+window.addEventListener('offline',offlineControls);
+window.addEventListener('online',()=>void checkMembership());
+window.addEventListener('storage',async event=>{if(event.key==='lightscore-offline-account' && event.newValue!==account?.id){leavePlaybackSession();accountEvents.disconnect();audioEngine?.stop();clearPrivateContext();if(account)await purgeAccount(account.id);location.replace('/?state=expired');}});
+queueMicrotask(offlineControls);
+
 
 async function openAccountArea(anchor: HTMLElement) {
   const body = document.createElement("div");
@@ -4030,6 +4076,10 @@ async function openAccountArea(anchor: HTMLElement) {
     leavePlaybackSession();
     audioEngine?.stop();
     accountEvents.disconnect();
+    localStorage.setItem('lightscore-pending-signout','1');
+    clearPrivateContext();
+    if(account)await purgeAccount(account.id);
+    if(isOffline()) {location.replace('/app');return;}
     try {
     const r = await fetch("/api/auth/sign-out", {
       method: "POST",
@@ -4037,18 +4087,21 @@ async function openAccountArea(anchor: HTMLElement) {
       body: "{}",
     });
     if (r.ok) {
+      localStorage.removeItem('lightscore-pending-signout');
       clearLibrary();
+      if(account)await purgeAccount(account.id);
       localStorage.removeItem(PLACE_KEY);
       localStorage.removeItem(`lightscore-ensemble:${account?.id}`);
       sessionStorage.removeItem(MODE_SWITCH_KEY);
       location.replace("/?state=signed-out");
-    } else {leavingAccount=false;accountEvents.connect();toast(pt("errorGeneric"), "error");}
-    } catch {leavingAccount=false;accountEvents.connect();toast(pt("errorGeneric"), "error");}
+    } else {location.replace('/app');}
+    } catch {location.replace('/app');}
   };
   body.append(signout);
   const remove = document.createElement("button");
   remove.className = "link-btn";
   remove.textContent = t("accountDelete");
+  remove.disabled=isOffline();remove.title=isOffline()?off("online"):"";
   remove.onclick = async () => {
     const plan = await api("/account/deletion");
     const sheet = document.createElement("div");
@@ -4093,6 +4146,7 @@ async function openAccountArea(anchor: HTMLElement) {
           password: password.value,
         });
         clearLibrary();
+        if(account)await purgeAccount(account.id);
         location.replace("/?state=signed-out");
       } catch (e) {
         leavingAccount=false;
@@ -4110,6 +4164,7 @@ async function openAccountArea(anchor: HTMLElement) {
   heading.className = "domain-heading";
   heading.textContent = pt("devices");
   body.append(heading);
+  if(isOffline()){const note=document.createElement("p");note.textContent=off("online");body.append(note);return;}
   const response = await fetch("/api/auth/list-sessions");
   if (!response.ok) {
     toast(pt("errorGeneric"), "error");
@@ -4140,8 +4195,19 @@ async function openAccountArea(anchor: HTMLElement) {
 
 function deviceLabel(ua:string='') { const browser=/Edg/.test(ua)?'Edge':/Firefox/.test(ua)?'Firefox':/Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':t('accountDevice'); const os=/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iOS':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':'';return [browser,os].filter(Boolean).join(' · '); }
 window.addEventListener('piece:conflict',()=>{toast(pt('conflict'));if(currentSong)void reloadCurrentSong();});
+function clearPrivateContext() {
+ clearLibrary();localLibrary.clear();audioEngine?.dispose();audioEngine=null;
+ importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;metaCache.clear();coverCanvases.clear();notesByPart.clear();partMix.clear();
+ pianoRoll=null;staffView=null;overview=null;songTitleEl.textContent='';songGridEl.replaceChildren();
+}
+function clearRevokedEnsemble(id: string) {
+ if(id!==currentEnsemble)return;
+ const name=ensembleById(id)?.name ?? libTitleEl.querySelector('.ens-switch')?.textContent ?? id;
+ leavePlaybackSession();clearPrivateContext();renderSongList();forgetEnsemble(id);setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));
+}
+window.addEventListener('offline:ensemble-purged',event=>{const detail=(event as CustomEvent).detail;if(detail.user===account?.id)clearRevokedEnsemble(detail.ensemble);});
 let checkingMembership=false;
-async function checkMembership(){if(checkingMembership || leavingAccount)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(leavingAccount)return;if(me.user.id!==account?.id){clearLibrary();location.reload();return;}await refreshEnsembleNames();window.dispatchEvent(new Event('membership:changed'));if(!inPublicFolder()&&!ensembleById(currentEnsemble)){leavePlaybackSession();audioEngine?.stop();clearLibrary();importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{}finally{checkingMembership=false;}}
+async function checkMembership(){if(checkingMembership || leavingAccount)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(leavingAccount)return;if(me.user.id!==account?.id){clearPrivateContext();if(account)await purgeAccount(account.id);location.reload();return;}await refreshEnsembleNames();window.dispatchEvent(new Event('membership:changed'));if(!inPublicFolder()&&!ensembleById(currentEnsemble)){leavePlaybackSession();audioEngine?.stop();clearLibrary();if(account)await purgeEnsemble(account.id,currentEnsemble);importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;metaCache.clear();coverCanvases.clear();notesByPart.clear();partMix.clear();audioEngine?.dispose();audioEngine=null;pianoRoll=null;staffView=null;overview=null;songTitleEl.textContent='';renderSongList();setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{if(isOffline() && !(await restoreIdentity())){leavePlaybackSession();audioEngine?.stop();clearLibrary();location.replace('/?state=expired');}}finally{checkingMembership=false;}}
 setInterval(()=>void checkMembership(),60000);
 window.addEventListener('membership:refresh',()=>void checkMembership());
 
@@ -4152,12 +4218,12 @@ window.addEventListener('pageshow',event=>{
   playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice,recalibrateSharedAudio);
  }
 });
-window.addEventListener('domain:error', (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED' && !leavingAccount){leavePlaybackSession();audioEngine?.stop();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
+window.addEventListener('domain:error', async (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED' && !leavingAccount){leavePlaybackSession();audioEngine?.stop();clearPrivateContext();if(account)await purgeAccount(account.id);location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
 
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void checkMembership();});
 
 // Keep account/ensemble changes live even while the title has no library subscription.
-const accountEvents = accountSocket({withCredentials:true,transports:['websocket']});
+const accountEvents = accountSocket({autoConnect:!isOffline(),withCredentials:true,transports:['websocket']});
 accountEvents.on('connect',()=>{
   for(const id of unlockedEnsembles())accountEvents.emit('ensemble:join',id);
   void checkMembership();
@@ -4172,3 +4238,6 @@ const transcriptionUi=installTranscription({beforeListen:()=>!syncEnabled()||!pl
  const song:SongEntry={id:id??'transcription-preview-'+crypto.randomUUID(),title,xml,format:'musicxml',imported:!!id,localOnly:!id};privateSongs.push(song);await selectSong(song);
 }});
 window.addEventListener('pagehide',()=>transcriptionUi.dispose(),{once:true});
+
+window.addEventListener('offline',()=>accountEvents.disconnect());
+window.addEventListener('online',()=>{if(!leavingAccount)accountEvents.connect();});

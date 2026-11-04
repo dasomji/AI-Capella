@@ -1,3 +1,5 @@
+import { resolve, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
@@ -12,9 +14,10 @@ const app = new Hono();
 app.onError((error, c) => { logError('host.error', error); return c.json({error: 'Service unavailable. Please try again.'}, 500); });
 app.route('/', api);
 app.use('*', async (c, next) => { if (decodeURIComponent(c.req.path).endsWith('.map')) return c.notFound(); await next(); });
-app.use('*', serveStatic({ root: './dist/client' }));
+const buildRoot=resolve(process.env.LIGHTSCORE_BUILD_ROOT ?? './dist');
+app.use('*', serveStatic({ root: join(buildRoot,'client') }));
 // Runtime import: Start's Vite build owns the server entry.
-const entryPath = '../dist/server/server.js';
+const entryPath = pathToFileURL(join(buildRoot,'server/server.js')).href;
 const { default: start } = await import(entryPath);
 app.all('*', c => start.fetch(c.req.raw));
 export const server = serve({ fetch: (request, bindings) => { setSocketAddress(bindings.incoming); const headers = new Headers(request.headers); headers.set('x-lightscore-socket-ip', String(bindings.incoming.headers['x-lightscore-socket-ip'] ?? '')); return app.fetch(new Request(request, {headers}), bindings); }, port: env.PORT });

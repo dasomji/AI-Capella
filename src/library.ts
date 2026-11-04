@@ -1,3 +1,6 @@
+import { isOffline, setOffline } from './offline-state';
+import { readPrepared, readOfflineCatalog, writeOfflineCatalog, writePrepared, removePrepared, purgeEnsemble, offlineAccountId } from './offline-store';
+import { account, ensembleById } from './ensembles';
 import { randomId } from './uuid';
 import { unzipSync, strFromU8 } from "fflate";
 import { api, ApiError } from "./domain-client";
@@ -92,7 +95,58 @@ function stored(m: PieceMetadata): StoredSong {
     savedConfig: s.savedConfig,
   };
 }
+const prepared = new Map<string, {metadata: PieceMetadata; body: string}>();
+let generation = 0;
+export const isPrepared = (id: string) => prepared.has(id);
+export const offlineUsage = () => ({count: prepared.size, bytes: [...prepared.values()].reduce((n, r) => n + new Blob([JSON.stringify(r)]).size, 0)});
+export async function unpreparePiece(id: string) {
+  generation++;
+  const row = prepared.get(id); if (!row || !account) return;
+  await removePrepared(account.id, row.metadata); prepared.delete(id); notify?.();
+}
+export async function removeOfflineEnsemble() {
+  generation++;
+  const user = account?.id, ensemble = activeEnsemble(); if (!user || !ensemble) return;
+  await purgeEnsemble(user, ensemble, false); prepared.clear(); notify?.();
+}
+async function publicAssetsReady(signal?: AbortSignal) {
+  if (!('serviceWorker' in navigator) || import.meta.env.MODE === 'development') return;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let abort: (() => void) | undefined;
+  try {
+    await Promise.race([navigator.serviceWorker.ready,new Promise<never>((_,reject)=>{
+      timer=setTimeout(()=>reject(Error('Offline app assets are not ready')),30000);
+      abort=()=>reject(new DOMException('Cancelled','AbortError'));
+      signal?.addEventListener('abort',abort,{once:true});
+      if(signal?.aborted)abort();
+    })]);
+  } finally {clearTimeout(timer);if(abort)signal?.removeEventListener('abort',abort);}
+}
+export async function preparePiece(id: string, signal?: AbortSignal) {
+  if (isOffline()) throw Error('Please connect online');
+  const user = account?.id, epoch = generation, m = metadata.get(id);
+  if (!user || !m) return;
+  const response = await fetch(`/api/ensembles/${m.ensembleId}/pieces/${id}/versions/${m.contentHash}`, {signal, cache:'no-store'});
+  if (!response.ok) throw new ApiError('unavailable', response.status);
+  const body = await response.text();
+  await publicAssetsReady(signal);
+  if (signal?.aborted || epoch !== generation || offlineAccountId() !== user || !ensembleById(m.ensembleId)) return;
+  const row = {metadata:m, body};
+  await writePrepared(user,row,()=>epoch===generation && !signal?.aborted && !!ensembleById(m.ensembleId));
+  if (epoch !== generation) return;
+  prepared.set(id,row); notify?.();
+}
+async function refreshPrepared(rows: PieceMetadata[]) {
+  for (const id of [...prepared.keys()]) {
+    const m = rows.find(r => r.id === id), old = prepared.get(id)!;
+    if (!m) await unpreparePiece(id);
+    else if (m.contentHash !== old.metadata.contentHash || m.revision !== old.metadata.revision) await preparePiece(id);
+  }
+}
 export async function scoreBody(id: string): Promise<string> {
+  if (isOffline()) {
+    const row = prepared.get(id); if (!row) throw Error('Not available offline'); return row.body;
+  }
   let m = metadata.get(id);
   if (!m) {
     m = await api<PieceMetadata>(`${base()}/${id}`);
@@ -107,6 +161,9 @@ export async function scoreBody(id: string): Promise<string> {
       if (!r.ok) throw new ApiError("not_found", r.status);
       const text = await r.text();
       return text;
+    }).catch(error => {
+      if (!(error instanceof ApiError) || error.status >= 500) { setOffline(true); const row=prepared.get(id);if(row)return row.body; }
+      throw error;
     });
     bodies.set(m.contentHash, body);
     body.catch(() => bodies.delete(m!.contentHash));
@@ -114,6 +171,8 @@ export async function scoreBody(id: string): Promise<string> {
   return body;
 }
 export function clearLibrary() {
+  generation++;
+  prepared.clear();
   const stop = stopSubscription;
   stopSubscription = undefined;
   stop?.();
@@ -128,6 +187,8 @@ export function subscribeToSongs(
 ): () => void {
   clearLibrary();
   let closed = false;
+  const user = account?.id;
+  let fromCache = false;
   const deleted = new Map<string, number>();
   const currentEnough = (id: string, revision: number, versionNo: number) => {
     const previous = metadata.get(id);
@@ -139,25 +200,43 @@ export function subscribeToSongs(
         [...metadata.values()]
           .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
           .map(stored),
-        false,
+        fromCache,
       );
   };
   notify = emit;
   const refresh = async () => {
+    if(user && !prepared.size) {const saved=await readPrepared(user,ensemble);if(closed)return;saved.forEach(row=>prepared.set(row.metadata.id,row));}
     const rows = await api<PieceMetadata[]>(`/ensembles/${ensemble}/pieces`);
     if (closed) return;
     metadata.clear();
     rows.forEach((m) => metadata.set(m.id, m));
+    if(user && offlineAccountId()===user) await writeOfflineCatalog(user,ensemble,rows,()=>!closed && !!ensembleById(ensemble));
+    if(closed)return;
+    fromCache = false;
+    emit();
+    await refreshPrepared(rows);
+  };
+  const fallback = async (error?: unknown) => {
+    if (closed) return;
+    if (error instanceof ApiError && error.status < 500) { onError(error); return; }
+    setOffline(true); fromCache = true;
+    if (user) {
+      const rows = await readPrepared(user, ensemble);
+      const catalog = await readOfflineCatalog(user,ensemble);
+      if (closed) return;
+      catalog.forEach(m=>metadata.set(m.id,m));
+      rows.forEach(row => {prepared.set(row.metadata.id,row); metadata.set(row.metadata.id,row.metadata);});
+    }
     emit();
   };
-  const socket = io({ withCredentials: true, transports: ["websocket"] });
+  const socket = io({ autoConnect: !isOffline(), withCredentials: true, transports: ["websocket"] });
   socket.on("membership:changed", () =>
     window.dispatchEvent(new Event("membership:refresh")),
   );
   socket.on("connect", () => {
     socket.emit("ensemble:join", ensemble);
     window.dispatchEvent(new Event("membership:refresh"));
-    void refresh().catch(onError);
+    void refresh().catch(fallback);
   });
   socket.on("library:changed", async (event) => {
     if (event.ensembleId !== ensemble) return;
@@ -176,15 +255,27 @@ export function subscribeToSongs(
         }),
       );
       emit();
+      if(user && offlineAccountId()===user)await writeOfflineCatalog(user,ensemble,[...metadata.values()],()=>!closed && !!ensembleById(ensemble));
+      await refreshPrepared([...metadata.values()]);
     } catch (e) {
       onError(e);
     }
   });
+  socket.on('disconnect', () => { if (!navigator.onLine) void fallback(); });
+  socket.on('connect_error', () => { void fallback(); });
+  const offline = () => { socket.disconnect(); void fallback(); };
+  const online = () => { socket.connect(); void refresh().catch(fallback); };
+  window.addEventListener('offline', offline);
+  window.addEventListener('online', online);
   const rejoin = () => socket.emit("ensemble:join", ensemble);
   window.addEventListener("membership:changed", rejoin);
-  void refresh().catch(onError);
+  if (isOffline()) void fallback(); else {
+    void refresh().catch(fallback);
+  }
   const stop = () => {
     closed = true;
+    window.removeEventListener('offline', offline);
+    window.removeEventListener('online', online);
     socket.disconnect();
     window.removeEventListener("membership:changed", rejoin);
   };
