@@ -27,7 +27,6 @@ import { OverviewStrip } from './overview';
 import { colorForPart } from './palette';
 import { measureAtBeat, playedBeat, type Score } from './score';
 import { clearLibrary, scoreBody, deleteImportedSong, readScoreFile, saveSongOrder, songOrder, saveImportedSong, saveScanMarks, saveSongConfig, saveSongSections, subscribeToSongs, updateSongMetadata, type ScanMark, type SongFormat, type StoredSong, type VoiceClef } from './library';
-import { ensureSignedIn } from './firebase';
 const serverLibraryEnabled = true;
 import { animateRibbons, coverDataFromScore, drawCover, drawMark, prepareCanvas, type CoverData } from './artwork';
 import { icon } from './icons';
@@ -3652,9 +3651,6 @@ window.setInterval(() => {
     relaySchedule();
   }
 }, 1000);
-sync.onOffsetChange(() => {
-  if (audioEngine?.isPlaying() && sharedAnchor()) relaySchedule();
-});
 
 // Browsers let sound start only in answer to a touch, click or key: any of them lets it (and a
 // device that follows a rehearsal untouched gets a button for it, below).
@@ -3924,16 +3920,11 @@ async function runBootstrap() {
     libraryState = 'ready';
     renderLibraryHead();
     renderSongList();
-    void ensureSignedIn().then(refreshEnsembleNames).then(renderLibraryHead).catch(() => {});
+    void refreshEnsembleNames().then(renderLibraryHead).catch(() => {});
     return;
   }
-  const ensemble = ensembleById(currentEnsemble);
-  if (ensemble?.channel) sync.setSessionChannel(ensemble.channel);
 
   try {
-    // Sign in first: the security rules require request.auth != null (and a membership of the
-    // ensemble, joined with its code on the title screen).
-    await ensureSignedIn();
     void refreshEnsembleNames().then(renderLibraryHead).catch(() => {});
     initScan({ onImport: importScannedScore, onStatusChange: renderScanChip });
     if (feedbackOn(currentEnsemble)) {
