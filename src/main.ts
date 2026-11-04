@@ -2563,7 +2563,7 @@ function gotoBlock(): HTMLElement {
   block.innerHTML = `
     <label class="label" for="goto-input">${t('goToBar')}</label>
     <div class="goto-row">
-      <input id="goto-input" class="field measure-input" type="number" min="1" max="${maxBar}" step="0.1" inputmode="decimal" placeholder="1–${maxBar}" value="${typed}" />
+      <input id="goto-input" class="field measure-input" type="number" min="1" max="${maxBar}" step="1" inputmode="numeric" placeholder="1–${maxBar}" value="${typed}" />
       <button type="submit" class="btn primary">${t('go')}</button>
     </div>`;
   block.addEventListener('submit', (e) => {

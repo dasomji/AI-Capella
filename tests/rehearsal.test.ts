@@ -476,3 +476,16 @@ it('engine accents the first count-in click and clips replacement nodes at effec
  const d=engine.scheduleShared({...state,revision:1,effectiveAt},t,from+pulse-100,0,[]);
  expect(starts).toHaveLength(2);expect(starts.every(at=>at>=d.audioTime-(state.countInUntil-effectiveAt)/1000)).toBe(true);
 });
+
+it('replacement starting tones never start before the effective boundary',()=>{
+ const {engine}=fakeSharedEngine(),ctx=engine.context as any,starts:number[]=[];
+ const param=()=>({value:0,setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){},cancelAndHoldAtTime(){}});
+ const node=()=>({gain:param(),frequency:param(),Q:param(),connect(){return this;},start:(at:number)=>starts.push(at),stop(){},addEventListener(){}});
+ ctx.createOscillator=node;ctx.createGain=node;ctx.createBiquadFilter=node;
+ const now=performance.timeOrigin+performance.now();
+ const state={...s,status:'countingIn' as const,anchor:{beat:0,serverTime:now-1000},effectiveAt:now+300,startingTonesUntil:now+1000,countInUntil:now+3000};
+ // Only inspect tones; a later count-in must also remain after effectiveAt.
+ const result=engine.scheduleShared(state,t,now,0,[60]);
+ const boundary=result.audioTime-(state.countInUntil-state.effectiveAt)/1000;
+ expect(starts.length).toBeGreaterThan(0);expect(starts.every(at=>at>=boundary)).toBe(true);
+});
