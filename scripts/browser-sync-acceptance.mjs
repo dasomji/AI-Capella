@@ -298,6 +298,9 @@ try {
   const calmEnd=await hook(q);assert.equal(calmEnd.sharedScheduleCount,calm.sharedScheduleCount);assert.ok(Math.abs(calmEnd.schedulingDriftMs)<25);
   results.offset='passed: 80 ms output offset, no reschedule for 10 seconds';
   await q.locator('#player-menu-btn').click();await q.getByText('Settings',{exact:true}).click();await q.getByText('Output latency offset',{exact:true}).click();await q.getByRole('slider',{name:'Output latency offset'}).evaluate(el=>{el.value='0';el.dispatchEvent(new Event('change',{bubbles:true}));});await q.keyboard.press('Escape');
+  // The persisted page lifecycle must recreate an authorized session.
+  await q.evaluate(()=>{window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));});
+  await ready(q);await converge();await aligned();results.bfcache='passed: disposed session recreated and rejoined';
   // Real process restart, requested over local IPC to the owning harness.
   assert.ok(process.send,'Run through browser-isolated.mjs');
   const restarted=new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('restart timeout')),20000);process.once('message',m=>{clearTimeout(timer);m.error?reject(Error(m.error)):resolve();});});

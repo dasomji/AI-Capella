@@ -45,3 +45,16 @@ for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start
   try { await new Promise<void>((resolve,reject) => { socket.on('connect',resolve); socket.on('connect_error',reject); }); } finally { socket.close(); }
  } finally { process.kill(-child.pid!, 'SIGTERM'); await new Promise<void>(resolve => child.on('exit',()=>resolve())); }
 });
+
+test('standby admits HTTP while rehearsal ownership remains unavailable', {timeout:30000},async()=>{
+ const {default:pg}=await import('pg');const owner=new pg.Client({connectionString:process.env.DATABASE_URL});await owner.connect();
+ assert.equal((await owner.query('select pg_try_advisory_lock(714083,1) as locked')).rows[0].locked,true);
+ const base='http://localhost:23004';const child=spawn('npm',['start'],{detached:true,env:{...process.env,NODE_ENV:'test',PORT:'23004',BETTER_AUTH_URL:base,TRUSTED_ORIGINS:base,MAIL_TRANSPORT:'smtp'},stdio:'pipe'});
+ let logs='';child.stdout.on('data',v=>logs+=v);child.stderr.on('data',v=>logs+=v);
+ try{
+  let response:Response|undefined;
+  for(let i=0;i<100;i++){try{response=await fetch(base+'/readyz');if(response.ok)break;}catch{}await delay(100);}
+  assert.ok(response?.ok,logs);assert.equal((await response.json()).rehearsal,false);
+  const rehearsal=await fetch(base+'/readyz/rehearsal');assert.equal(rehearsal.status,503);assert.equal(rehearsal.headers.get('cache-control'),'no-store');
+ }finally{process.kill(-child.pid!,'SIGTERM');await new Promise<void>(r=>child.once('exit',()=>r()));await owner.end();}
+});
