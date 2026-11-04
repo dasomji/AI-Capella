@@ -137,7 +137,10 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     if(!ack) throw new Error('unavailable');
     if (ack.status === 'rejected') {
       this.notice(ack.code ?? 'invalid');
-      if (ack.code === 'stale') { if(ack.state) await this.apply(ack.state); else await this.snapshot(); }
+      if (ack.code === 'stale') {
+        try {if(ack.state) await this.apply(ack.state); else await this.snapshot();}
+        catch(error) {if(!(error instanceof Error) || error.message!=='apply_failed')throw error;}
+      }
       if (ack.code === 'session_expired') { this.snapshotApplied=false; this.setReady(false); }
     }
     return ack;

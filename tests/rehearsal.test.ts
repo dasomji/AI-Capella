@@ -532,7 +532,7 @@ it.each(['snapshot','reconnect'])('repairs failed stale-ack application via %s w
  const log=vi.spyOn(console,'error').mockImplementation(()=>{});
  const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000,()=>{},code=>notices.push(code));
  transport.subscribe(state=>{if(state.revision===1 && !failed){failed=true;throw Error('temporary fetch');}});
- await transport.join();await expect(transport.send({type:'stop'})).rejects.toThrow('apply_failed');
+ await transport.join();await expect(transport.send({type:'stop'})).resolves.toMatchObject({status:'rejected',code:'stale'});
  await vi.waitFor(()=>expect(transport.ready).toBe(true));
  expect(snapshots).toBe(1);expect(notices).not.toContain('invalid');
  transport.dispose();log.mockRestore();
