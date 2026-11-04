@@ -16,3 +16,6 @@ coverage
 **/.transcription-tmp
 **/coverage
 **/dist
+
+**/*.log
+**/.review-evidence
