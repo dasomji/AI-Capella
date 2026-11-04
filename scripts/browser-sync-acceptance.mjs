@@ -288,14 +288,13 @@ try {
   const rect=await p.locator('#overview').boundingBox(),x=beat=>rect.x+16+beat/80*(rect.width-32),y=rect.y+rect.height/2;
   await next(p,async()=>{await p.mouse.move(x(8),y);await p.mouse.down();await p.mouse.move(x(16),y,{steps:5});await p.mouse.up();});
   const loop=(await hook(p)).state.loop;assert.ok(Math.abs(loop.startBeat-8)<.1 && Math.abs(loop.endBeat-16)<.1,JSON.stringify(loop));
+  await p.locator('.play-btn').click();await status('playing');
   for(const testBpm of [113,77.7]){
-  await next(p,()=>action(p,'stop'));await setTempo(testBpm);
-  // Re-select the region so the canonical anchor uses its precise pointer-derived start.
-  await next(p,async()=>{await p.mouse.move(x(8),y);await p.mouse.down();await p.mouse.move(x(16),y,{steps:5});await p.mouse.up();});
-  assert.equal((await hook(p)).state.loop.enabled,true);
-  await p.locator('.play-btn').click();const looping=await status('playing');
-  const loopStart=looping.anchor.serverTime,span=(loop.endBeat-loop.startBeat)*60000/looping.bpm;
-  for(let wrap=1;wrap<=4;wrap++){await after(p,loopStart+span*wrap-300);const high=await Promise.all(pages.map(hook));assert.ok(high.every(s=>s.position>14),JSON.stringify(high.map(s=>s.position)));await after(p,loopStart+span*wrap+150);await aligned();const beat=(await p.evaluate(()=>window.__lightscoreSync.positionAtServerTime(window.__lightscoreSync.serverNow)));assert.ok(beat>=loop.startBeat-.02 && beat<loop.endBeat);const low=await Promise.all(pages.map(hook));assert.ok(low.every(s=>s.position<12),JSON.stringify(low.map(s=>s.position)));}
+  await setTempo(testBpm);const looping=await converge();
+  assert.equal(looping.loop.enabled,true);
+  const span=(loop.endBeat-loop.startBeat)*60000/looping.bpm;
+  const firstWrap=looping.anchor.serverTime+(loop.endBeat-looping.anchor.beat)*60000/looping.bpm;
+  for(let wrap=1;wrap<=4;wrap++){await after(p,firstWrap+span*(wrap-1)-300);const high=await Promise.all(pages.map(hook));assert.ok(high.every(s=>s.position>14),JSON.stringify(high.map(s=>s.position)));await after(p,firstWrap+span*(wrap-1)+150);await aligned();const beat=(await p.evaluate(()=>window.__lightscoreSync.positionAtServerTime(window.__lightscoreSync.serverNow)));assert.ok(beat>=loop.startBeat-.02 && beat<loop.endBeat);const low=await Promise.all(pages.map(hook));assert.ok(low.every(s=>s.position<12),JSON.stringify(low.map(s=>s.position)));}
   }
   results.g='passed: bars 3-4, four wraps each at 113 and 77.7 BPM';
   await q.locator('#player-menu-btn').click();await q.getByText('Settings',{exact:true}).click();
