@@ -237,3 +237,12 @@ it('library socket boundary ignores stale revisions, versions and post-delete ev
   stop();clearLibrary();
  }finally{vi.doUnmock('socket.io-client');vi.doUnmock('../src/domain-client');vi.unstubAllGlobals();}
 });
+
+it('cleans all title entry boundaries and rejects unsafe titles',async()=>{
+ const {optionalTitle,pieceTitle}=await import('../src/api/title');
+ expect(optionalTitle.parse(' \nA\u202e\u200b\ufeffB\r ')).toBe('AB');
+ for(const title of ['x'.repeat(201),'a\0b','\ud800'])expect(optionalTitle.safeParse(title).success).toBe(false);
+ expect(pieceTitle.safeParse(' \n ').success).toBe(false);
+ const {createPieceInput}=await import('../src/api/domain');
+ expect(createPieceInput.safeParse({title:'x'.repeat(201),content:{}}).success).toBe(false);
+});

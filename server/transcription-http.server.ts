@@ -1,3 +1,4 @@
+import { optionalTitle } from '../src/api/title';
 import { registerTranscriptionUi } from './transcription-ui.server';
 import { transcriptionUsage } from './usage.server';
 import type { Hono } from 'hono';
@@ -26,7 +27,7 @@ export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string
  const stream=await storage().get(s.object_key);return new Response(Readable.toWeb(stream) as ReadableStream,{headers:{'Content-Type':'application/octet-stream','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(s.original_filename??'original')}`,'X-Content-Type-Options':'nosniff','Content-Length':String(s.size),'Cache-Control':'no-store','Content-Security-Policy':"sandbox; default-src 'none'"}});
  });
  app.post('/ensembles/:ensemble/transcriptions',async c=>{
- const body=z.object({sourceObjects:z.array(z.string().min(1)).min(1).max(60),options:z.object({language:z.enum(['de','en','la','other']).optional(),title:z.string().trim().max(200).refine(s=>!s.includes('\0')&&s.isWellFormed()).optional()}).default({})}).strict().parse(await c.req.json());
+ const body=z.object({sourceObjects:z.array(z.string().min(1)).min(1).max(60),options:z.object({language:z.enum(['de','en','la','other']).optional(),title:optionalTitle.optional()}).default({})}).strict().parse(await c.req.json());
  const key=z.string().min(1).max(200).parse(c.req.header('idempotency-key'));
  const job=await createJob(c.get('user').id,c.req.param('ensemble'),key,body.sourceObjects,body.options);return c.json({id:job.id,state:job.state,stage:await processingPaused()?'processing_paused':job.state},201);
  });

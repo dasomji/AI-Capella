@@ -1,3 +1,5 @@
+import { optionalTitle } from '../src/api/title';
+import { sanitizeOriginalFilename } from './originals.server';
 import { assembleOffThread } from './assembly-worker.server';
 import { estimatedCost,priceTable } from './transcription-cost';
 import { OpenAITranscriptionProvider } from './openai-provider.server';
@@ -23,6 +25,7 @@ export async function createJob(user:string,ensemble:string,key:string,objects:s
  for(const id of objects){const s=(await db.query("select * from stored_objects where id=$1 and ensemble_id=$2 and kind='original' and state='ready'",[id,ensemble])).rows[0];if(!s)throw new DomainError('not_found',404);sources.push(s);pages+=s.provenance.pages;}
  if(sources.length>1 && sources.some(s=>s.content_type==='application/pdf'))throw new DomainError('mixed_sources',422);
  if(!pages || pages>env.TRANSCRIPTION_MAX_PAGES)throw new DomainError('page_limit',422);
+ options={...options,title:optionalTitle.parse(options.title??'')||optionalTitle.parse(sanitizeOriginalFilename(sources[0].original_filename??'original').replace(/\.[^.]+$/,''))||'Transcription'};
  const job=(await db.query('insert into transcription_jobs(started_by,ensemble_id,user_id,request_key,request_hash,options,model,prompt_version,provenance) values($2,$1,$2,$3,$4,$5,$6,$7,$8) returning *',[ensemble,user,key,requestHash,options,provider.model,provider.promptVersion,{sources:objects,promptSha256:provider.promptSha256??null}])).rows[0];
  let index=0;for(const s of sources)for(let page=1;page<=s.provenance.pages;page++)await db.query('insert into job_pages(ensemble_id,job_id,object_id,page_number,source_page,model,prompt_version,provenance) values($1,$2,$3,$4,$5,$6,$7,$8)',[ensemble,job.id,s.id,index++,page,provider.model,provider.promptVersion,{sourceObject:s.id,sourcePage:page}]);
  return job;

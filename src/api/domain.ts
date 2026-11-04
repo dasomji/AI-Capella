@@ -1,3 +1,4 @@
+import { pieceTitle } from './title';
 import { z } from "zod";
 export const capabilities = z
   .object({
@@ -89,7 +90,7 @@ export const contentInput = z.discriminatedUnion("format", [
 ]);
 export const createPieceInput = z
   .object({
-    title: z.string().trim().min(1).max(500),
+    title: pieceTitle,
     content: contentInput,
     idempotencyKey: z.string().min(1).max(200).optional(),
   })
@@ -156,7 +157,7 @@ export const settingsInput = z
       return;
     switch (v.op) {
       case "title":
-        schema = z.string().trim().min(1).max(500);
+        schema = pieceTitle;
         break;
       case "partName":
         schema = z.string().max(200);
