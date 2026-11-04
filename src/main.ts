@@ -351,7 +351,7 @@ let stopLandingRibbons: (() => void) | null = null;
  * song switches to the player.
  */
 function setViewMode(mode: 'landing' | 'library' | 'player') {
- if(mode!=='player'&&transcriptionPreviewMode){sessionMode=transcriptionPreviewMode;transcriptionPreviewMode=undefined;privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));renderModeControls();}
+ if(mode!=='player'&&app.classList.contains('mode-player')&&transcriptionPreviewMode){sessionMode=transcriptionPreviewMode;transcriptionPreviewMode=undefined;privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));renderModeControls();}
   if(mode === 'landing') renderLanding(true);
   app.classList.toggle('mode-landing', mode === 'landing');
   app.classList.toggle('mode-library', mode === 'library');
@@ -4163,7 +4163,7 @@ accountEvents.on('connect',()=>{
 accountEvents.on('membership:changed',()=>void checkMembership());
 accountEvents.on('disconnect',(reason)=>{if(reason==='io server disconnect')void checkMembership();});
 
-const transcriptionUi=installTranscription({beforeListen:()=>!syncEnabled()||!playerSession||confirm(tr('leaveRehearsal')),reviewClosed:()=>{privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));},socket:accountEvents,ensemble:()=>currentEnsemble,entry:document.querySelector('#transcription-entry')!,jobs:document.querySelector('#transcription-jobs')!,open:async(xml,title,id)=>{
+const transcriptionUi=installTranscription({beforeListen:()=>!syncEnabled()||!playerSession||confirm(tr('leaveRehearsal')),reviewCleanup:()=>{const existing=new Set(privateSongs.filter(song=>song.id.startsWith('transcription-preview-')).map(song=>song.id));return ()=>{privateSongs=privateSongs.filter(song=>!existing.has(song.id));};},socket:accountEvents,ensemble:()=>currentEnsemble,entry:document.querySelector('#transcription-entry')!,jobs:document.querySelector('#transcription-jobs')!,open:async(xml,title,id)=>{
  if(!id)transcriptionPreviewMode=sessionMode;leavePlaybackSession();audioEngine?.stop();sessionMode='solo';renderModeControls();
  privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));
  if(id){await scoreBody(id);const song=allSongs().find(s=>s.id===id);if(song){await selectSong(song);return;}}
