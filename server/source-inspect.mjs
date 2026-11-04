@@ -15,11 +15,15 @@ try {
  else throw Error('invalid_magic');
  let pages=1,width,height;
  if(type==='application/pdf') {
- const bytes=await readFile(path);if(!bytes.subarray(-1024).includes(Buffer.from('%%EOF')))throw Error('invalid_source');
+ const bytes=await readFile(path);if(!/%%EOF\s*$/.test(bytes.subarray(-1024).toString('latin1')))throw Error('invalid_source');
  const doc=await PDFDocument.load(bytes,{ignoreEncryption:false,updateMetadata:false});pages=doc.getPageCount();
  if(pages<1 || pages>maxPages) throw Error('page_limit');
  for(const page of doc.getPages()){const s=page.getSize();if(!Number.isFinite(s.width*s.height) || s.width<=0 || s.height<=0 || s.width*s.height>maxPixels) throw Error('pixel_limit');}
  } else {
+ const bytes=await readFile(path);
+ if(type==='image/png' && !bytes.subarray(-8,-4).equals(Buffer.from('IEND')))throw Error('invalid_source');
+ if(type==='image/jpeg' && !(bytes.at(-2)===255 && bytes.at(-1)===217))throw Error('invalid_source');
+ if(type==='image/webp' && bytes.readUInt32LE(4)+8!==bytes.length)throw Error('invalid_source');
  const meta=await sharp(path,{limitInputPixels:maxPixels,pages:1}).metadata();width=meta.width;height=meta.height;
  if((meta.pages??1)>1)throw Error('animated_image');
  if(!width || !height || width*height>maxPixels || (meta.pages??1)>1) throw Error('pixel_limit');

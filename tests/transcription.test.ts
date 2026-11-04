@@ -133,7 +133,7 @@ test('failure reasons, bounded automatic retry and explicit retry preserves comp
  for(const reason of ['provider_refusal','provider_timeout','rate_limited','invalid_output','truncated'] as const){
  const j=await job(e.id,lead.cookie,source.id);const worker=new TranscriptionWorker(new FakeProvider(()=>reason));
  for(let n=0;n<env.TRANSCRIPTION_MAX_ATTEMPTS;n++){await pool.query('update job_pages set next_attempt_at=$2 where job_id=$1',[j.id,new Date(0)]);await worker.tick();}
- const state=await view(e.id,lead.cookie,j.id);assert.equal(state.state,'failed');assert.equal(state.failure_reason,reason);assert.ok(state.pages[0].attempts<=env.TRANSCRIPTION_MAX_ATTEMPTS);
+ const state=await view(e.id,lead.cookie,j.id);assert.equal(state.state,'failed');assert.equal(state.failure_reason,reason);assert.equal(state.pages[0].attempts,['provider_timeout','rate_limited'].includes(reason)?3:1);
  await ok(`ensembles/${e.id}/transcriptions/${j.id}/retry`,'POST',{},lead.cookie);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
  }
  const second=await sharp({create:{width:17,height:16,channels:3,background:'white'}}).png().toBuffer();const src=await (await upload(e.id,lead.cookie,second)).json();
@@ -152,6 +152,7 @@ test('cancel and emergency pause retain work, revocation prevents provider invoc
  assert.equal((await request(`ensembles/${e.id}/originals/${source.id}`,'GET',undefined,lead.cookie)).status,404);
  await pool.query('update memberships set is_lead=true where ensemble_id=$1',[e.id]);
  await pool.query("insert into stored_objects(ensemble_id,object_key,kind,size,content_type,sha256,provenance,state,created_at) values($1,$2,'derived',1,'text/plain','derived','{}','ready',$3)",[e.id,`ensembles/${e.id}/derived/test`,new Date(0)]);
+ const liveKey=(await pool.query('select object_key from stored_objects where id=$1',[source.id])).rows[0].object_key;await pool.query("insert into object_deletions(object_key,created_at) values($1,$2) on conflict do nothing",[liveKey,new Date(0)]);
  assert.equal(await cleanupDerived(new Date()),1);await pool.query("update object_deletions set created_at=$1",[new Date(0)]);await cleanupObjects();assert.equal((await request(`ensembles/${e.id}/originals/${source.id}`,'GET',undefined,lead.cookie)).status,200);
 });
 test('worker process death recovers expired leases under a frozen non-UTC clock',async()=>{
@@ -160,12 +161,12 @@ test('worker process death recovers expired leases under a frozen non-UTC clock'
  let errors='';child.stderr.on('data',c=>{errors+=c;});
  const exited=new Promise(resolve=>child.once('exit',resolve));
  try{
- for(let i=0;i<150;i++){const p=(await pool.query('select state from job_pages where job_id=$1',[j.id])).rows[0];if(p.state==='running')break;await delay(20);}
+ for(let i=0;i<150;i++){const p=(await pool.query('select state from job_pages where job_id=$1',[j.id])).rows[0];if(p.state==='running' && (await pool.query('select 1 from provider_calls where job_id=$1',[j.id])).rowCount)break;await delay(20);}
  assert.equal((await pool.query('select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running',errors);
  child.kill('SIGKILL');await exited;
  await pool.query("update job_pages set lease_expires_at=now()-interval '1 second' where job_id=$1",[j.id]);const now=transcriptionClock.now;transcriptionClock.now=()=>new Date(Date.now()+600000);
  try{await new TranscriptionWorker().tick();}finally{transcriptionClock.now=now;}
- const done=await view(e.id,lead.cookie,j.id);assert.equal(done.state,'completed');assert.equal(done.pages[0].attempts,2);
+ const done=await view(e.id,lead.cookie,j.id);assert.equal(done.state,'completed');assert.equal(done.pages[0].attempts,2);assert.equal((await pool.query("select outcome from provider_calls where job_id=$1 order by started_at",[j.id])).rows[0].outcome,'abandoned');
  }finally{child.kill('SIGKILL');await exited;}
 });
 test('transcribe-only access cannot import, edit-only can import, and job admission limits persist',async()=>{
@@ -305,4 +306,34 @@ test('authorized retrier becomes the billable actor after initiator revocation',
  const j=await job(e.id,member.cookie,source.id);await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);
  await pool.query('update memberships set ai_transcription=false where ensemble_id=$1 and user_id=$2',[e.id,member.id]);
  await ok(`ensembles/${e.id}/transcriptions/${j.id}/retry`,'POST',{},lead.cookie);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+});
+test('cleanup failure cannot block transcription ticks',async()=>{
+ const {maintainTranscription}=await import('../server/transcription.server');const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);const worker=new TranscriptionWorker();
+ await maintainTranscription(worker,async()=>{throw Error('cleanup unavailable');});await worker.tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+});
+test('lease theft retains both provider calls and fences stale output',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);let entered!:()=>void,release!:()=>void;
+ const ready=new Promise<void>(r=>entered=r),gate=new Promise<void>(r=>release=r);const provider=new FakeProvider();const transcribe=provider.transcribePage.bind(provider);
+ provider.transcribePage=async(i,c,o,_signal)=>{entered();await gate;return transcribe(i,c,o,new AbortController().signal);};
+ const first=new TranscriptionWorker(provider).tick();await ready;
+ await pool.query("update job_pages set lease_expires_at=now()-interval '1 second' where job_id=$1",[j.id]);await new TranscriptionWorker().tick();release();await first;
+ const calls=(await pool.query('select * from provider_calls where job_id=$1',[j.id])).rows;assert.equal(calls.length,2);assert.ok(calls.every(c=>c.finished_at));assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+});
+test('emergency pause aborts in-flight calls without spending an attempt',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);let entered!:()=>void;const ready=new Promise<void>(r=>entered=r);const provider=new FakeProvider();
+ provider.transcribePage=async(_i,_c,_o,signal)=>{entered();return new Promise((_r,reject)=>signal.addEventListener('abort',()=>reject(Error('aborted')),{once:true}));};
+ const work=new TranscriptionWorker(provider).tick();await ready;env.TRANSCRIPTION_EMERGENCY_STOP='1';try{await work;}finally{env.TRANSCRIPTION_EMERGENCY_STOP='0';}
+ const p=(await view(e.id,lead.cookie,j.id)).pages[0];assert.equal(p.state,'queued');assert.equal(p.attempts,0);await new TranscriptionWorker().tick();
+});
+test('parallel uploads dedupe and cross-ensemble/idempotency mismatches fail',async()=>{
+ const {lead,e,source}=await setup();const same=await Promise.all([upload(e.id,lead.cookie,png),upload(e.id,lead.cookie,png)]);assert.deepEqual(await Promise.all(same.map(async r=>(await r.json()).id)),[source.id,source.id]);
+ const other=await ok('ensembles','POST',{name:'Other',kind:'band'},lead.cookie);
+ assert.equal((await request(`ensembles/${other.id}/transcriptions`,'POST',{sourceObjects:[source.id]},lead.cookie)).status,404);
+ const key=crypto.randomUUID();await job(e.id,lead.cookie,source.id,key);
+ const r=await fetch(base+`/api/ensembles/${e.id}/transcriptions`,{method:'POST',headers:{origin:base,cookie:lead.cookie,'content-type':'application/json','idempotency-key':key},body:JSON.stringify({sourceObjects:[source.id],options:{language:'de'}})});assert.equal(r.status,409);
+});
+test('polyglot image trailers and storage ceiling are rejected',async()=>{
+ const {lead,e}=await setup();const poly=await upload(e.id,lead.cookie,Buffer.concat([png,Buffer.from('<html/>')]));assert.equal(poly.status,422);
+ const limit=env.TRANSCRIPTION_STORAGE_MAX_BYTES;env.TRANSCRIPTION_STORAGE_MAX_BYTES=1;
+ try{const photo=await sharp({create:{width:23,height:23,channels:3,background:'blue'}}).png().toBuffer();const r=await upload(e.id,lead.cookie,photo);assert.equal((await r.json()).code,'storage_limit');}finally{env.TRANSCRIPTION_STORAGE_MAX_BYTES=limit;}
 });

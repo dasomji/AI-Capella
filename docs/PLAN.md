@@ -1531,3 +1531,7 @@ started/retried the job. A current authorized retrier replaces a departed initia
 for this purpose. Explicit retries are unbounded except active-job admission;
 no monetary budgets exist. Retry emits durable progress. Pauses return the page
 attempt to the queue without consuming the automatic attempt allowance.
+
+Regression additions reproduce reviewer cancellation/lease/crash/authorization/
+assembly probes, assert exact automatic retry counts, and seed a live original's
+aged outbox entry to make original-retention cleanup coverage non-vacuous.
