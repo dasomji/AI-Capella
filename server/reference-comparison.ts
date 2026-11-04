@@ -53,10 +53,9 @@ function parse(xml:string):Part[]{
  if(e.start||e.stop)out.ties.push(JSON.stringify([anchor,e.pitch,e.start,e.stop]));
  }
  // Compare voice streams separately, retaining multiplicity and staff boundaries.
- for(let m=0;m<measures.length;m++)for(const voice of new Set(merged.filter(e=>e.m===m).map(e=>e.voice))){
- const stream=merged.filter(e=>e.m===m&&e.voice===voice).map(e=>[round(e.at),e.pitch,round(e.duration)]).sort();
- measures[m].voices.push(JSON.stringify([voice.split(':')[0],stream]));
- }
+ const streams=new Map<string,{m:number;staff:string;notes:unknown[][]}>();
+ for(const e of merged){const key=JSON.stringify([e.m,e.voice]);let stream=streams.get(key);if(!stream){stream={m:e.m,staff:e.voice.split(':')[0],notes:[]};streams.set(key,stream);}stream.notes.push([round(e.at),e.pitch,round(e.duration)]);}
+ for(const stream of streams.values())measures[stream.m].voices.push(JSON.stringify([stream.staff,stream.notes.sort()]));
  const fingerprint=JSON.stringify([merged.filter(e=>!e.rest).map(e=>e.pitch).sort(),merged.map(e=>round(e.duration)).sort(),[...state].filter(([k])=>k.startsWith('clef'))]);
  const pitched=merged.filter(e=>!e.rest);const midis=pitched.map(e=>{const [step,alter,octave]=e.pitch.split(':');return Number(octave)*12+({C:0,D:2,E:4,F:5,G:7,A:9,B:11}[step as 'C']??0)+Number(alter);}).filter(Number.isFinite);
  const profile={pitches:pitched.map(e=>e.pitch),rhythms:merged.map(e=>String(round(e.duration))),clefs:[...state].filter(([k])=>k.startsWith('clef')).map(([,v])=>v),center:midis.length?midis.reduce((a,b)=>a+b,0)/midis.length:0};
