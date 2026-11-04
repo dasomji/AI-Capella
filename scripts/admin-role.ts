@@ -1,4 +1,6 @@
 import pg from 'pg';
+import {userInfo,hostname} from 'node:os';
+import {logError} from '../server/logger.server';
 export async function changeAdminRole(connectionString: string, email: string, grant: boolean) {
     const db = new pg.Client({ connectionString, connectionTimeoutMillis: 5000, query_timeout: 10000, statement_timeout: 5000 });
     await db.connect();
@@ -7,15 +9,14 @@ export async function changeAdminRole(connectionString: string, email: string, g
         const u = (await db.query('select id,email_verified from "user" where lower(email)=lower($1) for update', [email.trim()])).rows[0];
         if (!u || !u.email_verified)
             throw Error('A verified account is required');
-        if (grant)
-            await db.query("insert into platform_roles(user_id,role) values($1,'sysadmin') on conflict(user_id) do nothing", [u.id]);
-        else
-            await db.query('delete from platform_roles where user_id=$1', [u.id]);
-        await db.query("insert into audit_events(action,target_id,outcome,metadata) values($1,$2,'ok',$3)", ['admin.user.' + (grant ? 'grant' : 'revoke'), u.id, { targetType: 'user', source: 'server-cli', operator: process.env.USER ?? 'server' }]);
+        const changed = grant
+            ? await db.query("insert into platform_roles(user_id,role) values($1,'sysadmin') on conflict(user_id) do nothing", [u.id])
+            : await db.query('delete from platform_roles where user_id=$1', [u.id]);
+        await db.query("insert into audit_events(action,target_id,outcome,metadata) values($1,$2,'ok',$3)", ['admin.user.' + (grant ? 'grant' : 'revoke'), u.id, { targetType: 'user', source: 'server-cli', operator: userInfo().username, sudoUser: process.env.SUDO_USER ?? null, hostname: hostname(), changed: !!changed.rowCount }]);
         await db.query('commit');
     }
     catch (e) {
-        await db.query('rollback');
+        try {await db.query('rollback');} catch(rollbackError) {logError('admin.cli.rollback',rollbackError);}
         throw e;
     }
     finally {

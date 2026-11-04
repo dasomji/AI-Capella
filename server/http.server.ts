@@ -45,8 +45,8 @@ api.use("*", async (c, next) => {
     );
   }
   // Conceal the administration surface before origin/body validation, including encoded/unknown paths.
-  let accessPath=c.req.path;try {accessPath=decodeURIComponent(accessPath);}catch {/* Normal route validation owns malformed encodings. */}
-  if (/^\/(?:api\/admin|admin)(?:\/|$)/.test(accessPath) && !await adminSession(c.req.raw.headers)) {
+  let accessPath=c.req.path;try {accessPath=decodeURIComponent(accessPath).trim();}catch {/* Normal route validation owns malformed encodings. */}
+  if (/^\/(?:api\/admin|admin)(?:\s*\/|$)/i.test(accessPath) && !await adminSession(c.req.raw.headers)) {
     c.header("Cache-Control", "no-store");
     return c.req.path.startsWith("/api/") ? c.json({code:"not_found"},404) : c.html('<main><h1>404</h1><p>Not found</p></main>',404);
   }
