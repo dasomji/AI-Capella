@@ -5,10 +5,9 @@ import { pool } from './db/index.server';
 import { authorize, audit, DomainError, transaction } from './domain.server';
 import { uploadOriginal } from './originals.server';
 import { storage } from './storage.server';
-import { UploadSlots } from './upload-slots.server';
+import { uploadAdmission as slots } from './upload-admission.server';
 import { env } from './env.server';
 import { createJob,jobView,cancelJob,retryJob,processingPaused,transcriptionMetrics } from './transcription.server';
-const slots=new UploadSlots(env.SCORE_UPLOAD_GLOBAL_MAX,env.SCORE_UPLOAD_USER_MAX);
 export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string;email:string;name:string}}}>) {
  app.post('/ensembles/:ensemble/originals',async c=>{
  const slot=slots.take(c.get('user').id);if('code' in slot)return c.json({code:'upload_busy'},slot.code);
@@ -35,5 +34,5 @@ export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string
  const input=z.object({paused:z.boolean()}).strict().parse(await c.req.json());
  await transaction(async db=>{if(!(await db.query("select 1 from platform_roles where user_id=$1 and role='sysadmin'",[c.get('user').id])).rowCount)throw new DomainError('not_found',404);await db.query('insert into transcription_control(id,paused) values(1,$1) on conflict(id) do update set paused=$1,updated_at=now()',[input.paused]);await db.query("insert into audit_events(actor_id,action,outcome,metadata) values($1,'transcription.control','ok',$2)",[c.get('user').id,input]);});return c.json({paused:await processingPaused()});
  });
- app.get('/admin/transcription/metrics',async c=>{if(!(await pool.query("select 1 from platform_roles where user_id=$1 and role='sysadmin'",[c.get('user').id])).rowCount)throw new DomainError('not_found',404);const from=z.iso.datetime({offset:true}).parse(c.req.query('from')),to=z.iso.datetime({offset:true}).parse(c.req.query('to'));if(from>=to)throw new DomainError('invalid_range',422);return c.json(await transcriptionMetrics(new Date(from),new Date(to)));});
+ app.get('/admin/transcription/metrics',async c=>{if(!(await pool.query("select 1 from platform_roles where user_id=$1 and role='sysadmin'",[c.get('user').id])).rowCount)throw new DomainError('not_found',404);const from=z.iso.datetime({offset:true}).parse(c.req.query('from')),to=z.iso.datetime({offset:true}).parse(c.req.query('to'));if(new Date(from).getTime()>=new Date(to).getTime())throw new DomainError('invalid_range',422);return c.json(await transcriptionMetrics(new Date(from),new Date(to)));});
 }

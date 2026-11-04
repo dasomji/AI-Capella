@@ -14,8 +14,7 @@ import { pool } from "./db/index.server";
 import { env } from "./env.server";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import { logError, withRequestLog } from "./logger.server";
-import { UploadSlots } from "./upload-slots.server";
-const uploadSlots = new UploadSlots(env.SCORE_UPLOAD_GLOBAL_MAX, env.SCORE_UPLOAD_USER_MAX);
+import { uploadAdmission as uploadSlots } from "./upload-admission.server";
 export const api = new Hono();
 api.onError((error, c) => {
   logError("http.error", error, c.res.headers.get("x-request-id") ?? undefined);

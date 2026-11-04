@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, open, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, open, rm, readdir, lstat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { Worker } from 'node:worker_threads';
@@ -21,13 +21,14 @@ export async function uploadOriginal(user:string,ensemble:string,body:ReadableSt
  if(env.NODE_ENV==='development' && 'initialize' in store)await (store as import('./storage.server').S3Storage).initialize();
  await mkdir('.transcription-tmp',{recursive:true,mode:0o700});const dir=await mkdtemp('.transcription-tmp/upload-');const path=dir+'/source';
  const reader=body.getReader();const file=await open(path,'wx',0o600);const hash=createHash('sha256');let size=0;let first=Buffer.alloc(0);let limit=sourceLimits.pdf;
- const timer=setTimeout(()=>{void reader.cancel();},30000);
+ let timedOut=false;const timer=setTimeout(()=>{timedOut=true;void reader.cancel();},30000);
  try {
  while(true){const chunk=await reader.read();if(chunk.done)break;size+=chunk.value.length;
  if(first.length<5){first=Buffer.concat([first,Buffer.from(chunk.value.subarray(0,5-first.length))]);if(first.length===5 && first.toString()!=='%PDF-')limit=sourceLimits.photo;}
  if(size>limit)throw new DomainError('body_too_large',413);
  hash.update(chunk.value);await file.writeFile(chunk.value);
  }
+ if(timedOut)throw new DomainError('upload_timeout',408);
  await file.close();const info=await inspectSource(path);if(size>(info.type==='application/pdf'?sourceLimits.pdf:sourceLimits.photo))throw new DomainError('body_too_large',413);
  const digest=hash.digest('hex');
  return await transaction(async db=>{
@@ -44,6 +45,7 @@ export async function uploadOriginal(user:string,ensemble:string,body:ReadableSt
 }
 /** Only explicit outbox keys without live DB references, or explicitly selected derivatives. */
 export async function cleanupObjects(store:ObjectStorage=storage()) {
+ await cleanupStaging();
  const rows=await pool.query("select object_key from object_deletions where created_at<now()-interval '1 hour' and not exists(select 1 from stored_objects s where s.object_key=object_deletions.object_key)");
  for(const r of rows.rows){await store.delete(r.object_key);await pool.query('delete from object_deletions where object_key=$1',[r.object_key]);}
 }
@@ -55,4 +57,14 @@ export async function cleanupDerived(before:Date,store:ObjectStorage=storage()) 
  for(const row of rows)await db.query('insert into object_deletions(object_key) values($1) on conflict do nothing',[row.object_key]);
  return rows.length;
  });
+}
+
+export async function cleanupStaging(now=new Date()) {
+ let entries:string[];
+ try{entries=await readdir('.transcription-tmp');}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return;throw error;}
+ for(const name of entries.filter(name=>name.startsWith('upload-')).slice(0,100)){
+ const path='.transcription-tmp/'+name;
+ try{const info=await lstat(path);if(info.isDirectory() && info.mtimeMs<now.getTime()-3600000)await rm(path,{recursive:true,force:true});}
+ catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
+ }
 }

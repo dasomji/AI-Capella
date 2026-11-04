@@ -98,16 +98,31 @@ export function attachSockets(server: ServerType) {
       if(r.rowCount)socket.emit('transcription:progress',{ensembleId:ensemble,jobId:job});
     }
   };
-  let notificationClient:import('pg').PoolClient|undefined;
+  let notificationClient:import('pg').Client|undefined;
   let notificationsClosed=false;
-  void pool.connect().then(async client=>{
-    if(notificationsClosed){client.release();return;}
+  let notificationRetry:ReturnType<typeof setTimeout>|undefined;
+  const listenForProgress=async()=>{
+    if(notificationsClosed)return;
+    const {Client}=await import('pg');
+    const client=new Client({connectionString:env.DATABASE_URL,connectionTimeoutMillis:5000});
     notificationClient=client;
-    client.on('error',error=>transcriptionLogError('transcription.notifications',error));
-    client.on('notification',message=>{if(message.channel==='transcription_progress' && message.payload){const data=JSON.parse(message.payload);void deliverTranscription(data.ensemble,data.job).catch(error=>transcriptionLogError('transcription.progress',error));}});
-    await client.query('listen transcription_progress');
-  }).catch(error=>transcriptionLogError('transcription.listen',error));
-  const unsubscribeTranscription=()=>{notificationsClosed=true;if(notificationClient){const client=notificationClient;notificationClient=undefined;void client.query('unlisten transcription_progress').finally(()=>client.release());}};
+    let failed=false;
+    const recover=(error:unknown)=>{
+      if(failed)return;failed=true;
+      transcriptionLogError('transcription.notifications',error);
+      void client.end().catch(()=>{});
+      if(!notificationsClosed){notificationRetry=setTimeout(()=>{void listenForProgress();},1000);notificationRetry.unref();}
+    };
+    client.on('error',recover);
+    client.on('notification',message=>{
+      if(message.channel!=='transcription_progress' || !message.payload)return;
+      try{const data=JSON.parse(message.payload);void deliverTranscription(data.ensemble,data.job).catch(error=>transcriptionLogError('transcription.progress',error));}
+      catch(error){transcriptionLogError('transcription.notification_input',error);}
+    });
+    try{await client.connect();if(notificationsClosed){await client.end();return;}await client.query('listen transcription_progress');}catch(error){recover(error);}
+  };
+  void listenForProgress();
+  const unsubscribeTranscription=()=>{notificationsClosed=true;clearTimeout(notificationRetry);void notificationClient?.end().catch(error=>transcriptionLogError('transcription.close',error));};
   const unsubscribeLibrary = onLibraryChange(async (ensemble, changes) => {
     const recipients = [...connected].filter((s) =>
       s.rooms.has(`ensemble:${ensemble}`),
