@@ -36,9 +36,12 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     const sensitive=(await pool.query('select password as value from account where user_id=$1 union all select token as value from session where user_id=$1',[sys.id])).rows.map(r=>r.value).filter(Boolean);
     const {admin}=await import('../server/admin.server');
     const {api}=await import('../server/http.server');
-    const routes=api.routes.filter(r=>r.path.toLowerCase().startsWith('/api/admin')&&!r.path.includes('*'));
-    assert.equal(routes.length,admin.routes.filter(r=>!r.path.includes('*')).length,'Admin routes must be mounted exclusively through guarded router');
-    const guardedRoutes=admin.routes.filter(r=>!r.path.includes('*'));
+    // Hono wraps mounted handlers for onError; compare the full method/path multiset,
+    // including wildcard registrations, rather than function identity.
+    const actual=api.routes.filter(r=>/^\/api\/admin(?:\/|$)/i.test(r.path)).map(r=>r.method+' '+r.path).sort();
+    const expected=[...admin.routes.map(r=>r.method+' /api/admin'+(r.path==='*'?'/*':r.path)),'ALL /api/admin/*'].sort();
+    assert.deepEqual(actual,expected,'Only the existing terminal 404 fallback may sit outside the guarded router');
+    const guardedRoutes=admin.routes.filter(r=>r.method!=='ALL');
     for(const cookie of ['',member.cookie,lead.cookie,manager.cookie]) for(const route of guardedRoutes) {
       const path='/api/admin'+route.path.replace(':id',p).replace(':object',object);
       for(const variant of [path,path.toUpperCase(),path.replace('/admin','/%61dmin'),path.replace('/admin','/admin%20')]) for(const method of new Set([route.method,'HEAD','OPTIONS']))
