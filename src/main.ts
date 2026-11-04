@@ -520,7 +520,7 @@ window.setInterval(()=>{
  const joined=lateJoin(sharedState,now,timing);
  if(joined.status==='playing' && audioEngine.context.state==='running'){
   lastSharedDrift=audioEngine.sharedDriftMs(now,playerSession.clock.diagnostics!.offsetMs);
-  if(playerSession.clock.diagnostics!.uncertaintyMs<15 && Math.abs(lastSharedDrift)>30){const beat=positionAt(sharedState,now,timing);const delta=(secondsAt(Math.ceil(beat+.01),timing)-secondsAt(beat,timing))*timing.baseBpm/sharedState.bpm*1000;scheduleSharedAudio(now+(delta>=80 && delta<=300?delta:80));}
+  if(Math.abs(lastSharedDrift)>1000 || (playerSession.clock.diagnostics!.uncertaintyMs<15 && Math.abs(lastSharedDrift)>30)){const beat=positionAt(sharedState,now,timing);const delta=(secondsAt(Math.ceil(beat+.01),timing)-secondsAt(beat,timing))*timing.baseBpm/sharedState.bpm*1000;scheduleSharedAudio(now+(delta>=80 && delta<=300?delta:80));}
  }
  if(joined.status==='stopped')syncPlayButtons(false);
  if(syncDebug){let el=document.querySelector<HTMLElement>('#sync-debug');if(!el){el=document.createElement('pre');el.id='sync-debug';el.style.cssText='position:fixed;bottom:0;left:0;z-index:10000;background:var(--bg,#16151c);color:var(--ink,#eee);padding:8px;pointer-events:none';document.body.append(el);}el.textContent=JSON.stringify({offset:playerSession.clock.diagnostics?.offsetMs,uncertainty:playerSession.clock.diagnostics?.uncertaintyMs,drift:lastSharedDrift,revision:sharedState.revision});}
@@ -3694,7 +3694,10 @@ function updateSoundPrompt() {
   el.querySelector('span')!.textContent = syncEnabled() ? t('syncListen') : t('tapForSound');
   el.classList.add('show');
 }
-onAudioStateChange(updateSoundPrompt);
+onAudioStateChange(()=>{
+ updateSoundPrompt();
+ if(syncEnabled() && audioEngine?.context.state==='running')scheduleSharedAudio();
+});
 
 function startAudioTick() {
   if (audioTickIntervalId == null) audioTickIntervalId = window.setInterval(audioTick, AUDIO_TICK_INTERVAL_MS);
