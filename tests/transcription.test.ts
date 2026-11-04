@@ -4,7 +4,7 @@ import {
   invitationSchema,
   metadataSchema,
 } from "../src/api/domain";
-import { test, after } from "node:test";
+import { test, after, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { setTimeout as delay } from "node:timers/promises";
 import { io as connect } from "socket.io-client";
@@ -16,6 +16,13 @@ process.env.TRUSTED_ORIGINS = `http://localhost:${process.env.PORT}`;
 process.env.TZ = "America/New_York";
 const { server, io } = await import("../server/start");
 const { pool } = await import("../server/db/index.server");
+afterEach(async()=>{
+ // Each scenario owns its jobs; unfinished projection/admission fixtures must not
+ // become work claimed by the next scenario's worker.
+ await pool.query("update job_pages set state='cancelled',lease_owner=null,lease_expires_at=null where state in ('queued','running')");
+ await pool.query("update transcription_jobs set state='cancelled' where state in ('queued','running')");
+});
+
 const { captureMail } = await import("../server/mail.server");
 const { clock } = await import("../server/domain-http.server");
 const base = process.env.BETTER_AUTH_URL;
@@ -351,4 +358,8 @@ test('upload idle deadline expires a stalled body',async()=>{
 });
 test('parallel claim race invokes the provider only once for a page',async()=>{
  const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);let calls=0;const worker=new TranscriptionWorker(new FakeProvider(()=>{calls++;return 'success';},50));await Promise.all(Array.from({length:8},()=>worker.tick()));assert.equal(calls,1);assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+});
+test('worker refuses a model/prompt pin it does not serve',async()=>{
+ const {createJob}=await import('../server/transcription.server');const {lead,e,source}=await setup();const provider=new FakeProvider();provider.model='unserved';
+ const j=await createJob(lead.id,e.id,crypto.randomUUID(),[source.id],{},provider);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).failure_reason,'model_unavailable');assert.equal((await pool.query('select 1 from provider_calls where job_id=$1',[j.id])).rowCount,0);
 });
