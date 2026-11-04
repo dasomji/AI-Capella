@@ -473,6 +473,15 @@ test('persistent or hung heartbeat and stuck rendering release before lease expi
  pool.query=function(this:typeof pool,...args:any[]){if(String(args[0]).startsWith('update job_pages p set lease_expires_at'))return mode==='failed'?Promise.reject(Error('persistent heartbeat fixture')):new Promise(()=>{});return (query as any).apply(this,args);} as any;
  const provider=new FakeProvider(()=> 'success',10000);let aborted=false;
  const renderer=mode==='render'?{render:async(_input:any,signal:AbortSignal)=>{signal.addEventListener('abort',()=>{aborted=true;},{once:true});return new Promise<any>(()=>{});}}:undefined;
- const started=performance.now();try{await new TranscriptionWorker(provider,renderer).tick();assert.ok(performance.now()-started<2500);assert.equal(mode==='render'?aborted:true,true);assert.notEqual((await query.call(pool,'select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running');}finally{pool.query=query;env.TRANSCRIPTION_LEASE_MS=lease;}
+ const started=performance.now();try{await new TranscriptionWorker(provider,renderer).tick();assert.ok(performance.now()-started<2500);assert.equal(mode==='render'?aborted:true,true);assert.notEqual((await (query as any).call(pool,'select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running');}finally{pool.query=query;env.TRANSCRIPTION_LEASE_MS=lease;}
  }
+});
+
+test('worker upgrades legacy context once and then consumes checkpoint without replay',async()=>{
+ const {lead,e,source}=await setup();const j=await ok(`ensembles/${e.id}/transcriptions`,'POST',{sourceObjects:[source.id,source.id,source.id]},lead.cookie);
+ const provider=new FakeProvider();const transcribe=provider.transcribePage.bind(provider);const contexts:any[]=[];
+ provider.transcribePage=async(i,c,o,signal)=>{contexts.push(c);return transcribe(i,c,o,signal);};
+ const worker=new TranscriptionWorker(provider);await worker.tick();
+ await pool.query("update job_pages set metrics=metrics-'contextState' where job_id=$1",[j.id]);await worker.tick();await worker.tick();
+ assert.equal(contexts.length,3);assert.equal(contexts[1].length,1);assert.equal(contexts[1][0].contextState,undefined);assert.equal(contexts[2].length,1);assert.ok(contexts[2][0].contextState);assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
 });
