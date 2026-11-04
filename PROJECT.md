@@ -854,8 +854,8 @@ AI-Capella/
 │   ├── reorder.ts             # moving pieces in the repertoire by hand
 │   ├── intro.ts               # the introduction tours
 │   ├── library.ts             # Firestore-backed shared song storage, PIN verification, .mxl unzip
-│   ├── sync.ts                 # multi-device shared playback session: clock calibration + pub/sub
-│   ├── firebase.ts            # Firebase app/auth/Firestore initialization, anonymous sign-in
+│   ├── sync.ts                 # Solo playback compatibility model/helpers
+│   ├── firebase.ts            # disabled scan/feedback compatibility (no Firebase SDK)
 │   ├── firebaseConfig.ts      # Firebase web app config (not secret; see file comment)
 │   ├── pinGate.ts             # the PIN screen
 │   ├── scan.ts                # "Scan sheet music" sheet: pages, upload, progress, questions, result
@@ -1452,161 +1452,38 @@ Two playback sounds, chosen per device in the player ⋯ menu (`ai-capella-sound
   blob is parsed and before anything downstream (the parts panel, piano roll, sheet view) reads
   a part's name — the stored source data is never rewritten just to rename a voice.
 
-### 4.7 Synced multi-device playback (`sync.ts`, `main.ts`)
+### 4.7 Synced multi-device playback (`src/rehearsal/`, `main.ts`)
 
-One Firestore doc, `sessions/live`, holds the entire shared transport state — `songId`, `bpm`,
-`transpose`, `metronomeOn`, `loopEnabled`/`loopRegion`, the play/pause origin (`playing`,
-`originBeat`, `originServerTimeMs`), `countInBeats`/`countInPulseBeats` (the count-in described
-in §2/§4.4), and `freshStart` (whether the *next* Play should count in at all — see below).
-Every connected device subscribes to it via `subscribePlaybackState()`.
-Mute/solo/true-solo is deliberately *not* in this doc — see "Not synced" below. Only active in
-**Ensemble mode** (`syncEnabled()` = `isFirebaseConfigured && sessionMode === 'ensemble'`,
-`sessionMode` set from the title screen/`localStorage`, see §2) — in **Solo mode**,
-`pushState()` applies every change immediately and locally instead, the same fallback path used
-when there's no Firebase backend at all, and the calibration/subscription setup in the
-bootstrap is skipped entirely. The shared song *library* (a different Firestore collection,
-`subscribeToSongs()`) is unconditional on `isFirebaseConfigured` alone, unaffected by this —
-Solo mode only opts out of playback sync.
+Together owns an authenticated Socket.IO connection to `/rehearsal` for the active
+account and ensemble. Every current member can control playback; piece editing
+still requires its separate capability. Typed commands carry a UUID, base revision,
+ensemble, and (where applicable) immutable piece/version. The server serializes
+commands, persists a complete canonical state in PostgreSQL and broadcasts it to
+all members including the sender. Stale revisions receive the latest snapshot;
+commands are never buffered for replay after reconnect.
 
-`countInBeats`/`countInPulseBeats` are **required fields, not optional ones**, specifically
-because `publishPlaybackState()` is a Firestore *merge* write: a field left out of a patch keeps
-its previous value in the shared doc rather than resetting. Every `publishPlayingAt()` call that
-starts playback without an intentional count-in (BPM/transpose-while-playing, seek-while-playing)
-explicitly zeroes both fields — omitting them would let a stale count-in from an earlier fresh
-Play silently reattach itself to an ordinary tempo tweak, turning it into a multi-second
-count-in-then-delay. Only `togglePlay()`'s actual Play branch computes a real value, from the
-target measure's own time signature. A count-in also needs real *lead time* before the music's
-start instant — `computeFutureOriginServerTimeMs()` takes an `extraLeadMs` parameter for
-exactly this, since the fixed 750ms sync buffer alone is nowhere near long enough to fit a
-multi-second count-in before playback begins.
+The canonical anchor is a beat and server timestamp. Accepted changes normally
+become effective 400 ms in the future. Tempo changes preserve the position at that
+effective instant, integrating the score's tempo map. Loop anchors, starting tones
+and count-in grids share the same timeline. Late join skips expired pre-roll.
+The server publishes stopped at the natural end. Server startup recovers moving
+sessions as paused at their recovery-time position; playback never auto-resumes.
 
-`freshStart` follows the same required-field, same merge-write-staleness reasoning: it's `true`
-after a Stop, a paused seek (a ruler/staff-ruler grid-lock tap or Measure-jump-Go), or a fresh
-song selection, and `false` after a plain Pause — every site that publishes `playing: false`
-sets it explicitly. `togglePlay()`'s Play branch reads it (alongside `metronomeOn` and a valid
-target measure) to decide whether *this* Play actually counts in — a Pause→Play resume from
-wherever playback stopped should never re-trigger the count-in, only a genuinely new start
-should. Read locally, not round-tripped through a publish/subscribe cycle for the read itself.
-One easy-to-miss detail: `currentStateSnapshot()` — the full-state fallback `pushState()` uses
-in Solo mode (no Firebase) — must also read the live `freshStart` variable rather than a
-hardcoded value, or Solo mode (the app's default, no-backend mode) would silently reset
-`freshStart` to `true` on every interaction and the whole feature would do nothing there.
+Each client calibrates its clock with timed Socket.IO pings, retaining low-RTT
+samples and reporting uncertainty. Controls require an authorized snapshot and a
+usable clock (uncertainty at most 100 ms). Reconnect, visibility, audio resume and
+sleep detection trigger calibration. The audio engine maps server instants onto
+AudioContext time, schedules notes against the tempo map and checks drift.
+Suspended audio displays a tap-to-listen banner. Device output-latency correction
+is adjustable from −500 to 500 ms; positive values schedule earlier.
 
-**The hard part: making Play land at the same real instant, not just the same logical beat.**
-Broadcasting "play now" doesn't work — Firestore's realtime updates don't arrive at every
-device at the same moment (latency varies, worse on the long-polling fallback `firebase.ts`
-already falls back to on restrictive networks), so "start as soon as the update arrives" would
-make devices start audibly out of sync with each other. Instead, a device that presses Play
-broadcasts a **future** instant (`computeFutureOriginServerTimeMs()`, `Date.now() + offset +
-750ms`) rather than "now," and every device — including the one that pressed Play — translates
-that shared instant into its own `AudioContext` clock and schedules `AudioEngine.play()`'s
-`startAtEpochMs` to begin exactly then (see §4.4). The 750ms buffer just needs to comfortably
-exceed normal propagation latency without feeling laggy.
-
-**Clock calibration.** Translating a shared server-time instant into "when is that on *my*
-clock" requires knowing the offset between this device's `Date.now()` and true server time —
-device clocks aren't perfectly synced, and can drift or jump (laptop sleep, mobile tab
-suspension). `calibrateClockOffset()` does an NTP-style round-trip measurement: write a
-per-device Firestore doc (`sessions/clockPing_<uid>` — a *shared* calibration doc would let two
-devices' concurrent writes corrupt each other's readings) with a `serverTimestamp()` and time
-that write's round trip: the server stamps the document while handling the write, so its clock
-then is estimated at the write's midpoint. The stamp is read back afterwards
-(`getDocFromServer`, bypassing the local cache), outside the timing — counting the read in, as
-this did until October 2026, put every device's estimate about half a read late, tens of
-milliseconds that differed from device to device and network to network. A single sample's
-error is bounded by roughly half its round-trip time, and real network latency is rarely
-symmetric, so this repeats the measurement `CALIBRATION_SAMPLES` (6) times and keeps whichever
-sample had the lowest round-trip time — the standard NTP-client mitigation. `startPeriodicCalibration()`
-runs this on load, every 5 minutes, and on `visibilitychange`; after a round where every sample
-failed it tries again in 10 s rather than 5 minutes. When a new round moves the offset by more
-than 30 ms (`onOffsetChange`), a playing device lays its schedule again (below). Every
-synced "start playing" write (Play, seek/BPM/transpose while playing) awaits
-`ensureCalibrated()` first, which resolves once that first attempt has finished — otherwise the
-very first Play right after the app loads could race the initial calibration and broadcast
-against the default, unmeasured `offsetMs` of 0. A calibration write that keeps failing (e.g. a
-Firestore rule that doesn't cover `sessions/clockPing_*`, see §5) logs a console warning rather
-than failing loudly, since it degrades to "offset stays 0" instead of breaking anything outright.
-
-**State ownership.** Every *synced* control in `main.ts` — Play/Pause/Stop, BPM, transpose, seek,
-metronome, loop, song selection — calls `pushState()` with a patch and does nothing else
-locally; `applyPlaybackState()`, driven only by the `onSnapshot` callback (including the
-writer's own near-instant optimistic echo), is the single place that actually mutates local
-state and calls into `audioEngine`/`pianoRoll`. This is the same pattern the shared song
-library already used for deletion (every device, including the one that clicked delete, only
-updates once Firestore reflects it), applied consistently to the whole transport instead of
-just one action. A consequence: a late joiner or a reconnect needs no special-case code at
-all — the first snapshot after subscribing runs through the exact same function, which
-recomputes the live position from a possibly-minutes-old `originServerTimeMs` anchor and joins
-already in sync. Mute/solo/true-solo is the one exception: it mutates `partMix` and calls
-`audioEngine.setPartMixState()`/`pianoRoll.setPartMix()` directly, never through `pushState()`,
-since it's local-only (see "Not synced" below) — nothing to publish or wait on an echo for.
-
-Two write shapes matter for correctness:
-- **Timing writes** (anything that starts, stops, or moves playback, or changes BPM/transpose
-  while playing) always carry the full `{playing, originBeat, originServerTimeMs, bpm,
-  transpose}` group in one call, never split across separate updates. This is the single most
-  important correctness rule in the design: Firestore's per-field merge means two devices'
-  *partial* concurrent writes could combine a winning `bpm` from one with a losing `originBeat`
-  from another into an incoherent state. Sending the whole group atomically means whichever
-  write lands last, it lands whole.
-- **Simple writes** (loop region, metronome, BPM/transpose while paused) just touch the field(s)
-  that changed.
-- `applyPlaybackState()` also diffs incoming timing fields against what it last applied and only
-  touches `AudioEngine` when they actually changed — an update that only changed the metronome,
-  say, must *not* trigger a reschedule, or every remote toggle would audibly retrigger every
-  currently-sounding note (`AudioEngine.play()` always clears and re-attacks the full schedule).
-
-**Without Firebase configured**, `pushState()` applies changes immediately and locally instead
-of publishing (single-device fallback, matching the app's pre-sync behavior) — a "start
-playing" patch has its origin timestamp zeroed in that case, which makes `AudioEngine.play()`
-take its normal "as soon as possible" path instead of waiting for a sync instant nothing else
-is listening for.
-
-**Not synced**, and deliberately so:
-- **Mute/solo/true-solo.** `partMix` lives entirely in local `main.ts` state and is never
-  written to `sessions/live` at all — each device picks which voices *it* wants to hear
-  independently (e.g. a soprano isolating their own part via true-solo while everyone else still
-  hears the full mix), without affecting anyone else's playback. It resets to all-`normal`
-  whenever `loadSongLocally()` runs (a fresh song, on this device, gets a fresh mix), driven
-  directly by the mute/solo/true-solo click handlers rather than `pushState()`.
-- **Loop/end-of-piece wraparound** isn't written to the shared doc either, but in a rehearsal
-  every device works out the same instant for it from the shared start (`sharedAnchor()`: the
-  last start, or the latest round of the loop since), so they come round together. (It used to be
-  local, each device wrapping when its 200 ms tick noticed — up to 200 ms apart.)
-- **Zoom, scroll position, and solo-ducking volume** remain personal per-device preferences,
-  never written to the shared doc at all.
-
-**Keeping devices together (October 2026).** Devices in a rehearsal started up to a second apart,
-and now and then one hung. The causes and what now guards against each:
-- **A new audio context per song.** A browser lets a context make sound only once the page has
-  been touched, and a fresh one takes a moment to get its output going; a device following the
-  rehearsal got its song (and context) from someone else's tap, so it sounded late by that
-  moment -- or, on an iPhone, not at all until touched, its light frozen with it. There is now
-  one context for the page's life (`audioContext()` in `audioEngine.ts`), unlocked by the first
-  touch, click or key anywhere (`unlockAudio`); song engines share it and only disconnect their
-  output when replaced.
-- **A schedule laid on a clock that stood still.** Pause used to suspend the context, and Play
-  resumed it without waiting -- `play()` read the frozen `currentTime` and laid the music on it,
-  late by however long the output took to wake. Pause now keeps the context running (it rests
-  only after 90 s, `IDLE_SUSPEND_MS`), and `play()`, finding it not running, lays the schedule
-  the moment it runs (`statechange`), from the shared instant -- a late start joins at the right
-  place. Until then the light follows the wall clock (`wallBeat`), and after 0.7 s a button
-  "Tippen, um den Ton einzuschalten" offers the touch the browser wants (`#sound-prompt`).
-- **States applied out of order.** `applyPlaybackState()` is async (loading a song takes a
-  while); a second state arriving meanwhile could finish first and the older land last --
-  stopping a device that should play, or loading the song twice. States are now applied one at
-  a time, the newest winning (each is the whole session).
-- **Nothing noticed a device falling out of step.** Once a second, a playing device in a
-  rehearsal holds its audio clock against the page's (`clockDrift()`, from
-  `getOutputTimestamp()` where there is one); parted by more than 50 ms twice running -- the
-  output stalled, the audio clock runs off -- it lays its schedule again from the shared timeline
-  (`relaySchedule()`).
-Tested with two browsers against the emulator (start, a 700 ms output stall, Play after a rest, a
-song chosen by the other device, a loop coming round, a Safari-like device whose sound only a
-touch can start): within 20 ms of each other throughout, the stall caught within two seconds. Two
-devices' real offsets on different networks add the calibration's error (above, typically 10-30
-ms). Many loudspeakers in one room stay audible as an echo from about 10 ms apart -- sound itself
-takes 9 ms over 3 m -- so for a room one device playing aloud is still the cleanest.
+Solo opens no rehearsal socket. Voice mute/solo, view, zoom and output correction
+remain device-local. Account, ensemble and mode changes dispose the shared owner.
+`?debug=sync` exposes clock/revision diagnostics and the read-only
+`window.__lightscoreSync` timing hook. `npm run test:browser:sync` runs three real
+accounts in headless Chromium against a built app and disposable database.
+Measurements are scheduled starts and browser positions, not acoustic output:
+Bluetooth, Safari and physical devices require separate hardware validation.
 
 ### 4.8 Sheet music view (`staffView.ts`)
 

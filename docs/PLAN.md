@@ -1078,3 +1078,151 @@ asserts no new voices are queued until calibration becomes usable. After this
 last change, typecheck, all 93 unit tests, secret scanning, Together/latency
 browser checks and musical smoke were rerun. Real PostgreSQL timing selection
 also forces a stale derivation version and verifies the lazy update is persisted.
+
+### Phase 3e-2 — legacy retirement and browser acceptance (2026-11-04)
+
+Work is confined to the production fork, branch `production-v1`. Removed the
+Firestore playback listener/patch paths, per-device clock-ping implementation,
+legacy channel selection and unreferenced storage stubs. `src/sync.ts` now only
+contains the Solo compatibility model/helpers. `src/firebase.ts` and the remaining
+`legacy-store.ts` exports are still referenced by retained scan/feedback code;
+those services are not migrated here. PIN-gate and ensemble code hashing were
+already absent. `rules-test/`, `functions/` and `omr-service/` remain untouched.
+The client grep audit is `.review-evidence/phase3e2-legacy-audit.txt`.
+
+`npm run test:browser:sync` uses a built `start` server, disposable PostgreSQL and
+Mailpit, three real accounts and a 20-bar score with tempo marks at bars 1 and 5.
+B/C have no capabilities. The default browser command includes the acceptance
+suite in addition to the existing design and sync checks. Server restart uses a
+local harness IPC request, not a test HTTP endpoint. The diagnostic hook remains
+read-only and adds cloned canonical state/timing, scheduled count-in clicks and
+AudioEngine drift. No command injection API is exposed to browser code.
+
+A deterministic regression found that a simultaneous wall/performance clock jump
+left calibration usable until the next timer. The clock now invalidates on a
+monotonic gap over three seconds as well as mismatched clock deltas, before a
+control or scheduling operation can use it. The new unit regression failed before
+the fix and passes after it (`303d229`).
+
+Browser actions use bounded condition waits (15 s default, 20 s calibration),
+server-time boundary waits and revision convergence. Mail/server startup poll
+bounded external readiness. There are no scenario retries or fixed settling
+sleeps. Initial harness failures (invitation key, responsive control selectors,
+and checking the library's connecting status while the player was open) remain
+in `.review-evidence/phase3e2-browser-*.log`; they are not application defects.
+
+Final scenario measurements and complete validation results follow below.
+
+The bounded offline browser probe also found that Chromium retained the existing
+WebSocket on `context.setOffline(true)` and the client remained ready. Failure
+state is preserved in `.review-evidence/phase3e2-offline-red.json`. PlayerSession
+now explicitly disconnects on the browser offline event and reconnects on online,
+with listener cleanup at disposal and a navigator guard on sends. Reconnect still
+requires calibration and an authorized snapshot; no offline commands are queued.
+
+A final reference audit also removed `src/playback-transport.ts` (its local pub/sub
+had no subscribers), its obsolete leader-clear patch and the unused Firebase
+configuration flag. No Firebase SDK dependency remains in the client.
+
+The shared-tablet browser regression caught two logout leftovers: the account's
+ensemble key survived, and `pagehide` recreated its deleted playback-place key
+while navigating away. `noteSeen`/`notePlace` now stop writing once account exit
+begins; successful signout also removes the account's ensemble key. The captured
+failure is `.review-evidence/phase3e2-logout-red.json`. B then signs in in the same
+context; assertions check A's room closed, its diagnostic owner disappeared,
+A-keyed storage is gone, B's identity is active, and A's private ensemble is absent.
+
+Inspection of the first fully passing browser evidence found a musical boundary
+bug: a one-bar 4/4 count-in scheduled only three clicks. Repeated subtraction of
+fractional pulse lengths at epoch-ms magnitude rounded the downbeat just below
+its lower bound. The engine now generates click times by integer pulse index from
+the canonical end, with a 0.001 ms numeric boundary tolerance. A unit regression
+checks four clicks, the exact downbeat and late-join clipping; browser scenario f
+now requires all four scheduled clicks before checking their shared grid and
+survival through a metronome toggle.
+
+Measured focused acceptance after all four fixes (headless Chromium, this local
+machine; **scheduled starts, not acoustic output**):
+
+| Scenario | Result / measured evidence |
+| --- | --- |
+| a — three-client start, 10 runs | mean/p95/max pairwise scheduled-start difference **0/0/0 ms** (limit 50 ms); reported start uncertainties **3.01–3.12 ms** |
+| b — ordinary member controls | pause, seek to bar 6 and tempo accepted; valid rename rejected **403**, stored title unchanged |
+| c — concurrent controls | commands dispatched **0.10 ms** apart; identical complete state/revision on all three clients |
+| d — late join | bar 6, after the tempo mark; AudioEngine position difference **9.80 ms**; no count-in clicks replayed |
+| e — effective tempo change | sampled after effective time +1 s; position difference **1.21 ms** |
+| f — count-in + starting tones | **4 clicks**, identical server-time grid; metronome toggle retains future clicks and pre-roll origins; position difference **7.84 ms** |
+| g — loop bars 3–4 | actual positions sampled on both sides of **2 wraps**; pairwise differences **12.94 / 16.14 ms** |
+| h — offline | connecting badge, disabled controls, **0 offline commands**; A's stop applied on reconnect; paused position difference **0 ms** |
+| i — sleep/audio resume | suspension banner/tap, hidden→visible, wall-only and simultaneous wall/performance 10-minute jumps; **0 immediate sleep commands**; position differences **5.06 / 7.83 ms** |
+| j — real server restart | connecting→paused, recovery beat matches the previous timeline at recovery time; paused position difference **0 ms**; play works afterward |
+| k — revocation | C leaves Together, sees membership-removal explanation; **0 further commands** |
+| l — shared device | A's room closes; A owner/global and account-keyed storage absent; B signs in, with no A-private ensemble |
+| m — Solo isolation | B plays, seeks and changes tempo; **0 commands**, A's canonical state unchanged |
+| n — natural end | all stop at beat **80**, position difference **0 ms**; fresh join sees stopped |
+
+Position measurements compare each actual AudioEngine position with the shared
+musical timeline at its sampled server time, then compare those score-time errors
+between clients (maximum **16.14 ms** in this focused run). Each client must first
+be within 25 ms of the canonical timeline; pairwise differences must be ≤50 ms.
+Raw starts, uncertainties, clicks, positions and dispatch span are saved in
+`.review-evidence/browser/sync-acceptance.json` (replaced by each successful run).
+The 0 ms scheduled-start result means clients chose the same future instant; it
+does not imply zero loudspeaker skew.
+
+Limitations: no microphone/acoustic measurement, Safari/iOS device run, Bluetooth
+output test or arbitrary network-asymmetry guarantee. Output hardware and room
+acoustics still require device-local latency adjustment and physical validation.
+Visibility/clock jumps use explicit browser overrides and AudioContext suspension;
+they are deterministic lifecycle simulations, not an operating-system sleep test.
+No scenario remains deferred in this suite. No scenario retry was needed.
+
+Final complete `npm run test:browser` also passed the existing design/capability
+matrix and the original two-account sync test, then all a–n acceptance scenarios.
+The late-join scenario was strengthened to play an actual count-in/starting-tone
+window before C joins; neither pre-roll is replayed. Final full-run measurements:
+
+| Measurement | Result |
+| --- | --- |
+| 10 three-client scheduled starts, mean / p95 / max | **0 / 0 / 0 ms** |
+| Reported uncertainties during those starts | **2.96–3.14 ms** |
+| Late join in changed-tempo section, pairwise position | **5.72 ms** |
+| Tempo change, after effective time +1 s | **10.25 ms** |
+| Four-click count-in grid difference | **0 ms** |
+| Loop, first / second wrap position difference | **4.26 / 2.46 ms** |
+| Sleep recovery, wall-only / both-clock jump | **10.47 / 6.24 ms** |
+| Maximum pairwise AudioEngine position difference across samples | **10.47 ms** |
+| Concurrent-control dispatch separation | **0.10 ms** |
+
+These are local headless Chromium schedule/position measurements with a 50 ms
+acceptance ceiling, not acoustic-output measurements. The earlier focused table
+above is retained as a separate run rather than silently replacing its values.
+
+The final musical smoke initially exposed an old test assumption after password
+reset: it tried to click the previously open sample without choosing the sample
+library again. The new logout privacy behavior correctly clears that saved place.
+The smoke now explicitly clicks “View samples” after reset/sign-in; its original
+failure is retained in `.review-evidence/phase3e2-musical-smoke.log`. Playback,
+notation and PDF export had already passed before that selector failure.
+
+Final checks (all passed):
+
+- `npm run typecheck`.
+- `npm test`: **95/95**; also **95/95** with `TZ=America/New_York`.
+- `npm run build`: built `start` artifacts through the browser harness and secret
+  scanner; final positive-control builds passed.
+- `npm run test:integration`: **38/38**, no skips, including real process recovery,
+  auth/tenant boundaries and large-score timing extraction.
+- `npm run test:browser:sync`: all **14 scenarios a–n** passed after the fixes.
+- `npm run test:browser`: full design/language/device/capability matrix, existing
+  two-account scenario and the strengthened three-account acceptance suite passed.
+- `BROWSER_SCRIPT=scripts/browser-smoke.mjs npm run test:browser`: playback,
+  staff, PDF (**121435 bytes**), reset/sign-in and player themes passed; zero
+  browser errors and zero forbidden external requests.
+- `npm run check:secrets`: positive control detected; client artifacts clean;
+  no public source maps.
+- `npm run db:generate`: no schema changes / no migration drift.
+- `git diff --check`: passed. Retirement directories unchanged.
+
+All work is committed locally on `production-v1`. No push, PR, deployment,
+external provisioning, paid provider call or real email delivery was performed.
