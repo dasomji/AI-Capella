@@ -399,7 +399,7 @@ test('usage sysadmin gate and SQL DST half-open buckets retain failed attempts',
  assert.equal((await request(path)).status,401);
  await pool.query("insert into platform_roles(user_id,role) values($1,'sysadmin')",[lead.id]);
  assert.equal((await request('admin/transcription/usage?from=2026-03-08&to=2026-03-09','GET',undefined,lead.cookie)).status,422);
- assert.equal((await request('admin/transcription/usage?from=2025-01-01T00:00:00Z&to=2026-02-01T00:00:00Z','GET',undefined,lead.cookie)).status,422);
+ const excessive=await request('admin/transcription/usage?from=2025-01-01T00:00:00Z&to=2026-02-01T00:00:00Z','GET',undefined,lead.cookie);assert.equal(excessive.status,422);assert.match((await excessive.json()).message,/366 days/);
  const page=(await pool.query('select id from job_pages where job_id=$1',[j.id])).rows[0];
  for(const [i,instant] of ['2026-03-08T04:59:59Z','2026-03-08T05:00:00Z','2026-03-09T03:59:59Z','2026-03-09T04:00:00Z'].entries())await pool.query(`insert into provider_calls(job_id,page_id,attempt,lease_owner,started_at,finished_at,outcome,model,prompt_version,usage,estimated_cost) values($1,$2,$3,$4,$5::timestamptz,$5::timestamptz+$3::int*interval '1 second','failed','usage-fixture','v1',$6,$7)`,[j.id,page.id,i+1,crypto.randomUUID(),instant,{inputTokens:10,outputTokens:20},.25]);
  const {usageSQL}=await import('../server/usage.server');
@@ -426,6 +426,7 @@ function skewDate(original:DateConstructor,delta:number):DateConstructor{return 
 test('timeout ledger marks unknown usage and orphan cancellation abandons running calls',async()=>{
  const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);const provider=new FakeProvider();provider.transcribePage=async()=>{throw new (await import('../server/transcription-provider.server')).ProviderError('provider_timeout',true);};await new TranscriptionWorker(provider).tick();
  const calls=(await pool.query('select usage from provider_calls where job_id=$1',[j.id])).rows;assert.equal(calls[0].usage.usage_unknown,true);
+ const metrics=(await pool.query('select metrics from transcription_jobs where id=$1',[j.id])).rows[0].metrics;assert.equal(metrics.estimatedCost,null);assert.equal(metrics.costUnknown,true);assert.equal(metrics.unpricedCalls,1);assert.equal(metrics.knownCostUSD,0);
  const p=(await pool.query('select id from job_pages where job_id=$1',[j.id])).rows[0];await pool.query("insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version) values($1,$2,2,$3,'fixture','v1')",[j.id,p.id,crypto.randomUUID()]);await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);assert.equal((await pool.query("select count(*)::int as n from provider_calls where job_id=$1 and outcome='running'",[j.id])).rows[0].n,0);
 });
 
