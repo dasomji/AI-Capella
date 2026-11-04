@@ -1826,3 +1826,88 @@ Phase 4b-2 acceptance (2026-11-04):
 Check logs remain in gitignored `.transcription-tmp/4b2-*`; browser artifacts
 remain in `.review-evidence/browser/`. Plane AICAP-14 tracking was updated through
 the plane-project-management skill; no product quality threshold was invented.
+
+### Phase 4b fixes — 2026-11-04
+
+Local review remediation on production-v1 from feac2da. No push, deployment,
+real email, infrastructure provisioning, or paid/provider request. Review scratch
+probes were read only; the removed legacy recognizer was not restored.
+
+- X1: external PUBLIC/SYSTEM declarations without internal subsets are stripped
+  before parsing; any ENTITY or remaining DOCTYPE fails closed. Restored the
+  original Evening Rise exporter header. Import and fake-provider regressions
+  cover MusicXML 3.0/3.1/4.0 and timewise (normalized to partwise for playback).
+- X2: validate page output before its checkpoint, with inherited attributes;
+  bad output gets one automatic retry. Cover/blank/no_music pages persist as
+  skipped with source provenance, flags and report warnings. Global maximum-weight
+  one-to-one part assignment prioritizes context ids, normalizes diacritics,
+  common vocal names/numerals and checks clefs. Ambiguous and new identities warn;
+  new-part diagnostics identify the first page. Transient assembly failures have
+  durable bounded exponential backoff. Explicit retry resets all pages for an
+  assembly failure or changed model/prompt; otherwise completed pages are kept.
+- X3: rest lyrics, empty measures/parts and unequal part measure counts warn.
+  Cross-staff timing is keyed by voice; mixed meter sums all beat/type pairs;
+  tie stops precede starts independent of XML order. Missing divisions, nonfinite
+  durations, negative cursors and unusable pitch/part structure still block.
+- S1: strict schema intentionally omits root $schema and unsupported string
+  constraints; recursively linted for required fields and additionalProperties.
+  Reference: https://developers.openai.com/api/docs/guides/structured-outputs#supported-schemas
+- S2: outer whitespace/fences and safe external DTDs are tolerated. Empty and
+  reasoning-only responses use the same single invalid_output retry allowance.
+- S3: parser exceptions retain response usage/request id; timeouts/aborts and
+  orphan cancellation flag usage_unknown; cancellation abandons orphan running
+  calls. Provider logs contain only sanitized reason/status/code/request id.
+  provider_calls(job_id) is indexed; usage reporting counts unknown usage.
+- S4: quota and 401/403 failures are terminal provider_account_error; sysadmin
+  usage grouping exposes error_kind.
+- S5: synthetic rests copy the template's time only, with the receiving part's
+  own divisions/key/clef/other attributes. No transposition/staves leak across
+  instruments, and divisions survive tacet spans.
+- S6: unreadable pages and all-rest parts/scores warn. Meter disagreement remains
+  a warning: finite timing is playable but accuracy is unknown, and independent
+  polymeter/pickups cannot be safely repaired. Missing divisions remain errors;
+  inherited divisions yielding excessive beats remain a conspicuous timing
+  warning, never an assertion of musical accuracy. Valid means structural only.
+- S7 (partial): provenance diagnostics use indexed lookups; backfill avoids the
+  previous quadratic provenance search. Assembly executes in a bounded worker
+  thread outside DB transactions; completion rechecks state/attempt/permission.
+  Imported piece sidecars are gzip/base64, while job reports retain full detail.
+  Offline 60×12×30 benchmark: 13,437 ms, 2,594,197 bytes uncompressed provenance.
+  The <3 s target and synthetic-rest range compression remain open; DOM creation
+  is still the main scaling limit. Reproduce with
+  `node --import tsx scripts/benchmark-assembly.ts`.
+- S8: alpha is flattened to white, Sharp runs with concurrency 1, children get
+  MALLOC_ARENA_MAX=2; bad inputs return render_failed, infrastructure stays
+  retryable. Native stderr is bounded and logged, never returned to HTTP.
+- S9: prompt assets load relative to the module. A pinned SHA-256 is checked at
+  startup and stored in job provenance and the ledger. Editing v1 requires a new
+  version and pinned hash; changing the file alone refuses startup.
+- S10: claims skip incompatible pins. Maintenance expires unserved, idle pins
+  after TRANSCRIPTION_UNCLAIMED_MS (default 15 minutes), respecting live leases.
+  Explicit retry repins to the current provider and resets all pages if pins
+  changed (including completed pages, to avoid mixed models/prompts).
+- S11: seccomp denies io_uring and requires socket resolution. Minimal child env,
+  separate sessions, and fail-closed Landlock deny the parent's /proc/environ;
+  the child's own /proc diagnostics remain accessible. Requires Linux Landlock
+  (5.13+), Python3 and libseccomp2; unsupported kernels degrade readiness and
+  uploads to 503 sandbox_unavailable. A launcher/socket canary runs on startup.
+  Both app and worker images install Python3/libseccomp2; worker adds Poppler.
+  This is filesystem isolation of /proc, not a blanket filesystem sandbox: the
+  service's mounted data must still follow least-privilege deployment policy.
+- S12: removed unused transcriptionClock; real global Date constructor/Date.now
+  skew tests run at ±10 minutes while lease authority remains PostgreSQL.
+
+Additional fixes: assembler depth bound; cleanup continues after object errors
+with a per-row one-hour retry delay; Content-Length storage/size preflight;
+percent-decoded filenames strip bidi/path/control characters and downloads retain
+sanitized names; S3 checksum calculation WHEN_REQUIRED. Worker base pinned by
+registry digest, npm ci --omit=dev, selective COPY and recursive Docker ignores.
+
+Open follow-ups: S7 performance/range compression above; incremental persisted
+page context (current compact prompt context still reparses prior pages), richer
+repeat/ending/octave/pedal/lyric continuation state; lease-derived heartbeat and
+transient-heartbeat tolerance. max_output_tokens currently budgets 64,000 total
+including reasoning; truncated remains an explicit terminal reason requiring
+review/resubmission. Automatic overlapping top/bottom split retry is deferred
+because deduplicating overlapping measures without changing music needs its own
+fixtures and policy. No live quality/cost claim is made.
