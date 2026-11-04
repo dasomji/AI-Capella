@@ -38,9 +38,11 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     for (const reject of this.pending) reject(new Error('disconnected'));
     this.pending.clear();
   };
+  private joining: {epoch:number;promise:Promise<void>} | null=null;
   private reconnect = () => {
     const epoch=this.epoch;
-    void (async()=>{
+    if(this.joining?.epoch===epoch)return this.joining.promise;
+    const promise=(async()=>{
       for(let attempt=0;;attempt++){
         if(this.closed || epoch!==this.epoch || !this.socket.connected)return;
         try{await this.join();return;}catch(error){
@@ -49,7 +51,8 @@ export class SocketPlaybackTransport implements RehearsalTransport {
           await new Promise(resolve=>setTimeout(resolve,Math.min(10000,250*2**Math.min(attempt,6))));
         }
       }
-    })();
+    })().finally(()=>{if(this.joining?.promise===promise)this.joining=null;});
+    this.joining={epoch,promise};return promise;
   };
   private received = (raw: unknown) => { void this.apply(raw).catch(() => {this.setReady(false);console.warn('rehearsal.state.invalid');this.notice('invalid');void this.snapshot().catch(()=>this.reconnect());}); };
   private request(event: string, input?: unknown): Promise<any> {
