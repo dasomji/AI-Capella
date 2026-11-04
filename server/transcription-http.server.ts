@@ -1,3 +1,4 @@
+import { registerTranscriptionUi } from './transcription-ui.server';
 import { transcriptionUsage } from './usage.server';
 import type { Hono } from 'hono';
 import { Readable } from 'node:stream';
@@ -10,6 +11,7 @@ import { uploadAdmission as slots } from './upload-admission.server';
 import { env } from './env.server';
 import { createJob,jobView,jobResult,jobReport,cancelJob,retryJob,processingPaused,transcriptionMetrics } from './transcription.server';
 export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string;email:string;name:string}}}>) {
+ registerTranscriptionUi(app);
  app.post('/ensembles/:ensemble/originals',async c=>{
  const slot=slots.take(c.get('user').id);if('code' in slot)return c.json({code:'upload_busy'},slot.code);
  try{await authorize(pool,c.get('user').id,c.req.param('ensemble'),'transcribe');const length=Number(c.req.header('content-length'));if(Number.isFinite(length)&&length>0){if(length>sourceLimits.pdf)throw new DomainError('body_too_large',413);const used=(await pool.query("select coalesce(sum(size),0)::text as bytes from stored_objects where ensemble_id=$1 and kind='original' and state='ready'",[c.req.param('ensemble')])).rows[0];if(Number(used.bytes)+length>env.TRANSCRIPTION_STORAGE_MAX_BYTES)throw new DomainError('storage_limit',413);}
@@ -24,7 +26,7 @@ export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string
  const stream=await storage().get(s.object_key);return new Response(Readable.toWeb(stream) as ReadableStream,{headers:{'Content-Type':'application/octet-stream','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(s.original_filename??'original')}`,'X-Content-Type-Options':'nosniff','Content-Length':String(s.size),'Cache-Control':'no-store','Content-Security-Policy':"sandbox; default-src 'none'"}});
  });
  app.post('/ensembles/:ensemble/transcriptions',async c=>{
- const body=z.object({sourceObjects:z.array(z.string().min(1)).min(1).max(60),options:z.object({language:z.enum(['de','en']).optional()}).default({})}).strict().parse(await c.req.json());
+ const body=z.object({sourceObjects:z.array(z.string().min(1)).min(1).max(60),options:z.object({language:z.enum(['de','en','la','other']).optional(),title:z.string().trim().max(200).refine(s=>!s.includes('\0')&&s.isWellFormed()).optional()}).default({})}).strict().parse(await c.req.json());
  const key=z.string().min(1).max(200).parse(c.req.header('idempotency-key'));
  const job=await createJob(c.get('user').id,c.req.param('ensemble'),key,body.sourceObjects,body.options);return c.json({id:job.id,state:job.state,stage:await processingPaused()?'processing_paused':job.state},201);
  });
