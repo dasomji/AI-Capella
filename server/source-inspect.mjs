@@ -1,4 +1,5 @@
-import { parentPort, workerData } from 'node:worker_threads';
+const workerData=JSON.parse(process.argv[2]);
+const parentPort={postMessage:value=>process.stdout.write(JSON.stringify(value))};
 import { readFile, open } from 'node:fs/promises';
 import sharp from 'sharp';
 import { PDFDocument } from 'pdf-lib';

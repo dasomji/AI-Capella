@@ -1476,3 +1476,13 @@ exposed an overly short whole-note observation window and a concurrent secrets
 build replacing served assets; the final complete browser run passed without
 concurrent builds. Physical/acoustic output, Safari/iOS and Bluetooth remain
 outside this headless check. No production resources changed; no push or PR.
+
+### Phase 4a fixes
+
+B1: source inspection now executes in a separate Linux process with a 1.5 GiB
+address-space limit (including native allocations), 5/6-second CPU limits,
+10-second parent kill deadline, and inherited seccomp network denial. Failure to
+install the sandbox fails closed. Phase 4b rasterization must use this same
+launcher, never an API worker thread. The Railway deployment image must install
+Python 3 and libseccomp2; these Linux process controls require no privileged
+container/cgroup access. No Railway deployment was performed or verified here.

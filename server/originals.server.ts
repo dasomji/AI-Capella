@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, open, rm, readdir, lstat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
-import { Worker } from 'node:worker_threads';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { storage, type ObjectStorage } from './storage.server';
 import { transaction, authorize, audit, DomainError, lockEnsemble } from './domain.server';
 import { pool } from './db/index.server';
@@ -9,11 +10,15 @@ import { env } from './env.server';
 export const sourceLimits={pdf:env.TRANSCRIPTION_PDF_MAX_BYTES,photo:env.TRANSCRIPTION_PHOTO_MAX_BYTES,pages:env.TRANSCRIPTION_MAX_PAGES,pixels:env.TRANSCRIPTION_MAX_PIXELS};
 export async function inspectSource(path:string):Promise<{type:string;pages:number;width?:number;height?:number}> {
  return new Promise((resolve,reject)=>{
- const worker=new Worker(new URL('./source-inspect.mjs',import.meta.url),{workerData:{path,maxPages:sourceLimits.pages,maxPixels:sourceLimits.pixels},resourceLimits:{maxOldGenerationSizeMb:192}});
- const timer=setTimeout(()=>{void worker.terminate();reject(new DomainError('inspection_timeout',422));},10000);
- worker.once('message',r=>{clearTimeout(timer);void worker.terminate();r.error?reject(new DomainError(r.error,422)):resolve(r);});
- worker.once('error',()=>{clearTimeout(timer);reject(new DomainError('invalid_source',422));});
- worker.once('exit',code=>{clearTimeout(timer);if(code)reject(new DomainError('invalid_source',422));});
+ const child=spawn('python3',[fileURLToPath(new URL('./inspection-sandbox.py',import.meta.url)),process.execPath,'--jitless','--max-old-space-size=192',fileURLToPath(new URL('./source-inspect.mjs',import.meta.url)),JSON.stringify({path,maxPages:sourceLimits.pages,maxPixels:sourceLimits.pixels})],{stdio:['ignore','pipe','ignore'],env:{PATH:process.env.PATH}});
+ let output='';let expired=false;
+ const timer=setTimeout(()=>{expired=true;child.kill('SIGKILL');},10000);
+ child.stdout.on('data',chunk=>{output+=chunk;if(output.length>4096)child.kill('SIGKILL');});
+ child.once('error',()=>{clearTimeout(timer);reject(new DomainError('invalid_source',422));});
+ child.once('close',(code,signal)=>{clearTimeout(timer);
+ if(expired || code || signal){reject(new DomainError('source_too_complex',422));return;}
+ try{const r=JSON.parse(output);r.error?reject(new DomainError(r.error,422)):resolve(r);}catch{reject(new DomainError('invalid_source',422));}
+ });
  });
 }
 export async function uploadOriginal(user:string,ensemble:string,body:ReadableStream<Uint8Array>,filename:string,store:ObjectStorage=storage()) {

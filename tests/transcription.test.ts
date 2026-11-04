@@ -226,3 +226,18 @@ test('durable progress notifications reach only current transcribers on authenti
  await new TranscriptionWorker().tick();const progress=await received;assert.equal(progress.jobId,j.id);assert.equal(progress.state,'completed');assert.equal(progress.pages[0].state,'completed');await delay(100);assert.equal(ordinaryEvents,0);
  }finally{for(const socket of sockets)socket.disconnect();}
 });
+test('sandbox bounds PDF object-stream bombs without growing API memory',async()=>{
+ const {createDeflate}=await import('node:zlib');const {once}=await import('node:events');
+ const {writeFile,mkdtemp,rm}=await import('node:fs/promises');const {inspectSource}=await import('../server/originals.server');
+ const dir=await mkdtemp('.transcription-tmp/bomb-');
+ try{for(const mb of [512,2048]){
+ const zip=createDeflate({level:9});const chunks:Buffer[]=[];zip.on('data',c=>chunks.push(c));
+ zip.write('10 0 ');const block=Buffer.alloc(1024*1024,32);
+ for(let i=0;i<mb;i++)if(!zip.write(block))await once(zip,'drain');
+ zip.end('<< /Type /Catalog /Pages 3 0 R >>');await once(zip,'end');const compressed=Buffer.concat(chunks);
+ const path=dir+'/'+mb+'.pdf';await writeFile(path,Buffer.concat([Buffer.from(`%PDF-1.5\n4 0 obj\n<< /Type /ObjStm /N 1 /First 5 /Length ${compressed.length} /Filter /FlateDecode >>\nstream\n`),compressed,Buffer.from('\nendstream\nendobj\n1 0 obj\n<< /Type /Catalog /Pages 3 0 R >>\nendobj\n3 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R /Size 5 >>\n%%EOF\n')]));
+ const rss=process.memoryUsage().rss;const start=Date.now();
+ await assert.rejects(()=>inspectSource(path),(e:any)=>['source_too_complex','invalid_source'].includes(e.code));
+ assert.ok(process.memoryUsage().rss-rss<100*1024*1024);assert.ok(Date.now()-start<12000);
+ }}finally{await rm(dir,{recursive:true,force:true});}
+});
