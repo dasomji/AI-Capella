@@ -1,3 +1,5 @@
+import { installTranscription } from './transcription';
+import { tr } from './i18n';
 import { playbackDriftMs } from './rehearsal/schedule';
 import { timingFromScore, timingMatches, secondsAt } from './rehearsal/timeline';
 import { positionAt, lateJoin } from './rehearsal/controller';
@@ -147,9 +149,11 @@ app.innerHTML = `
         </div>
         <div class="lib-tools">
           <label class="search" id="lib-search-wrap" hidden>${icon('search')}<input id="lib-search" type="search" placeholder="${t('searchTitles')}" aria-label="${t('searchTitles')}" /></label>
+          <button type="button" class="btn" id="transcription-entry" hidden><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H5v18h14V9M14 3v6h5M8 12h7M8 16h7M19 1v6M16 4h6"/></svg><span>${tr('entry')}</span></button>
           <button type="button" class="btn primary" id="import-btn">${icon('plus')}<span>${t('addArrangement')}</span></button>
         </div>
       </div>
+      <section id="transcription-jobs" hidden aria-label="${tr('work')}"></section>
       <div id="lib-banner" class="banner" role="status" hidden></div>
       <ul id="song-grid" class="song-grid"></ul>
       <p class="lib-tip">${icon('upload')}<span>${t('dropTip')}</span></p>
@@ -4154,3 +4158,11 @@ accountEvents.on('connect',()=>{
 });
 accountEvents.on('membership:changed',()=>void checkMembership());
 accountEvents.on('disconnect',(reason)=>{if(reason==='io server disconnect')void checkMembership();});
+
+const transcriptionUi=installTranscription({ensemble:()=>currentEnsemble,entry:document.querySelector('#transcription-entry')!,jobs:document.querySelector('#transcription-jobs')!,open:async(xml,title,id)=>{
+ leavePlaybackSession();audioEngine?.stop();sessionMode='solo';renderModeControls();
+ privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));
+ if(id){await scoreBody(id);const song=allSongs().find(s=>s.id===id);if(song){await selectSong(song);return;}}
+ const song:SongEntry={id:id??'transcription-preview-'+crypto.randomUUID(),title,xml,format:'musicxml',imported:!!id,localOnly:!id};privateSongs.push(song);await selectSong(song);
+}});
+window.addEventListener('pagehide',()=>transcriptionUi.dispose(),{once:true});
