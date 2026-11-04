@@ -460,7 +460,7 @@ test('UI endpoints isolate ensembles, validate pages/options and sandbox cached 
  const other=await ok('ensembles','POST',{name:'Other'},lead.cookie);
  for(const path of [`ensembles/${other.id}/transcriptions/${j.id}`,`ensembles/${other.id}/originals/${source.id}/pages/1`])assert.equal((await request(path,'GET',undefined,lead.cookie)).status,404);
  for(const n of ['0','2','1.5'])assert.equal((await request(page.replace(/1$/,n),'GET',undefined,lead.cookie)).status,404);
- for(const options of [{title:'x'.repeat(201)},{title:'a\0b'},{title:'\ud800'},{language:'fr'}])assert.equal((await request(list,'POST',{sourceObjects:[source.id],options},lead.cookie)).status,422);
+ for(const options of [{title:'x'.repeat(201)},{title:'a\0b'},{title:'\ud800'},{language:'fr'}])assert.equal((await request(list,'POST',{sourceObjects:[source.id],options},lead.cookie)).status,400);
  const responses=await Promise.all(Array.from({length:4},()=>request(page,'GET',undefined,lead.cookie)));
  for(const response of responses){assert.equal(response.status,200,await response.clone().text());assert.equal(response.headers.get('content-type'),'image/png');assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(response.headers.get('content-security-policy'),'sandbox');await response.arrayBuffer();}
  assert.equal((await pool.query("select count(*)::int n from audit_events where actor_id=$1 and target_id=$2 and action='original.access'",[lead.id,source.id])).rows[0].n,1);
