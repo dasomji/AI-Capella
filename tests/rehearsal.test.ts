@@ -370,3 +370,15 @@ it('holds periodic audio refill until the shared clock is usable again',()=>{
  engine.scheduleShared({...s,status:'playing',anchor:{beat:0,serverTime:now+400},effectiveAt:now+400},t,now,0,[]);
  expect(note).not.toHaveBeenCalled();ready=true;(engine as any).fillShared();expect(note).toHaveBeenCalledTimes(1);
 });
+
+it('gates commands immediately after both clocks advance through sleep',async()=>{
+ const {PlaybackClock}=await import('../src/rehearsal/client-clock');
+ let now=1000;const wall=vi.spyOn(Date,'now').mockImplementation(()=>now);
+ const clock=new PlaybackClock(async()=>now+500,()=>{},()=>now);
+ try {
+  await clock.refresh();expect(clock.usable).toBe(true);
+  now+=600000;
+  expect(clock.usable).toBe(false);
+  await clock.refresh();expect(clock.usable).toBe(true);
+ } finally {clock.dispose();wall.mockRestore();}
+});

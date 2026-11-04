@@ -13,7 +13,7 @@ export class PlaybackClock {
   constructor(private ping: () => Promise<number>, private changed: () => void = () => {}, private now = clientEpoch) {}
   private checkSleep() {
     const mono=this.now(), wall=Date.now();
-    if(this.monotonic!==undefined && Math.abs((wall-this.wall)-(mono-this.monotonic))>2000) {
+    if(this.monotonic!==undefined && (mono-this.monotonic>3000 || Math.abs((wall-this.wall)-(mono-this.monotonic))>2000)) {
       this.diagnostics=null;this.generation++;this.refreshing=null;
       queueMicrotask(()=>{this.changed();void this.refresh();});
     }
