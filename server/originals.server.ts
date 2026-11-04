@@ -1,3 +1,5 @@
+import { sandboxReady,sandboxEnv } from './sandbox.server';
+import { logError } from './logger.server';
 import { mkdir, mkdtemp, open, rm, readdir, lstat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
@@ -9,15 +11,16 @@ import { pool } from './db/index.server';
 import { env } from './env.server';
 export const sourceLimits={idleMs:30000,totalMs:600000,pdf:env.TRANSCRIPTION_PDF_MAX_BYTES,photo:env.TRANSCRIPTION_PHOTO_MAX_BYTES,pages:env.TRANSCRIPTION_MAX_PAGES,pixels:env.TRANSCRIPTION_MAX_PIXELS};
 export async function inspectSource(path:string):Promise<{type:string;pages:number;width?:number;height?:number}> {
+ if(!await sandboxReady())throw new DomainError('sandbox_unavailable',503);
  return new Promise((resolve,reject)=>{
- const child=spawn('python3',[fileURLToPath(new URL('./inspection-sandbox.py',import.meta.url)),process.execPath,'--jitless','--max-old-space-size=192',fileURLToPath(new URL('./source-inspect.mjs',import.meta.url)),JSON.stringify({path,maxPages:sourceLimits.pages,maxPixels:sourceLimits.pixels})],{stdio:['ignore','pipe','ignore'],env:{PATH:process.env.PATH}});
- let output='';let expired=false;
+ const child=spawn('python3',[fileURLToPath(new URL('./inspection-sandbox.py',import.meta.url)),process.execPath,'--jitless','--max-old-space-size=192',fileURLToPath(new URL('./source-inspect.mjs',import.meta.url)),JSON.stringify({path,maxPages:sourceLimits.pages,maxPixels:sourceLimits.pixels})],{detached:true,stdio:['ignore','pipe','pipe'],env:sandboxEnv()});
+ let output='',stderr='';let expired=false;child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-4096);});
  const timer=setTimeout(()=>{expired=true;child.kill('SIGKILL');},10000);
  child.stdout.on('data',chunk=>{output+=chunk;if(output.length>4096)child.kill('SIGKILL');});
- child.once('error',()=>{clearTimeout(timer);reject(new DomainError('invalid_source',422));});
+ child.once('error',()=>{clearTimeout(timer);logError('sandbox.launch');reject(new DomainError('sandbox_unavailable',503));});
  child.once('close',(code,signal)=>{clearTimeout(timer);
  if(expired || code || signal){reject(new DomainError('source_too_complex',422));return;}
- try{const r=JSON.parse(output);r.error?reject(new DomainError(r.error,422)):resolve(r);}catch{reject(new DomainError('invalid_source',422));}
+ try{const r=JSON.parse(output);r.error?reject(new DomainError(['pixel_limit','page_limit','invalid_magic','invalid_source','unsupported_image_format','animated_image','encrypted_pdf'].includes(r.error)?r.error:'invalid_source',422)):resolve(r);}catch{reject(new DomainError('invalid_source',422));}
  });
  });
 }

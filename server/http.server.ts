@@ -1,3 +1,5 @@
+import { sandboxReady } from './sandbox.server';
+void sandboxReady();
 import { rehearsalReady } from './rehearsal.server';
 import { withMailRequester } from "./auth-guards.server";
 import { jwtVerify } from "jose";
@@ -110,6 +112,7 @@ api.get("/readyz", async (c) => {
       expected.some((m, i) => m.hash !== result.rows[i]?.hash)
     )
       return c.json({ status: "migrations pending" }, 503);
+    if(!await sandboxReady())return c.json({status:'sandbox_unavailable',uploads:false,transcription:false},503);
     return c.json({ status: "ready", rehearsal: rehearsalReady() });
   } catch (error) {
     logError("database.readiness", error);

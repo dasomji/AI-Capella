@@ -136,3 +136,11 @@ test('model fences are tolerated and empty/reasoning-only responses retry; parse
 test('quota/auth failures are terminal account errors',async()=>{
  for(const status of [401,403,429])await expect(provider({error:{message:'private',type:'test',code:status===429?'insufficient_quota':'invalid_api_key'}},status,{'x-request-id':'req_account'}).transcribePage(input,[],{},new AbortController().signal)).rejects.toMatchObject({reason:'provider_account_error',retryable:false,requestId:'req_account'});
 });
+
+test('sandbox launcher canary fails closed when Python is unavailable',async()=>{
+ const {spawnSync}=await import('node:child_process');
+ const r=spawnSync(process.execPath,['--import','tsx','--input-type=module','-e',`const {sandboxReady}=await import('./server/sandbox.server.ts');process.exit(await sandboxReady()?1:0);`],{cwd:process.cwd(),env:{PATH:'/nonexistent'},encoding:'utf8',timeout:10000});
+ expect(r.status).toBe(0);expect(r.stderr).toContain('sandbox.unavailable');
+ const good=await import('../server/sandbox.server');expect(await good.sandboxReady()).toBe(true);expect(good.sandboxEnv()).not.toHaveProperty('OPENAI_API_KEY');
+ const script=(await import('node:fs')).readFileSync('server/inspection-sandbox.py','utf8');expect(script).toContain("b'io_uring_setup'");expect(script).toContain("b'io_uring_enter'");expect(script).toContain("b'io_uring_register'");expect(script).toContain("name == b'socket'");
+},15000);

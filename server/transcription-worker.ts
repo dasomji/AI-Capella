@@ -1,3 +1,5 @@
+import { sandboxReady } from './sandbox.server';
+await sandboxReady();
 import { TranscriptionWorker,maintainTranscription } from './transcription.server';
 import { pool } from './db/index.server';
 import { env } from './env.server';
