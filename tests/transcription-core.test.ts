@@ -94,4 +94,15 @@ test('external exporter DOCTYPEs work for import and model output; subsets and e
  }
  await expect(validateScore('<!DOCTYPE score-partwise SYSTEM "partwise.dtd">'+page(['S']),'musicxml')).resolves.toHaveProperty('hash');
  for(const bad of ['<!DOCTYPE score-partwise [<!ENTITY x "bad">]>','<!ENTITY x "bad">'])await expect(validateScore(bad+page(['S']),'musicxml')).rejects.toMatchObject({code:'invalid_xml'});
+},30000);
+
+test('valid unusual notation produces warnings, cross-staff mixed-meter ties stay clean',()=>{
+ const validate=(xml:string)=>{const d=scoreDocument(xml);try{return validateMusicDocument(d.window.document);}finally{d.window.close();}};
+ const unusual=page(['S','A']).replace(note(),'<note><rest/><duration>4</duration><lyric><text>Ah</text></lyric></note>').replace('</part>','<measure><forward><duration>4</duration></forward></measure><measure><barline/></measure></part>');
+ const r=validate(unusual);expect(r.structurallyValid).toBe(true);expect(r.warnings.map(w=>w.code)).toEqual(expect.arrayContaining(['unattached_lyric','empty_measure','discontinuous_part']));
+ const cross=page(['S']).replace(note(),note().replace('<duration>4','<duration>2').replace('</note>','<staff>1</staff></note>')+note().replace('<duration>4','<duration>2').replace('</note>','<staff>2</staff></note>'));
+ expect(validate(cross).warnings.map(w=>w.code)).not.toContain('measure_duration');
+ expect(validate(page(['S']).replace('<beats>4</beats><beat-type>4</beat-type>','<beats>3</beats><beat-type>4</beat-type><beats>2</beats><beat-type>8</beat-type>')).warnings.map(w=>w.code)).not.toContain('measure_duration');
+ const tied=page(['S'],'start').replace('</part>',`<measure>${note().replace('</note>','<tie type="start"/><tie type="stop"/></note>')}</measure><measure>${note('stop')}</measure></part>`);
+ expect(validate(tied).warnings.map(w=>w.code).filter(c=>c.includes('tie'))).toEqual([]);
 });
