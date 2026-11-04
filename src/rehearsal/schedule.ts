@@ -28,3 +28,13 @@ export function playbackDriftMs(state:RehearsalState,now:number,actualBeat:numbe
  }
  return delta;
 }
+
+/** Index from the canonical end; repeated subtraction at epoch magnitude can lose
+ * the first click through floating-point rounding. Keep partial late-join grids. */
+export function countInClickTimes(from:number,until:number,pulse:number,now:number):number[] {
+ const count=Math.floor((until-from+.001)/pulse);
+ return Array.from({length:Math.max(0,count)},(_,i)=>{
+   const time=until-(count-i)*pulse;
+   return Math.abs(time-from)<.001 ? from : time;
+ }).filter(time=>time>=now);
+}

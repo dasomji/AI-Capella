@@ -1,4 +1,4 @@
-import { playbackSchedule } from './rehearsal/schedule';
+import { countInClickTimes, playbackSchedule } from './rehearsal/schedule';
 import { positionAt } from './rehearsal/controller';
 import { secondsAt, beatAt, type PieceTiming } from './rehearsal/timeline';
 import type { RehearsalState } from './rehearsal/contract';
@@ -899,6 +899,7 @@ export class AudioEngine {
   get context() {return this.ctx;}
   /** Canonical scheduling uses the shared tempo map and explicit effective instant.
    * Existing voices survive until that instant; future voices are faded/cancelled there. */
+  sharedClickTimes:number[]=[];
   scheduleShared(state:RehearsalState,timing:PieceTiming,now:number,offset:number,pitches:number[]) {
     const decision=playbackSchedule(state,now,timing);
     const at=serverToAudioTime(decision.effectiveAt,offset,{state:this.ctx.state,currentTime:this.ctx.currentTime,outputLatency:this.ctx.outputLatency,baseLatency:this.ctx.baseLatency,getOutputTimestamp:()=>{const t=this.ctx.getOutputTimestamp?.()??{};return {contextTime:t.contextTime??0,performanceTime:t.performanceTime??0};}})-this.outputLatencyOffsetMs/1000;
@@ -914,12 +915,15 @@ export class AudioEngine {
       const start=Math.max(this.ctx.currentTime,audioAt(from));
       for(const pitch of pitches)this.scheduledVoices.push(playDuNote(this.ctx,this.masterGain,start,Math.max(.02,(until-Math.max(now,from))/1000),pitch+state.transposition,1/Math.sqrt(Math.max(1,pitches.length))));
     }
+    this.sharedClickTimes=[];
     if(decision.countIn){
       const measure=timing.measures.findLast(m=>m.startBeat<=state.anchor.beat)??timing.measures[0];
       const localBpm=(timing.tempos.findLast(p=>p.beat<=state.anchor.beat)?.bpm??timing.baseBpm)*state.bpm/timing.baseBpm;
       const pulse=60000/localBpm*4/(measure?.beatType??4);
-      for(let time=decision.countIn.until-pulse;time>=decision.countIn.from;time-=pulse)
-        if(time>=now)this.scheduledVoices.push(playClick(this.ctx,this.metronomeGain,audioAt(time),time===decision.countIn.from));
+      for(const time of countInClickTimes(decision.countIn.from,decision.countIn.until,pulse,now)) {
+        this.sharedClickTimes.push(time);
+        this.scheduledVoices.push(playClick(this.ctx,this.metronomeGain,audioAt(time),Math.abs(time-decision.countIn.from)<.001));
+      }
     }
     this.fillShared();
     return {serverTime:decision.musicAt,audioTime:audioAt(decision.musicAt)};

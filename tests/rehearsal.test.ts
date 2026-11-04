@@ -382,3 +382,14 @@ it('gates commands immediately after both clocks advance through sleep',async()=
   await clock.refresh();expect(clock.usable).toBe(true);
  } finally {clock.dispose();wall.mockRestore();}
 });
+
+
+it('keeps all four count-in clicks and its downbeat at fractional epoch timestamps',async()=>{
+ const {countInClickTimes}=await import('../src/rehearsal/schedule');
+ const from=1793753836683.8103,pulse=60000/255,until=from+4*pulse;
+ const clicks=countInClickTimes(from,until,pulse,from-2000);
+ expect(clicks).toHaveLength(4);expect(clicks[0]).toBe(from);
+ clicks.slice(1).forEach((time,i)=>expect(time-from).toBeCloseTo((i+1)*pulse,3));
+ expect(countInClickTimes(from,until,pulse,from+pulse+.1)).toEqual(clicks.slice(2));
+ expect(countInClickTimes(from,until,pulse,until)).toEqual([]);
+});
