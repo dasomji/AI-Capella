@@ -159,10 +159,12 @@ try {
     page.on('websocket',socket=>{socket.on('framesent',frame=>{const f=frames.get(page),s=String(frame.payload);if(s.includes('rehearsal:command'))f.commands++;if(s.includes('clock:ping'))f.pings++;});socket.on('close',()=>frames.get(page).closed++);});
     await page.addInitScript(()=>{
       const Original=window.AudioContext;
-      window.AudioContext=new Proxy(Original,{construct(target,args){const ctx=new target(...args);window.fixtureAudio=ctx;window.fixtureClicks=[];
+      window.AudioContext=new Proxy(Original,{construct(target,args){const ctx=new target(...args);window.fixtureAudio=ctx;window.fixtureClicks=[];window.fixtureNotes=[];
         const create=ctx.createOscillator.bind(ctx);
         ctx.createOscillator=()=>{const osc=create(),set=osc.frequency.setValueAtTime.bind(osc.frequency);
-          osc.frequency.setValueAtTime=(value,at)=>{if(osc.type==='square')window.fixtureClicks.push({frequency:value,at});return set(value,at);};return osc;};
+          osc.frequency.setValueAtTime=(value,at)=>{if(osc.type==='square')window.fixtureClicks.push({frequency:value,at});return set(value,at);};const start=osc.start.bind(osc);osc.start=(at=0)=>{if(osc.type!=='square')window.fixtureNotes.push({at});return start(at);};return osc;};
+        const buffer=ctx.createBufferSource.bind(ctx);
+        ctx.createBufferSource=()=>{const source=buffer(),start=source.start.bind(source);source.start=(at=0,...rest)=>{window.fixtureNotes.push({at});return start(at,...rest);};return source;};
         return ctx;}});
       const dateNow=Date.now.bind(Date),performanceNow=performance.now.bind(performance);window.fixtureJump=0;window.fixturePerformanceJump=0;Date.now=()=>dateNow()+window.fixtureJump;Object.defineProperty(performance,'now',{value:()=>performanceNow()+window.fixturePerformanceJump});
       localStorage.setItem('ai-capella-intro-off','1');
@@ -189,6 +191,7 @@ try {
   const aligned=async (active=pages)=>{
     await Promise.all(active.map(page=>page.waitForFunction(()=>window.__lightscoreSync.driftMs!==null && Math.abs(window.__lightscoreSync.driftMs)<=25,null,{timeout:10000})));
     const at=(await hook(active[0])).serverNow+100;
+    // Canonical position consistency, independent of the measured audio-clock drift below.
     const beats=await Promise.all(active.map(page=>page.evaluate(at=>window.__lightscoreSync.positionAtServerTime(at),at)));
     assert.ok(Math.max(...beats)-Math.min(...beats)<.05,JSON.stringify(beats));
     const diagnostics=await Promise.all(active.map(hook)),drifts=diagnostics.map(s=>s.driftMs);
@@ -213,7 +216,14 @@ try {
     const previous=await Promise.all(pages.map(hook));
     await p.locator('.play-btn').click();const state=await status('playing');
     await Promise.all(pages.map((page,j)=>page.waitForFunction(old=>window.__lightscoreSync.lastScheduledStartServerMs!==old,previous[j].lastScheduledStartServerMs)));
-    const sample=await Promise.all(pages.map(hook)), starts=sample.map(s=>s.lastScheduledStartServerMs);
+    const sample=await Promise.all(pages.map(hook));
+    const starts=await Promise.all(pages.map(page=>page.evaluate(()=>{
+      const s=window.__lightscoreSync,ctx=window.fixtureAudio,stamp=ctx.getOutputTimestamp?.(),now=performance.now();
+      const valid=ctx.state==='running' && stamp?.performanceTime>0 && Math.abs(stamp.performanceTime-now)<=1000 && Number.isFinite(stamp.contextTime);
+      const audio=valid?stamp.contextTime:ctx.currentTime;
+      const perf=valid?stamp.performanceTime:now+(ctx.outputLatency||ctx.baseLatency||0)*1000;
+      return performance.timeOrigin+perf+(s.lastScheduledStartAudioTime-audio)*1000+s.offsetMs;
+    })));
     const differenceMs=Math.max(...starts)-Math.min(...starts);
     assert.ok(differenceMs<=50,`Run ${i}: ${differenceMs}ms`);
     console.log('start run',i,differenceMs);runs.push({differenceMs,starts,uncertainties:sample.map(s=>s.uncertaintyMs)});
@@ -294,9 +304,19 @@ try {
   assert.equal(looping.loop.enabled,true);
   const span=(loop.endBeat-loop.startBeat)*60000/looping.bpm;
   const firstWrap=looping.anchor.serverTime+(loop.endBeat-looping.anchor.beat)*60000/looping.bpm;
-  for(let wrap=1;wrap<=4;wrap++){await after(p,firstWrap+span*(wrap-1)-300);const high=await Promise.all(pages.map(hook));assert.ok(high.every(s=>s.position>14),JSON.stringify(high.map(s=>s.position)));await after(p,firstWrap+span*(wrap-1)+150);await aligned();const beat=(await p.evaluate(()=>window.__lightscoreSync.positionAtServerTime(window.__lightscoreSync.serverNow)));assert.ok(beat>=loop.startBeat-.02 && beat<loop.endBeat);const low=await Promise.all(pages.map(hook));assert.ok(low.every(s=>s.position<12),JSON.stringify(low.map(s=>s.position)));}
+  for(let wrap=1;wrap<=4;wrap++){await after(p,firstWrap+span*(wrap-1)-300);const high=await Promise.all(pages.map(hook));assert.ok(high.every(s=>s.position>14),JSON.stringify(high.map(s=>s.position)));await after(p,firstWrap+span*(wrap-1)+150);await aligned();const beat=(await p.evaluate(()=>window.__lightscoreSync.positionAtServerTime(window.__lightscoreSync.serverNow)));assert.ok(beat>=loop.startBeat-.02 && beat<loop.endBeat);const low=await Promise.all(pages.map(hook));assert.ok(low.every(s=>s.position<12),JSON.stringify(low.map(s=>s.position)));
+    const boundary=firstWrap+span*(wrap-1);
+    const counts=await Promise.all(pages.map(page=>page.evaluate(({boundary,span})=>{
+      const s=window.__lightscoreSync,ctx=window.fixtureAudio,stamp=ctx.getOutputTimestamp?.(),now=performance.now();
+      const valid=stamp?.performanceTime>0 && Math.abs(stamp.performanceTime-now)<=1000;
+      const audio=valid?stamp.contextTime:ctx.currentTime,perf=valid?stamp.performanceTime:now+(ctx.outputLatency||ctx.baseLatency||0)*1000;
+      return window.fixtureNotes.filter(({at})=>{const server=performance.timeOrigin+perf+(at-audio)*1000+s.offsetMs;return server>=boundary+10 && server<boundary+Math.min(span,2000);}).length;
+    },{boundary,span})));
+    assert.ok(counts.every(n=>n>0),`Silent loop after wrap ${wrap} at ${testBpm} BPM: ${counts}`);
+    (results.loopNoteStarts??=[]).push({bpm:testBpm,wrap,counts});
   }
-  results.g='passed: bars 3-4, four wraps each at 113 and 77.7 BPM';
+  }
+  results.g={description:'bars 3-4, four wraps each at 113 and 77.7 BPM; non-click source starts after every wrap',wraps:results.loopNoteStarts};
   await q.locator('#player-menu-btn').click();await q.getByText('Settings',{exact:true}).click();
   await q.getByText('Output latency offset',{exact:true}).click();
   const offset=q.getByRole('slider',{name:'Output latency offset'});

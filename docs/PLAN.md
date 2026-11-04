@@ -1431,3 +1431,22 @@ derived cleanup exclusion of originals, and account-closure deletion outbox.
 Temporary check logs are in gitignored `.transcription-tmp/`; browser evidence is
 in gitignored `.review-evidence/`. No push, provisioning, paid AI or real mail.
 Separate read-only review and independent verification belong to the parent run.
+
+### Phase 3g — focused synchronized-playback fix pass (2026-11-04)
+
+Loop scheduling clamps the half-open end and tracks actual wraps, clearing a loop
+removes its bounds, and all failed client state applications initiate single-flight
+snapshot repair (then reconnect if needed). Regression coverage includes clicks and
+notes within 5 ms over eight wraps for every integer 60–180 BPM plus 133.3 BPM,
+and stale acknowledgements whose listener fails once without an invalid toast.
+
+Browser scenario a now maps each client's scheduled AudioContext start back to
+server time using its live output timestamp/currentTime and calibrated offset.
+The previous 0/0/0 ms start figures in Phases 3e-2 and 3f compared canonical target
+instants and are retained as historical consistency checks, not independent
+scheduling measurements. The positionAtServerTime spread is likewise only a
+canonical consistency check; AudioEngine drift supplies the position measurement.
+Scenario g records non-click oscillator and buffer-source starts and requires new
+notes after each of four wraps at both 113 and 77.7 BPM on all three clients.
+All measurements are scheduling/position measurements in headless Chromium,
+not acoustic measurements. Final measured results and validation follow below.
