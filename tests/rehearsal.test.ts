@@ -296,13 +296,16 @@ it('keeps calibration through dropped pings and starts a fresh round after recon
  await clock.refresh();await clock.refresh();expect(clock.usable).toBe(true);expect(clock.diagnostics?.sampleCount).toBe(7);
  block=true;const old=clock.refresh();const fresh=clock.reconnect();release();await Promise.all([old,fresh]);expect(count).toBeGreaterThan(24);expect(clock.usable).toBe(true);
 });
-it('isolates a throwing subscriber and repairs an invalid broadcast with a snapshot',async()=>{
+it('retries a failed subscriber with the same revision and repairs malformed broadcasts',async()=>{
  const {SocketPlaybackTransport}=await import('../src/rehearsal/socket-transport');
  const handlers=new Map<string,any>();const events:string[]=[];
  const socket:any={connected:true,on:(e:string,fn:any)=>handlers.set(e,fn),off:()=>{},disconnect:()=>{},volatile:{emit:(e:string,_input:any,ack:any)=>{events.push(e);ack({state:s});}}};
  const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000);let calls=0;
- transport.subscribe(()=>{throw Error('listener');});transport.subscribe(()=>{calls++;});
- await transport.join();expect(transport.ready).toBe(true);expect(calls).toBe(1);
+ transport.subscribe(()=>{if(calls++===0)throw Error('version fetch');});
+ await expect(transport.join()).rejects.toThrow('apply_failed');expect(transport.ready).toBe(false);
+ handlers.get('playback:state')(s);
+ await vi.waitFor(()=>expect(calls).toBe(2));
+ await transport.snapshot();expect(transport.ready).toBe(true);expect(calls).toBe(2);
  expect(()=>handlers.get('playback:state')({invalid:true})).not.toThrow();
  await vi.waitFor(()=>expect(events).toContain('rehearsal:snapshot'));transport.dispose();
 });

@@ -45,7 +45,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
         if(this.closed || epoch!==this.epoch || !this.socket.connected)return;
         try{await this.join();return;}catch(error){
           const code=error instanceof Error?error.message:'connecting';
-          if(!['unavailable','timeout','clock_unavailable','rate_limited'].includes(code)){this.notice(code);return;}
+          if(!['unavailable','timeout','clock_unavailable','rate_limited','apply_failed'].includes(code)){this.notice(code);return;}
           await new Promise(resolve=>setTimeout(resolve,Math.min(10000,250*2**Math.min(attempt,6))));
         }
       }
@@ -74,7 +74,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     if (state.ensembleId !== this.ensembleId) return Promise.resolve();
     const result = this.applying.catch(() => {}).then(async () => {
       if (epoch !== this.epoch || this.closed || (this.latest && state.revision <= this.latest.revision)) return;
-      for (const listener of this.listeners) {try {await listener(state);} catch(error) {this.notice(error instanceof Error ? error.message : 'invalid');console.error('rehearsal.listener',error);}}
+      for (const listener of this.listeners) {try {await listener(state);} catch(error) {this.snapshotApplied=false;this.setReady(false);console.error('rehearsal.listener',error);throw new Error('apply_failed');}}
       if (epoch === this.epoch && !this.closed) this.latest = state;
     });
     this.applying = result;
