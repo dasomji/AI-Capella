@@ -245,7 +245,7 @@ try {
   await p.locator("#mode-solo-btn").click();
   await p.locator("#lib-menu-btn").click();
   await p.getByText("Account and devices", { exact: true }).click();
-  await p.getByText(/This device/).waitFor();
+  await p.getByText(/· This device$/).waitFor();
   await request(p, `/ensembles/${e}/members/${member.id}`, "DELETE");
   await q
     .getByText("You are no longer a member of Browser Choir.", { exact: true })

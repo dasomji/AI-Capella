@@ -25,7 +25,9 @@ async function waitReady() {
 test('real HTTP accounts, mail capture, cookies, revocation and Socket.IO', { timeout: 60000 }, async () => {
  assert.equal((await fetch(`${base}/healthz`)).status,200); await waitReady();
  assert.match(await (await fetch(base)).text(), /LightScore/);
- assert.equal((await fetch(`${base}/app`, { redirect: 'manual' })).status,302);
+ // The public shell runs private-store cleanup before its client-side sign-in redirect.
+ const anonymousApp=await fetch(`${base}/app`,{redirect:'manual'});
+ assert.equal(anonymousApp.status,200);assert.equal(anonymousApp.headers.get('cache-control'),'no-store');
  const email = `foundation-${crypto.randomUUID()}@example.test`; const password = 'valid-rehearsal-password-42';
  assert.equal((await post('sign-up/email', { name:'Singer', email, password, language:'de', callbackURL: `${base}/?state=verified` })).status,200);
  await waitMail(0); assert.match(mailLink().mail.subject,/bestätigen/);

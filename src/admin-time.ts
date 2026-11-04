@@ -4,7 +4,9 @@ export function adminInstant(value: string, zone: string, locale = 'en') {
  if(!Number.isFinite(date.getTime())||!/(Z|[+-]\d{2}:\d{2})$/.test(value))throw Error('Expected instant with offset');
  const parts=new Intl.DateTimeFormat(locale==='de'?'de-DE':'en-GB',{timeZone:zone,year:'numeric',month:locale==='de'?'2-digit':'short',day:locale==='de'?'2-digit':'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZoneName:'short'}).formatToParts(date);
  const p=(k:string)=>parts.find(v=>v.type===k)!.value;
- return `${locale==='de'?`${p('day')}.${p('month')}.${p('year')}`:`${p('day')} ${p('month')} ${p('year')}`}, ${p('hour')}:${p('minute')} ${p('timeZoneName').replace('GMT','UTC')}`;
+ const short=p('timeZoneName');
+ const zoneLabel=/^(GMT|UTC)[+-]/.test(short)?new Intl.DateTimeFormat('en-GB',{timeZone:zone,timeZoneName:'longOffset'}).formatToParts(date).find(p=>p.type==='timeZoneName')!.value.replace('GMT',''):short;
+ return `${locale==='de'?`${p('day')}.${p('month')}.${p('year')}`:`${p('day')} ${p('month')} ${p('year')}`}, ${p('hour')}:${p('minute')} ${zoneLabel}`;
 }
 export function calendarDate(now:Date,zone:string){return new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 export function addCalendarDays(day:string,days:number){const [y,m,d]=day.split('-').map(Number);const date=new Date(Date.UTC(y,m-1,d+days));return date.toISOString().slice(0,10);}

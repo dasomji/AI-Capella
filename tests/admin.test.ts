@@ -80,6 +80,11 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     await pool.query("insert into score_versions(id,ensemble_id,piece_id,version_no,format,musicxml,content_hash,size) values('zzzzzz-newest',$1,$2,2,'musicxml','fixture','hash',7)",[e,p]);
     const newest=await json('pieces/'+p+'/versions?limit=1',sys.cookie);assert.equal(newest.items[0].version_no,2);assert.equal(typeof newest.items[0].size,'number');
     const older=await json('pieces/'+p+'/versions?limit=1&cursor='+newest.nextCursor,sys.cookie);assert.equal(older.items[0].version_no,1);
+    await pool.query("update music_pieces set created_at='2026-01-01T00:00:00Z',updated_at='2026-04-01T00:00:00Z' where id=$1",[p]);
+    const newer=(await pool.query("insert into music_pieces(ensemble_id,title,sort_key,format,created_at,updated_at) values($1,'Sort fixture','2','musicxml','2026-03-01T00:00:00Z','2026-02-01T00:00:00Z') returning id",[e])).rows[0].id;
+    assert.equal((await json('pieces?ensemble='+e+'&sort=created&direction=desc',sys.cookie)).items[0].id,newer);
+    assert.equal((await json('pieces?ensemble='+e+'&sort=updated&direction=desc',sys.cookie)).items[0].id,p);
+    assert.ok((await pool.query("select 1 from audit_events where actor_id=$1 and action='admin.memberships.list'",[sys.id])).rowCount);
     const first = await json('users?limit=1&sort=name', sys.cookie);
     assert.equal(first.items.length, 1);
     assert.ok(first.nextCursor);
@@ -141,6 +146,7 @@ test('calendar boundaries span Berlin DST and use seven calendar days',()=>{
  assert.equal(calendarInstant('2026-03-30','Europe/Berlin'),'2026-03-29T22:00:00.000Z');
  assert.equal(calendarInstant('2026-10-26','Europe/Berlin'),'2026-10-25T23:00:00.000Z');
  assert.deepEqual(calendarRange('Europe/Berlin',7,new Date('2026-03-29T23:30:00Z')),{from:'2026-03-24',to:'2026-03-31'});
+ assert.match(adminInstant('2026-11-04T05:58:00Z','Asia/Kolkata','en'),/[+]05:30$/);
  assert.equal(adminInstant('2026-11-04T05:58:00Z','UTC','de'),'04.11.2026, 05:58 UTC');
  assert.equal(adminInstant('2026-11-04T05:58:00Z','UTC','en'),'4 Nov 2026, 05:58 UTC');
 });
