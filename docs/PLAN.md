@@ -1486,3 +1486,8 @@ install the sandbox fails closed. Phase 4b rasterization must use this same
 launcher, never an API worker thread. The Railway deployment image must install
 Python 3 and libseccomp2; these Linux process controls require no privileged
 container/cgroup access. No Railway deployment was performed or verified here.
+
+S1: added an independent provider_calls ledger, written at call entry and on
+settlement before result fencing. Expired leases mark running calls abandoned
+with lease_expired; stale returns retain their usage. Heartbeats abort on lost
+ownership, cancellation and pause. Admin metrics aggregate the ledger.

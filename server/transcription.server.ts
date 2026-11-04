@@ -34,14 +34,20 @@ export class TranscriptionWorker {
  if((await db.query("select count(*)::int as n from job_pages where state='running' and lease_expires_at>$1",[now])).rows[0].n>=env.TRANSCRIPTION_WORKER_CONCURRENCY)return;
  const p=(await db.query(`select p.*,j.user_id,j.options,s.object_key,s.content_type from job_pages p join transcription_jobs j on j.id=p.job_id join stored_objects s on s.id=p.object_id where j.state in ('queued','running') and (p.state='queued' and p.next_attempt_at<=$1 or p.state='running' and p.lease_expires_at<=$1) and not exists(select 1 from job_pages prev where prev.job_id=p.job_id and prev.page_number<p.page_number and prev.state!='completed') order by j.created_at,p.page_number for update of j skip locked limit 1`,[now])).rows[0];
  if(!p)return;
+ if(p.state==='running')await db.query("update provider_calls set outcome='abandoned',error_kind='lease_expired',finished_at=now() where lease_owner=$1 and outcome='running'",[p.lease_owner]);
  await db.query("update job_pages set state='running',lease_owner=$2,lease_expires_at=$3,attempts=attempts+1 where id=$1",[p.id,token,new Date(now.getTime()+env.TRANSCRIPTION_LEASE_MS)]);await db.query("update transcription_jobs set state='running',attempts=attempts+1 where id=$1",[p.job_id]);return p;
  });
  if(!page)return false;
  const abort=new AbortController();const timeout=setTimeout(()=>abort.abort(),env.TRANSCRIPTION_TIMEOUT_MS);
- const heartbeat=setInterval(()=>{void pool.query("update job_pages set lease_expires_at=$3 where id=$1 and lease_owner=$2 and state='running'",[page.id,token,new Date(transcriptionClock.now().getTime()+env.TRANSCRIPTION_LEASE_MS)]).catch(()=>abort.abort());},Math.max(250,env.TRANSCRIPTION_LEASE_MS/3));
+ const heartbeat=setInterval(()=>{void (async()=>{
+ const r=await pool.query("update job_pages p set lease_expires_at=$3 from transcription_jobs j where p.id=$1 and p.lease_owner=$2 and p.state='running' and j.id=p.job_id and j.state='running' returning p.id",[page.id,token,new Date(transcriptionClock.now().getTime()+env.TRANSCRIPTION_LEASE_MS)]);
+ if(!r.rowCount)abort.abort();
+ if(await processingPaused()){paused=true;abort.abort();}
+ })().catch(()=>abort.abort());},Math.min(250,Math.max(25,env.TRANSCRIPTION_LEASE_MS/3)));
+
  const started=Date.now();let result:PageResult|undefined;let failure:ProviderError|undefined;let paused=false;
  try {
- if(page.attempts>=env.TRANSCRIPTION_MAX_ATTEMPTS)throw new ProviderError('provider_timeout');
+ if(page.attempts>=env.TRANSCRIPTION_MAX_ATTEMPTS)throw new ProviderError('abandoned');
  await authorize(pool,page.user_id,page.ensemble_id,'transcribe').catch(()=>{throw new ProviderError('permission_revoked');});
  paused=await processingPaused();if(!paused){
  const input=await this.renderer.render({objectKey:page.object_key,contentType:page.content_type,sourcePage:page.source_page,pageIndex:page.page_number},abort.signal);
@@ -51,7 +57,13 @@ export class TranscriptionWorker {
  const context=(await pool.query("select metrics from job_pages where job_id=$1 and state='completed' order by page_number",[page.job_id])).rows.map(r=>r.metrics.result as PageResult);
  let timeoutReject:()=>void=()=>{};
  const deadline=new Promise<never>((_,reject)=>{timeoutReject=()=>reject(new ProviderError('provider_timeout',true));abort.signal.addEventListener('abort',timeoutReject,{once:true});if(abort.signal.aborted)timeoutReject();});
- try{result=await Promise.race([this.provider.transcribePage(input,context,page.options??{},abort.signal),deadline]);}finally{abort.signal.removeEventListener('abort',timeoutReject);}
+ await pool.query('insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version) values($1,$2,$3,$4,$5,$6)',[page.job_id,page.id,page.attempts+1,token,this.provider.model,this.provider.promptVersion]);
+ const call=this.provider.transcribePage(input,context,page.options??{},abort.signal).then(async value=>{
+ const price=JSON.parse(env.TRANSCRIPTION_PRICE_TABLE)[this.provider.model]??{input:0,output:0};
+ await pool.query("update provider_calls set finished_at=now(),outcome='completed',usage=$2,estimated_cost=$3,error_kind=null where lease_owner=$1",[token,value.usage,JSON.stringify((value.usage.inputTokens*price.input+value.usage.outputTokens*price.output)/1000000)]);return value;
+ },async error=>{await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2 where lease_owner=$1",[token,error instanceof ProviderError?error.reason:'infrastructure_error']);throw error;});
+ try{result=await Promise.race([call,deadline]);}catch(error){await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2 where lease_owner=$1 and outcome='running'",[token,error instanceof ProviderError?error.reason:'infrastructure_error']);throw error;}finally{abort.signal.removeEventListener('abort',timeoutReject);}
+
  if(!result.musicxmlFragment.endsWith('</measure>'))throw new ProviderError(result.musicxmlFragment.startsWith('<measure')?'truncated':'invalid_output');
  }
  }
@@ -60,8 +72,8 @@ export class TranscriptionWorker {
  await transaction(async db=>{
  await db.query('select id from transcription_jobs where id=$1 for update',[page.job_id]);
  const p=(await db.query('select p.*,j.state as job_state from job_pages p join transcription_jobs j on j.id=p.job_id where p.id=$1 for update of p',[page.id])).rows[0];
- if(p.lease_owner!==token || p.state!=='running' || p.job_state==='cancelled')return;
- if(paused){await db.query("update job_pages set state='queued',failure_reason='emergency_stop',lease_owner=null,lease_expires_at=null where id=$1",[page.id]);return;}
+ if(!p || p.lease_owner!==token || p.state!=='running' || p.job_state==='cancelled')return;
+ if(paused){await db.query("update job_pages set state='queued',attempts=greatest(0,attempts-1),failure_reason='emergency_stop',lease_owner=null,lease_expires_at=null where id=$1",[page.id]);return;}
  const reason=failure?.reason;const retry=failure?.retryable && p.attempts<env.TRANSCRIPTION_MAX_ATTEMPTS;
  const price=JSON.parse(env.TRANSCRIPTION_PRICE_TABLE)[this.provider.model]??{input:0,output:0};
  const history=[...(p.metrics?.history??[]),{latency:Date.now()-started,usage:result?.usage??{inputTokens:0,outputTokens:0},outcome:reason??'completed',model:this.provider.model,promptVersion:this.provider.promptVersion}];
@@ -86,4 +98,4 @@ export class TranscriptionWorker {
  }
  async recoverAssembly(){for(const j of (await pool.query("select id from transcription_jobs where state in ('queued','running') and not exists(select 1 from job_pages where job_id=transcription_jobs.id and state!='completed')")).rows)await this.assemble(j.id);}
 }
-export async function transcriptionMetrics(from:Date,to:Date){return (await pool.query(`select model,prompt_version,state,count(*)::int as pages,sum(attempts)::int as attempts,sum((metrics->>'latency')::numeric) as latency,sum((metrics->>'estimatedCost')::numeric) as estimated_cost,sum((metrics->'usage'->>'inputTokens')::numeric) as input_tokens,sum((metrics->'usage'->>'outputTokens')::numeric) as output_tokens from job_pages where created_at >= $1 and created_at < $2 group by model,prompt_version,state`,[from,to])).rows;}
+export async function transcriptionMetrics(from:Date,to:Date){return (await pool.query(`select model,prompt_version,outcome as state,count(*)::int as attempts,sum(extract(epoch from (finished_at-started_at))*1000) as latency,sum(estimated_cost::text::numeric) as estimated_cost,sum((usage->>'inputTokens')::numeric) as input_tokens,sum((usage->>'outputTokens')::numeric) as output_tokens from provider_calls where started_at >= $1 and started_at < $2 group by model,prompt_version,outcome`,[from,to])).rows;}

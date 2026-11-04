@@ -241,3 +241,11 @@ test('sandbox bounds PDF object-stream bombs without growing API memory',async()
  assert.ok(process.memoryUsage().rss-rss<100*1024*1024);assert.ok(Date.now()-start<12000);
  }}finally{await rm(dir,{recursive:true,force:true});}
 });
+test('cancel aborts provider and retains its independent ledger entry',async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);
+ let entered!:()=>void;const ready=new Promise<void>(r=>entered=r);let aborted=false;
+ const provider=new FakeProvider();provider.transcribePage=async(_i,_c,_o,signal)=>{entered();return new Promise((_r,reject)=>signal.addEventListener('abort',()=>{aborted=true;reject(new Error('aborted'));},{once:true}));};
+ const work=new TranscriptionWorker(provider).tick();await ready;
+ await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);await work;
+ assert.equal(aborted,true);const calls=(await pool.query('select * from provider_calls where job_id=$1',[j.id])).rows;assert.equal(calls.length,1);assert.ok(calls[0].finished_at);
+});
