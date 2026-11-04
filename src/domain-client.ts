@@ -1,3 +1,5 @@
+let verifiedServerDate=NaN;
+export const lastVerifiedServerDate=()=>verifiedServerDate;
 import { setOffline, isOffline } from './offline-state';
 export class ApiError extends Error {
   constructor(
@@ -26,6 +28,7 @@ export async function api<T = any>(
     headers,
     ...(body === undefined ? {} : { body: upload ? (input.content.format === "musicxml" ? input.content.body : JSON.stringify(input.content.body)) : JSON.stringify(body) }),
   }).catch(error => { setOffline(true); throw error; });
+  if(path==='/me' && r.ok)verifiedServerDate=Date.parse(r.headers.get('Date')??'');
   const data = await r.json();
   if (!r.ok) {
     window.dispatchEvent(

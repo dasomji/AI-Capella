@@ -1,3 +1,4 @@
+import { truncateTitle } from '../src/api/title';
 import { sandboxReady,sandboxEnv } from './sandbox.server';
 import { logError,logChildError } from './logger.server';
 import { mkdir, mkdtemp, open, rm, readdir, lstat } from 'node:fs/promises';
@@ -24,7 +25,7 @@ export async function inspectSource(path:string):Promise<{type:string;pages:numb
  });
  });
 }
-export function sanitizeOriginalFilename(value:string){try{value=decodeURIComponent(value);}catch{}return value.replace(/[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,'').replace(/[\x00-\x1f\x7f/\\]/g,'_').slice(0,200)||'original';}
+export function sanitizeOriginalFilename(value:string){try{value=decodeURIComponent(value);}catch{}return truncateTitle(value.replace(/[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,'').replace(/[\x00-\x1f\x7f/\\]/g,'_'))||'original';}
 export async function uploadOriginal(user:string,ensemble:string,body:ReadableStream<Uint8Array>,filename:string,store:ObjectStorage=storage()) {
  await authorize(pool,user,ensemble,'transcribe');
  if(env.NODE_ENV==='development' && 'initialize' in store)await (store as import('./storage.server').S3Storage).initialize();

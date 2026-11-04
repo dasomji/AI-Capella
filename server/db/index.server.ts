@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import { logError } from "../logger.server";
@@ -8,8 +9,6 @@ const globals = globalThis as typeof globalThis & { [key]?: pg.Pool };
 export const pool = (globals[key] ??= new pg.Pool({
   connectionString: env.DATABASE_URL,
   connectionTimeoutMillis: 5000,
-  query_timeout: 5000,
-  statement_timeout: 5000,
   keepAlive: true,
   keepAliveInitialDelayMillis: 5000,
   max: env.DB_POOL_MAX,
@@ -21,3 +20,13 @@ if (pool.listenerCount("connect") === 0)
     client.on("error", (error) => logError("database.client", error)),
   );
 export const db = drizzle(pool, { schema });
+
+// Bound worker statements without imposing the deadline on admin/usage queries.
+const workerContext=new AsyncLocalStorage<boolean>();
+const workerPool=new pg.Pool({connectionString:env.DATABASE_URL,connectionTimeoutMillis:5000,query_timeout:5000,statement_timeout:5000,max:env.DB_POOL_MAX});
+workerPool.on('error',error=>logError('database.worker',error));
+export const workerQueries=<T>(work:()=>Promise<T>)=>workerContext.run(true,work);
+const ordinaryQuery=pool.query.bind(pool);
+pool.query=function(...args:any[]){return workerContext.getStore()?(workerPool.query as any)(...args):(ordinaryQuery as any)(...args);} as typeof pool.query;
+const ordinaryEnd=pool.end.bind(pool);
+pool.end=(async()=>{await workerPool.end();await ordinaryEnd();}) as typeof pool.end;

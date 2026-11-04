@@ -945,7 +945,7 @@ domain.get(
     c.header("Content-Security-Policy", "sandbox; default-src 'none'");
     c.header("X-Content-Type-Options", "nosniff");
     c.header("ETag", `"${v.content_hash}"`);
-    c.header("Cache-Control", "private, max-age=31536000, immutable");
+    c.header("Cache-Control", "private, no-cache");
     if (c.req.header("if-none-match") === `"${v.content_hash}"`)
       return c.body(null, 304);
     return c.body(
@@ -1068,7 +1068,7 @@ domain.patch("/ensembles/:ensemble/pieces/:piece", async (c) => {
       defaults: "format_defaults",
     };
     if (input.op === "title") {
-      const title = z.string().trim().min(1).max(500).parse(input.value);
+      const title = pieceTitle.parse(input.value);
       await db.query(
         "update music_pieces set title=$1,revision=revision+1 where id=$2",
         [title, p],

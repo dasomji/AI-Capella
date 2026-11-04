@@ -11,9 +11,13 @@ export async function registerOfflineWorker() {
     notice.onclick = () => { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {once:true}); registration.waiting?.postMessage('ACTIVATE_UPDATE'); };
     document.body.append(notice);
   };
+  const warm=()=>registration.active?.postMessage('PREPARE_ASSETS');
+  if('requestIdleCallback' in window)window.requestIdleCallback(warm,{timeout:10000});else setTimeout(warm,10000);
   show();
   registration.addEventListener('updatefound', () => registration.installing?.addEventListener('statechange', show));
 }
 
 // Keep the standalone fallback bootstrap in the client graph without executing it in Start.
 window.addEventListener('lightscore:offline-bootstrap', () => void import('./offline-entry'));
+
+window.addEventListener('vite:preloadError', event => {event.preventDefault();if(confirm(document.documentElement.lang==='de'?'Neue Version verfügbar. Jetzt neu laden?':'New version available. Reload now?'))location.reload();});

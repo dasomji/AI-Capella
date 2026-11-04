@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AccountStage } from "./account-stage";
 import { authMessages } from "./i18n";
+import { purgeLandingIdentity, storageUnavailable } from './offline-store';
 export function AuthPage() {
   const [language, setLanguage] = useState<"en" | "de">("en");
   const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">(
@@ -16,6 +17,7 @@ export function AuthPage() {
   const [maskedEmail, setMaskedEmail] = useState("");
   const [resendAt, setResendAt] = useState(0);
   const [clock, setClock] = useState(Date.now());
+  useEffect(() => { void purgeLandingIdentity().catch(storageUnavailable); }, []);
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
   const m = authMessages[language];
   useEffect(() => {

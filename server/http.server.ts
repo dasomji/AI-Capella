@@ -127,11 +127,7 @@ api.get("/readyz", async (c) => {
     return c.json({ status: "not ready" }, 503);
   }
 });
-api.use("/app", async (c, next) => {
-  const session = await currentSession(c.req.raw.headers);
-  if (!session?.user.emailVerified) return c.redirect("/?state=expired");
-  await next();
-});
+// The public shell checks identity and purges private storage before redirecting.
 // One process initially: reject overlapping password evaluations, never queue guesses.
 const passwordChecks = new Set<string>();
 const failedPasswordChecks = new Map<string, number>();
@@ -262,6 +258,8 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
     c.res.headers.get("x-request-id") ?? crypto.randomUUID(),
     () => withMailRequester(c.req.header("x-lightscore-socket-ip") ?? "internal", () => auth.handler(c.req.raw)),
   );
+  const responseHeaders=new Headers(response.headers);
+  if(path.endsWith('/sign-out'))responseHeaders.set('Clear-Site-Data','"cache"');
   if (emailFailureKey && response.status === 401)
     for(const key of [emailFailureKey, globalFailureKey!]) await pool.query(
       `insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request < $2-60000 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request < $2-60000 then $2 else rate_limit.last_request end`,
@@ -278,7 +276,7 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
     if (data) delete data.token;
     return Response.json(data, {
       status: response.status,
-      headers: response.headers,
+      headers: responseHeaders,
     });
   }
   if (response.status >= 500)
@@ -289,7 +287,7 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
     );
   return response.status >= 500
     ? c.json({ error: "Service unavailable. Please try again." }, 503)
-    : response;
+    : new Response(response.body,{status:response.status,headers:responseHeaders});
 });
 api.get("/api/me", async (c) => {
   const session = await currentSession(c.req.raw.headers);

@@ -15,7 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run tests/offline.test.ts tests/transcription-ui.test.ts tests/unit.test.ts tests/rehearsal.test.ts tests/rehearsal-server.test.ts tests/transcription-core.test.ts tests/reference-comparison.test.ts tests/evaluation.test.ts tests/usage.test.ts",
+    "test": "vitest run tests/offline.test.ts tests/offline-library.test.ts tests/transcription-ui.test.ts tests/unit.test.ts tests/rehearsal.test.ts tests/rehearsal-server.test.ts tests/transcription-core.test.ts tests/reference-comparison.test.ts tests/evaluation.test.ts tests/usage.test.ts",
     "test:integration": "node scripts/integration.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "accounts:cleanup": "node --env-file-if-exists=.env --import tsx scripts/cleanup-accounts.ts",

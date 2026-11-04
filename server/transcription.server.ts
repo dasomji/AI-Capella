@@ -1,6 +1,6 @@
 import { heartbeatInterval,heartbeatStale,withinAbort } from './lease-deadline';
 export { heartbeatInterval } from './lease-deadline';
-import { optionalTitle } from '../src/api/title';
+import { optionalTitle, truncateTitle } from '../src/api/title';
 import { sanitizeOriginalFilename } from './originals.server';
 import { assembleOffThread } from './assembly-worker.server';
 import { estimatedCost,priceTable } from './transcription-cost';
@@ -8,7 +8,7 @@ import { OpenAITranscriptionProvider } from './openai-provider.server';
 import { BoundedPageRenderer } from './page-renderer.server';
 import { ScoreAssembler,validatePage } from './score-assembly.server';
 import { createHash, randomUUID } from 'node:crypto';
-import { pool } from './db/index.server';
+import { pool, workerQueries } from './db/index.server';
 import { authorize, transaction, lockEnsemble, DomainError } from './domain.server';
 import { validateScore } from './score-validation.server';
 import { logError } from './logger.server';
@@ -27,7 +27,7 @@ export async function createJob(user:string,ensemble:string,key:string,objects:s
  for(const id of objects){const s=(await db.query("select * from stored_objects where id=$1 and ensemble_id=$2 and kind='original' and state='ready'",[id,ensemble])).rows[0];if(!s)throw new DomainError('not_found',404);sources.push(s);pages+=s.provenance.pages;}
  if(sources.length>1 && sources.some(s=>s.content_type==='application/pdf'))throw new DomainError('mixed_sources',422);
  if(!pages || pages>env.TRANSCRIPTION_MAX_PAGES)throw new DomainError('page_limit',422);
- options={...options,title:optionalTitle.parse(options.title??'')||optionalTitle.parse(sanitizeOriginalFilename(sources[0].original_filename??'original').replace(/\.[^.]+$/,''))||'Transcription'};
+ options={...options,title:optionalTitle.parse(options.title??'')||optionalTitle.parse(truncateTitle((sources[0].original_filename??'original').replace(/\.[^.]+$/,'')))||'Transcription'};
  const job=(await db.query('insert into transcription_jobs(started_by,ensemble_id,user_id,request_key,request_hash,options,model,prompt_version,provenance) values($2,$1,$2,$3,$4,$5,$6,$7,$8) returning *',[ensemble,user,key,requestHash,options,provider.model,provider.promptVersion,{sources:objects,promptSha256:provider.promptSha256??null}])).rows[0];
  let index=0;for(const s of sources)for(let page=1;page<=s.provenance.pages;page++)await db.query('insert into job_pages(ensemble_id,job_id,object_id,page_number,source_page,model,prompt_version,provenance) values($1,$2,$3,$4,$5,$6,$7,$8)',[ensemble,job.id,s.id,index++,page,provider.model,provider.promptVersion,{sourceObject:s.id,sourcePage:page}]);
  return job;
@@ -45,7 +45,8 @@ export async function cancelJob(user:string,e:string,id:string){await transactio
 export async function retryJob(user:string,e:string,id:string){const provider:TranscriptionProvider=defaultProvider();const result=await transaction(async db=>{const owner=(await db.query('select user_id from transcription_jobs where id=$1 and ensemble_id=$2',[id,e])).rows[0];if(!owner)throw new DomainError('not_found',404);await db.query('select pg_advisory_xact_lock(hashtextextended($1,0))',['transcription-user:'+user]);await lockEnsemble(db,e);await authorize(db,user,e,'transcribe');const j=(await db.query('select * from transcription_jobs where id=$1 and ensemble_id=$2 for update',[id,e])).rows[0];if(!j || !['failed','cancelled'].includes(j.state))throw new DomainError('invalid_state',409);const n=(await db.query("select count(*) filter(where started_by=$1)::int as own,count(*) filter(where ensemble_id=$2)::int as ensemble from transcription_jobs where state in ('queued','running')",[user,e])).rows[0];if(n.own>=env.TRANSCRIPTION_USER_MAX || n.ensemble>=env.TRANSCRIPTION_ENSEMBLE_MAX)throw new DomainError('concurrency_limit',429);await db.query("update job_pages set state='queued',attempts=0,failure_reason=null,result_xml=null,metrics=null,model=$3,prompt_version=$4,next_attempt_at=now(),lease_owner=null,lease_expires_at=null where job_id=$1 and (state!='completed' or $2)",[id,j.model!==provider.model||j.prompt_version!==provider.promptVersion||['assembly_failed','invalid_output'].includes(j.failure_reason),provider.model,provider.promptVersion]);return (await db.query("update transcription_jobs set state='queued',failure_reason=null,result_xml=null,model=$3,prompt_version=$4,provenance=(provenance-'assemblyAttempts'-'assemblyRetryAt') || jsonb_build_object('promptSha256',$5::text),started_by=$2 where id=$1 returning id,state",[id,user,provider.model,provider.promptVersion,provider.promptSha256??null])).rows[0];});await emit(e,id);return result;}
 export class TranscriptionWorker {
  constructor(private provider:TranscriptionProvider=defaultProvider(),private renderer:PageRenderer=env.NODE_ENV==='test'?new ReferenceRenderer():new BoundedPageRenderer(),private assembler:JobAssembler=env.NODE_ENV==='test'?new FakeAssembler():new ScoreAssembler()){}
- async tick():Promise<boolean>{
+ async tick():Promise<boolean>{return workerQueries(()=>this.tickWork());}
+ private async tickWork():Promise<boolean>{
  if(await processingPaused())return false;
  const token=randomUUID();
  const page=await transaction(async db=>{
@@ -81,13 +82,13 @@ export class TranscriptionWorker {
  await withinAbort(abort.signal,()=>authorize(pool,page.user_id,page.ensemble_id,'transcribe')).catch(error=>{if(error instanceof DomainError && [403,404].includes(error.status))throw new ProviderError('permission_revoked');throw error;});
  paused=await withinAbort(abort.signal,processingPaused);
  if(!paused){
- let context=(await pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number desc limit 1",[page.job_id])).rows.map(r=>({musicxmlFragment:r.result_xml,contextState:r.metrics?.contextState,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},promptVersion:page.job_prompt,flags:r.metrics?.flags??[],model:page.job_model,latency:r.metrics?.latency??0}) as PageResult);
+ let context=(await withinAbort(abort.signal,()=>pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number desc limit 1",[page.job_id]))).rows.map(r=>({musicxmlFragment:r.result_xml,contextState:r.metrics?.contextState,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},promptVersion:page.job_prompt,flags:r.metrics?.flags??[],model:page.job_model,latency:r.metrics?.latency??0}) as PageResult);
  // Upgrade pre-checkpoint jobs once; subsequent pages read only the last checkpoint.
- if(context.length&&!context[0].contextState)context=(await pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number",[page.job_id])).rows.map(r=>({musicxmlFragment:r.result_xml,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},model:page.job_model,latency:0}) as PageResult);
+ if(context.length&&!context[0].contextState)context=(await withinAbort(abort.signal,()=>pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number",[page.job_id]))).rows.map(r=>({musicxmlFragment:r.result_xml,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},model:page.job_model,latency:0}) as PageResult);
+ await withinAbort(abort.signal,()=>pool.query('insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version,prompt_sha256) values($1,$2,$3,$4,$5,$6,$7)',[page.job_id,page.id,page.attempts+1,token,this.provider.model,this.provider.promptVersion,this.provider.promptSha256??null]));
  let timeoutReject:()=>void=()=>{};
  const deadline=new Promise<never>((_,reject)=>{timeoutReject=()=>reject(new ProviderError('provider_timeout',true));abort.signal.addEventListener('abort',timeoutReject,{once:true});if(abort.signal.aborted)timeoutReject();});
- await pool.query('insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version,prompt_sha256) values($1,$2,$3,$4,$5,$6,$7)',[page.job_id,page.id,page.attempts+1,token,this.provider.model,this.provider.promptVersion,this.provider.promptSha256??null]);
- const call=Promise.resolve().then(()=>this.provider.transcribePage(input,context,page.options??{},abort.signal)).then(async value=>{
+ const call=Promise.resolve().then(()=>{abort.signal.throwIfAborted();return this.provider.transcribePage(input,context,page.options??{},abort.signal);}).then(async value=>{
  const prices=priceTable(env.TRANSCRIPTION_PRICE_TABLE);
  await pool.query("update provider_calls set finished_at=now(),outcome='completed',usage=$2,estimated_cost=$3,error_kind=null where lease_owner=$1",[token,{...value.usage,requestId:value.requestId},estimatedCost(this.provider.model,value.usage,prices)]);return value;
  },async error=>{await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2,usage=$3,estimated_cost=$4 where lease_owner=$1",[token,error instanceof ProviderError?error.reason:'infrastructure_error',error instanceof ProviderError?{...error.usage,requestId:error.requestId,usage_unknown:!error.usage}:{usage_unknown:true},error instanceof ProviderError&&error.usage?estimatedCost(this.provider.model,error.usage,priceTable(env.TRANSCRIPTION_PRICE_TABLE)):null]);throw error;});

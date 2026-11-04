@@ -3,8 +3,8 @@ import { appendAdminAccountLink } from './admin-account';
 import { isOffline } from './offline-state';
 import { off } from './offline-text';
 import { registerOfflineWorker } from './offline-worker';
-import { offlineAccountId, purgeAccount, purgeEnsemble, restoreIdentity } from './offline-store';
-import { preparePiece, unpreparePiece, isPrepared, offlineUsage, removeOfflineEnsemble } from './library';
+import { offlineStorageAvailable, offlineAccountId, purgeAccount, purgeEnsemble, restoreIdentity } from './offline-store';
+import { preparePieces, preparePiece, unpreparePiece, isPrepared, offlineUsage, removeOfflineEnsemble } from './library';
 import { installTranscription } from './transcription';
 import { tr } from './i18n';
 import { playbackDriftMs } from './rehearsal/schedule';
@@ -680,8 +680,8 @@ async function openEnsembleMenu(anchor:HTMLElement) {
  }
  if(!inPublicFolder()) {
  const usage=offlineUsage();
- items.push({label:`${usage.count} ${off('usage')} · ${(usage.bytes/1048576).toLocaleString(lang,{maximumFractionDigits:1})} MB offline`,disabled:true,onSelect:()=>{}});
- items.push({label:off('prepare'),icon:'file',disabled:isOffline()||!!preparing,onSelect:()=>void prepareRepertoire()});
+ items.push({label:`${usage.count} ${off('usage')} · ${(usage.bytes/1048576).toLocaleString(lang,{maximumFractionDigits:1})} MB offline${usage.quota?` / ${(usage.quota/1048576).toLocaleString(lang,{maximumFractionDigits:0})} MB`:''} · ${lang==='de'?(usage.persistent?'dauerhaft gespeichert':'Speicher kann freigegeben werden'):(usage.persistent?'persistent storage':'storage may be evicted')}`,disabled:true,onSelect:()=>{}});
+ items.push({label:off('prepare'),icon:'file',disabled:isOffline()||!offlineStorageAvailable()||!!preparing,onSelect:()=>void prepareRepertoire()});
  if(preparing)items.push({label:off('cancel'),onSelect:()=>preparing?.abort()});
  items.push({label:off('remove'),icon:'trash',onSelect:()=>void removeOfflineEnsemble().catch(e=>toast(errorText(e),'error'))});
  }
@@ -690,7 +690,7 @@ async function openEnsembleMenu(anchor:HTMLElement) {
 let preparing: AbortController | undefined;
 async function prepareRepertoire() {
  const controller=new AbortController();preparing=controller;
- try {const songs=importedSongs.slice();for(let i=0;i<songs.length;i++){if(controller.signal.aborted)break;toast(`${off('progress')} ${i+1}/${songs.length}`);await preparePiece(songs[i].id,controller.signal);} }
+ try {const {failed,skipped}=await preparePieces(importedSongs.map(song=>song.id),controller.signal,(index,total)=>toast(`${off('progress')} ${index}/${total}`));if(failed+skipped)toast(`${failed+skipped} ${lang==='de'?'Stücke übersprungen/fehlgeschlagen':'pieces skipped/failed'}`,'error'); }
  catch(e){if(!controller.signal.aborted)toast(errorText(e),'error');}
  finally{preparing=undefined;renderSongList();}
 }
@@ -4065,6 +4065,12 @@ async function openAccountArea(anchor: HTMLElement) {
   email.className = "member-email";
   email.textContent = account?.email ?? "";
   body.append(email);
+  if(!offlineStorageAvailable()){const note=document.createElement('p');note.textContent=lang==='de'?'Offline-Speicher nicht verfügbar':'Offline storage unavailable';body.append(note);}
+  const sharedLabel=document.createElement('label'), sharedToggle=document.createElement('input');
+  sharedToggle.type='checkbox';sharedToggle.checked=localStorage.getItem('lightscore-shared-device')==='1';
+  sharedToggle.onchange=()=>localStorage.setItem('lightscore-shared-device',sharedToggle.checked?'1':'0');
+  sharedLabel.append(sharedToggle,document.createTextNode(lang==='de'?'Dieses Gerät wird geteilt (24 h offline)':'This device is shared (24 h offline)'));body.append(sharedLabel);
+
   void appendAdminAccountLink(body);
   const signout = document.createElement("button");
   signout.className = "btn primary";
@@ -4205,7 +4211,9 @@ function clearRevokedEnsemble(id: string) {
  const name=ensembleById(id)?.name ?? libTitleEl.querySelector('.ens-switch')?.textContent ?? id;
  leavePlaybackSession();clearPrivateContext();renderSongList();forgetEnsemble(id);setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));
 }
-window.addEventListener('offline:ensemble-purged',event=>{const detail=(event as CustomEvent).detail;if(detail.user===account?.id)clearRevokedEnsemble(detail.ensemble);});
+window.addEventListener('offline:ensemble-purged',event=>{const detail=(event as CustomEvent).detail;if(detail.revoked!==false && detail.user===account?.id)clearRevokedEnsemble(detail.ensemble);});
+window.addEventListener('offline:refresh-failed',()=>toast(lang==='de'?'Offline-Kopie konnte nicht aktualisiert werden':'Could not update offline copy'));
+window.addEventListener('offline:unavailable',()=>toast(lang==='de'?'Offline-Speicher nicht verfügbar':'Offline storage unavailable'));
 let checkingMembership=false;
 async function checkMembership(){if(checkingMembership || leavingAccount)return;checkingMembership=true;const name=ensembleName(currentEnsemble),previous=JSON.stringify(ensembleById(currentEnsemble));try{const me=await api('/me');if(leavingAccount)return;if(me.user.id!==account?.id){clearPrivateContext();if(account)await purgeAccount(account.id);location.reload();return;}await refreshEnsembleNames();window.dispatchEvent(new Event('membership:changed'));if(!inPublicFolder()&&!ensembleById(currentEnsemble)){leavePlaybackSession();audioEngine?.stop();clearLibrary();if(account)await purgeEnsemble(account.id,currentEnsemble);importedSongs=[];privateSongs=[];currentSong=null;currentScore=null;metaCache.clear();coverCanvases.clear();notesByPart.clear();partMix.clear();audioEngine?.dispose();audioEngine=null;pianoRoll=null;staffView=null;overview=null;songTitleEl.textContent='';renderSongList();setViewMode('landing');renderLanding(true);toast(pt('removedMembership',{name}));}else if(previous!==JSON.stringify(ensembleById(currentEnsemble))){window.dispatchEvent(new Event('membership:changed'));renderLibraryHead();renderSongList();if(currentScore)void reloadCurrentSong();refreshBindings();}}catch{if(isOffline() && !(await restoreIdentity())){leavePlaybackSession();audioEngine?.stop();clearLibrary();location.replace('/?state=expired');}}finally{checkingMembership=false;}}
 setInterval(()=>void checkMembership(),60000);
@@ -4232,7 +4240,7 @@ accountEvents.on('membership:changed',()=>void checkMembership());
 accountEvents.on('disconnect',(reason)=>{if(reason==='io server disconnect')void checkMembership();});
 
 const transcriptionUi=installTranscription({beforeListen:()=>!syncEnabled()||!playerSession||confirm(tr('leaveRehearsal')),reviewCleanup:()=>{const existing=new Set(privateSongs.filter(song=>song.id.startsWith('transcription-preview-')).map(song=>song.id));return ()=>{privateSongs=privateSongs.filter(song=>!existing.has(song.id));};},socket:accountEvents,ensemble:()=>currentEnsemble,entry:document.querySelector('#transcription-entry')!,jobs:document.querySelector('#transcription-jobs')!,open:async(xml,title,id)=>{
- if(!id)transcriptionPreviewMode=sessionMode;leavePlaybackSession();audioEngine?.stop();sessionMode='solo';renderModeControls();
+ if(!id)transcriptionPreviewMode??=sessionMode;leavePlaybackSession();audioEngine?.stop();sessionMode='solo';renderModeControls();
  privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));
  if(id){await scoreBody(id);const song=allSongs().find(s=>s.id===id);if(song){await selectSong(song);return;}}
  const song:SongEntry={id:id??'transcription-preview-'+crypto.randomUUID(),title,xml,format:'musicxml',imported:!!id,localOnly:!id};privateSongs.push(song);await selectSong(song);

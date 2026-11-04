@@ -50,6 +50,11 @@ test('one wrong note cannot reindex both voices; onset excludes pitch',()=>{
 });
 test('repeated identical measures retain multiplicity and identical parts remain distinct',()=>{
  const ref=music([n('C'),n('C'),n('C'),n('D')]);expect(compareMusicXML(music([n('C'),n('C'),n('D')]),ref).metrics.notes.recall).toBe(.75);
+ const multivoice=(a:string,b:string,reverse=false)=>reverse?n(b,4,2)+'<backup><duration>4</duration></backup>'+n(a):n(a)+'<backup><duration>4</duration></backup>'+n(b,4,2);
+ const repeated=[['C','E'],['C','E'],['D','F'],['C','E'],['E','G'],['F','A']];
+ const dropped=compareMusicXML(music(repeated.filter((_,i)=>i!==2).map(([a,b])=>multivoice(a,b,true))),music(repeated.map(([a,b])=>multivoice(a,b))));
+ expect(dropped.metrics.notes.f1).toBeCloseTo(10/11);expect(dropped.metrics.voices.f1).toBeCloseTo(10/11);
+
  expect(compareMusicXML(score([part('S'),part('B')]),score([part('B'),part('S')])).metrics.notes.reference).toBe(2);
 });
 test('compares written pitch regardless of transpose metadata; staffs constrain matches',()=>{
@@ -65,4 +70,14 @@ test('duplicate Piano names pair RH and LH by content before order',()=>{
  const ref=wrap([repeat(a),repeat(b)]);
  const pred=wrap([repeat(b).replace('<step>C','<step>D'),repeat(a).replace('<step>C','<step>E')]);
  expect(compareMusicXML(pred,ref).metrics.notes.f1).toBe(.75);
+});
+
+test('measure alignment ignores voice/chord document order across a dropped measure',()=>{
+ const voice=(a:string,b:string,reverse=false)=>reverse?n(b,4,2)+'<backup><duration>4</duration></backup>'+n(a,4,1):n(a,4,1)+'<backup><duration>4</duration></backup>'+n(b,4,2);
+ const measures=[['C','E'],['D','F'],['E','G'],['F','A'],['G','B'],['A','C']];
+ const ref=music(measures.map(([a,b])=>voice(a,b)));
+ const candidate=music(measures.filter((_,i)=>i!==2).map(([a,b])=>voice(a,b,true)));
+ const result=compareMusicXML(candidate,ref);expect(result.metrics.notes.f1).toBeCloseTo(10/11);expect(result.metrics.voices.f1).toBeCloseTo(10/11);
+ const chord=(a:string,b:string)=>n(a)+n(b).replace('<note>','<note><chord/>');
+ expect(compareMusicXML(music([chord('C','E')]),music([chord('E','C')])).metrics.notes.f1).toBe(1);
 });

@@ -1,5 +1,5 @@
 import { isOffline, setOffline } from './offline-state';
-import { readPrepared, readOfflineCatalog, writeOfflineCatalog, writePrepared, removePrepared, purgeEnsemble, offlineAccountId } from './offline-store';
+import { storageUnavailable, ensembleEpoch, readPrepared, readOfflineCatalog, writeOfflineCatalog, writePrepared, removePrepared, purgeEnsemble, offlineAccountId } from './offline-store';
 import { account, ensembleById } from './ensembles';
 import { randomId } from './uuid';
 import { unzipSync, strFromU8 } from "fflate";
@@ -97,10 +97,15 @@ function stored(m: PieceMetadata): StoredSong {
 }
 const prepared = new Map<string, {metadata: PieceMetadata; body: string}>();
 let generation = 0;
+const pieceEpochs=new Map<string,number>();
+window.addEventListener('offline:ensemble-purged',event=>{const d=(event as CustomEvent).detail;if(d.user!==account?.id)return;for(const [id,row] of prepared)if(row.metadata.ensembleId===d.ensemble)prepared.delete(id);generation++;notify?.();});
+export const offlineStorageStatus={persistent:false,usage:0,quota:0};
+let persistenceRequested=false;
+async function durability(){try{if(!persistenceRequested){persistenceRequested=true;offlineStorageStatus.persistent=await navigator.storage?.persist?.()??false;}const estimate=await navigator.storage?.estimate?.();offlineStorageStatus.usage=estimate?.usage??0;offlineStorageStatus.quota=estimate?.quota??0;}catch(error){storageUnavailable(error);}}
 export const isPrepared = (id: string) => prepared.has(id);
-export const offlineUsage = () => ({count: prepared.size, bytes: [...prepared.values()].reduce((n, r) => n + new Blob([JSON.stringify(r)]).size, 0)});
+export const offlineUsage = () => ({count: prepared.size, persistent:offlineStorageStatus.persistent, quota:offlineStorageStatus.quota, bytes: offlineStorageStatus.usage || [...prepared.values()].reduce((n, r) => n + new Blob([JSON.stringify(r)]).size, 0)});
 export async function unpreparePiece(id: string) {
-  generation++;
+  pieceEpochs.set(id,(pieceEpochs.get(id)??0)+1);
   const row = prepared.get(id); if (!row || !account) return;
   await removePrepared(account.id, row.metadata); prepared.delete(id); notify?.();
 }
@@ -114,33 +119,51 @@ async function publicAssetsReady(signal?: AbortSignal) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let abort: (() => void) | undefined;
   try {
-    await Promise.race([navigator.serviceWorker.ready,new Promise<never>((_,reject)=>{
+    const registration=await Promise.race([navigator.serviceWorker.ready,new Promise<never>((_,reject)=>{
       timer=setTimeout(()=>reject(Error('Offline app assets are not ready')),30000);
       abort=()=>reject(new DOMException('Cancelled','AbortError'));
       signal?.addEventListener('abort',abort,{once:true});
       if(signal?.aborted)abort();
     })]);
+    // Preparation must wait for the complete public asset cache.
+    // Worker acknowledges full caching below through a message port.
+    await new Promise<void>((resolve,reject)=>{const channel=new MessageChannel();const timeout=setTimeout(()=>reject(Error('Offline assets unavailable')),30000);channel.port1.onmessage=e=>{clearTimeout(timeout);channel.port1.close();e.data.ok?resolve():reject(Error('Offline assets unavailable'));};registration.active?.postMessage('PREPARE_ASSETS_ACK',[channel.port2]);});
   } finally {clearTimeout(timer);if(abort)signal?.removeEventListener('abort',abort);}
 }
 export async function preparePiece(id: string, signal?: AbortSignal) {
   if (isOffline()) throw Error('Please connect online');
-  const user = account?.id, epoch = generation, m = metadata.get(id);
+  const user = account?.id, epoch = generation, pieceEpoch=pieceEpochs.get(id)??0, m = metadata.get(id);
   if (!user || !m) return;
+  const scopeEpoch=ensembleEpoch(user,m.ensembleId);
+  const valid=()=>epoch===generation && pieceEpoch===(pieceEpochs.get(id)??0) && scopeEpoch===ensembleEpoch(user,m.ensembleId) && !signal?.aborted && !!ensembleById(m.ensembleId);
   const response = await fetch(`/api/ensembles/${m.ensembleId}/pieces/${id}/versions/${m.contentHash}`, {signal, cache:'no-store'});
   if (!response.ok) throw new ApiError('unavailable', response.status);
   const body = await response.text();
   await publicAssetsReady(signal);
   if (signal?.aborted || epoch !== generation || offlineAccountId() !== user || !ensembleById(m.ensembleId)) return;
   const row = {metadata:m, body};
-  await writePrepared(user,row,()=>epoch===generation && !signal?.aborted && !!ensembleById(m.ensembleId));
-  if (epoch !== generation) return;
+  try {await writePrepared(user,row,valid);} catch(error){if((error as DOMException)?.name==='QuotaExceededError')throw Error('Nicht genug Speicherplatz für Offline-Stücke.');throw error;}
+  if (!valid()) return;
   prepared.set(id,row); notify?.();
+  void durability();
+}
+export async function preparePieces(ids: string[], signal?: AbortSignal, progress?: (index:number,total:number)=>void) {
+  let failed=0, skipped=0;
+  for(let index=0;index<ids.length;index++) {
+    if(signal?.aborted){skipped+=ids.length-index;break;}
+    progress?.(index+1,ids.length);
+    try {await preparePiece(ids[index],signal);if(!isPrepared(ids[index]))skipped++;}
+    catch {if(signal?.aborted)skipped++;else failed++;}
+  }
+  return {failed,skipped};
 }
 async function refreshPrepared(rows: PieceMetadata[]) {
   for (const id of [...prepared.keys()]) {
     const m = rows.find(r => r.id === id), old = prepared.get(id)!;
-    if (!m) await unpreparePiece(id);
-    else if (m.contentHash !== old.metadata.contentHash || m.revision !== old.metadata.revision) await preparePiece(id);
+    try {
+      if (!m) await unpreparePiece(id);
+      else if (m.contentHash !== old.metadata.contentHash || m.revision !== old.metadata.revision) await preparePiece(id);
+    } catch {window.dispatchEvent(new Event('offline:refresh-failed'));}
   }
 }
 export async function scoreBody(id: string): Promise<string> {
@@ -156,13 +179,13 @@ export async function scoreBody(id: string): Promise<string> {
   let body = bodies.get(m.contentHash);
   if (!body) {
     body = fetch(
-      `/api/ensembles/${m.ensembleId}/pieces/${id}/versions/${m.contentHash}`,
+      `/api/ensembles/${m.ensembleId}/pieces/${id}/versions/${m.contentHash}`, {cache: 'no-store'},
     ).then(async (r) => {
       if (!r.ok) throw new ApiError("not_found", r.status);
       const text = await r.text();
       return text;
     }).catch(error => {
-      if (!(error instanceof ApiError) || error.status >= 500) { setOffline(true); const row=prepared.get(id);if(row)return row.body; }
+      if (!(error instanceof ApiError) || error.status >= 500) { if(!navigator.onLine)setOffline(true); const row=prepared.get(id);if(row)return row.body; }
       throw error;
     });
     bodies.set(m.contentHash, body);
@@ -205,12 +228,13 @@ export function subscribeToSongs(
   };
   notify = emit;
   const refresh = async () => {
-    if(user && !prepared.size) {const saved=await readPrepared(user,ensemble);if(closed)return;saved.forEach(row=>prepared.set(row.metadata.id,row));}
+    const scopeEpoch=user?ensembleEpoch(user,ensemble):0;
+    if(user && !prepared.size) {const saved=await readPrepared(user,ensemble).catch(error=>{storageUnavailable(error);return [];});if(closed || scopeEpoch!==ensembleEpoch(user,ensemble))return;saved.forEach(row=>prepared.set(row.metadata.id,row));}
     const rows = await api<PieceMetadata[]>(`/ensembles/${ensemble}/pieces`);
     if (closed) return;
     metadata.clear();
     rows.forEach((m) => metadata.set(m.id, m));
-    if(user && offlineAccountId()===user) await writeOfflineCatalog(user,ensemble,rows,()=>!closed && !!ensembleById(ensemble));
+    if(user && offlineAccountId()===user) await writeOfflineCatalog(user,ensemble,rows,()=>!closed && scopeEpoch===ensembleEpoch(user,ensemble) && !!ensembleById(ensemble)).catch(storageUnavailable);
     if(closed)return;
     fromCache = false;
     emit();
@@ -255,7 +279,7 @@ export function subscribeToSongs(
         }),
       );
       emit();
-      if(user && offlineAccountId()===user)await writeOfflineCatalog(user,ensemble,[...metadata.values()],()=>!closed && !!ensembleById(ensemble));
+      if(user && offlineAccountId()===user)await writeOfflineCatalog(user,ensemble,[...metadata.values()],()=>!closed && !!ensembleById(ensemble)).catch(storageUnavailable);
       await refreshPrepared([...metadata.values()]);
     } catch (e) {
       onError(e);

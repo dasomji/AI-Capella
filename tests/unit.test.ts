@@ -246,3 +246,9 @@ it('cleans all title entry boundaries and rejects unsafe titles',async()=>{
  const {createPieceInput}=await import('../src/api/domain');
  expect(createPieceInput.safeParse({title:'x'.repeat(201),content:{}}).success).toBe(false);
 });
+
+it('cleans multiline titles and Unicode tags and truncates filename titles without broken emoji',async()=>{
+ const {cleanTitle,truncateTitle}=await import('../src/api/title');
+ expect(cleanTitle('A\n\tB\u00ad\u2028\u2029\u{e0061}')).toBe('A B');
+ const title=truncateTitle('x'.repeat(199)+'😀.png');expect(title).toHaveLength(199);expect(title.isWellFormed()).toBe(true);
+});

@@ -10,7 +10,7 @@ function Rehearsal() {
       if (active && !mounted) {
         const { initializeEnsembles } = await import("../ensembles");
         try { await initializeEnsembles(); }
-        catch { location.replace('/?state=expired'); return; }
+        catch(error) { if((error as {code?:string}).code!=='SIGNED_OUT')location.replace('/?state=expired'); return; }
         mounted = true;
         setReady(true);
         await import("../main");

@@ -141,9 +141,32 @@ try {
   assert.equal(updated.status,200);
   await p.waitForFunction(async({hash})=>{for(const db of await indexedDB.databases()){if(!db.name.startsWith('lightscore-private:'))continue;const values=await new Promise((resolve,reject)=>{const r=indexedDB.open(db.name);r.onsuccess=()=>{const d=r.result,t=d.transaction('data'),q=t.objectStore('data').getAll();t.oncomplete=()=>{d.close();resolve(q.result);};};r.onerror=reject;});if(values.some(v=>v?.metadata?.contentHash===hash))return true;}return false;},{hash:updated.body.contentHash});
   console.log('background prepared version refresh verified');
+  // A failed version refresh retains the old offline copy and leaves online controls enabled.
+  await p.route('**/versions/*',route=>route.request().method()==='GET'?route.fulfill({status:500,body:'fixture refresh failure'}):route.continue());
+  await p.evaluate(()=>{window.__refreshFailed=false;window.addEventListener('offline:refresh-failed',()=>window.__refreshFailed=true,{once:true});});
+  const current=await request(p,`/ensembles/${ensemble}/pieces/${pieceId}`);
+  const failedRefresh=await p.evaluate(async({ensemble,pieceId,revision,xml})=>{const r=await fetch(`/api/ensembles/${ensemble}/pieces/${pieceId}/versions`,{method:'POST',headers:{'Content-Type':'text/xml','x-expected-revision':String(revision)},body:xml});return r.status;},{ensemble,pieceId,revision:current.body.revision,xml:xml.replace('Evening','Refresh')});
+  assert.equal(failedRefresh,200);await p.waitForFunction(()=>window.__refreshFailed);
+  assert.equal(await p.locator('.offline-mark').count(),1);
+  assert.equal(await p.locator('#mode-ensemble-btn').isDisabled(),false);
+  await p.unroute('**/versions/*');
+  // Explicit eviction must clear the sibling tab without revoking its membership.
+  if(await p.locator('#library-back-btn:visible').count())await p.locator('#library-back-btn').click();
+  const evictionTab=await a.newPage();await evictionTab.goto(base+'/app');await evictionTab.locator('.offline-mark').waitFor({state:'attached'});
+  await p.locator('.ens-switch').click();await p.getByRole('menuitem',{name:'Remove offline data',exact:true}).click();
+  await evictionTab.locator('.offline-mark').waitFor({state:'detached'});await evictionTab.close();
+  await p.locator('.ens-switch').click();await p.getByRole('menuitem',{name:'Make available offline',exact:true}).click();await p.locator('.offline-mark').waitFor();
+  // A browser that cannot open IndexedDB must still enter the online app.
+  const broken=await browser.newContext();await broken.addCookies(await a.cookies());
+  await broken.addInitScript(()=>{localStorage.setItem('ai-capella-intro-off','1');indexedDB.open=()=>{throw new DOMException('Unavailable','UnknownError');};});
+  const onlineOnly=await broken.newPage();await onlineOnly.goto(base+'/app');await onlineOnly.locator('#app.mode-landing').waitFor();assert.equal(new URL(onlineOnly.url()).pathname,'/app');await broken.close();
+  console.log('refresh failure, cross-tab eviction and unavailable IndexedDB verified');
+
   const originalWorker=fs.readFileSync(`${process.env.LIGHTSCORE_BUILD_ROOT||'dist'}/client/sw.js`,'utf8');
   try {fs.writeFileSync(`${process.env.LIGHTSCORE_BUILD_ROOT||'dist'}/client/sw.js`,originalWorker.replace(/const CACHE = '([^']+)'/,"const CACHE = '$1-browser-update'"));await p.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();});await p.locator('#offline-update').waitFor();assert.match(await p.locator('#offline-update').innerText(),/New version available/);}finally{fs.writeFileSync(`${process.env.LIGHTSCORE_BUILD_ROOT||'dist'}/client/sw.js`,originalWorker);}
   console.log('waiting worker reload notice verified');
+  p.once('dialog',dialog=>dialog.dismiss());
+  assert.equal(await p.evaluate(()=>{const event=new Event('vite:preloadError',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;}),true);
 
   // A disconnected prepared member loses the ensemble copy as soon as membership is revalidated.
   await q.goto(base);await q.locator('nav').getByRole('button',{name:'Create account',exact:true}).click();await signup(q,emailB,'Second Singer');await signin(q,emailB);await q.waitForURL('**/app');await q.locator('#landing-empty').waitFor({state:'visible'});
@@ -168,15 +191,26 @@ try {
   await q.locator('#lib-menu-btn').click();await q.getByRole('menuitem',{name:'Account and devices',exact:true}).click();await q.getByRole('button',{name:'Sign out',exact:true}).click();await q.getByText('Please sign in online',{exact:true}).waitFor();
   assert(!(await q.evaluate(()=>indexedDB.databases().then(d=>d.map(x=>x.name)))).some(n=>n.startsWith('lightscore-private:'+encodeURIComponent(memberAccount)+':')));
   console.log('offline logout purge verified');
+  await b.setOffline(false);await q.reload();await q.waitForURL('**/?state=signed-out');
+  assert.equal(await q.evaluate(()=>localStorage.getItem('lightscore-pending-signout')),null);assert.equal((await request(q,'/me')).status,401);
+  console.log('pending signout revoked the server session');
   // Logout through the existing account sheet must delete every account store.
   if(await p.locator('#library-back-btn:visible').count())await p.locator('#library-back-btn').click();
   await p.locator('#lib-menu-btn').click();await p.getByRole('menuitem',{name:'Account and devices',exact:true}).click();
+  const signoutResponse=p.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/sign-out');
   await p.getByRole('button',{name:'Sign out',exact:true}).click();await p.waitForURL('**/?state=signed-out');
+  assert.equal(await (await signoutResponse).headerValue('clear-site-data'),'"cache"');
   assert(!(await p.evaluate(()=>indexedDB.databases().then(d=>d.map(x=>x.name)))).some(n=>n.startsWith('lightscore-private:'+encodeURIComponent(userId)+':')));
+  assert.equal(await p.evaluate(async url=>(await fetch(url)).status,`/api/ensembles/${ensemble}/pieces/${pieceId}/versions/${updated.body.contentHash}`),401);
   await signin(p,emailB);await p.waitForURL('**/app');await p.locator('#landing-empty').waitFor({state:'visible'});
   await a.setOffline(true);await p.reload();await p.locator('#landing-empty').waitFor({state:'visible'});assert.equal(await p.locator('.offline-mark').count(),0);assert.equal(await p.locator(`[data-id="${pieceId}"]`).count(),0);
   await p.evaluate(async()=>{const user=localStorage.getItem('lightscore-offline-account');const r=indexedDB.open('lightscore-private:'+encodeURIComponent(user)+':_identity');await new Promise((resolve,reject)=>{r.onsuccess=()=>{const db=r.result,tx=db.transaction('data','readwrite'),s=tx.objectStore('data'),get=s.get('session');get.onsuccess=()=>s.put({...get.result,verified:Date.now()-15*86400000},'session');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=reject;};r.onerror=reject;});});
   await p.reload();await p.getByText('Please sign in online',{exact:true}).waitFor();assert.equal(await p.evaluate(()=>localStorage.getItem('lightscore-offline-account')),null);
   assert.deepEqual(errors,[]);
+  await a.setOffline(false);await p.goto(base);await signin(p,emailA);await p.waitForURL('**/app');
+  await p.waitForFunction(()=>!!localStorage.getItem('lightscore-offline-account'));
+  await a.clearCookies();await p.goto(base+'/app');await p.waitForURL('**/?state=expired');
+  assert(!(await p.evaluate(()=>indexedDB.databases())).some(db=>db.name.startsWith('lightscore-private:')));
+  console.log('online cookie-loss app entry purges all private stores');
   console.log('PASS Phase 5a: preparation, offline reload/solo, public cache boundary and logout purge', {ensemble,pieceId});
-} catch(e){console.log('FAIL URL',p.url(),await p.locator('body').innerText());await p.screenshot({path:evidence+'/offline-failure.png'});throw e;} finally { await browser.close(); }
+} catch(e){console.log('FAIL URL',p.url(),await p.locator('body').innerText());console.log('FAIL DATA',await p.evaluate(async()=>{const data=[];for(const {name} of await indexedDB.databases()){if(!name?.endsWith('_identity'))continue;data.push(await new Promise(resolve=>{const r=indexedDB.open(name);r.onsuccess=()=>{const db=r.result;const t=db.transaction('data');const q=t.objectStore('data').get('session');t.oncomplete=()=>{db.close();resolve(q.result);};};}));}return {data,keys:{...localStorage}};}));await p.screenshot({path:evidence+'/offline-failure.png'});throw e;} finally { await browser.close(); }

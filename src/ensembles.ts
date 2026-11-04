@@ -1,5 +1,6 @@
 import { isOffline, setOffline } from './offline-state';
-import { identityEpoch, offlineAccountId, purgeAccount, reconcilePrepared, rememberIdentity, restoreIdentity } from './offline-store';
+import { storageUnavailable, identityEpoch, offlineAccountId, purgeAccount, reconcilePrepared, rememberIdentity, restoreIdentity } from './offline-store';
+import { lastVerifiedServerDate } from './domain-client';
 import { ApiError } from './domain-client';
 import { api } from "./domain-client";
 import { pt } from "./i18n";
@@ -24,8 +25,9 @@ export async function initializeEnsembles() {
   if(localStorage.getItem('lightscore-pending-signout')) {
     const response=await fetch('/api/auth/sign-out',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
     if(response.ok){localStorage.removeItem('lightscore-pending-signout');location.replace('/?state=signed-out');}
-    throw new ApiError('SESSION_EXPIRED',401);
+    throw new ApiError(response.ok?'SIGNED_OUT':'SESSION_EXPIRED',401);
   }
+  await restoreIdentity().catch(storageUnavailable);
   try {
     const me = await api('/me');
     const previous = offlineAccountId();
@@ -42,7 +44,9 @@ export async function initializeEnsembles() {
     account = saved.user; ENSEMBLES = saved.ensembles; setOffline(true);
   }
 }
+let refreshSerial=0;
 export async function refreshEnsembleNames() {
+  const serial=++refreshSerial;
   const user=account?.id, epoch=user?identityEpoch(user):0;
   const me=await api('/me');
   if(account && me.user.id!==account.id){await purgeAccount(account.id);location.reload();throw new ApiError('SESSION_EXPIRED',401);}
@@ -50,8 +54,15 @@ export async function refreshEnsembleNames() {
   if (!account) return;
   if(user && epoch!==identityEpoch(user))throw new ApiError('SESSION_EXPIRED',401);
   ENSEMBLES = rows;
-  await rememberIdentity(account, ENSEMBLES);
-  await reconcilePrepared(account.id, rows.map(e => e.id));
+  const current=()=>account?.id===user && identityEpoch(user!)===epoch && ENSEMBLES===rows;
+  const identity=account, verified=lastVerifiedServerDate();
+  // Browser storage must never hold the online sign-in path hostage.
+  void (async()=>{
+    try {await rememberIdentity(identity,rows,verified,()=>current() && serial===refreshSerial);}catch(error){storageUnavailable(error);return;}
+    let latest:Ensemble[];
+    try {latest=await api<Ensemble[]>('/ensembles');}catch{return;}
+    if(current())await reconcilePrepared(identity.id,[...new Set([...rows,...latest].map(e=>e.id))],()=>current() && serial===refreshSerial);
+  })().catch(storageUnavailable);
   setOffline(false);
 }
 export const ensembleById = (id: string) => ENSEMBLES.find((e) => e.id === id);

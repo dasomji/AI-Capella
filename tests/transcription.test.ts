@@ -467,13 +467,18 @@ test('UI endpoints isolate ensembles, validate pages/options and sandbox cached 
  const row=(await pool.query('select options from transcription_jobs where id=$1',[j.id])).rows[0];assert.equal(row.options.title,'score');
 });
 
-test('persistent or hung heartbeat and stuck rendering release before lease expiry',async()=>{
- for(const mode of ['failed','hung','render']){
- const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);const query=pool.query,lease=env.TRANSCRIPTION_LEASE_MS;env.TRANSCRIPTION_LEASE_MS=2500;
- pool.query=function(this:typeof pool,...args:any[]){if(String(args[0]).startsWith('update job_pages p set lease_expires_at'))return mode==='failed'?Promise.reject(Error('persistent heartbeat fixture')):new Promise(()=>{});return (query as any).apply(this,args);} as any;
+test('persistent or hung heartbeat and stuck rendering release before lease expiry',{timeout:60000},async()=>{
+ for(const mode of ['failed','hung','render','context','legacy-context','call-insert']){
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);const query=pool.query,lease=env.TRANSCRIPTION_LEASE_MS;env.TRANSCRIPTION_LEASE_MS=5000;
+ pool.query=function(this:typeof pool,...args:any[]){const sql=String(args[0]);
+ if(sql.startsWith('update job_pages p set lease_expires_at') )return mode==='failed'?Promise.reject(Error('persistent heartbeat fixture')):new Promise(()=>{});
+ if(mode==='context'&&sql.startsWith('select metrics,result_xml'))return new Promise(()=>{});
+ if(mode==='legacy-context'&&sql.startsWith('select metrics,result_xml'))return sql.includes('limit 1')?Promise.resolve({rows:[{result_xml:'legacy',metrics:{}}]}):new Promise(()=>{});
+ if(mode==='call-insert'&&sql.startsWith('insert into provider_calls'))return new Promise(()=>{});
+ return (query as any).apply(this,args);} as any;
  const provider=new FakeProvider(()=> 'success',10000);let aborted=false;
  const renderer=mode==='render'?{render:async(_input:any,signal:AbortSignal)=>{signal.addEventListener('abort',()=>{aborted=true;},{once:true});return new Promise<any>(()=>{});}}:undefined;
- const started=performance.now();try{await new TranscriptionWorker(provider,renderer).tick();assert.ok(performance.now()-started<2500);assert.equal(mode==='render'?aborted:true,true);assert.notEqual((await (query as any).call(pool,'select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running');}finally{pool.query=query;env.TRANSCRIPTION_LEASE_MS=lease;}
+ const started=performance.now();try{await new TranscriptionWorker(provider,renderer).tick();assert.ok(performance.now()-started<5000,`${mode}: lease deadline exceeded`);assert.equal(mode==='render'?aborted:true,true);assert.notEqual((await (query as any).call(pool,'select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running');}finally{pool.query=query;env.TRANSCRIPTION_LEASE_MS=lease;}
  }
 });
 
@@ -485,4 +490,15 @@ test('worker upgrades legacy context once and then consumes checkpoint without r
  const metrics=(await pool.query('select metrics from job_pages where job_id=$1 and page_number=0',[j.id])).rows[0].metrics;assert.equal(metrics.uncertainties.length,200);assert.equal(metrics.uncertainties[0].reason.length,500);assert.equal(metrics.uncertainties[0].part.length,500);
  await pool.query("update job_pages set metrics=metrics-'contextState' where job_id=$1",[j.id]);await worker.tick();await worker.tick();
  assert.equal(contexts.length,3);assert.equal(contexts[1].length,1);assert.equal(contexts[1][0].contextState,undefined);assert.equal(contexts[2].length,1);assert.ok(contexts[2][0].contextState);assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+});
+
+test('transcription config returns authenticated upload limits',async()=>{
+ const {lead}=await setup();const r=await fetch(`${base}/api/transcription/config`,{headers:{cookie:lead.cookie}});
+ assert.equal(r.status,200,await r.clone().text());const config=await r.json();assert.ok(config.pdf>0);assert.ok(config.photo>0);assert.ok(config.pages>0);assert.equal(r.headers.get('cache-control'),'no-store');
+});
+
+test('worker statement timeout does not constrain admin/usage pool queries',async()=>{
+ const {workerQueries}=await import('../server/db/index.server');
+ assert.equal((await pool.query('show statement_timeout')).rows[0].statement_timeout,'0');
+ assert.equal((await workerQueries(()=>pool.query('show statement_timeout'))).rows[0].statement_timeout,'5s');
 });

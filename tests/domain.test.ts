@@ -181,6 +181,9 @@ test(
     );
     const piece = await ok(path + "/pieces", "POST", body, lead.cookie);
     const p = path + "/pieces/" + piece.id;
+    const renamed=await ok(p,'PATCH',{op:'title',value:'A\u202eB\u200b',expectedRevision:piece.revision},lead.cookie);
+    assert.equal(renamed.title,'AB');
+
     assert.equal(
       (await ok(path + "/pieces", "POST", body, lead.cookie)).id,
       piece.id,
@@ -192,7 +195,7 @@ test(
     assert.equal(r.headers.get("etag"), `"${piece.contentHash}"`);
     assert.equal(
       r.headers.get("cache-control"),
-      "private, max-age=31536000, immutable",
+      "private, no-cache",
     );
     assert.ok((await r.text()).length > 900000);
     for (const suffix of [
@@ -1893,4 +1896,10 @@ test('recipient mail window rolls each send and twenty requester shares cannot f
   await pool.query('delete from rate_limit where key=$1',[key+':interval']);assert.equal(await allowAccountMail(other,'reset',req('198.51.100.'+n)),false);
  }
  assert.ok(await allowAccountMail(other,'reset',req('203.0.113.250')));
+});
+
+test('sign-out returns cache clearing and revokes session',async()=>{
+ const user=await account();const response=await request('auth/sign-out','POST',{},user.cookie);
+ assert.equal(response.status,200);assert.equal(response.headers.get('clear-site-data'),'"cache"');
+ assert.equal((await request('me','GET',undefined,user.cookie)).status,401);
 });

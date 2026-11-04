@@ -246,6 +246,9 @@ try {
   await p.locator("#lib-menu-btn").click();
   await p.getByText("Account and devices", { exact: true }).click();
   await p.getByText(/· This device$/).waitFor();
+  const shared=p.getByLabel('This device is shared (24 h offline)',{exact:true});
+  assert.equal(await shared.isChecked(),false);await shared.check();
+  assert.equal(await p.evaluate(()=>localStorage.getItem('lightscore-shared-device')),'1');await shared.uncheck();
   await request(p, `/ensembles/${e}/members/${member.id}`, "DELETE");
   await q
     .getByText("You are no longer a member of Browser Choir.", { exact: true })

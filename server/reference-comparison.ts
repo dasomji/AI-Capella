@@ -74,7 +74,7 @@ function intersection(a:string[],b:string[]){const counts=new Map<string,number>
 
 /** Sequence edit alignment: substitutions cost one, insertions/deletions one. */
 function align(a:Measure[],b:Measure[]){
- const fingerprint=(m:Measure)=>JSON.stringify([m.notes,m.rests]);const af=a.map(fingerprint),bf=b.map(fingerprint);
+ const fingerprint=(m:Measure)=>JSON.stringify([[...m.notes].sort(),[...m.rests].sort()]);const af=a.map(fingerprint),bf=b.map(fingerprint);
  const dp=Array.from({length:a.length+1},()=>new Uint32Array(b.length+1));for(let i=0;i<=a.length;i++)dp[i][0]=i;for(let j=0;j<=b.length;j++)dp[0][j]=j;
  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)dp[i][j]=Math.min(dp[i-1][j-1]+Number(af[i-1]!==bf[j-1]),dp[i-1][j]+1,dp[i][j-1]+1);
  const pairs:[Measure|undefined,Measure|undefined][]=[];let i=a.length,j=b.length;

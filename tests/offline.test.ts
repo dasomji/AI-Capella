@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, test, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { privateName, withinOfflineWindow, OFFLINE_WINDOW_MS, purgeAccount, reconcilePrepared, purgeEnsemble, writeOfflineCatalog } from '../src/offline-store';
@@ -7,7 +7,7 @@ describe('offline privacy boundary', () => {
  function storageFixture() {
    const names=new Set([privateName('A','one'),privateName('A','two'),privateName('A','_identity'),privateName('B','one'),'unrelated']);
    const values=new Map([['lightscore-offline-account','A']]);
-   vi.stubGlobal('localStorage',{getItem:(k:string)=>values.get(k)??null,removeItem:(k:string)=>values.delete(k)});
+   vi.stubGlobal('localStorage',{getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>values.set(k,v),removeItem:(k:string)=>values.delete(k)});
    vi.stubGlobal('window',new EventTarget());
    vi.stubGlobal('indexedDB',{databases:async()=>[...names].map(name=>({name})),deleteDatabase:(name:string)=>{const request:any={};queueMicrotask(()=>{names.delete(name);request.onsuccess();});return request;}});
    return {names,values};
@@ -49,4 +49,38 @@ describe('offline privacy boundary', () => {
    expect(allowed({url:'https://other.test/assets/main-hash.js',method:'GET'})).toBe(false);
    expect(allowed({url:'https://local.test/assets/main-hash.js',method:'POST'})).toBe(false);
  });
+});
+
+describe('offline review regressions',()=>{
+ afterEach(()=>vi.unstubAllGlobals());
+ it('rejects a delayed write when another tab increments the ensemble epoch',async()=>{
+   const values=new Map([['lightscore-offline-account','A']]);
+   vi.stubGlobal('localStorage',{getItem:(k:string)=>values.get(k)??null});
+   const request:any={},transaction=vi.fn();
+   vi.stubGlobal('indexedDB',{open:()=>request});
+   const pending=writeOfflineCatalog('A','one',[]);
+   values.set('lightscore-epoch:A:one','1');
+   request.result={close:vi.fn(),transaction};request.onsuccess();
+   await expect(pending).rejects.toThrow('Offline access cleared');expect(transaction).not.toHaveBeenCalled();
+ });
+ it('stale membership reconciliation cannot delete an ensemble',async()=>{
+   vi.stubGlobal('indexedDB',{databases:async()=>[{name:privateName('A','new-membership')}],deleteDatabase:vi.fn()});
+   await reconcilePrepared('A',[],()=>false);expect(indexedDB.deleteDatabase).not.toHaveBeenCalled();
+ });
+ it('navigation fallback accepts trailing slash and query without caching requests',async()=>{
+   const handlers:any={},fallback={offline:true};
+   runInNewContext(readFileSync('public/sw.js','utf8'),{URL,self:{location:{origin:'https://local.test'},addEventListener:(name:string,fn:any)=>handlers[name]=fn},fetch:()=>Promise.reject(Error('offline')),caches:{open:async()=>({match:async()=>fallback})}});
+   for(const path of ['/app','/app/','/app?x=1']){let response:any;handlers.fetch({request:{url:'https://local.test'+path,method:'GET',mode:'navigate'},respondWith:(r:any)=>response=r});expect(await response).toBe(fallback);}
+ });
+});
+
+test('a clock behind the server denies restore without purging; shared mode caps at 24 hours',async()=>{
+ const {restoreIdentity,offlineWindow}=await import('../src/offline-store');
+ const values=new Map([['lightscore-offline-account','skew']]);
+ vi.stubGlobal('localStorage',{getItem:(key:string)=>values.get(key)??null});
+ const deleted=vi.fn();
+ vi.stubGlobal('indexedDB',{deleteDatabase:deleted,open:()=>{
+   const request:any={};queueMicrotask(()=>{request.result={close(){},transaction(){const tx:any={objectStore:()=>({get:()=>{const q={result:{verified:Date.now()+60000,user:{id:'skew'},ensembles:[]}};queueMicrotask(()=>tx.oncomplete());return q;}})};return tx;}};request.onsuccess();});return request;
+ }});
+ try{expect(await restoreIdentity()).toBeNull();expect(deleted).not.toHaveBeenCalled();expect(offlineWindow()).toBe(OFFLINE_WINDOW_MS);values.set('lightscore-shared-device','1');expect(offlineWindow()).toBe(Math.min(OFFLINE_WINDOW_MS,86400000));}finally{vi.unstubAllGlobals();}
 });
