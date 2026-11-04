@@ -434,7 +434,14 @@ let leavingAccount = false;
 let playerSession: PlayerSession | null = null;
 let sharedState: RehearsalState | null = null;
 let sharedReady = false;
-function sendShared(command:Command) {if(!sharedReady || !playerSession)return;void playerSession.send(command).catch(e=>sharedNotice(errorText(e)));}
+function restoreSharedLoopPreview(){
+ pianoRoll?.setLoopRegion(loopRegion);overview?.setLoopRegion(loopRegion);scheduleRender();
+}
+function sendShared(command:Command) {
+ if(!sharedReady || !playerSession){if(command.type==='setLoop')restoreSharedLoopPreview();return;}
+ void playerSession.send(command).then(ack=>{if(command.type==='setLoop' && ack.status==='rejected')restoreSharedLoopPreview();})
+ .catch(e=>{if(command.type==='setLoop')restoreSharedLoopPreview();sharedNotice(errorText(e));});
+}
 const sharedSeeks=new SeekCoalescer(sendShared);
 document.addEventListener('pointerup',()=>sharedSeeks.flush());
 function leavePlaybackSession() {sharedSeeks.cancel(); playerSession?.dispose(); playerSession=null; sharedState=null; sharedReady=false; }
