@@ -1,3 +1,4 @@
+import { estimatedCost,priceTable } from './transcription-cost';
 import { OpenAITranscriptionProvider } from './openai-provider.server';
 import { BoundedPageRenderer } from './page-renderer.server';
 import { ScoreAssembler } from './score-assembly.server';
@@ -75,9 +76,9 @@ export class TranscriptionWorker {
  const deadline=new Promise<never>((_,reject)=>{timeoutReject=()=>reject(new ProviderError('provider_timeout',true));abort.signal.addEventListener('abort',timeoutReject,{once:true});if(abort.signal.aborted)timeoutReject();});
  await pool.query('insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version) values($1,$2,$3,$4,$5,$6)',[page.job_id,page.id,page.attempts+1,token,this.provider.model,this.provider.promptVersion]);
  const call=Promise.resolve().then(()=>this.provider.transcribePage(input,context,page.options??{},abort.signal)).then(async value=>{
- const price=JSON.parse(env.TRANSCRIPTION_PRICE_TABLE)[this.provider.model]??{input:0,output:0};
- await pool.query("update provider_calls set finished_at=now(),outcome='completed',usage=$2,estimated_cost=$3,error_kind=null where lease_owner=$1",[token,{...value.usage,requestId:value.requestId},JSON.stringify((value.usage.inputTokens*price.input+value.usage.outputTokens*price.output)/1000000)]);return value;
- },async error=>{await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2,usage=$3 where lease_owner=$1",[token,error instanceof ProviderError?error.reason:'infrastructure_error',error instanceof ProviderError?{...error.usage,requestId:error.requestId}:{}]);throw error;});
+ const prices=priceTable(env.TRANSCRIPTION_PRICE_TABLE);
+ await pool.query("update provider_calls set finished_at=now(),outcome='completed',usage=$2,estimated_cost=$3,error_kind=null where lease_owner=$1",[token,{...value.usage,requestId:value.requestId},estimatedCost(this.provider.model,value.usage,prices)]);return value;
+ },async error=>{await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2,usage=$3,estimated_cost=$4 where lease_owner=$1",[token,error instanceof ProviderError?error.reason:'infrastructure_error',error instanceof ProviderError?{...error.usage,requestId:error.requestId}:{},error instanceof ProviderError&&error.usage?estimatedCost(this.provider.model,error.usage,priceTable(env.TRANSCRIPTION_PRICE_TABLE)):null]);throw error;});
  try{result=await Promise.race([call,deadline]);}catch(error){await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2 where lease_owner=$1 and outcome='running'",[token,error instanceof ProviderError?error.reason:'infrastructure_error']);throw error;}finally{abort.signal.removeEventListener('abort',timeoutReject);}
 
  if(this.provider instanceof FakeProvider && !result.musicxmlFragment.endsWith('</measure>'))throw new ProviderError(result.musicxmlFragment.startsWith('<measure')?'truncated':'invalid_output');
@@ -91,10 +92,10 @@ export class TranscriptionWorker {
  if(!p || p.lease_owner!==token || p.state!=='running' || p.job_state==='cancelled')return;
  if(paused){await db.query("update job_pages set state='queued',attempts=greatest(0,attempts-1),failure_reason='emergency_stop',lease_owner=null,lease_expires_at=null where id=$1",[page.id]);return;}
  const reason=failure?.reason;const retry=failure?.retryable && p.attempts<env.TRANSCRIPTION_MAX_ATTEMPTS;
- const price=JSON.parse(env.TRANSCRIPTION_PRICE_TABLE)[this.provider.model]??{input:0,output:0};
+ const prices=priceTable(env.TRANSCRIPTION_PRICE_TABLE);
  const history=[...(p.metrics?.history??[]),{latency:Date.now()-started,usage:result?.usage??failure?.usage??{inputTokens:0,outputTokens:0},outcome:reason??'completed',model:this.provider.model,promptVersion:this.provider.promptVersion}];
  const usage=history.reduce((sum,item)=>({inputTokens:sum.inputTokens+item.usage.inputTokens,outputTokens:sum.outputTokens+item.usage.outputTokens}),{inputTokens:0,outputTokens:0});
- const metrics={history,latency:history.reduce((sum,item)=>sum+item.latency,0),attempts:history.length,retries:history.length-1,usage,model:this.provider.model,promptVersion:this.provider.promptVersion,estimatedCost:(usage.inputTokens*price.input+usage.outputTokens*price.output)/1000000,outcome:reason??'completed',uncertainties:result?.uncertainties??[],flags:result?.flags??[],requestId:result?.requestId??failure?.requestId};
+ const metrics={history,latency:history.reduce((sum,item)=>sum+item.latency,0),attempts:history.length,retries:history.length-1,usage,model:this.provider.model,promptVersion:this.provider.promptVersion,estimatedCost:estimatedCost(this.provider.model,usage,prices),outcome:reason??'completed',uncertainties:result?.uncertainties??[],flags:result?.flags??[],requestId:result?.requestId??failure?.requestId};
  await db.query(`update job_pages set state=$2,failure_reason=$3,result_xml=$4,metrics=$5,next_attempt_at=now()+$6*interval '1 millisecond',lease_owner=null,lease_expires_at=null where id=$1`,[page.id,failure?(retry?'queued':'failed'):'completed',reason,result?.musicxmlFragment,metrics,Math.max(failure?.retryAfterMs??0,Math.min(60000,1000*2**p.attempts))]);
  if(failure && !retry)await db.query("update transcription_jobs set state='failed',failure_reason=$2 where id=$1",[page.job_id,reason]);
  });

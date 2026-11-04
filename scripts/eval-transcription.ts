@@ -29,7 +29,7 @@ export async function evaluate(args:string[]){
  for(const file of manifests.slice(0,opts.limit)){
  const manifest=manifestSchema.parse(JSON.parse(await readFile(file,'utf8')));const dir=dirname(file);
  const local=(p:string)=>{const path=resolve(dir,p);if(!path.startsWith(dir+'/'))throw Error('Fixture path escapes directory');return path;};
- const store={get:async(key:string)=>createReadStream(key)} as ObjectStorage;
+ const store={get:async(key:string)=>createReadStream(key)} satisfies Pick<ObjectStorage,'get'>;
  const renderer=new BoundedPageRenderer(store);const results:PageResult[]=[];const pages:any[]=[];const jobStart=Date.now();
  for(const [index,p] of manifest.pages.entries()){
  const attempts:any[]=[];let result:PageResult|undefined;const start=Date.now();let failure:string|undefined;

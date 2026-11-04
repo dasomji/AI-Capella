@@ -1,3 +1,4 @@
+import { transcriptionUsage } from './usage.server';
 import type { Hono } from 'hono';
 import { Readable } from 'node:stream';
 import { z } from 'zod';
@@ -35,5 +36,6 @@ export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string
  const input=z.object({paused:z.boolean()}).strict().parse(await c.req.json());
  await transaction(async db=>{if(!(await db.query("select 1 from platform_roles where user_id=$1 and role='sysadmin'",[c.get('user').id])).rowCount)throw new DomainError('not_found',404);await db.query('insert into transcription_control(id,paused) values(1,$1) on conflict(id) do update set paused=$1,updated_at=now()',[input.paused]);await db.query("insert into audit_events(actor_id,action,outcome,metadata) values($1,'transcription.control','ok',$2)",[c.get('user').id,input]);});return c.json({paused:await processingPaused()});
  });
+ app.get('/admin/transcription/usage',async c=>{if(!(await pool.query("select 1 from platform_roles where user_id=$1 and role='sysadmin'",[c.get('user').id])).rowCount)throw new DomainError('not_found',404);try{return c.json(await transcriptionUsage(c.req.query('from')??'',c.req.query('to')??''));}catch(e){if(e instanceof Error&&e.message.startsWith('Expected'))throw new DomainError('invalid_range',422);throw e;}});
  app.get('/admin/transcription/metrics',async c=>{if(!(await pool.query("select 1 from platform_roles where user_id=$1 and role='sysadmin'",[c.get('user').id])).rowCount)throw new DomainError('not_found',404);const from=z.iso.datetime({offset:true}).parse(c.req.query('from')),to=z.iso.datetime({offset:true}).parse(c.req.query('to'));if(new Date(from).getTime()>=new Date(to).getTime())throw new DomainError('invalid_range',422);return c.json(await transcriptionMetrics(new Date(from),new Date(to)));});
 }

@@ -5,7 +5,7 @@ export const categories=['notes','pitch','onset','duration','rests','measures','
 type Category=typeof categories[number];
 export type Metric={precision:number;recall:number;f1:number;matched:number;predicted:number;reference:number};
 type Part={name:string;measures:Record<Category,string[]>[]};
-const empty=()=>Object.fromEntries(categories.map(c=>[c,[]])) as Record<Category,string[]>;
+const empty=()=>Object.fromEntries(categories.map(c=>[c,[] as string[]])) as Record<Category,string[]>;
 const normalized=(s:string)=>s.normalize('NFC').trim().replace(/\s+/g,' ').toLowerCase();
 function parse(xml:string):Part[]{
  if(/<!DOCTYPE|<!ENTITY/i.test(xml)||XMLValidator.validate(xml)!==true)throw Error('Unsafe or malformed MusicXML');

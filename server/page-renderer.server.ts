@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { ObjectStorage } from './storage.server';
 import { ProviderError,type PageRenderer,type PageInput } from './transcription-provider.server';
 export class BoundedPageRenderer implements PageRenderer {
- constructor(private store?:ObjectStorage){}
+ constructor(private store?:Pick<ObjectStorage,'get'>){}
  async render(input:PageInput,signal:AbortSignal):Promise<PageInput>{
  await mkdir('.transcription-tmp',{recursive:true,mode:0o700});const dir=await mkdtemp('.transcription-tmp/render-');
  try{
