@@ -393,3 +393,17 @@ it('keeps all four count-in clicks and its downbeat at fractional epoch timestam
  expect(countInClickTimes(from,until,pulse,from+pulse+.1)).toEqual(clicks.slice(2));
  expect(countInClickTimes(from,until,pulse,until)).toEqual([]);
 });
+
+it('keeps scheduling through epoch-scale loop wraps across tempo and length sweeps',()=>{
+ for(const bpm of [77.7,113,133.3,...Array.from({length:18},(_,i)=>60+i*7)])for(const [a,b] of [[2,6],[0,8],[3,11]]){
+  const {engine,note}=fakeSharedEngine();const ctx=engine.context as any;
+  (engine as any).score.notes=Array.from({length:16},(_,startBeat)=>({partId:'a',startBeat,durationBeats:.5,midi:60}));
+  const now=performance.timeOrigin+performance.now()+1234.567;
+  const timing={...t,baseBpm:120,tempos:[{beat:0,bpm:120}],totalBeats:64};
+  engine.scheduleShared({...s,bpm,status:'playing',anchor:{beat:a,serverTime:now+400},effectiveAt:now+400,loop:{enabled:true,startBeat:a,endBeat:b}},timing,now,0,[]);
+  let last=0;
+  for(let i=1;i<=160;i++){const before=note.mock.calls.length;ctx.currentTime=10+i*.5;engine.tick();if(note.mock.calls.length>before)last=i;}
+  expect(last,`bpm ${bpm}, loop ${a}..${b}`).toBeGreaterThan(156);
+  expect(note.mock.calls.length).toBeGreaterThan((b-a)*5);
+ }
+});

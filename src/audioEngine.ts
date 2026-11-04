@@ -892,7 +892,7 @@ export class AudioEngine {
     this.scheduleAhead(true);
   }
 
-  private canonical: {state:RehearsalState;timing:PieceTiming;offset:number;server:number;audio:number;through:number} | null = null;
+  private canonical: {state:RehearsalState;timing:PieceTiming;offset:number;server:number;audio:number;through:number;beat?:number} | null = null;
   private previousCanonical: typeof this.canonical = null;
   outputLatencyOffsetMs = 0;
   sharedClockReady?: () => boolean;
@@ -905,7 +905,7 @@ export class AudioEngine {
     const at=serverToAudioTime(decision.effectiveAt,offset,{state:this.ctx.state,currentTime:this.ctx.currentTime,outputLatency:this.ctx.outputLatency,baseLatency:this.ctx.baseLatency,getOutputTimestamp:()=>{const t=this.ctx.getOutputTimestamp?.()??{};return {contextTime:t.contextTime??0,performanceTime:t.performanceTime??0};}})-this.outputLatencyOffsetMs/1000;
     this.clearSchedule(at);
     this.previousCanonical=this.canonical;
-    this.canonical={state,timing,offset,server:decision.effectiveAt,audio:at,through:decision.effectiveAt};
+    this.canonical={state,timing,offset,server:decision.effectiveAt,audio:at,through:0};
     this.cancelIdleRest();this.playing=decision.playing;this.waiting=this.ctx.state!=='running';
     this.pausedBeat=decision.beat;this.lastTranspose=state.transposition;
     this.metronomeEnabled=state.metronome;
@@ -935,22 +935,23 @@ export class AudioEngine {
     const {state:s,timing:t}=c;
     if(s.status!=='playing' && s.status!=='countingIn')return;
     const musicAt=Math.max(s.anchor.serverTime,s.countInUntil??0,s.startingTonesUntil??0,c.server);
-    let from=Math.max(c.through,musicAt);
-    const horizon=Math.max(c.server,this.sharedServerNow(c))+LOOKAHEAD_SEC*1000;
+    // Keep elapsed milliseconds and the musical cursor across refills and wraps.
+    let from=Math.max(c.through,musicAt-c.server);
+    let beat=c.beat ?? positionAt(s,c.server+from,t);
+    const horizon=Math.max(0,this.sharedServerNow(c)-c.server)+LOOKAHEAD_SEC*1000;
     const scale=t.baseBpm/s.bpm;
     let guard=0;
     while(from<horizon && guard++<512){
-      const beat=positionAt(s,from,t);
       const end=s.loop.enabled ? s.loop.endBeat??t.totalBeats : t.totalBeats;
-      if(beat>=end)break;
+      if(beat>=end){if(!s.loop.enabled)break;beat=s.loop.startBeat??0;}
       const endTime=from+(secondsAt(end,t)-secondsAt(beat,t))*scale*1000;
       const until=Math.min(horizon,endTime);
       const endBeat=beatAt(secondsAt(beat,t)+(until-from)/1000/scale,t);
-      const audioAt=(b:number)=>c.audio+(from-c.server)/1000+(secondsAt(b,t)-secondsAt(beat,t))*scale;
+      const audioAt=(b:number)=>c.audio+from/1000+(secondsAt(b,t)-secondsAt(beat,t))*scale;
       for(const note of this.score.notes){
         if(note.startBeat>=endBeat || note.startBeat+note.durationBeats<=beat)continue;
         // Only pick up held notes at a new schedule/loop start, never at a lookahead refill.
-        if(note.startBeat<beat && from!==musicAt && !(s.loop.enabled && Math.abs(beat-(s.loop.startBeat??0))<1e-6))continue;
+        if(note.startBeat<beat && from!==musicAt-c.server && !(s.loop.enabled && Math.abs(beat-(s.loop.startBeat??0))<1e-6))continue;
         const gain=this.partGains.get(note.partId);if(!gain)continue;
         const start=Math.max(this.ctx.currentTime,audioAt(Math.max(beat,note.startBeat)));
         const finish=audioAt(Math.min(end,note.startBeat+note.durationBeats));
@@ -960,11 +961,14 @@ export class AudioEngine {
       }
       if(s.metronome)for(const marker of this.beatMarkers)
         if(marker.beat>=beat && marker.beat<endBeat)this.scheduledVoices.push(playClick(this.ctx,this.metronomeGain,Math.max(this.ctx.currentTime,audioAt(marker.beat)),marker.isDownbeat));
-      if(until<=from)break;
-      from=until;
-      if(!s.loop.enabled && until>=endTime)break;
+      if(until>=endTime){
+        beat=s.loop.enabled ? s.loop.startBeat??0 : end;
+        // Relative times retain sub-millisecond progress even at epoch-scale anchors.
+        from=endTime;
+        if(!s.loop.enabled)break;
+      }else{from=until;beat=endBeat;}
     }
-    c.through=from;
+    c.through=from;c.beat=beat;
   }
 
   /** True while the starting tones of the most recent play() are still sounding. */
