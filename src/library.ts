@@ -1,3 +1,4 @@
+import { serverRestart } from './socket-restart';
 import { isOffline, setOffline } from './offline-state';
 import { storageUnavailable, ensembleEpoch, readPrepared, readOfflineCatalog, writeOfflineCatalog, writePrepared, removePrepared, purgeEnsemble, offlineAccountId } from './offline-store';
 import { account, ensembleById } from './ensembles';
@@ -7,6 +8,7 @@ import { api, ApiError } from "./domain-client";
 import { localLibrary } from "./local-library";
 import { activeEnsemble, canEditPieces, PUBLIC_ID } from "./ensembles";
 import { io } from "socket.io-client";
+import { offlineQuotaMessages, lang as offlineLanguage } from './i18n';
 import type { PieceMetadata } from "./api/domain";
 export type SongFormat = "musicxml" | "score";
 
@@ -100,8 +102,8 @@ let generation = 0;
 const pieceEpochs=new Map<string,number>();
 window.addEventListener('offline:ensemble-purged',event=>{const d=(event as CustomEvent).detail;if(d.user!==account?.id)return;for(const [id,row] of prepared)if(row.metadata.ensembleId===d.ensemble)prepared.delete(id);notify?.();});
 export const offlineStorageStatus={persistent:false,usage:0,quota:0};
-let persistenceRequested=false;
-async function durability(){try{if(!persistenceRequested){persistenceRequested=true;offlineStorageStatus.persistent=await navigator.storage?.persist?.()??false;}const estimate=await navigator.storage?.estimate?.();offlineStorageStatus.usage=estimate?.usage??0;offlineStorageStatus.quota=estimate?.quota??0;}catch(error){storageUnavailable(error);}}
+const PERSIST_RETRY_MS=7*86400000;
+async function durability(){try{{offlineStorageStatus.persistent=await navigator.storage?.persisted?.()??false;const last=Number(localStorage.getItem('lightscore-persist-attempt'));if(!offlineStorageStatus.persistent && (!last || Date.now()-last>=PERSIST_RETRY_MS)){localStorage.setItem('lightscore-persist-attempt',String(Date.now()));offlineStorageStatus.persistent=await navigator.storage?.persist?.()??false;}}const estimate=await navigator.storage?.estimate?.();offlineStorageStatus.usage=estimate?.usage??0;offlineStorageStatus.quota=estimate?.quota??0;}catch { /* Persistence and estimates are optional browser hints. */ }}
 export const isPrepared = (id: string) => prepared.has(id);
 export const offlineUsage = () => ({count: prepared.size, persistent:offlineStorageStatus.persistent, quota:offlineStorageStatus.quota, bytes: offlineStorageStatus.usage || [...prepared.values()].reduce((n, r) => n + new Blob([JSON.stringify(r)]).size, 0)});
 export async function unpreparePiece(id: string) {
@@ -142,7 +144,7 @@ export async function preparePiece(id: string, signal?: AbortSignal) {
   await publicAssetsReady(signal);
   if (signal?.aborted || epoch !== generation || offlineAccountId() !== user || !ensembleById(m.ensembleId)) return;
   const row = {metadata:m, body};
-  try {await writePrepared(user,row,valid);} catch(error){if((error as DOMException)?.name==='QuotaExceededError')throw Error('Nicht genug Speicherplatz für Offline-Stücke.');throw error;}
+  try {await writePrepared(user,row,valid);} catch(error){if((error as DOMException)?.name==='QuotaExceededError')throw new DOMException(offlineQuotaMessages[offlineLanguage], 'QuotaExceededError');throw error;}
   if (!valid()) return;
   prepared.set(id,row); notify?.();
   void durability();
@@ -153,7 +155,7 @@ export async function preparePieces(ids: string[], signal?: AbortSignal, progres
     if(signal?.aborted){skipped+=ids.length-index;break;}
     progress?.(index+1,ids.length);
     try {await preparePiece(ids[index],signal);if(!isPrepared(ids[index]))skipped++;}
-    catch {if(signal?.aborted)skipped++;else failed++;}
+    catch(error) {if((error as DOMException)?.name==='QuotaExceededError')throw error;if(signal?.aborted)skipped++;else failed++;}
   }
   return {failed,skipped};
 }
@@ -254,6 +256,7 @@ export function subscribeToSongs(
     emit();
   };
   const socket = io({ autoConnect: !isOffline(), withCredentials: true, transports: ["websocket"] });
+  const restart=serverRestart(socket);
   socket.on("membership:changed", () =>
     window.dispatchEvent(new Event("membership:refresh")),
   );
@@ -288,7 +291,7 @@ export function subscribeToSongs(
   socket.on('disconnect', () => { if (!navigator.onLine) void fallback(); });
   socket.on('connect_error', () => { void fallback(); });
   const offline = () => { socket.disconnect(); void fallback(); };
-  const online = () => { socket.connect(); void refresh().catch(fallback); };
+  const online = () => { restart.connect(); void refresh().catch(fallback); };
   window.addEventListener('offline', offline);
   window.addEventListener('online', online);
   const rejoin = () => socket.emit("ensemble:join", ensemble);
@@ -297,7 +300,7 @@ export function subscribeToSongs(
     void refresh().catch(fallback);
   }
   const stop = () => {
-    closed = true;
+    closed = true;restart.dispose();
     window.removeEventListener('offline', offline);
     window.removeEventListener('online', online);
     socket.disconnect();

@@ -1,3 +1,4 @@
+import { serverRestart } from '../socket-restart';
 import { io } from 'socket.io-client';
 import { PlaybackClock } from './client-clock';
 import { SocketPlaybackTransport } from './socket-transport';
@@ -7,9 +8,10 @@ export class PlayerSession {
   readonly transport: SocketPlaybackTransport;
   readonly clock: PlaybackClock;
   private socket = io('/rehearsal', {autoConnect:false,forceNew:true,withCredentials:true,transports:['websocket']});
+  private restart=serverRestart(this.socket);
   private closed = false;
   private offline = () => this.socket.disconnect();
-  private online = () => {if(!this.closed)this.socket.connect();};
+  private online = () => {if(!this.closed)this.restart.connect();};
   constructor(ensembleId:string, apply:(state:RehearsalState)=>Promise<void>, ready:(value:boolean)=>void, notice:(code:string)=>void, recalibrated:()=>void=()=>{}) {
     this.transport = new SocketPlaybackTransport(this.socket,ensembleId,()=>this.clock.serverNow(),value=>ready(value && this.clock.usable),notice,async()=>{await this.clock.reconnect();if(!this.clock.usable)throw Error('clock_unavailable');});
     this.clock = new PlaybackClock(async()=>{await new Promise(resolve=>setTimeout(resolve,5));return this.transport.ping();},()=>{ready(this.transport.ready && this.clock.usable);if(this.transport.ready && this.clock.usable)recalibrated();});
@@ -29,5 +31,5 @@ export class PlayerSession {
     return this.transport.send(command);
   }
   async resume() {await this.clock.reconnect();if(!this.closed && this.clock.usable) await this.transport.snapshot();}
-  dispose() {this.closed=true;window.removeEventListener('offline',this.offline);window.removeEventListener('online',this.online);this.clock.dispose();this.transport.dispose();}
+  dispose() {this.closed=true;this.restart.dispose();window.removeEventListener('offline',this.offline);window.removeEventListener('online',this.online);this.clock.dispose();this.transport.dispose();}
 }

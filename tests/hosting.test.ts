@@ -15,7 +15,7 @@ for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start
   assert.ok(ready,logs);
   const html = await fetch(base); assert.match(await html.text(),/LightScore/); assert.equal(html.headers.get('cache-control'),'no-store');
   assert.equal((await fetch(`${base}/_serverFn/fixture`,{method:'POST',body:'{}'})).status,403);
-  if (mode === 'start') { const { readdir } = await import('node:fs/promises'); const asset = (await readdir('dist/client/assets')).find(f=>f.endsWith('.js'))!; const response = await fetch(`${base}/assets/${asset}`); assert.equal(response.status,200); assert.match(response.headers.get('cache-control') ?? '', /immutable/); assert.equal((await fetch(`${base}/assets/${asset}.map`)).status,404); }
+  if (mode === 'start') { const { readdir } = await import('node:fs/promises'); const asset = (await readdir((process.env.LIGHTSCORE_BUILD_ROOT ?? 'dist')+'/client/assets')).find(f=>f.endsWith('.js'))!; const response = await fetch(`${base}/assets/${asset}`); assert.equal(response.status,200); assert.match(response.headers.get('cache-control') ?? '', /immutable/); assert.equal((await fetch(`${base}/assets/${asset}.map`)).status,404); }
   const post = (path: string, body: unknown) => fetch(`${base}/api/auth/${path}`,{ method:'POST',headers:{origin:base,'Content-Type':'application/json'},body:JSON.stringify(body) });
   const email = `${mode}-${crypto.randomUUID()}@example.test`; const password = 'valid-singer-password-55';
   assert.equal((await post('sign-up/email',{ email,password,name:'Host singer',callbackURL:base })).status,200);

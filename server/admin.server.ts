@@ -3,7 +3,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {calendarRange,calendarInstant} from '../src/admin-time';
 import { offsetInstant } from './time.server';
 import { z } from 'zod';
-import { pool } from './db/index.server';
+import { pool, adminQueries } from './db/index.server';
 import { adminSession } from './admin-auth.server';
 import { DomainError, transaction } from './domain.server';
 import { adminQuery, adminAccess, adminControl, safeAdminText } from '../src/api/admin';
@@ -25,17 +25,17 @@ export const admin = new Hono<{
     };
 }>();
 admin.onError((e, c) => { if (e instanceof DomainError)
-    return adminJSON(c, { code: e.code, message: e.code==='rate_limited' ? e.message : undefined }, e.status as 400); if (e instanceof z.ZodError || e instanceof SyntaxError || (typeof (e as any)?.code==='string' && (e as any).code.startsWith('22')))
+    return adminJSON(c, { code: e.code, message: e.code==='rate_limited' ? e.message : undefined, ...(e.code==='rate_limited' ? (e as any).limit : {}) }, e.status as 400); if (e instanceof z.ZodError || e instanceof SyntaxError || (typeof (e as any)?.code==='string' && (e as any).code.startsWith('22')))
     return adminJSON(c, { code: 'invalid_input', message: 'Use bounded filters and ISO instants with offset or Z.' }, 422); logError('admin.http', e); return adminJSON(c, { code: 'service_unavailable' }, 500); });
 export async function adminLimit(actor: string, kind = 'read', max = 120, windowMs = 60000) {
     const r = await pool.query(`insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request<=$2-$3 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request<=$2-$3 then $2 else rate_limit.last_request end returning count`, ['admin:' + kind + ':' + actor, Date.now(),windowMs]);
     if (r.rows[0].count > max) {
         console.warn(JSON.stringify({timestamp:new Date().toISOString(),level:'warn',event:'admin.cap_hit',actor,kind,max,windowMs}));
-        const error=new DomainError('rate_limited',429);error.message=`Admin ${kind} limit reached (${max} per ${windowMs/60000} minutes). Please wait before trying again.`;throw error;
+        const error=new DomainError('rate_limited',429);const unit=windowMs===86400000?'day':windowMs===3600000?'hour':'minute';error.message=`Admin limit reached (${max} per ${unit}). Please wait before trying again.`;(error as any).limit={max,unit};throw error;
     }
 }
 admin.use('*', async (c, next) => { c.header('Cache-Control', 'no-store'); const s = await adminSession(c.req.raw.headers); if (!s)
-    return adminJSON(c, { code: 'not_found' }, 404); for(const v of Object.values(c.req.param()))safeAdminText.max(200).parse(v); c.set('actor', s.user.id); await adminLimit(s.user.id); await next(); if(['GET','HEAD'].includes(c.req.method) && c.res.status===200 && /\/transcription\/(control|metrics|failures)$/.test(c.req.path)){const data=await c.res.clone().json();await listAudit(c,c.req.path.split('/').at(-1)!,Array.isArray(data)?data.length:data.items?.length??1);} });
+    return adminJSON(c, { code: 'not_found' }, 404); for(const v of Object.values(c.req.param()))safeAdminText.max(200).parse(v); c.set('actor', s.user.id); await adminLimit(s.user.id); await adminQueries(next); if(['GET','HEAD'].includes(c.req.method) && c.res.status===200 && /\/transcription\/(control|metrics|failures)$/.test(c.req.path)){const data=await c.res.clone().json();await listAudit(c,c.req.path.split('/').at(-1)!,Array.isArray(data)?data.length:data.items?.length??1);} });
 export async function adminAudit(actor: string, type: string, target: string, action = 'detail', reason = '') {
     await pool.query("insert into audit_events(actor_id,action,target_id,ensemble_id,outcome,metadata) values($1,$2,$3,case when $5='ensemble' then (select id from ensembles where id=$3) when $5='piece' then (select ensemble_id from music_pieces where id=$3) when $5='original' then (select ensemble_id from stored_objects where id=$3) end,'ok',$4)", [actor, 'admin.' + type + '.' + action, target, { targetType: type, reason },type]);
 }
@@ -51,7 +51,7 @@ const sources = {
     ensembles: { table: 'ensembles t', fields: `t.id,t.name,t.kind,t.created_at,(select count(*)::int from memberships m where m.ensemble_id=t.id) as members,(select count(*)::int from memberships m where m.ensemble_id=t.id and m.is_lead) as leads,(select count(*)::int from music_pieces p where p.ensemble_id=t.id) as pieces,(select count(*)::int from invitations i where i.ensemble_id=t.id and i.state='pending' and i.expires_at>now()) as pending_invitations,(select coalesce(sum(size),0)::float8 from stored_objects o where o.ensemble_id=t.id and o.kind='original' and o.state='ready') as storage_bytes`, search: 't.name', name: 't.name', date: 't.created_at' },
     pieces: { table: 'music_pieces t', fields: `t.id,t.title,t.ensemble_id,t.format,t.created_at,t.updated_at,(select size::float8 from score_versions v where v.id=t.current_version_id) as size,(select count(*)::int from score_versions v where v.piece_id=t.id) as versions`, search: 't.title', name: 't.title', date: 't.created_at' },
     jobs: { table: 'transcription_jobs t', fields: 't.id,t.ensemble_id,t.user_id,t.state,t.failure_reason,t.attempts,t.model,t.prompt_version,t.imported_piece_id,t.created_at,t.updated_at', search: 't.id', name: 't.id', date: 't.created_at' },
-    audit: { table: 'audit_events t', fields: 't.id,t.actor_id,t.ensemble_id,t.action,t.target_id,t.outcome,t.created_at,case when t.action like \'admin.%\' then left(t.metadata->>\'reason\',160) end as reason_excerpt', search: 't.action', name: 't.action', date: 't.created_at' },
+    audit: { table: 'audit_events t', fields: 't.id,t.actor_id,(select name from "user" where id=t.actor_id) as actor_name,t.ensemble_id,t.action,t.target_id,t.outcome,t.created_at,case when t.action like \'admin.%\' then left(t.metadata->>\'reason\',160) end as reason_excerpt', search: 't.action', name: 't.action', date: 't.created_at' },
     memberships: { table: 'memberships m join ensembles e on e.id=m.ensemble_id join "user" u on u.id=m.user_id', fields: memberFields, search: 'u.email', name: 'u.name', date: 'm.created_at' },
     invitations: { table: 'invitations t', fields: "t.id,t.ensemble_id,t.email,t.inviter_id,case when t.state='pending' and t.expires_at<=now() then 'expired' else t.state end as state,t.expires_at,t.created_at,t.manage_members,t.edit_music_pieces,t.ai_transcription", search: 't.email', name: 't.email', date: 't.created_at' },
 } as const;

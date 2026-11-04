@@ -476,7 +476,7 @@ async function receiveSharedState(state:RehearsalState) {
   if(!state.pieceId){sharedState=state;audioEngine?.stop();setViewMode('library');endArrival();return;}
   if(state.pieceId!==loadedSongId || state.versionNo!==sharedVersion){
     const meta=await api(`/ensembles/${currentEnsemble}/pieces/${state.pieceId}`);
-    const response=await fetch(`/api/ensembles/${currentEnsemble}/pieces/${state.pieceId}/versions/${state.versionNo}`);
+    const response=await fetch(`/api/ensembles/${currentEnsemble}/pieces/${state.pieceId}/versions/${state.versionNo}`,{cache:'no-store'});
     if(!response.ok)throw new Error('not_found');
     const xml=await response.text();
     await loadSongLocally({id:state.pieceId,title:meta.title,format:meta.format,xml,imported:true},state.effectiveAt);
@@ -1412,7 +1412,7 @@ function applySongTitle(songId: string, value: string, previousTitle: string) {
 }
 
 function errorText(err: unknown): string {
-  if(err && typeof err==='object' && 'code' in err)return domainError(String(err.code));
+  if(err && typeof err==='object' && 'code' in err && typeof err.code==='string')return domainError(String(err.code));
   return err instanceof Error ? err.message : String(err);
 }
 

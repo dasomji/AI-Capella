@@ -129,7 +129,7 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     for(const [kind,count] of [['content-hour',30],['content-day',200]] as const){
       await pool.query('delete from rate_limit where key like $1',['admin:content%:'+sys.id]);
       await pool.query('insert into rate_limit(key,count,last_request) values($1,$2,$3)',['admin:'+kind+':'+sys.id,count,Date.now()]);
-      const r=await req('/api/admin/pieces/'+p+'/content',sys.cookie,'POST',{reason:'Cap test'});assert.equal(r.status,429);assert.match((await r.json()).message,new RegExp(kind));
+      const r=await req('/api/admin/pieces/'+p+'/content',sys.cookie,'POST',{reason:'Cap test'});assert.equal(r.status,429);const body=await r.json();assert.equal(body.max,count);assert.equal(body.unit,kind==='content-hour'?'hour':'day');assert.match(body.message,new RegExp(`${count} per ${body.unit}`));
     }
     await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);
     for(let i=0;i<30;i++)await json('users',sys.cookie);assert.equal((await req('/api/admin/users',sys.cookie)).status,429);
@@ -158,4 +158,17 @@ test('CLI preserves original errors when rollback itself fails',async()=>{
  const pg=(await import('pg')).default;const query=pg.Client.prototype.query;
  pg.Client.prototype.query=function(this:InstanceType<typeof pg.Client>,...args:any[]){if(args[0]==='rollback')return Promise.reject(Error('rollback failure')) as any;return (query as any).apply(this,args);} as any;
  try{await assert.rejects(changeAdminRole(process.env.DATABASE_URL!,'missing-account@example.test',true),/verified account/);}finally{pg.Client.prototype.query=query;}
+});
+
+test('malformed percent paths return 400 without a host error',async()=>{
+ for(const path of ['/foo%zz','/%']){const response=await req(path);assert.equal(response.status,400);assert.equal((await response.json()).code,'invalid_path');}
+});
+test('ordinary handler statements time out and release the connection',{timeout:45000},async()=>{
+ const {api}=await import('../server/http.server');
+ api.get('/polish-timeout-fixture',async c=>{await pool.query('select pg_sleep(40) /* polish timeout */');return c.json({ok:true});});
+ const start=performance.now(),response=await api.request(base+'/polish-timeout-fixture');assert.equal(response.status,500);assert.ok(performance.now()-start<38000);
+ assert.equal((await pool.query('select 1 as ok')).rows[0].ok,1);assert.equal(pool.waitingCount,0);
+ assert.equal((await pool.query("select count(*)::int n from pg_stat_activity where state='active' and query like 'select pg_sleep(40)%' ")).rows[0].n,0);
+ const {adminQueries,workerQueries}=await import('../server/db/index.server');
+ assert.equal((await pool.query('show statement_timeout')).rows[0].statement_timeout,'30s');assert.equal((await adminQueries(()=>pool.query('show statement_timeout'))).rows[0].statement_timeout,'2min');assert.equal((await workerQueries(()=>pool.query('show statement_timeout'))).rows[0].statement_timeout,'5s');
 });

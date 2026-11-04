@@ -499,6 +499,15 @@ test('transcription config returns authenticated upload limits',async()=>{
 
 test('worker statement timeout does not constrain admin/usage pool queries',async()=>{
  const {workerQueries}=await import('../server/db/index.server');
- assert.equal((await pool.query('show statement_timeout')).rows[0].statement_timeout,'0');
+ assert.equal((await pool.query('show statement_timeout')).rows[0].statement_timeout,'30s');
  assert.equal((await workerQueries(()=>pool.query('show statement_timeout'))).rows[0].statement_timeout,'5s');
+});
+
+test('abort during provider insert closes a late running call as abandoned',{timeout:15000},async()=>{
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);const query=pool.query,timeout=env.TRANSCRIPTION_TIMEOUT_MS;
+ let release!:()=>void,inserted!:Promise<any>;const provider=new FakeProvider();env.TRANSCRIPTION_TIMEOUT_MS=250;
+ pool.query=function(this:typeof pool,...args:any[]){if(String(args[0]).startsWith('insert into provider_calls')){inserted=new Promise<void>(resolve=>release=resolve).then(()=>(query as any).apply(pool,args));return inserted;}return (query as any).apply(this,args);} as any;
+ try{await new TranscriptionWorker(provider).tick();assert.ok(release);release();await inserted;
+ for(let i=0;i<50;i++){const row=(await (query as any).call(pool,'select outcome,finished_at from provider_calls where job_id=$1',[j.id])).rows[0];if(row?.outcome==='abandoned'){assert.ok(row.finished_at);return;}await delay(20);}assert.fail('late insert remained running');
+ }finally{pool.query=query;env.TRANSCRIPTION_TIMEOUT_MS=timeout;}
 });

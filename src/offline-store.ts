@@ -4,6 +4,7 @@ const POINTER = 'lightscore-offline-account';
 export const privatePrefix = (user: string) => `lightscore-private:${encodeURIComponent(user)}:`;
 export const privateName = (user: string, ensemble: string) => privatePrefix(user) + encodeURIComponent(ensemble);
 export const withinOfflineWindow = (verified: number, now = Date.now(), windowMs = OFFLINE_WINDOW_MS) => Number.isFinite(verified) && now >= verified && now - verified <= windowMs;
+export const correctedNow = (identity: {skew?: number}) => Date.now() - (Number.isFinite(identity.skew) ? identity.skew! : 0);
 export const offlineWindow = () => localStorage.getItem('lightscore-shared-device') === '1' ? Math.min(OFFLINE_WINDOW_MS,86400000) : OFFLINE_WINDOW_MS;
 export const ensembleEpoch = (user: string, ensemble: string) => Number(localStorage.getItem(`lightscore-epoch:${user}:${ensemble}`) || 0);
 let storageAvailable=true;
@@ -26,7 +27,7 @@ async function access<T>(user: string, ensemble: string, mode: IDBTransactionMod
       const tx = db.transaction('data', mode);
       const req = operation(tx.objectStore('data'));
       tx.oncomplete = () => { db.close(); resolve(req.result); };
-      tx.onabort = tx.onerror = () => { db.close(); reject(tx.error); };
+      tx.onabort = tx.onerror = event => { db.close(); reject((event.target as IDBRequest)?.error ?? tx.error ?? new Error('Offline storage transaction failed')); };
       } catch(error) { db.close();reject(error); }
     };
   });
@@ -40,7 +41,7 @@ export const readOfflineCatalog = async (user: string, ensemble: string): Promis
 export async function writeOfflineCatalog(user: string, ensemble: string, rows: PieceMetadata[], valid = () => true) { if(typeof indexedDB !== 'undefined') await access(user,ensemble,'readwrite',s=>s.put(rows,'catalog'),valid); }
 export async function writePrepared(user: string, row: Prepared, valid = () => true) {
   const identity=await access<any>(user,'_identity','readonly',s=>s.get('session'));
-  if(!identity?.ensembles.some((e: {id:string})=>e.id===row.metadata.ensembleId) || !withinOfflineWindow(identity.verified,Date.now(),offlineWindow())) throw Error('Offline permission expired');
+  if(!identity?.ensembles.some((e: {id:string})=>e.id===row.metadata.ensembleId) || !withinOfflineWindow(identity.verified,correctedNow(identity),offlineWindow())) throw Error('Offline permission expired');
   await access(user, row.metadata.ensembleId, 'readwrite', s => s.put(row, `${row.metadata.id}:${row.metadata.contentHash}`),valid);
   // Only retain the newest authorized version of each piece.
   const rows = await readPrepared(user, row.metadata.ensembleId);
@@ -55,6 +56,7 @@ async function drop(name: string) {
 export async function purgeAccount(user: string) {
   epochs.set(user, (epochs.get(user) ?? 0) + 1);
   if (offlineAccountId() === user) localStorage.removeItem(POINTER);
+  for (let i=localStorage.length-1;i>=0;i--) { const key=localStorage.key(i); if(key?.startsWith(`lightscore-epoch:${user}:`))localStorage.removeItem(key); }
   localStorage.removeItem(`lightscore-place:${user}`);
   localStorage.removeItem(`lightscore-ensemble:${user}`);
   for (const db of typeof indexedDB === 'undefined' ? [] : await indexedDB.databases()) if (db.name?.startsWith(privatePrefix(user))) await drop(db.name);
@@ -75,7 +77,7 @@ export async function rememberIdentity(user: {id: string; email: string; name: s
   if (typeof indexedDB === 'undefined') return;
   const previous = offlineAccountId();
   if (previous && previous !== user.id) await purgeAccount(previous);
-  await access(user.id, '_identity', 'readwrite', s => s.put({user, ensembles, verified}, 'session'),valid);
+  await access(user.id, '_identity', 'readwrite', s => s.put({user, ensembles, verified: Number.isFinite(verified) ? verified : Date.now(), skew: Number.isFinite(verified) ? Date.now()-verified : 0}, 'session'),valid);
   if(!valid())return;
   localStorage.setItem(POINTER, user.id);
 }
@@ -83,9 +85,9 @@ export async function restoreIdentity(): Promise<any | null> {
   const user = offlineAccountId();
   if (!user) return null;
   const identity = await access<any>(user, '_identity', 'readonly', s => s.get('session'));
-  if (!identity || !withinOfflineWindow(identity.verified,Date.now(),offlineWindow())) {
+  if (!identity || !withinOfflineWindow(identity.verified,correctedNow(identity),offlineWindow())) {
     // A clock behind the server denies access but does not destroy a valid copy.
-    if (!identity || Date.now() - identity.verified > offlineWindow()) await purgeAccount(user);
+    if (!identity || correctedNow(identity) - identity.verified > offlineWindow()) await purgeAccount(user);
     return null;
   }
   return identity;

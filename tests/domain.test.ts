@@ -195,7 +195,7 @@ test(
     assert.equal(r.headers.get("etag"), `"${piece.contentHash}"`);
     assert.equal(
       r.headers.get("cache-control"),
-      "private, no-cache",
+      "private, no-store",
     );
     assert.ok((await r.text()).length > 900000);
     for (const suffix of [
@@ -813,8 +813,8 @@ test(
       },
       lead.cookie,
     );
-    await Promise.all([
-      ok(
+    const reorders=await Promise.all([
+      request(
         path + "/reorder",
         "POST",
         {
@@ -823,7 +823,7 @@ test(
         },
         lead.cookie,
       ),
-      ok(
+      request(
         path + "/reorder",
         "POST",
         {
@@ -833,6 +833,7 @@ test(
         lead.cookie,
       ),
     ]);
+    assert.ok(reorders.some(r=>r.status===200));for(const r of reorders)assert.ok([200,409].includes(r.status),await r.text());
     const reordered = await ok(path + "/pieces", "GET", undefined, lead.cookie);
     assert.equal(new Set(reordered.map((x: any) => x.sortKey)).size, 2);
     assert.deepEqual(

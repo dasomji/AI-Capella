@@ -205,6 +205,7 @@ try {
   assert(!(await p.evaluate(()=>indexedDB.databases().then(d=>d.map(x=>x.name)))).some(n=>n.startsWith('lightscore-private:'+encodeURIComponent(userId)+':')));
   assert.equal(await p.evaluate(async url=>(await fetch(url)).status,`/api/ensembles/${ensemble}/pieces/${pieceId}/versions/${updated.body.contentHash}`),401);
   await signin(p,emailB);await p.waitForURL('**/app');await p.locator('#landing-empty').waitFor({state:'visible'});
+  await p.waitForFunction(id=>localStorage.getItem('lightscore-offline-account')===id,memberAccount);
   await a.setOffline(true);await p.reload();await p.locator('#landing-empty').waitFor({state:'visible'});assert.equal(await p.locator('.offline-mark').count(),0);assert.equal(await p.locator(`[data-id="${pieceId}"]`).count(),0);
   await p.evaluate(async()=>{const user=localStorage.getItem('lightscore-offline-account');const r=indexedDB.open('lightscore-private:'+encodeURIComponent(user)+':_identity');await new Promise((resolve,reject)=>{r.onsuccess=()=>{const db=r.result,tx=db.transaction('data','readwrite'),s=tx.objectStore('data'),get=s.get('session');get.onsuccess=()=>s.put({...get.result,verified:Date.now()-15*86400000},'session');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=reject;};r.onerror=reject;});});
   await p.reload();await p.getByText('Please sign in online',{exact:true}).waitFor();assert.equal(await p.evaluate(()=>localStorage.getItem('lightscore-offline-account')),null);

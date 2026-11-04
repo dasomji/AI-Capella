@@ -2,9 +2,10 @@ import {test,expect,vi,beforeEach,afterEach} from 'vitest';
 const state=vi.hoisted(()=>({rows:[] as any[],saved:[] as any[],writes:[] as any[],quota:false}));
 vi.mock('../src/ensembles',()=>({account:{id:'A'},ensembleById:()=>({id:'E'}),activeEnsemble:()=> 'E',canEditPieces:()=>true,PUBLIC_ID:'public'}));
 vi.mock('../src/domain-client',async original=>({...await original<any>(),api:async()=>state.rows}));
-vi.mock('socket.io-client',()=>({io:()=>({on(){},emit(){},disconnect(){},connect(){}})}));
+vi.mock('socket.io-client',()=>({io:()=>({on(){},off(){},emit(){},disconnect(){},connect(){}})}));
 vi.mock('../src/offline-store',async original=>({...await original<any>(),readPrepared:async()=>state.saved,writeOfflineCatalog:async()=>{},removePrepared:async()=>{},writePrepared:async(_user:any,row:any,valid:any)=>{if(state.quota)throw new DOMException('full','QuotaExceededError');if(valid())state.writes.push(row);}}));
 import {subscribeToSongs,preparePiece,unpreparePiece,isPrepared,clearLibrary,scoreBody,preparePieces} from '../src/library';
+import {offlineQuotaMessages,lang} from '../src/i18n';
 import {isOffline,setOffline} from '../src/offline-state';
 const row=(id:string,hash='old')=>({id,ensembleId:'E',contentHash:hash,revision:1,settings:{},sortKey:id});
 beforeEach(()=>{localStorage.setItem('lightscore-offline-account','A');state.rows=[row('one'),row('two')];state.saved=[];state.writes=[];state.quota=false;setOffline(false);});
@@ -25,7 +26,7 @@ test('unpreparing one piece does not cancel a second in-flight prepare',async()=
 test('quota exhaustion reports the actionable offline message',async()=>{
  state.saved=[{metadata:row('one'),body:'one'}];await subscribe();state.quota=true;
  vi.stubGlobal('fetch',vi.fn(async()=>new Response('two')));
- await expect(preparePiece('two')).rejects.toThrow('Nicht genug Speicherplatz für Offline-Stücke.');expect(isOffline()).toBe(false);
+ await expect(preparePiece('two')).rejects.toThrow(offlineQuotaMessages[lang]);expect(isOffline()).toBe(false);
 });
 
 test('bulk preparation continues after a failed piece and counts failures and skips',async()=>{
@@ -39,4 +40,21 @@ test('evicting another ensemble does not cancel this ensemble preparation',async
  let release!:(value:Response)=>void;vi.stubGlobal('fetch',vi.fn(()=>new Promise<Response>(resolve=>release=resolve)));
  const pending=preparePiece('two');window.dispatchEvent(new CustomEvent('offline:ensemble-purged',{detail:{user:'A',ensemble:'different',revoked:false}}));
  release(new Response('two'));await pending;expect(isPrepared('two')).toBe(true);
+});
+
+ test('bulk quota error stays actionable instead of becoming a failed count',async()=>{
+ state.saved=[{metadata:row('one'),body:'one'}];await subscribe();state.quota=true;
+ vi.stubGlobal('fetch',vi.fn(async()=>new Response('two')));
+ await expect(preparePieces(['two'])).rejects.toMatchObject({name:'QuotaExceededError',message:offlineQuotaMessages[lang]});
+ });
+
+test('a denied persistence request retries quietly only after one week',async()=>{
+ state.saved=[{metadata:row('one'),body:'one'}];await subscribe();localStorage.removeItem('lightscore-persist-attempt');
+ const persist=vi.fn(async()=>false),now=Date.now();vi.spyOn(Date,'now').mockReturnValue(now);
+ vi.stubGlobal('navigator',{onLine:true,storage:{persist,persisted:async()=>false,estimate:async()=>({})}});
+ vi.stubGlobal('fetch',vi.fn(async()=>new Response('two')));
+ try{await preparePiece('two');await vi.waitFor(()=>expect(persist).toHaveBeenCalledTimes(1));
+ vi.mocked(Date.now).mockReturnValue(now+86400000);await preparePiece('two');expect(persist).toHaveBeenCalledTimes(1);
+ vi.mocked(Date.now).mockReturnValue(now+7*86400000);await preparePiece('two');await vi.waitFor(()=>expect(persist).toHaveBeenCalledTimes(2));
+ }finally{vi.restoreAllMocks();}
 });

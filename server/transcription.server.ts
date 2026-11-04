@@ -76,6 +76,7 @@ export class TranscriptionWorker {
  }catch(error){logError('transcription.heartbeat',error);if(performance.now()-lastHeartbeat>=env.TRANSCRIPTION_LEASE_MS-heartbeatInterval(env.TRANSCRIPTION_LEASE_MS))abort.abort();}finally{heartbeatBusy=false;}
  })();},heartbeatInterval(env.TRANSCRIPTION_LEASE_MS));
 
+ const closeAbandoned=()=>pool.query("update provider_calls set outcome='abandoned',finished_at=now(),error_kind='lease_expired',usage=coalesce(usage,'{}') || jsonb_build_object('usage_unknown',true) where lease_owner=$1 and outcome='running'",[token]);
  const started=Date.now();let result:PageResult|undefined;let failure:ProviderError|undefined;let paused=false;
  try {
  if(page.job_model!==this.provider.model || page.job_prompt!==this.provider.promptVersion)throw new ProviderError('model_unavailable');
@@ -89,7 +90,7 @@ export class TranscriptionWorker {
  let context=(await withinAbort(abort.signal,()=>pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number desc limit 1",[page.job_id]))).rows.map(r=>({musicxmlFragment:r.result_xml,contextState:r.metrics?.contextState,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},promptVersion:page.job_prompt,flags:r.metrics?.flags??[],model:page.job_model,latency:r.metrics?.latency??0}) as PageResult);
  // Upgrade pre-checkpoint jobs once; subsequent pages read only the last checkpoint.
  if(context.length&&!context[0].contextState)context=(await withinAbort(abort.signal,()=>pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number",[page.job_id]))).rows.map(r=>({musicxmlFragment:r.result_xml,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},model:page.job_model,latency:0}) as PageResult);
- await withinAbort(abort.signal,()=>pool.query('insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version,prompt_sha256) values($1,$2,$3,$4,$5,$6,$7)',[page.job_id,page.id,page.attempts+1,token,this.provider.model,this.provider.promptVersion,this.provider.promptSha256??null]));
+ await withinAbort(abort.signal,()=>pool.query('insert into provider_calls(job_id,page_id,attempt,lease_owner,model,prompt_version,prompt_sha256) values($1,$2,$3,$4,$5,$6,$7)',[page.job_id,page.id,page.attempts+1,token,this.provider.model,this.provider.promptVersion,this.provider.promptSha256??null]).then(async value=>{if(abort.signal.aborted)await closeAbandoned();return value;}));
  let timeoutReject:()=>void=()=>{};
  const deadline=new Promise<never>((_,reject)=>{timeoutReject=()=>reject(new ProviderError('provider_timeout',true));abort.signal.addEventListener('abort',timeoutReject,{once:true});if(abort.signal.aborted)timeoutReject();});
  const call=Promise.resolve().then(()=>{abort.signal.throwIfAborted();return this.provider.transcribePage(input,context,page.options??{},abort.signal);}).then(async value=>{
@@ -103,7 +104,7 @@ export class TranscriptionWorker {
 
  }
  }
- }catch(error){failure=error instanceof ProviderError?error:new ProviderError('infrastructure_error',true);}
+ }catch(error){await closeAbandoned();failure=error instanceof ProviderError?error:new ProviderError('infrastructure_error',true);}
  finally{clearTimeout(timeout);clearInterval(heartbeat);this.active.delete(abort);if(this.stopping)paused=true;}
  await transaction(async db=>{
  await db.query('select id from transcription_jobs where id=$1 for update',[page.job_id]);

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { parseMusicXML } from "../src/musicxml";
 import { parseMIDI } from "../src/midi";
@@ -224,7 +224,7 @@ it('library socket boundary ignores stale revisions, versions and post-delete ev
  vi.stubGlobal('window',dom.window);vi.stubGlobal('Event',dom.window.Event);
  vi.resetModules();
  const handlers=new Map<string,(event:any)=>Promise<void>>();
- vi.doMock('socket.io-client',()=>({io:()=>({on:(name:string,fn:any)=>handlers.set(name,fn),emit:()=>{},disconnect:()=>{}})}));
+ vi.doMock('socket.io-client',()=>({io:()=>({on:(name:string,fn:any)=>handlers.set(name,fn),emit:()=>{},off:()=>{},disconnect:()=>{}})}));
  vi.doMock('../src/domain-client',()=>({api:async()=>[]}));
  try {
   const {subscribeToSongs,clearLibrary}=await import('../src/library');let songs:any[]=[];
@@ -251,4 +251,27 @@ it('cleans multiline titles and Unicode tags and truncates filename titles witho
  const {cleanTitle,truncateTitle}=await import('../src/api/title');
  expect(cleanTitle('A\n\tB\u00ad\u2028\u2029\u{e0061}')).toBe('A B');
  const title=truncateTitle('x'.repeat(199)+'😀.png');expect(title).toHaveLength(199);expect(title.isWellFormed()).toBe(true);
+});
+
+it('preserves grapheme joiners inside emoji, Persian and Indic titles',async()=>{
+ const {cleanTitle}=await import('../src/api/title');
+ for(const title of ['👨‍👩‍👧','می‌خواهم','क्‍ष'])expect(cleanTitle(title)).toBe(title);
+ expect(cleanTitle('\u200dHello\u200c')).toBe('Hello');
+ expect(cleanTitle('a\u200d\u200db')).toBe('ab');
+});
+it('localizes admin limits with singular time units',async()=>{
+ const {adminRateMessage}=await import('../src/i18n');
+ expect(adminRateMessage(10,'minute','de')).toContain('10 pro Minute');
+ expect(adminRateMessage(200,'day','de')).toContain('200 pro Tag');
+ expect(adminRateMessage(10,'minute','en')).toContain('10 per minute');
+ expect(adminRateMessage(200,'day','en')).toContain('200 per day');
+});
+it('delays restart reconnects and cancels reconnect on disposal',async()=>{
+ const {serverRestart}=await import('../src/socket-restart');vi.useFakeTimers();
+ try {const handlers=new Map<string,any>(),socket={on:(k:string,v:any)=>handlers.set(k,v),off:(k:string)=>handlers.delete(k),connect:vi.fn(),disconnect:vi.fn()},connecting=vi.fn();
+ const owner=serverRestart(socket,connecting);handlers.get('server:restarting')({reconnectAfterMs:2500});
+ expect(socket.disconnect).toHaveBeenCalledOnce();expect(connecting).toHaveBeenCalledOnce();owner.connect();expect(socket.connect).not.toHaveBeenCalled();
+ await vi.advanceTimersByTimeAsync(2499);expect(socket.connect).not.toHaveBeenCalled();await vi.advanceTimersByTimeAsync(1);expect(socket.connect).toHaveBeenCalledOnce();
+ handlers.get('server:restarting')({reconnectAfterMs:1000});owner.dispose();await vi.advanceTimersByTimeAsync(1000);expect(socket.connect).toHaveBeenCalledOnce();expect(handlers.size).toBe(0);
+ }finally{vi.useRealTimers();}
 });

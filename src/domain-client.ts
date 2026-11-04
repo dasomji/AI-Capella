@@ -25,10 +25,11 @@ export async function api<T = any>(
   } : body === undefined ? {} : {"Content-Type":"application/json"};
   const r = await fetch(`/api${path}`, {
     method,
+    cache: 'no-store',
     headers,
     ...(body === undefined ? {} : { body: upload ? (input.content.format === "musicxml" ? input.content.body : JSON.stringify(input.content.body)) : JSON.stringify(body) }),
   }).catch(error => { setOffline(true); throw error; });
-  if(path==='/me' && r.ok)verifiedServerDate=Date.parse(r.headers.get('Date')??'');
+  if(path==='/me' && r.ok){const date=Date.parse(r.headers.get('Date')??'');verifiedServerDate=Number.isFinite(date)?date:Date.now();}
   const data = await r.json();
   if (!r.ok) {
     window.dispatchEvent(

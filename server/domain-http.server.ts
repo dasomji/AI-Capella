@@ -918,7 +918,7 @@ domain.get(
     c.header("Content-Security-Policy", "sandbox; default-src 'none'");
     c.header("X-Content-Type-Options", "nosniff");
     c.header("ETag", `"${v.content_hash}"`);
-    c.header("Cache-Control", "private, no-cache");
+    c.header("Cache-Control", "private, no-store");
     if (c.req.header("if-none-match") === `"${v.content_hash}"`)
       return c.body(null, 304);
     return c.body(

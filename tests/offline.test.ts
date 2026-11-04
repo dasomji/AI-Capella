@@ -84,3 +84,34 @@ test('a clock behind the server denies restore without purging; shared mode caps
  }});
  try{expect(await restoreIdentity()).toBeNull();expect(deleted).not.toHaveBeenCalled();expect(offlineWindow()).toBe(OFFLINE_WINDOW_MS);values.set('lightscore-shared-device','1');expect(offlineWindow()).toBe(Math.min(OFFLINE_WINDOW_MS,86400000));}finally{vi.unstubAllGlobals();}
 });
+
+test.each([-300000,300000,NaN])('prepare and offline restore use the verified timeline (skew %s)',async(skew)=>{
+ const {rememberIdentity,writePrepared,restoreIdentity}=await import('../src/offline-store');
+ const values=new Map<string,string>(),databases=new Map<string,Map<string,any>>();
+ vi.stubGlobal('localStorage',{getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>values.set(k,v),removeItem:(k:string)=>values.delete(k),get length(){return values.size;},key:(i:number)=>[...values.keys()][i]});
+ vi.stubGlobal('window',new EventTarget());
+ vi.stubGlobal('indexedDB',{databases:async()=>[...databases.keys()].map(name=>({name})),deleteDatabase:(name:string)=>{const q:any={};queueMicrotask(()=>{databases.delete(name);q.onsuccess();});return q;},open:(name:string)=>{
+ const q:any={};if(!databases.has(name))databases.set(name,new Map());const data=databases.get(name)!;
+ queueMicrotask(()=>{q.result={close(){},transaction(){const tx:any={objectStore:()=>({get:(k:string)=>request(data.get(k)),put:(v:any,k:string)=>{data.set(k,v);return request(k);},getAll:()=>request([...data.values()])})};function request(result:any){queueMicrotask(()=>tx.oncomplete());return {result};}return tx;}};q.onsuccess();});return q;
+ }});
+ const now=Date.now();vi.spyOn(Date,'now').mockReturnValue(now);
+ try{await rememberIdentity({id:'skew-test',email:'test@example.test',name:'Test'},[{id:'E'}],now-skew);
+ await writePrepared('skew-test',{metadata:{id:'p',ensembleId:'E',contentHash:'hash'} as any,body:'score'});
+ expect((await restoreIdentity()).user.id).toBe('skew-test');
+ localStorage.setItem('lightscore-epoch:skew-test:E','3');localStorage.setItem('lightscore-epoch:other:E','4');
+ vi.mocked(Date.now).mockReturnValue(now+15*86400000);expect(await restoreIdentity()).toBeNull();expect(databases.size).toBe(0);expect(localStorage.getItem('lightscore-epoch:skew-test:E')).toBeNull();expect(localStorage.getItem('lightscore-epoch:other:E')).toBe('4');
+ }finally{vi.restoreAllMocks();vi.unstubAllGlobals();}
+});
+
+test('a transaction with no own error preserves the request quota error',async()=>{
+ const quota=new DOMException('full','QuotaExceededError'),open:any={},tx:any={error:null,objectStore:()=>({put:()=>({})})};
+ vi.stubGlobal('localStorage',{getItem:(k:string)=>k==='lightscore-offline-account'?'quota-user':null});vi.stubGlobal('indexedDB',{open:()=>open});
+ const pending=writeOfflineCatalog('quota-user','ensemble',[]);open.result={close(){},transaction:()=>tx};open.onsuccess();tx.onerror({target:{error:quota}});
+ try{await expect(pending).rejects.toBe(quota);}finally{vi.unstubAllGlobals();}
+});
+
+test('identity verification falls back to the local clock without an HTTP Date',async()=>{
+ const {api,lastVerifiedServerDate}=await import('../src/domain-client');const now=Date.now();vi.spyOn(Date,'now').mockReturnValue(now);
+ vi.stubGlobal('fetch',vi.fn(async()=>Response.json({user:{id:'date-fixture'}})));
+ try{await api('/me');expect(lastVerifiedServerDate()).toBe(now);}finally{vi.restoreAllMocks();vi.unstubAllGlobals();}
+});
