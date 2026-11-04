@@ -445,3 +445,7 @@ it('falls back to 100 for missing or invalid score tempo while clamping explicit
  for(const tempo of [undefined,NaN,0,-10])expect(timingFromScore({tempo,totalBeats:4,measures:[]} as any).baseBpm).toBe(100);
  expect(timingFromScore({tempo:0,totalBeats:4,measures:[],marks:[{kind:'tempo',beat:0,tempoBpm:.1}]} as any).baseBpm).toBe(1);
 });
+
+it('clearing a selected region explicitly disables the canonical loop',()=>{
+ expect(preferenceCommands({loopRegion:null},{...s,loop:{enabled:true,startBeat:2,endBeat:6}},16)[0]).toMatchObject({type:'setLoop',enabled:false});
+});

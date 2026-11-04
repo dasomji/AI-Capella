@@ -9,7 +9,7 @@ export function preferenceCommands(patch:Partial<PlaybackState>, state:Rehearsal
  if(binding && (patch.loopEnabled!==undefined || patch.loopRegion!==undefined)) {
   const selectedRegion=patch.loopRegion===undefined ? state.loop : patch.loopRegion ? {startBeat:patch.loopRegion.start,endBeat:patch.loopRegion.end}:null;
   const region=selectedRegion?.startBeat!=null?selectedRegion:totalBeats?{startBeat:0,endBeat:totalBeats}:null;
-  commands.push({type:'setLoop',...binding,enabled:patch.loopEnabled ?? state.loop.enabled,...(region?.startBeat!=null && region?.endBeat!=null ? {startBeat:region.startBeat,endBeat:region.endBeat}:{})});
+  commands.push({type:'setLoop',...binding,enabled:patch.loopRegion===null ? false : patch.loopEnabled ?? state.loop.enabled,...(region?.startBeat!=null && region?.endBeat!=null ? {startBeat:region.startBeat,endBeat:region.endBeat}:{})});
  }
  if(patch.metronomeOn!==undefined) commands.push({type:'setMetronome',enabled:patch.metronomeOn});
  if(patch.startTonesOn!==undefined) commands.push({type:'setStartingTones',enabled:patch.startTonesOn});
