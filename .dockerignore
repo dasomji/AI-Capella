@@ -7,3 +7,12 @@ dist
 .transcription-tmp
 .browser*
 coverage
+
+**/node_modules
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+**/.transcription-tmp
+**/coverage
+**/dist
