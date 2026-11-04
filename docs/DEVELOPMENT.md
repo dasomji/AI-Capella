@@ -144,3 +144,10 @@ boolean but a standby without the advisory lock can still serve HTTP. Use
 `/readyz/rehearsal` for ownership/recovery monitoring, not rolling-deploy admission.
 Only one instance owns shared playback; other instances reject playback commands
 until they acquire ownership. Route rehearsal sockets to the owner.
+
+Ownership heartbeat: probe every 5 seconds with a 2-second query timeout; require
+three consecutive probe failures before discarding ownership. Successful probes
+reset the count; connection error events still invalidate ownership immediately.
+This tolerates transient stalls at the cost of roughly 15–17 seconds to detect
+a silent failure. Commands still fail on database errors; the advisory lock and
+revision guard protect against simultaneous owners. Probe failures remain logged.

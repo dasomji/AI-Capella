@@ -155,7 +155,15 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         // A query detects dead owner sessions even without subsequent commands.
         const probe={text:'select 1',query_timeout:2000};
         const ownerClient=client;
-        heartbeat=setInterval(()=>{void ownerClient.query(probe).catch(()=>{if(owner===ownerClient)loseOwnership();});},5000);
+        let heartbeatFailures=0, probing=false;
+        heartbeat=setInterval(()=>{
+          if(probing || owner!==ownerClient)return;
+          probing=true;
+          void ownerClient.query(probe).then(()=>{heartbeatFailures=0;}).catch(error=>{
+            logError('rehearsal.heartbeat',error);
+            if(owner===ownerClient && ++heartbeatFailures>=3)loseOwnership();
+          }).finally(()=>{probing=false;});
+        },5000);
         heartbeat.unref();
         for(const recovered of pendingRecovery.values()) {
           const existing=(await pool.query('select state from rehearsal_sessions where ensemble_id=$1',[recovered.ensembleId])).rows[0]?.state;
