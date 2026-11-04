@@ -83,7 +83,8 @@ export class ScoreAssembler implements JobAssembler {
 }
 function restMeasure(doc:Document,template:Element,number:number,attributes?:Element){
  const measure=doc.createElement('measure');measure.setAttribute('number',String(number));
- const templateAttrs=effectiveAttributes(doc,template);if(attributes?.querySelector('clef'))for(const c of children(templateAttrs,'clef'))c.remove();
+ const templateAttrs=effectiveAttributes(doc,template);for(const child of Array.from(templateAttrs.children))if(child.tagName!=='time')child.remove();
+ if(!attributes?.querySelector('divisions')){const d=doc.createElement('divisions');d.textContent='1';templateAttrs.prepend(d);}
  const a=mergeAttributes(doc,attributes,templateAttrs);if(a)measure.append(doc.importNode(a,true));
  const note=doc.createElement('note');const rest=doc.createElement('rest');rest.setAttribute('measure','yes');note.append(rest);
  const div=Number(a?text(a,'divisions'):1)||1;const beats=Number(a?text(a,'time > beats'):4)||4;const beatType=Number(a?text(a,'time > beat-type'):4)||4;

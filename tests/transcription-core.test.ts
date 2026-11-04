@@ -144,3 +144,12 @@ test('sandbox launcher canary fails closed when Python is unavailable',async()=>
  const good=await import('../server/sandbox.server');expect(await good.sandboxReady()).toBe(true);expect(good.sandboxEnv()).not.toHaveProperty('OPENAI_API_KEY');
  const script=(await import('node:fs')).readFileSync('server/inspection-sandbox.py','utf8');expect(script).toContain("b'io_uring_setup'");expect(script).toContain("b'io_uring_enter'");expect(script).toContain("b'io_uring_register'");expect(script).toContain("name == b'socket'");
 },15000);
+
+test('synthetic rests retain each parts own divisions and never copy another instrument transpose',async()=>{
+ const clarinet=page(['Cl']).replace('</attributes>','<transpose><chromatic>-2</chromatic></transpose><staves>2</staves></attributes>');
+ const soprano=page(['S']).replace('<divisions>1','<divisions>4').replace('<duration>4','<duration>16');
+ const second=clarinet.replace('</part-list>','<score-part id="S"><part-name>S</part-name></score-part></part-list>').replace('</score-partwise>',soprano.match(/<part id="S">[\s\S]*<\/part>/)![0]+'</score-partwise>');
+ const out=await new ScoreAssembler().assembleDetailed([result(clarinet),result(second),result(clarinet),result(soprano.replace(attrs,''))]);const dom=scoreDocument(out.xml);try{
+ const s=dom.window.document.querySelector('part[id="S"]')!;expect(s.querySelector('transpose, staves')).toBeNull();expect(s.querySelector('measure[number="3"] divisions')?.textContent).toBe('4');expect(s.querySelector('measure[number="3"] duration')?.textContent).toBe('16');
+ }finally{dom.window.close();}
+});
