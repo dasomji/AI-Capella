@@ -218,3 +218,11 @@ test('lease staleness includes a safety interval and abort races hung preparator
  expect(heartbeatStale(7999,0,10000)).toBe(false);expect(heartbeatStale(8000,0,10000)).toBe(true);
  const abort=new AbortController();const hung=withinAbort(abort.signal,()=>new Promise(()=>{}));abort.abort();await expect(hung).rejects.toThrow('lease_deadline');
 });
+
+test('Landlock permits only the task temporary directory for writes',async()=>{
+ const fs=await import('node:fs');const path=await import('node:path');const {spawnSync}=await import('node:child_process');
+ fs.mkdirSync('.transcription-tmp',{recursive:true});const dir=fs.mkdtempSync('.transcription-tmp/landlock-'),sibling=path.resolve(dir)+'-denied';
+ try{const code=`import os,sys,json,errno; p=json.loads(sys.argv[1]);open(p['dir']+'/allowed','w').write('ok');\ntry: open(p['denied'],'w');raise AssertionError('write escaped sandbox')\nexcept OSError as e: assert e.errno==errno.EACCES`;
+ const r=spawnSync('python3',['server/inspection-sandbox.py','/usr/bin/python3','-c',code,JSON.stringify({dir:path.resolve(dir),denied:sibling})],{encoding:'utf8',timeout:5000});expect(r.status,r.stderr).toBe(0);expect(fs.existsSync(dir+'/allowed')).toBe(true);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});fs.rmSync(sibling,{force:true});}
+});

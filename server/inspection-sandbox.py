@@ -1,6 +1,7 @@
 """Fail-closed Linux sandbox shared by source inspection and future rasterization."""
 import ctypes
 import errno
+import json
 import os
 import resource
 import sys
@@ -41,15 +42,31 @@ ruleset = Ruleset(access)
 fd = libc.syscall(444, ctypes.byref(ruleset), ctypes.sizeof(ruleset), 0)
 if fd < 0:
     raise RuntimeError('Landlock ruleset failed')
+# All runtime code is readable; only the task's own temporary directory is writable.
+try:
+    task = json.loads(sys.argv[-1])
+    writable = os.path.realpath(task.get('dir') or os.path.dirname(task['path']))
+    if not writable.startswith(os.path.realpath('.transcription-tmp') + os.sep):
+        raise RuntimeError('invalid sandbox write directory')
+except (ValueError, KeyError, TypeError):
+    writable = None
 for path in [os.path.join('/', p) for p in os.listdir('/') if p not in ('proc', 'sys', 'dev')] + ['/dev/null', '/dev/urandom', '/dev/random', '/proc/self']:
     try:
         path_fd = os.open(path, os.O_PATH)
     except OSError:
         continue
-    allowed = access if os.path.isdir(path) else access & ((1 << 0) | (1 << 1) | (1 << 2) | (1 << 14))
+    allowed = ((1 << 0) | (1 << 2) | (1 << 3)) if os.path.isdir(path) else ((1 << 0) | (1 << 2))
+    if path == '/dev/null':
+        allowed |= (1 << 1)
     rule = PathRule(allowed, path_fd)
     if libc.syscall(445, fd, 1, ctypes.byref(rule), 0) != 0:
         raise RuntimeError('Landlock path rule failed')
+    os.close(path_fd)
+if writable:
+    path_fd = os.open(writable, os.O_PATH)
+    rule = PathRule(access, path_fd)
+    if libc.syscall(445, fd, 1, ctypes.byref(rule), 0) != 0:
+        raise RuntimeError('Landlock writable path rule failed')
     os.close(path_fd)
 if libc.prctl(38, 1, 0, 0, 0) != 0 or libc.syscall(446, fd, 0) != 0:
     raise RuntimeError('Landlock restriction failed')

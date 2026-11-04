@@ -351,6 +351,7 @@ let stopLandingRibbons: (() => void) | null = null;
  * song switches to the player.
  */
 function setViewMode(mode: 'landing' | 'library' | 'player') {
+ if(mode!=='player'&&transcriptionPreviewMode){sessionMode=transcriptionPreviewMode;transcriptionPreviewMode=undefined;privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));renderModeControls();}
   if(mode === 'landing') renderLanding(true);
   app.classList.toggle('mode-landing', mode === 'landing');
   app.classList.toggle('mode-library', mode === 'library');
@@ -425,6 +426,7 @@ const MODE_STORAGE_KEY = 'ai-capella-mode-v2';
 // The shared library remains available in either mode. Leaving the account,
 // ensemble or mode disposes the playback owner before the next arrival.
 let sessionMode: 'solo' | 'ensemble' = 'solo';
+let transcriptionPreviewMode:'solo'|'ensemble'|undefined;
 let leavingAccount = false;
 let playerSession: PlayerSession | null = null;
 let sharedState: RehearsalState | null = null;
@@ -3872,6 +3874,7 @@ function notePlace() {
   if(leavingAccount)return;
   const inPlayer = app.classList.contains('mode-player');
   if (!inPlayer && !app.classList.contains('mode-library')) return;
+  if(currentSong?.id.startsWith('transcription-preview-'))return;
   const song = inPlayer ? currentSong : null;
   const mix = Object.fromEntries([...partMix].filter(([, state]) => state !== 'normal'));
   const place: Place = {
@@ -4160,8 +4163,8 @@ accountEvents.on('connect',()=>{
 accountEvents.on('membership:changed',()=>void checkMembership());
 accountEvents.on('disconnect',(reason)=>{if(reason==='io server disconnect')void checkMembership();});
 
-const transcriptionUi=installTranscription({ensemble:()=>currentEnsemble,entry:document.querySelector('#transcription-entry')!,jobs:document.querySelector('#transcription-jobs')!,open:async(xml,title,id)=>{
- leavePlaybackSession();audioEngine?.stop();sessionMode='solo';renderModeControls();
+const transcriptionUi=installTranscription({beforeListen:()=>!syncEnabled()||!playerSession||confirm(tr('leaveRehearsal')),reviewClosed:()=>{privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));},socket:accountEvents,ensemble:()=>currentEnsemble,entry:document.querySelector('#transcription-entry')!,jobs:document.querySelector('#transcription-jobs')!,open:async(xml,title,id)=>{
+ if(!id)transcriptionPreviewMode=sessionMode;leavePlaybackSession();audioEngine?.stop();sessionMode='solo';renderModeControls();
  privateSongs=privateSongs.filter(song=>!song.id.startsWith('transcription-preview-'));
  if(id){await scoreBody(id);const song=allSongs().find(s=>s.id===id);if(song){await selectSong(song);return;}}
  const song:SongEntry={id:id??'transcription-preview-'+crypto.randomUUID(),title,xml,format:'musicxml',imported:!!id,localOnly:!id};privateSongs.push(song);await selectSong(song);

@@ -1,7 +1,7 @@
 import { tr, type Lang } from './i18n';
 import type { MeasureSource, ValidationReport } from './score-validation';
 export interface JobPage {page_number:number;source_page:number;state:string;object_id:string;content_type:string;original_filename?:string;failure_reason?:string}
-export interface TranscriptionJob {id:string;state:string;stage:string;failure_reason?:string;imported_piece_id?:string;options?:{title?:string};pages:JobPage[]}
+export interface TranscriptionJob {created_at?:string;id:string;state:string;stage:string;failure_reason?:string;imported_piece_id?:string;options?:{title?:string};pages:JobPage[]}
 export function reorderPhotos<T>(items:readonly T[],from:number,to:number):T[] {
  const result=[...items];if(from<0||to<0||from>=items.length||to>=items.length)return result;
  const [item]=result.splice(from,1);result.splice(to,0,item);return result;
