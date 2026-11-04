@@ -28,7 +28,7 @@ Out of scope for this run:
 3. **Synchronized playback — complete (Phase 3f)**: Socket.IO authoritative command protocol, clock calibration,
    reconnect/late join, revocation on live sockets; rehearsal controller extraction.
    (AICAP-8, 9, 15)
-4. **Transcription**: private original storage (S3 interface, SeaweedFS dev), durable jobs,
+4. **Transcription — complete (local verification)**: private original storage (S3 interface, SeaweedFS dev), durable jobs,
    direct GPT-6.1 Sol transcription with stubbed provider, notation validation, metrics, upload
    bounds, Audiveris removal. (AICAP-11, 12, 13, 14, 19)
 5. **Offline and sysadmin**: service-worker policy, scoped private caches, logout clearing;
@@ -2158,10 +2158,97 @@ after check 61; the bounded rerun completed all 77 tests. Logs are retained as
 `.review-evidence/p4c-design-{typecheck,unit,build,secrets,db,standard-browser,browser-verified,integration-final}.log`.
 No push, deployment or OpenAI calls.
 
-### Phase 4 final fixes — in progress
+### Phase 4 final fixes — 2026-11-04
 
 B1: note/pitch/duration anchors use staff and measure-local quarter time, with
 multiset matching; onset excludes pitch. Pitch is scored at matching onsets.
 Voice streams have a separate content metric, independent of exporter labels.
 Comparison uses **written pitch**; transpose metadata does not convert to sounding
 pitch. Sequence alignment retains duplicate measures; parts retain multiplicity.
+
+- S1: page rendering uses its own two-global/two-user admission, four queued
+  requests and a two-second queue deadline. Request abort and 20-second timeout
+  combine. Authorized PNGs use a 32 MiB memory LRU keyed by object/page/250 dpi;
+  no derived object can remove an original. Access audits coalesce per user/object
+  for ten minutes, with bounded bookkeeping. Responses include sandbox/no-store.
+  Review caches page blob URLs and aborts superseded requests, revoking on close.
+- S2: landing ensemble changes immediately reconcile the transcription scope and
+  jobs. Start rechecks current scope after loading server limits; its heading names
+  the destination ensemble. Browser regression switches then creates a job there.
+- S3: shared title schemas reject >200 characters, NUL and malformed Unicode;
+  remove controls, bidi and zero-width formatting; normalize and trim. Piece create,
+  rename, job creation and import use this boundary. Empty job titles derive from
+  the sanitized first filename without extension. Import sends no ignored title.
+- S4: every heartbeat tick checks monotonic staleness before its busy guard, using
+  one interval of lease margin. Authorization, pause and render awaits race abort.
+  Pool queries/statements time out at five seconds, and configured leases have a
+  ten-second minimum. Tests include persistent failure, hung renewal and rendering.
+- S5: duplicate part names rank content profiles before order fallback. Swapped
+  Piano registers with one wrong note in each four-note stream score 0.75.
+- S6: photos decode at 200 px, use OffscreenCanvas when supported (canvas fallback)
+  and retain only thumbnail URLs. Drag supplies Firefox transfer data. Upload
+  size/page limits come from the authenticated config endpoint. Excess photos show
+  an error. PDF counting runs during server upload inspection, without main-thread
+  pdf-lib; the pre-upload page count for a PDF is consequently provisional.
+- S7: negative read/render/options tests cover plain members, outsiders, mismatched
+  ensemble IDs, page bounds, PNG/no-store/sandbox headers and concurrent rendering.
+  Browser coverage injects HTML into provider reason/part and asserts plain text.
+  FakeProvider now produces valid complete scores plus continuation state, exercising
+  the common validation path. Legacy checkpoint upgrade is tested explicitly.
+- Additional fixes: imported jobs filter in SQL; socket progress fetches only the
+  changed job, reusing the account socket. Provider uncertainty fields are capped
+  at 500 characters and 200 items before persistence. Truncation reviewReason stores
+  a localized code. Listening asks before leaving an active shared rehearsal; its
+  temporary Solo mode is not saved, is restored on return, and preview entries are
+  removed on review close/return. Option edits regenerate a failed request's key.
+  Usage includes failed_calls and completed/failed latency percentiles. Migration
+  0012 drops the unused model/started_at index. Legacy validation now also matches
+  normalized names; both validation paths honor no_music before parsing.
+- Landlock permits writes only in the task's render/upload temporary directory
+  (plus /dev/null); runtime code is read-only. A regression proves sibling writes
+  fail. RLIMIT_CPU is five seconds soft/six hard per process, including Poppler;
+  pathological pages can therefore fail rendering before the wall-clock timeout.
+
+Known limitations and operator handoff: measure alignment and duplicate-part
+pairing remain deterministic heuristics, and the separate voice-stream metric is
+content-sensitive. No sounding-pitch conversion or live recognition quality claim.
+Page previews are process-local caches, with no cross-process cache/admission.
+The extreme 60×12×30 assembly benchmark remains **12.8 seconds**, above the three-
+second target; compact/streaming assembly is follow-up work. Overlapping crop retry
+remains deferred pending a safe deduplication policy. A first live evaluation needs
+an operator-provided OPENAI_API_KEY, explicit `--confirm-paid`, realistic licensed
+fixtures with references, and agreed musical-quality/cost acceptance thresholds.
+No OpenAI requests, production access, deployment or push occurred in this pass.
+
+Phase 4 is closed for the authorized local implementation scope. Live provider
+quality and production rollout remain operator work, as described above.
+
+Final verification:
+
+- `npm run typecheck`: passed.
+- `npm test`: 242/242 passed; final metric-specific rerun 17/17 passed.
+- `npm run build`: passed; browser and secret harnesses also rebuilt final sources.
+- `npm run test:integration`: 80/80 passed (315,134 ms). Targeted contract/usage/
+  concurrent-render rerun also passed 7/7 before the complete green run.
+- `npm run test:browser`: passed account/design matrix, two-account synchronization
+  and full three-client acceptance, including looping, offline, count-in, sleep,
+  restart and account isolation.
+- `PATH="$PWD/.review-evidence/bin:$PATH" BROWSER_EVIDENCE="$PWD/.review-evidence/final-browser" npm run test:browser:transcription`:
+  passed the full matrix and acceptance, including new destination-switch,
+  configured-photo-limit and hostile provider text cases. Actual listening and
+  idempotent import pass after fixing the deferred dialog-close cleanup race.
+- `npm run check:secrets`: passed positive control, clean final client artifacts
+  and no public source maps.
+- `npm run db:generate`: no schema drift after migration 0012.
+- `npm run eval:transcription -- --dry-run`: eight offline jobs completed,
+  synthetic fixture note F1=1. No network/provider call or live quality claim.
+
+Evidence: `.review-evidence/final-{typecheck,unit,build,integration-green,
+standard-browser,transcription-browser-verified,secrets,db-drift,eval}.log`;
+transcription screenshots: `.review-evidence/final-browser/shots/index.html`.
+Earlier failed logs remain retained: the first integration overlapped a build;
+subsequent failures identified stale assertions for intentional response/status
+changes. Browser verification caught and fixed deferred cleanup deleting a newly
+created preview; the new switch fixture was then made deterministic before
+hydration. The serialized final runs above are green. All commits remain local
+on production-v1; nothing was pushed.
