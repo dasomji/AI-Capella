@@ -1831,3 +1831,12 @@ test('global score admission rejects a fifth account before buffering its body',
   for(const response of await Promise.all(pending))assert.equal(response.status,201);
  }
 });
+
+test('parallel attackers cannot exclude a fresh IP password attempt', {timeout:90000},async()=>{
+ const victim={...await account(),password:'domain-fixture-password-42'};const {api}=await import('../server/http.server');
+ const attempt=(ip:string,password:string)=>api.fetch(new Request(base+'/api/auth/sign-in/email',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':ip},body:JSON.stringify({email:victim.email,password})}));
+ let active=true;
+ const attackers=Array.from({length:12},(_,i)=>(async()=>{for(let n=0;active && n<20;n++)await attempt(`198.51.100.${i+1}`,'wrong-password');})());
+ try {await delay(30);for(let n=0;n<5;n++)assert.equal((await attempt('203.0.113.90',victim.password)).status,200);}
+ finally{active=false;await Promise.all(attackers);}
+});

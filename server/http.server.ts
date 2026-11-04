@@ -1,3 +1,4 @@
+import { rehearsalReady } from './rehearsal.server';
 import { withMailRequester } from "./auth-guards.server";
 import { jwtVerify } from "jose";
 import { verifyPassword } from "better-auth/crypto";
@@ -79,6 +80,7 @@ api.use("/api/*", async (c, next) => {
     const slot = uploadSlots.take(session.user.id);
     if ("code" in slot) {
       c.header("Retry-After", "2");
+      await discard();
       return c.json({code:"upload_busy"},slot.code);
     }
     release = slot.release;
@@ -106,6 +108,7 @@ api.get("/readyz", async (c) => {
       expected.some((m, i) => m.hash !== result.rows[i]?.hash)
     )
       return c.json({ status: "migrations pending" }, 503);
+    if(!rehearsalReady()) return c.json({status:"rehearsal unavailable"},503);
     return c.json({ status: "ready" });
   } catch (error) {
     logError("database.readiness", error);
@@ -119,18 +122,33 @@ api.use("/app", async (c, next) => {
 });
 // One process initially: reject overlapping password evaluations, never queue guesses.
 const passwordChecks = new Set<string>();
+const failedPasswordChecks = new Map<string, number>();
 api.use("/api/auth/*", async (c, next) => {
   if (c.req.method !== "POST" || !/\/sign-in\/email\/*$/.test(decodeURIComponent(c.req.path))) return next();
   const body = await c.req.raw.clone().json();
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const digest = createHash("sha256").update(email).digest("hex");
-  const keys = [digest, digest + ":" + c.req.header("x-lightscore-socket-ip")];
-  if (keys.some(key => passwordChecks.has(key))) {
+  const ip = c.req.header("x-lightscore-socket-ip") ?? "";
+  const key = digest + ":" + ip;
+  if (passwordChecks.has(key)) {
     c.header("Retry-After", "1");
     return c.json({code:"TOO_MANY_ATTEMPTS"},429);
   }
-  keys.forEach(key => passwordChecks.add(key));
-  try { await next(); } finally { keys.forEach(key => passwordChecks.delete(key)); }
+  passwordChecks.add(key);
+  let counted = false;
+  try {
+    const failureKey = "email:" + digest + ":/api/auth/sign-in/email:" + ip;
+    const failure = (await pool.query("select count,last_request from rate_limit where key=$1",[failureKey])).rows[0];
+    if (failure?.count > 0 && Number(failure.last_request) > Date.now()-60000) {
+      const count = failedPasswordChecks.get(digest) ?? 0;
+      if (count >= 4) { c.header("Retry-After","1"); return c.json({code:"TOO_MANY_ATTEMPTS"},429); }
+      failedPasswordChecks.set(digest,count+1); counted=true;
+    }
+    await next();
+  } finally {
+    passwordChecks.delete(key);
+    if(counted) { const count=failedPasswordChecks.get(digest)!-1; if(count) failedPasswordChecks.set(digest,count); else failedPasswordChecks.delete(digest); }
+  }
 });
 api.on(["GET", "POST"], "/api/auth/*", async (c) => {
   const path = decodeURIComponent(c.req.path).replace(/\/+$/, "");
