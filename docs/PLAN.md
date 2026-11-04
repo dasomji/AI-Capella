@@ -1939,3 +1939,70 @@ Phase 4b fixes verification:
 - Performance benchmark remains above the requested target, as recorded under S7.
 
 All implementation commits remain local on production-v1. No pushes or PRs.
+
+### Phase 4c — transcription user interface (2026-11-04)
+
+Production client transcription flow, using only FakeProvider/recorded data for
+verification. No paid requests, deployment, push or production access.
+
+- Repertoire entry follows current transcribe/lead permission. The start sheet
+  accepts one PDF or ordered JPEG/PNG/WebP photos, camera capture on touch devices,
+  thumbnails, drag/keyboard reorder and removal, optional title and four lyric
+  languages. PDF title/page count, total size, private-original notice, per-file
+  upload bars and friendly bilingual source errors use the existing themes/fonts.
+- Ensemble job cards survive reload and appear on a second authorized device.
+  Socket progress triggers durable reconciliation; reconnect and an eight-second
+  fallback refresh repair missed events. Cards distinguish page outcomes, pause,
+  cancellation and terminal reasons, with cancel/retry/original actions. Imported
+  jobs disappear. Live membership refresh hides revoked access and closes review;
+  edit permission changes update import availability without closing review.
+- Full-screen read-only Verovio review distinguishes gold uncertainty questions
+  from warm-red warning ticks and pencil washes. Clicking a review item locates
+  the assembled measure and displays its authorized original source-page raster.
+  Mapping supports repeated local numbers and inclusive synthetic-rest provenance
+  ranges. Review always distinguishes structural validity from unknown accuracy;
+  skipped pages and plain-language diagnostic families remain visible. Downloads
+  retain the complete report and canonical MusicXML. Listen opens a temporary,
+  unsaved Solo score with persistence controls disabled. Import is pending-guarded
+  and server-idempotent, preserves the optional title and opens the library piece.
+- Minimal server additions: capability-gated ensemble job read model (most recent
+  100 jobs), bounded/audited private source-page PNG endpoint using the existing
+  sandbox renderer and upload admission, optional title and la/other language
+  values on job creation, and import title from captured job options. The API
+  Dockerfile now installs Poppler for on-demand PDF comparison. No schema changes.
+
+Implementation limits/deviations: assembly and validation have no separately
+persisted stages in the existing API; the UI infers assembly from finished pages
+and supports a validation stage when supplied. Upload progress remains in the
+start sheet until a durable job exists. Interrupted, not-yet-complete browser
+uploads require reselecting files (browser file access cannot survive reload);
+ready original deduplication and durable jobs avoid repeating completed work.
+Report families are translated; free-form provider uncertainty text is displayed
+verbatim as plain text. Original comparison rasterizes on demand rather than
+retaining additional derived page objects. Job history is bounded to 100 recent
+entries. These limits do not assert musical accuracy or live-provider quality.
+
+Tests: `tests/transcription-ui.test.ts` covers every state/reason in DE/EN, page
+segments, immutable photo ordering, repeated printed measures and provenance
+ranges. `npm run test:browser:transcription` uses the existing disposable built
+start/Postgres/Mailpit harness and a local SeaweedFS bucket, with an explicitly
+FakeProvider-backed worker and real assembly. Requires Python/seccomp/Landlock and
+Poppler locally (or the app/worker image); fixture bucket is removed after the run.
+Browser acceptance covers two-page PDF upload/progress/review/marks/original,
+actual Solo playback, double-click-safe import of exactly one piece, three-photo
+reordering, HEIC rejection, pause, cancel/retry, independent transcribe/edit rights,
+ordinary-member denial and live permission changes. Screenshots cover start and
+review at 390/1440 px in light/dark plus running/paused/cancelled cards; text
+contrast assertions pass. Evidence lives in `.review-evidence/p4c/shots/index.html`.
+
+Local verification: `npm run typecheck` passed; `npm test` passed (226 tests);
+`npm run db:generate` reported no schema changes. Built-start transcription
+browser acceptance passed (including live edit/transcribe revocation); standard
+`npm run test:browser` passed including the complete sync/restart acceptance.
+Logs: `.review-evidence/p4c-final-browser.log` and
+`.review-evidence/p4c-standard-browser.log`. The first full integration run passed
+76/77; the concurrent evaluation agent corrected its unrelated UTC/DST fixture
+selection and verified the targeted usage cases. A coordinated full integration,
+explicit build and secret scan are running separately to avoid concurrent dist
+rebuilds. The final mobile engraving adjustment is typechecked; a refreshed visual
+capture is pending that quiet window.
