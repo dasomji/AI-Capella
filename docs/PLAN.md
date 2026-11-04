@@ -2402,3 +2402,85 @@ checks. Separate build roots and the Phase 5a banner fix resolved those failures
 Implementation commits: `2c493d9`, `338474e`, `90c03c8`. Shared main/package hunks
 were staged separately from Phase 5a; its work was preserved. All commits remain
 local on production-v1. This Phase 5b plan entry is committed separately.
+
+### Phase 5b fixes — 2026-11-04 (AICAP-20)
+
+Review findings verified against production-v1 at 73d54fa. Implementation commit
+`a0d01c7` hardens the decoded/trimmed, case-insensitive server boundary and adds a
+DB-checked server-function route loader. Router-derived enumeration covers all
+registered admin APIs and page tabs for anonymous/member/lead/manager callers,
+including HEAD/OPTIONS, case and encoded variants. A router-ownership assertion
+fails when an admin endpoint is registered outside the guarded router.
+
+Every collection read now audits endpoint, filter keys, ID filters only and row
+count; memberships have their own action. Primary/version/original lists have
+30/min actor limits; content/downloads share 10/min, 30/hour and 200/day persistent
+caps, clear 429 messages and structured `admin.cap_hit` warnings. The runbook
+records the log-alerting hook. Content/download reasons are mandatory. Piece and
+ensemble-targeted audits carry ensemble scope; the audit UI shows reason excerpts.
+Cursor types are validated; NUL/unpaired-surrogate input is rejected; PostgreSQL
+class 22 maps to 422. Versions paginate by `(version_no DESC,id ASC)`. JSON numeric
+fields remain numbers; piece created/updated sorts are independent. CLI audits
+record changed:boolean and actual OS username/SUDO_USER/hostname; rollback failure
+cannot mask the primary error.
+
+Admin design follows the Phase 2 ruled/pencil/ink vocabulary: full-width warm-red
+header hairline, DE·EN text toggle, relevant per-tab filters, calendar-date fields,
+7/30/90/All presets, automatic 300ms filtering, enum chips, one localized zone-aware
+formatter with ISO tooltips, × panel close, mono section headings/IDs, copy buttons,
+text booleans and capability chips. Bounded initial detail sections share one
+endpoint; deleted records stay in the panel and 429 preserves the specific message.
+Transcription has distinct localized usage/token/cost cards, localized failure
+tables, real latency values and the shared switch styling with reason/confirmation
+and a warm-red stop action. Tables have sticky headers and become cards at 390px.
+
+Calendar-date conversion and statistics default to seven business-zone calendar
+days including today, ending at tomorrow's midnight. Berlin spring/autumn DST,
+near-midnight behavior, UTC DE/EN formatting and numeric-offset fallback are tested
+under a different process zone. The All statistics preset reads all retained calls;
+ensemble filters also apply to usage/failures. Migration 0014 adds membership
+(created_at,id), audit(action,id) and job-ID trigram indexes. The Drizzle migrator
+is transactional, so CONCURRENTLY is unsupported; the maintenance-window caveat
+is documented in SYSADMIN.md. `db:generate` reports no drift.
+
+Commit `d9728f1` adds sort/offset regressions and aligns two stale cross-suite test
+assertions with the concurrent private-store changes: `/app` serves a no-store
+shell for cleanup before client redirection, and “This device” uniquely targets
+the session description rather than the new shared-device checkbox.
+
+Final verification: typecheck passed; npm test 260/260; build passed; secret
+positive-control and clean-client scan passed; focused admin/time/CLI 9/9 harness
+cases passed, with subsequent enumeration/sort/offset reruns green. The admin
+browser suite passed with 35 screenshots and AA ink/pencil/gold contrast >=4.5
+across dark/light/Papier, DE/EN and 1440/390; deleted-record and specific-429 UI
+regressions passed. Contact sheet: `/tmp/aicap-p5b-design/shots/index.html`.
+
+Initial full integration run: 83/84, failed only the stale `/app` redirect
+assertion. Initial standard browser run: stale “This device” strict locator.
+Both are fixed in d9728f1. A second integration attempt read stale root dist SSR
+and failed the opposite /app expectation; a focused account run against the fresh
+isolated build confirmed the correct behavior. The default dist was also rebuilt.
+Final `LIGHTSCORE_BUILD_ROOT="$PWD/.review-evidence/fixes-verified-build"
+PATH="$PWD/.review-evidence/bin:$PATH" npm run test:integration`: **87/87 passed**.
+Final `npm run test:browser`: **passed** account/theme, Phase 5a offline boundary,
+two-account sync and full three-client acceptance (loops/count-in/sleep/restart).
+The prior Phase 5a sign-out-header failure came from a build predating the other
+agent's fix in 4c2b1cc; the final run includes that fix.
+
+Commit 1b4bb53 strengthens the router ownership assertion to include wildcard and
+ALL registrations (Hono wraps mounted handlers, so ownership compares the full
+method/path multiset). Commit 4cfffd8 prevents row key handling from intercepting
+the ID copy button, with a keyboard-copy browser regression. The final admin run
+still passed all 35 screenshots/AA checks. Final command evidence:
+`p5b-fixes-integration-verified.log`, `p5b-fixes-standard-browser-verified.log`,
+`p5b-fixes-admin-keyboard-green.log`, `p5b-fixes-unit-last.log`,
+`p5b-fixes-default-build.log`, `p5b-fixes-secrets-verified.log`,
+`p5b-fixes-typecheck-final.log`, and `p5b-fixes-db-final.log`. Failure evidence is
+retained in `.review-evidence/p5b-fixes-integration.log` and
+`p5b-fixes-standard-browser.log`; final evidence uses `p5b-fixes-*-green.log`,
+`p5b-fixes-admin-browser-complete.log`, `p5b-fixes-secrets-final.log`,
+`p5b-fixes-types-verified.log` and `p5b-fixes-build-final.log`.
+
+All changes stay local on production-v1. Only owned admin paths and the small
+HTTP admin-guard hunk were staged; concurrent private/offline changes were
+preserved. No push, production access, paid provider calls or real mail.
