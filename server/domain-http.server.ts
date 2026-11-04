@@ -1,3 +1,4 @@
+import { pieceTitle } from '../src/api/title';
 import { gzipSync } from 'node:zlib';
 import { registerTranscriptionRoutes } from './transcription-http.server';
 import { TIMING_DERIVATION_VERSION } from '../src/rehearsal/timeline';
@@ -1192,7 +1193,7 @@ domain.post('/ensembles/:ensemble/transcriptions/:job/import',async c=>{
  const j=(await db.query('select * from transcription_jobs where id=$1 and ensemble_id=$2 for update',[id,e])).rows[0];
  if(j.imported_piece_id)return metadata(db,e,j.imported_piece_id);
  const n=(await db.query('select coalesce(max(sort_key::bigint),-1)+1 as n from music_pieces where ensemble_id=$1',[e])).rows[0].n;
- const p=(await db.query("insert into music_pieces(ensemble_id,title,sort_key,format,provenance) values($1,$2,$3,'musicxml',$4) returning id",[e,typeof j.options?.title==='string'&&j.options.title.trim()?j.options.title.trim():'Transcription',String(n).padStart(12,'0'),{jobId:id,model:j.model,promptVersion:j.prompt_version,sidecar:{encoding:'gzip+base64',data:gzipSync(JSON.stringify(j.provenance)).toString('base64')}}])).rows[0];
+ const p=(await db.query("insert into music_pieces(ensemble_id,title,sort_key,format,provenance) values($1,$2,$3,'musicxml',$4) returning id",[e,pieceTitle.parse(j.options?.title||'Transcription'),String(n).padStart(12,'0'),{jobId:id,model:j.model,promptVersion:j.prompt_version,sidecar:{encoding:'gzip+base64',data:gzipSync(JSON.stringify(j.provenance)).toString('base64')}}])).rows[0];
  await insertVersion(db,e,p.id,u,1,{format:'musicxml',schemaVersion:1},data);
  await db.query('update transcription_jobs set imported_piece_id=$2 where id=$1',[id,p.id]);await audit(db,e,u,'transcription.import',p.id,{jobId:id});return metadata(db,e,p.id);
  });

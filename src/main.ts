@@ -963,7 +963,7 @@ function appearanceItems() {
 
 async function reloadForDesign() {
   if(syncEnabled()){leavePlaybackSession();audioEngine?.stop();}else stopPlayback();
-  if (!app.classList.contains('mode-landing')) sessionStorage.setItem(MODE_SWITCH_KEY, sessionMode);
+  if (!app.classList.contains('mode-landing')) sessionStorage.setItem(MODE_SWITCH_KEY, transcriptionPreviewMode??sessionMode);
   location.reload();
 }
 
