@@ -14,3 +14,6 @@ test('rejects naive, invalid, empty and reversed ranges',()=>{for(const args of 
 test('usage groups expose operator account failures and explicitly unknown usage',()=>{
  expect(usageSQL).toContain('c.error_kind');expect(usageSQL).toContain("c.usage->>'usage_unknown'='true'");
 });
+
+test('rejects normalized impossible dates and excessive ranges',()=>{for(const a of ['2026-02-30T00:00:00Z','2026-04-31T00:00:00Z','2026-01-01T24:00:00Z'])expect(()=>usageRange(a,'2026-12-01T00:00:00Z')).toThrow();expect(()=>usageRange('2025-01-01T00:00:00Z','2026-02-01T00:00:00Z')).toThrow('366');});
+test('response aggregates are numeric and null costs stay null',async()=>{vi.mocked(pool.query).mockResolvedValueOnce({rows:[{day:'2026-11-01',model:'m',calls:2,input_tokens:'20',known_cost_usd:'0.25',estimated_cost_usd:null,unpriced_calls:1}]} as any);const r=await transcriptionUsage('2026-11-01T00:00:00Z','2026-11-02T00:00:00Z');expect(r.groups[0].known_cost_usd).toBe(.25);expect(r.groups[0].input_tokens).toBe(20);expect(r.groups[0].estimated_cost_usd).toBeNull();});
