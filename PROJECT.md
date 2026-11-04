@@ -51,3 +51,5 @@ hosting and an Audiveris/Cloud Function experiment. These descriptions are histo
 legacy sources remain only for migration/retirement evidence. The live prototype must
 stay untouched until a separately authorized operator inventories and retires it.
 AICAP-18 tracks urgent independent verification of legacy AI endpoint exposure.
+
+Musical client details: [piano roll, sheet view, audio, parsers and timeline](docs/CLIENT.md).

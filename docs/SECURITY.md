@@ -62,3 +62,7 @@ Production/fork services remain separate from the live prototype. Legacy Functio
 omrTestPage and scan endpoints have unverified deployment/exposure; AICAP-18 remains
 urgent independent operator work. Removing source is not retirement. See RUNBOOK.md
 for separately authorized inventory, containment, backup verification and retirement.
+
+Worker images require DB/S3/OpenAI configuration only; web auth/mail secrets are
+not required by worker validation. Runtime images exclude migration export tooling
+and development dependencies. Run legacy exports only from trusted operator/CI environments.

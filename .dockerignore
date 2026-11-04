@@ -27,3 +27,9 @@ firebase.json
 firestore.rules
 .review-evidence
 backups
+
+migration/.runtime
+docs
+tests
+.github
+eval/reports

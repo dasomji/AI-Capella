@@ -17,6 +17,7 @@ const source = await disposable();
 let db;
 try {
   Object.assign(process.env, source.env);
+  assert.equal(spawnSync(process.execPath, ['--import','tsx','scripts/ops-canary.ts','--s3'], {env:{...process.env,...source.env},stdio:'inherit'}).status,0);
   assert.equal(
     spawnSync(process.execPath, ["--import", "tsx", "scripts/migrate.ts"], {
       stdio: "inherit",
@@ -77,6 +78,7 @@ try {
       Body: Buffer.from("orphan"),
     }),
   );
+  await db.query("insert into stored_objects(ensemble_id,kind,object_key,size,content_type,sha256,provenance,state) values('backup-ensemble','original','pending/fixture',1,'application/pdf',repeat('0',64),'{}','pending'),('backup-ensemble','original','failed/fixture',1,'application/pdf',repeat('0',64),'{}','failed')");
   const originalDump = await backupDb(dir),
     originalObjects = await backupObjects(`${dir}/objects`);
   await mkdir(`${dir}/download`);
@@ -88,7 +90,10 @@ try {
   assert.deepEqual(await digest(dump), await digest(originalDump));
   const report = await verify(dump, objects);
   assert.equal(report.parsedPieces, 1);
-  assert.equal(report.counts.objects, "1");
+  assert.equal(report.counts.objects, "3");
+  assert.deepEqual(report.nonReady.map(row => row.state).sort(), ["failed","pending"]);
+  const manifest = JSON.parse(await readFile(dump + ".manifest.json", "utf8"));
+  assert.ok(Date.parse(manifest.captureStartedAt) <= Date.parse(manifest.capturedAt));
   assert.deepEqual(report.orphans, ["orphan-evidence"]);
   const retained = await source.client.send(
     new GetObjectCommand({ Bucket: "restore", Key: "original/fixture" }),

@@ -2,8 +2,7 @@
 
 Use Node >=22.22 and Docker with local-container access. Install python3, libseccomp2,
 poppler-utils for inspection/render tests; install Playwright Chromium with
-`npx playwright install --with-deps chromium`. On this rehearsal host Poppler is
-available via `.review-evidence/bin`; other machines should use their installed tools.
+`npx playwright install --with-deps chromium`. Ensure `pdftoppm` is on PATH.
 
 ```sh
 npm ci
@@ -63,12 +62,15 @@ services. Development alone may initialize a missing bucket; production never do
 Configured public browser origin must reach S3 for signed downloads. Preserve originals
 indefinitely; cleanup removes transient artifacts and explicitly deleted ensemble data.
 
-CI runs on PRs and main pushes, builds app/worker Docker images without pushing and
+CI runs on PRs and main/production-v1 pushes, builds app/worker Docker images without pushing and
 has no deployment permissions. It runs typecheck, UTC/non-UTC unit suites, build,
 sentinel scanner, disposable integration + browser suites, fresh migrations/drift,
-eval replay, backup and graceful operations; Phase 6a migration tests are conditional
-on the script being present. SeaweedFS is launched by a workflow Docker step because
-GitHub service definitions cannot set its server command; Postgres/Mailpit use service
-containers. No paid APIs or repository secrets. Legacy rules-test is skipped: its
-Firebase-only semantics are superseded by app authorization tests. Legacy files stay
+eval replay, backup and graceful operations; Phase 6a migration tests are mandatory; missing scripts fail CI. CI installs the
+rules-test dependencies, Java 21 and caches Firebase emulator jars. SeaweedFS is launched by a workflow Docker step because
+GitHub service definitions cannot set its server command; Postgres uses a service container; each browser harness owns its mail fixture. No paid APIs or repository secrets. The legacy standalone rules suite is superseded by app authorization tests, but
+the migration suite uses the local Firestore emulator and its rules-test tooling. Legacy files stay
 for migration/retirement evidence. See DEPLOYMENT.md and SYSADMIN.md for operations.
+
+Migration export/import runs on an operator machine or a dedicated CI job with full
+dependencies. Production images omit firebase-admin, Vite, Vitest, Playwright and drizzle-kit.
+`test:ops` requires `npm run build` first and fails immediately without dist.

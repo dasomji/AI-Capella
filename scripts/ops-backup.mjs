@@ -43,7 +43,7 @@ export const s3 = (env = process.env) => {
   return new S3Client({
     endpoint: env.S3_ENDPOINT,
     region: env.S3_REGION ?? "us-east-1",
-    forcePathStyle: true,
+    forcePathStyle: env.S3_FORCE_PATH_STYLE !== "false",
     requestHandler: { requestTimeout: 15000, connectionTimeout: 5000 },
     requestChecksumCalculation: "WHEN_REQUIRED",
     credentials: {
@@ -55,6 +55,7 @@ export const s3 = (env = process.env) => {
 export async function backupDb(dir) {
   if (!process.env.DATABASE_URL) throw Error("DATABASE_URL is required");
   await mkdir(dir, { recursive: true, mode: 0o700 });
+  const captureStartedAt = new Date().toISOString();
   const file = join(
     dir,
     `database-${new Date().toISOString().replace(/[:.]/g, "-")}.dump`,
@@ -91,6 +92,7 @@ export async function backupDb(dir) {
     JSON.stringify(
       {
         version: 1,
+        captureStartedAt,
         capturedAt: new Date().toISOString(),
         ...(await digest(file)),
       },
@@ -320,7 +322,8 @@ export async function verify(dump, objects) {
       await db.query("select object_key,size,sha256,state from stored_objects")
     ).rows;
     const map = new Map(manifest.objects.map((o) => [o.key, o]));
-    for (const row of rows) {
+    const nonReady = rows.filter(row => row.state !== "ready");
+    for (const row of rows.filter(row => row.state === "ready")) {
       const o = map.get(row.object_key);
       if (!o || o.size !== Number(row.size) || o.sha256 !== row.sha256)
         throw Error(`Missing/mismatched stored object (${row.state})`);
@@ -356,7 +359,8 @@ export async function verify(dump, objects) {
       verifiedAt: new Date().toISOString(),
       counts,
       parsedPieces: pieces.length,
-      orphans: [...map.keys()],
+      nonReady,
+      orphans: [...map.keys()].filter(key => !nonReady.some(row => row.object_key === key)),
     };
     console.log(JSON.stringify(report, null, 2));
     return report;

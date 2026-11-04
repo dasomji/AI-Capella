@@ -36,7 +36,7 @@ export function compactContext(pages:PageResult[]) {
 export class OpenAITranscriptionProvider implements TranscriptionProvider {
  readonly promptVersion='transcription-v1';
  readonly promptSha256=promptSha256;
- constructor(readonly model=process.env.OPENAI_TRANSCRIPTION_MODEL??'gpt-6.1-sol',private client?:OpenAI){}
+ constructor(readonly model=z.string().trim().min(1).default('gpt-6.1-sol').parse(process.env.OPENAI_TRANSCRIPTION_MODEL),private client?:OpenAI){}
  async transcribePage(input:PageInput,pages:PageResult[],options:Record<string,unknown>,signal:AbortSignal):Promise<PageResult>{
  const start=Date.now();if(signal.aborted)throw new ProviderError('provider_timeout',true);
  if(!input.raster)throw new ProviderError('infrastructure_error');

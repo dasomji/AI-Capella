@@ -10,6 +10,7 @@ import { attachSockets } from "./socket.server";
 import { logError } from "./logger.server";
 import { flushBackground } from "./background.server";
 import { setSocketAddress } from "./client-ip.server";
+console.log(JSON.stringify({event:"web.transcription_config", model:env.OPENAI_TRANSCRIPTION_MODEL, promptVersion:"transcription-v1", at:new Date().toISOString()}));
 const app = new Hono();
 app.onError((error, c) => {
   logError("host.error", error);

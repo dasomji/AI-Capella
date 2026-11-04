@@ -2587,13 +2587,13 @@ No provisioning, deploy, push, real mail/paid AI, secret rotation or legacy acce
 
 Replaced the historical feature-branch Pages deployment with read-only PR/main CI:
 typecheck, unit suites (default + America/New_York), build, sentinel secrets,
-recorded evaluation, conditional Phase 6a migration tests, disposable backup drill,
+recorded evaluation, mandatory Phase 6a migration tests, disposable backup drill,
 app/worker image builds (no push), fresh Postgres migrations/schema drift and
 integration/browser/transcription suites. npm and Playwright caches, per-ref
 concurrency, Postgres/Mailpit service containers and an owned authenticated SeaweedFS
 container are configured. SeaweedFS requires a Docker step because Actions services
 cannot override its server command. Legacy Firebase rules-test is deliberately
-skipped in app CI, and legacy source/config remains retained for migration/retirement.
+excluded as a standalone suite (migration CI still installs its emulator tooling), and legacy source/config remains retained for migration/retirement.
 `act` is unavailable locally; the corresponding npm/Docker commands were run directly.
 
 Added separate railway.web.toml / railway.worker.toml with direct Node start,
@@ -2745,3 +2745,37 @@ synthetic snapshots/backups/results remain in ignored per-run runtime directorie
 All staging/commits used explicit owned paths and a separate index to preserve
 the concurrent Phase 6b work. The validated Plane project mapping was retained;
 AICAP-10 received the implementation/evidence update.
+
+
+### Phase 6b fixes — CI and runtime review (2026-11-04)
+
+- Migration CI now installs rules-test dependencies, Temurin 21 and emulator cache,
+  builds first and requires the migration suite. Every job has a deadline; actions
+  use verified full release SHAs, service images use digests, production-v1 pushes
+  run CI, unused Mailpit is removed and failures upload logs/screenshots/traces.
+- Railway admission uses /readyz; ownership monitoring stays /readyz/rehearsal.
+  Contended ownership polls every second; real errors retain exponential backoff.
+  A fake-clock regression releases the lock after 60 seconds and accepts within 1s.
+- Parsed transcription model is passed to job/provider creation; web and worker log
+  effective model/prompt. Worker bootstrap selects validation without web/mail secrets.
+- Both Dockerfiles separate full build dependencies from production runtime install;
+  build-time assertions exclude vite/vitest/playwright/drizzle-kit/firebase-admin.
+  TanStack's dependency graph retains Vite even with omitted peers, so runtime stages
+  explicitly remove these build-only packages before asserting their absence.
+- S3_FORCE_PATH_STYLE is configurable (default true), including backup and signed-URL
+  canaries. First-deploy docs require verified addressing and signed upload/download.
+- Backup manifests record capture start/end; restore reports pending/failed objects
+  separately while ready-object mismatch remains fatal. Shutdown requeues identify
+  shutdown_requeue; ops tests reject missing dist before creating fixtures and cover
+  in-flight HTTP drain plus 10s/20s hard deadlines.
+- Restored the surviving musical client reference from d5e3ed3^ into docs/CLIENT.md,
+  replacing legacy library/access/offline and playback assumptions; linked both entry docs.
+
+Local evidence so far: typecheck, unit UTC and America/New_York (268 each), build,
+secret scanner, schema generation (no drift), full downloaded backup restore,
+expanded ops shutdown suite, both Docker builds and in-image sandbox/Poppler canaries
+passed. Workflow YAML parsed and timeout/full-SHA assertions passed; release SHAs
+checked against action repositories. Optional Playwright preload produced PNG/ZIP
+artifacts in a real local Chromium fixture. No Railway/Resend/OpenAI calls or provisioning.
+Broader integration/browser runs are concurrent with the other review agents; preserve
+.review-evidence/p6b-fixes-*.log for their final outcomes rather than implying green.

@@ -14,7 +14,7 @@ import { validateScore } from './score-validation.server';
 import { logError } from './logger.server';
 import { env } from './env.server';
 import { FakeProvider, ReferenceRenderer, FakeAssembler, ProviderError, type TranscriptionProvider, type PageRenderer, type JobAssembler, type PageResult } from './transcription-provider.server';
-const defaultProvider=()=>env.NODE_ENV==='test'?new FakeProvider():new OpenAITranscriptionProvider();
+const defaultProvider=()=>env.NODE_ENV==='test'?new FakeProvider():new OpenAITranscriptionProvider(env.OPENAI_TRANSCRIPTION_MODEL);
 export async function processingPaused(){return env.TRANSCRIPTION_EMERGENCY_STOP==='1' || !!(await pool.query('select paused from transcription_control where id=1')).rows[0]?.paused;}
 export async function createJob(user:string,ensemble:string,key:string,objects:string[],options:Record<string,unknown>,provider:TranscriptionProvider=defaultProvider()) {
  const requestHash=createHash('sha256').update(JSON.stringify({objects,options})).digest('hex');
@@ -109,7 +109,7 @@ export class TranscriptionWorker {
  await db.query('select id from transcription_jobs where id=$1 for update',[page.job_id]);
  const p=(await db.query('select p.*,j.state as job_state from job_pages p join transcription_jobs j on j.id=p.job_id where p.id=$1 for update of p',[page.id])).rows[0];
  if(!p || p.lease_owner!==token || p.state!=='running' || p.job_state==='cancelled')return;
- if(paused){await db.query("update job_pages set state='queued',attempts=greatest(0,attempts-1),failure_reason='emergency_stop',lease_owner=null,lease_expires_at=null where id=$1",[page.id]);return;}
+ if(paused){await db.query("update job_pages set state='queued',attempts=greatest(0,attempts-1),failure_reason=$2,lease_owner=null,lease_expires_at=null where id=$1",[page.id,this.stopping?'shutdown_requeue':'emergency_stop']);return;}
  const reason=failure?.reason;const retry=(failure?.reason==='invalid_output'?p.attempts<2:failure?.retryable) && p.attempts<env.TRANSCRIPTION_MAX_ATTEMPTS;
  const prices=priceTable(env.TRANSCRIPTION_PRICE_TABLE);
  const history=[...(p.metrics?.history??[]),{usageUnknown:!result?.usage&&!failure?.usage,latency:Date.now()-started,usage:result?.usage??failure?.usage??{inputTokens:0,outputTokens:0},outcome:reason??'completed',model:this.provider.model,promptVersion:this.provider.promptVersion}];

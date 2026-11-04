@@ -37,3 +37,5 @@ See [development](docs/DEVELOPMENT.md), [architecture](PROJECT.md),
 [security](docs/SECURITY.md), [sysadmin](docs/SYSADMIN.md) and [phase plan](docs/PLAN.md).
 Legacy Firebase/functions/rules-test/scan sources are retained for migration and
 separately authorized retirement; production app CI and images exclude them.
+
+Musical client details: [piano roll, sheet view, audio, parsers and timeline](docs/CLIENT.md).

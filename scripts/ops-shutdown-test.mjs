@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+if (!existsSync(`${process.env.LIGHTSCORE_BUILD_ROOT ?? "dist"}/server/server.js`)) throw Error("test:ops requires a built server; run npm run build first");
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
@@ -5,6 +7,20 @@ import { once } from "node:events";
 import { io } from "socket.io-client";
 import pg from "pg";
 import { disposable } from "./ops-backup.mjs";
+// Worker validation accepts only its own secrets; config booleans/model are strict.
+const configTest = spawnSync(process.execPath, ['--import','tsx','--input-type=module','-e', `
+  import assert from 'node:assert/strict';
+  const {parseEnv,env}=await import('./server/env.server.ts');
+  assert.equal(env.OPENAI_TRANSCRIPTION_MODEL,'gpt-6.1-sol');
+  assert.equal(env.S3_FORCE_PATH_STYLE,true);
+  const input={NODE_ENV:'production',DATABASE_URL:'postgres://fixture:fixture@localhost/fixture'};
+  assert.equal(parseEnv({...input,OPENAI_TRANSCRIPTION_MODEL:'custom-model',S3_FORCE_PATH_STYLE:'false'},'worker').OPENAI_TRANSCRIPTION_MODEL,'custom-model');
+  assert.equal(parseEnv({...input,S3_FORCE_PATH_STYLE:'false'},'worker').S3_FORCE_PATH_STYLE,false);
+  assert.throws(()=>parseEnv({...input,S3_FORCE_PATH_STYLE:'yes'},'worker'),/S3_FORCE_PATH_STYLE/);
+  assert.throws(()=>parseEnv({...input,OPENAI_TRANSCRIPTION_MODEL:' '},'worker'),/OPENAI_TRANSCRIPTION_MODEL/);
+  assert.throws(()=>parseEnv(input,'web'),/BETTER_AUTH_SECRET/);
+`], {env:{PATH:process.env.PATH,NODE_ENV:'production',LIGHTSCORE_PROCESS_ROLE:'worker',DATABASE_URL:'postgres://fixture:fixture@localhost/fixture'},stdio:'inherit'});
+assert.equal(configTest.status,0);
 const fixture = await disposable();
 let web, db, socket;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -65,11 +81,24 @@ try {
     reconnection: false,
   });
   await once(socket, "connect");
+  // Hold a real readiness query in PostgreSQL while shutdown begins.
+  await db.query('begin');
+  await db.query('lock table drizzle.__drizzle_migrations in access exclusive mode');
+  const inflight = fetch(base + '/readyz');
+  for (let i=0;;i++) {
+    await db.query('select pg_stat_clear_snapshot()');
+    const waiting = await db.query("select 1 from pg_stat_activity where wait_event_type='Lock' and query like 'select hash from drizzle.__drizzle_migrations%'");
+    if (waiting.rowCount) break;
+    if (i>100) throw Error('In-flight HTTP request did not reach database');
+    await wait(10);
+  }
   const hint = once(socket, "server:restarting");
   const exit = once(web, "exit");
   web.kill("SIGTERM");
   const [data] = await hint;
   assert.equal(data.reconnectAfterMs, 2000);
+  await db.query('commit');
+  assert.equal((await inflight).status, 200);
   assert.equal((await exit)[0], 0);
   assert.equal(
     (await db.query("select pg_try_advisory_lock(714083,1) locked")).rows[0]
@@ -120,9 +149,10 @@ try {
   worker.stop();
   await tick;
   const page = (
-    await db.query("select state,lease_owner from job_pages where id='ops-p'")
+    await db.query("select state,lease_owner,failure_reason from job_pages where id='ops-p'")
   ).rows[0];
   assert.equal(page.state, "queued");
+  assert.equal(page.failure_reason, "shutdown_requeue");
   assert.equal(page.lease_owner, null);
   assert.equal(await worker.tick(), false);
   await (await import("../server/db/index.server.ts")).pool.end();
@@ -157,8 +187,32 @@ try {
   } finally {
     if (processWorker.exitCode === null) processWorker.kill("SIGTERM");
   }
+  // Force pool cleanup to hang in child processes, exercising real hard deadlines.
+  const preload = 'data:text/javascript,' + encodeURIComponent("import {createRequire} from 'node:module'; const pg=createRequire(process.cwd()+'/package.json')('pg'); pg.Pool.prototype.end = function(){return new Promise(()=>{})}; setInterval(()=>{},1000);");
+  for (const [entry, deadlineMs] of [['server/entry.ts',10000],['server/transcription-worker.ts',20000]]) {
+    const child = spawn(process.execPath, ['--import','tsx','--import',preload,entry], {env:process.env,stdio:['ignore','pipe','inherit']});
+    try {
+      if (entry.includes('worker')) {
+        await new Promise((resolve,reject)=>{
+          const timer=setTimeout(()=>reject(Error('Deadline worker startup timeout')),10000);
+          child.stdout.on('data',data=>{if(data.toString().includes('worker.ready')){clearTimeout(timer);resolve();}});
+        });
+      } else {
+        for(let n=0;;n++) {
+          try {if((await fetch(base+'/readyz')).ok) break;} catch {}
+          if(n>200) throw Error('Deadline web startup timeout');
+          await wait(50);
+        }
+      }
+      const exited = once(child,'exit'), started=performance.now();
+      child.kill('SIGTERM');
+      assert.equal((await exited)[0],1);
+      const elapsed=performance.now()-started;
+      assert.ok(elapsed>=deadlineMs-500 && elapsed<deadlineMs+5000, `Hard deadline ${entry}: ${elapsed}ms`);
+    } finally {if(child.exitCode===null) child.kill('SIGTERM');}
+  }
   console.log(
-    "Graceful operations passed: web SIGTERM reconnect hint, clean exit/owner release; active worker stop requeues/relinquishes lease and refuses claims.",
+    "Graceful operations passed: HTTP in-flight drain, hard web/worker deadlines; web SIGTERM reconnect hint, clean exit/owner release; active worker stop requeues/relinquishes lease and refuses claims.",
   );
 } finally {
   socket?.close();

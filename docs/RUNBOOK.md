@@ -50,8 +50,9 @@ Use trusted operator access with Docker and Node dependencies. Default output is
 `backups/`; keep sensitive artifacts outside Git, encrypted and access-restricted.
 Quiesce uploads/deletions and application writes while capturing the pair: pg_dump
 is transactionally consistent but S3 listings and DB dumps are not an atomic snapshot.
-Pause worker cleanup too. Strict reconciliation rejects pending/deleted/missing
-object rows; resolve them or capture a stable snapshot before calling it verified.
+Pause worker cleanup too. Ready rows require exact object bytes. Pending/failed rows
+are reported separately in nonReady; review pending uploads and failed inspections,
+then retry or remove through authorized application flows. Do not invent missing bytes.
 
 ```sh
 npm run backup:db -- /secure/lightscore/capture-UTC
@@ -62,7 +63,7 @@ npm run restore:verify -- --db /downloaded/database-UTC.dump --objects /download
 npm run test:backup
 ```
 
-Database backups use pg_dump custom format plus UTC capture instant, bytes and SHA-256
+Database backups use pg_dump custom format plus UTC capture start and completion instants, bytes and SHA-256
 sidecar. pg_dump runs a PostgreSQL 17 client container and requires network access to
 DATABASE_URL; for Railway use the operator-approved reachable connection/tunnel,
 never expose DB credentials in command text/logs. Its URL is passed in environment.
@@ -75,7 +76,7 @@ The manifest is integrity evidence, not a signature; protect it with the artifac
 restore:verify always creates its own disposable Postgres + SeaweedFS with unique
 names/random loopback ports. It checks downloaded dump/object manifests, restores
 the complete dump, checks migrations are current, uploads/downloads all objects,
-checks every stored_objects reference and SHA-256, lists orphan objects, runs count
+checks every ready stored_objects reference and SHA-256; reports non-ready rows separately, lists orphan objects, runs count
 queries and parses up to ten current pieces through the app validator/timeline.
 A missing object, digest/size mismatch, schema drift or parse failure fails the drill.
 It never restores into DATABASE_URL or a live bucket. Orphans are reported for review,
@@ -149,3 +150,8 @@ archive routing/config evidence, explicitly disable/undeploy listed endpoints, v
 terminal disabled/authenticated behavior and no unexpected billing, then retire keys
 and remove legacy source/config/tests in a later reviewed commit. Do not rotate keys,
 restrict legacy writes, remove endpoints or delete data under this runbook alone.
+
+First deployment must pass `npm run ops:canary -- --s3` with bucket credentials,
+confirm addressing style, region and signed URL upload/download; see DEPLOYMENT.md.
+The default canary checks sandbox/Poppler only. Railway admission uses `/readyz`;
+`/readyz/rehearsal` monitors ownership after admission.

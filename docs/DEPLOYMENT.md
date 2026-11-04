@@ -17,13 +17,13 @@ and [pre-deploy commands](https://docs.railway.com/deployments/pre-deploy-comman
 
 One web replica owns in-memory playback ordering, sessions and admission limits.
 A dedicated PostgreSQL connection holds advisory lock `(714083,1)`; a replacement
-can serve HTTP before acquiring it. `/healthz` is process liveness (Railway deploy
-healthcheck); `/readyz` is database/migration readiness, reporting sandbox and
+can serve HTTP before acquiring it. `/healthz` is process liveness; `/readyz` is the Railway deploy healthcheck and database/migration readiness, reporting sandbox and
 rehearsal booleans. `/readyz/rehearsal` is 503 on standby, for ownership monitoring,
 not deploy admission. During overlap there must be only one owner. Expect a short
 Together outage until old sockets drain and the lock transfers. Clients reconnect,
 join, recheck membership and obtain paused/reconciled snapshots. No commands queue
-offline. Check `/readyz` explicitly after Railway marks a deploy healthy.
+offline. Check `/readyz/rehearsal` after admission to confirm ownership handoff. Standbys poll
+the lock every second; only genuine errors use exponential backoff.
 
 Web pre-deploy runs `npm run db:migrate`: only DATABASE_URL is required by that
 script; advisory lock 17031501 serializes concurrent migrators. Worker has no
@@ -36,12 +36,14 @@ commands ensure SIGTERM reaches the application rather than an npm wrapper.
 |---|---|---|---|
 | NODE_ENV | yes | yes | public setting: production |
 | DATABASE_URL | yes | yes | secret; private Postgres connection reference |
-| BETTER_AUTH_SECRET | yes | yes* | secret; generated >=32 chars, never VITE_* |
-| BETTER_AUTH_URL | yes | yes* | public origin: https://scores.example.org |
-| TRUSTED_ORIGINS | yes | yes* | public exact comma-separated HTTPS origins, same origin normally |
-| MAIL_TRANSPORT | resend | resend* | public setting |
-| MAIL_FROM | yes | yes* | public verified sender: LightScore <scores@example.org> |
-| RESEND_API_KEY | yes | yes* | secret; domain-scoped mail key |
+| BETTER_AUTH_SECRET | yes | absent | secret; generated >=32 chars, never VITE_* |
+| BETTER_AUTH_URL | yes | absent | public origin: https://scores.example.org |
+| TRUSTED_ORIGINS | yes | absent | public exact comma-separated HTTPS origins, same origin normally |
+| MAIL_TRANSPORT | resend | absent | public setting |
+| MAIL_FROM | yes | absent | public verified sender: LightScore <scores@example.org> |
+| RESEND_API_KEY | yes | absent | secret; domain-scoped mail key |
+| OPENAI_TRANSCRIPTION_MODEL | yes | yes | gpt-6.1-sol default; must be identical on web and worker; effective model/prompt logged at startup |
+| S3_FORCE_PATH_STYLE | optional | optional | true by default for SeaweedFS/dev; verify bucket addressing on first deploy |
 | OPENAI_API_KEY | absent | yes | secret, worker only |
 | S3_ENDPOINT | yes | yes | public HTTPS endpoint, not browser credentials |
 | S3_REGION | yes | yes | public region from bucket settings |
@@ -56,8 +58,8 @@ commands ensure SIGTERM reaches the application rather than an npm wrapper.
 | TRANSCRIPTION_PRICE_TABLE | optional | optional | public JSON USD/million tokens; absent prices mean unknown cost |
 | DB_POOL_MAX | optional | optional | 10; size combined pools below DB connection budget |
 
-*Current shared env validation requires auth/mail settings even for the worker;
-these credentials stay server-side. The migrator does not import that validation.
+Worker startup selects worker-only env validation before importing shared modules.
+The migrator requires only DATABASE_URL.
 Additional limits/defaults are in `.env.example` and `server/env.server.ts`: PDF
 50 MiB, photo 20 MiB, max 60 pages / 40M pixels, ensemble storage 5 GiB, native/XML
 score 20 MiB; user/ensemble active jobs 2/4, page lease 30s, timeout 180s, max attempts 3.
@@ -99,3 +101,14 @@ separate review and rehearsal.
 CI only tests/builds; it never deploys, pushes images, contacts paid APIs or uses
 repository secrets. Legacy functions/rules/omr-service remain excluded from images
 and app CI pending migration plus separately authorized retirement.
+
+Both images use a full-dependency build stage and a production-only runtime stage.
+Migration export tooling runs from an operator machine/CI with full dependencies;
+firebase-admin and development tools are excluded from both runtime images.
+
+First-deploy bucket gate: verify the supplied region and endpoint, whether the bucket
+requires virtual-hosted addressing (`S3_FORCE_PATH_STYLE=false`) or path-style (`true`),
+and browser reachability/CORS for short-lived signed links. Run
+`npm run ops:canary -- --s3` with the selected bucket credentials on each service:
+it uploads/downloads known bytes using signed URLs and removes only its unique test key.
+Without complete credentials it reports skipped; this is not bucket verification.

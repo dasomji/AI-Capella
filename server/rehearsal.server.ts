@@ -138,9 +138,9 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         if(client) client.release(true);
         retryOwnership();
     }
-    function retryOwnership() {
+    function retryOwnership(contended = false) {
         if(closed || retry) return;
-        retry=setTimeout(()=>{retry=undefined;ready=acquire();void ready.catch(()=>{});},Math.min(30000,250*2**Math.min(failures++,7)));
+        retry=setTimeout(()=>{retry=undefined;ready=acquire();void ready.catch(()=>{});},contended ? 1000 : Math.min(30000,250*2**Math.min(failures++,7)));
         retry.unref();
     }
     async function acquire() {
@@ -151,7 +151,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         owner=client;
         client.on('error',()=>{if(owner===client)loseOwnership();});
         const lock=await client.query('select pg_try_advisory_lock(714083, 1) as locked');
-        if(!lock.rows[0].locked) throw Error('unavailable');
+        if(!lock.rows[0].locked) { owner=undefined;client.release();failures=0;retryOwnership(true);return; }
         // A query detects dead owner sessions even without subsequent commands.
         const probe={text:'select 1',query_timeout:2000};
         const ownerClient=client;

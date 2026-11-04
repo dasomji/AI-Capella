@@ -279,3 +279,14 @@ it('requires three consecutive heartbeat failures and resets after a successful 
  mocks.heartbeatFail=true;await vi.advanceTimersByTimeAsync(10000);expect(rehearsalReady()).toBe(true);
  mocks.locked=false;await vi.advanceTimersByTimeAsync(5000);expect(rehearsalReady()).toBe(false);expect(mocks.released).toHaveBeenCalled();
 });
+
+it('polls a long-held ownership lock every second and acquires within three seconds of release',async()=>{
+ mocks.locked=false;
+ const app=setup();
+ await vi.advanceTimersByTimeAsync(60000);
+ mocks.locked=true;
+ await vi.advanceTimersByTimeAsync(1000);
+ const c=app.socket('handoff');
+ expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).state).toBeDefined();
+ expect((await c.emit('rehearsal:command',command())).status).toBe('accepted');
+});

@@ -13,7 +13,7 @@ export class S3Storage implements ObjectStorage {
   private client:S3Client;
   constructor(private bucket=env.S3_BUCKET) {
     if(!bucket || !env.S3_ENDPOINT || !env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY) throw Error('S3 configuration required');
-    this.client=new S3Client({endpoint:env.S3_ENDPOINT,region:env.S3_REGION,forcePathStyle:true,requestChecksumCalculation:'WHEN_REQUIRED',credentials:{accessKeyId:env.S3_ACCESS_KEY_ID,secretAccessKey:env.S3_SECRET_ACCESS_KEY},requestHandler:{requestTimeout:30000}});
+    this.client=new S3Client({endpoint:env.S3_ENDPOINT,region:env.S3_REGION,forcePathStyle:env.S3_FORCE_PATH_STYLE,requestChecksumCalculation:'WHEN_REQUIRED',credentials:{accessKeyId:env.S3_ACCESS_KEY_ID,secretAccessKey:env.S3_SECRET_ACCESS_KEY},requestHandler:{requestTimeout:30000}});
   }
   async initialize(){
     try {await this.client.send(new HeadBucketCommand({Bucket:this.bucket}));}
