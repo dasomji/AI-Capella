@@ -1,3 +1,4 @@
+import { registerTranscriptionRoutes } from './transcription-http.server';
 import { TIMING_DERIVATION_VERSION } from '../src/rehearsal/timeline';
 import { Hono } from "hono";
 import { z } from "zod";
@@ -514,6 +515,7 @@ domain.delete("/account", async (c) => {
     for (const { ensemble_id: e } of es) {
       await revokeIssued(db, e, u.id);
       if (sole.includes(e)) {
+        await db.query('insert into object_deletions(object_key) select object_key from stored_objects where ensemble_id=$1 on conflict do nothing',[e]);
         await db.query(
           "update music_pieces set current_version_id=null where ensemble_id=$1",
           [e],
@@ -1173,3 +1175,5 @@ domain.delete("/ensembles/:ensemble/pieces/:piece", async (c) => {
   ]);
   return c.json({ status: true });
 });
+
+registerTranscriptionRoutes(domain);
