@@ -245,9 +245,9 @@ test('sandbox bounds PDF object-stream bombs without growing API memory',async()
  for(let i=0;i<mb;i++)if(!zip.write(block))await once(zip,'drain');
  zip.end('<< /Type /Catalog /Pages 3 0 R >>');await once(zip,'end');const compressed=Buffer.concat(chunks);
  const path=dir+'/'+mb+'.pdf';await writeFile(path,Buffer.concat([Buffer.from(`%PDF-1.5\n4 0 obj\n<< /Type /ObjStm /N 1 /First 5 /Length ${compressed.length} /Filter /FlateDecode >>\nstream\n`),compressed,Buffer.from('\nendstream\nendobj\n1 0 obj\n<< /Type /Catalog /Pages 3 0 R >>\nendobj\n3 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R /Size 5 >>\n%%EOF\n')]));
- const rss=process.memoryUsage().rss;const start=Date.now();
- await assert.rejects(()=>inspectSource(path),(e:any)=>e.code==='source_too_complex');
- assert.ok(process.memoryUsage().rss-rss<100*1024*1024);assert.ok(Date.now()-start<12000);
+ const rss=process.memoryUsage().rss;const start=Date.now();let peak=rss;const sample=setInterval(()=>{peak=Math.max(peak,process.memoryUsage().rss);},10);
+ try{await assert.rejects(()=>inspectSource(path),(e:any)=>e.code==='source_too_complex');}finally{clearInterval(sample);}
+ assert.ok(peak-rss<100*1024*1024);assert.ok(Date.now()-start<12000);
  }}finally{await rm(dir,{recursive:true,force:true});}
 });
 test('cancel aborts provider and retains its independent ledger entry',async()=>{
@@ -362,4 +362,9 @@ test('parallel claim race invokes the provider only once for a page',async()=>{
 test('worker refuses a model/prompt pin it does not serve',async()=>{
  const {createJob}=await import('../server/transcription.server');const {lead,e,source}=await setup();const provider=new FakeProvider();provider.model='unserved';
  const j=await createJob(lead.id,e.id,crypto.randomUUID(),[source.id],{},provider);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).failure_reason,'model_unavailable');assert.equal((await pool.query('select 1 from provider_calls where job_id=$1',[j.id])).rowCount,0);
+});
+test('inspection child inherits hard address/CPU limits and cannot open sockets',async()=>{
+ const {spawnSync}=await import('node:child_process');
+ const r=spawnSync('python3',['server/inspection-sandbox.py',process.execPath,'--jitless','--max-old-space-size=192','--input-type=module','-e',`import net from 'node:net';import fs from 'node:fs';const limits=fs.readFileSync('/proc/self/limits','utf8');if(!/Max address space\\s+1610612736\\s+1610612736/.test(limits)||!/Max cpu time\\s+5\\s+6/.test(limits))process.exit(2);net.createConnection({host:'127.0.0.1',port:9}).on('connect',()=>process.exit(3)).on('error',e=>process.exit(e.code==='EPERM'?0:4));`],{timeout:3000,encoding:'utf8'});
+ assert.equal(r.status,0,r.stderr);
 });

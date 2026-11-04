@@ -1543,3 +1543,12 @@ run under America/New_York with explicit SQL lease expiry and JS skew.
 The bundled Evening Rise MusicXML sample now omits its external DTD declaration
 so it remains importable under the shared DOCTYPE rejection policy; musical
 content is unchanged. The first browser run caught this compatibility issue.
+
+Deployment prerequisite (not provisioned): Railway supports supplying a custom
+[Dockerfile](https://docs.railway.com/guides/dockerfiles), so package Python 3 and
+libseccomp2 in that image. The sandbox uses unprivileged per-process rlimits and
+seccomp, not privileged cgroup management or network namespaces. The local probe
+confirmed RLIMIT_AS=1610612736 bytes, RLIMIT_CPU=5/6 seconds and socket creation
+fails EPERM. Railway runtime compatibility itself remains a deployment smoke
+check; lack of Python/seccomp fails closed. Size the service memory and upload
+concurrency to leave parent-process headroom alongside these per-child limits.
