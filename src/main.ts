@@ -426,11 +426,9 @@ document.querySelector<HTMLButtonElement>('#library-back-btn')!.addEventListener
 // mode a developer's own test pass last left on that device/browser. Ordinary persistence
 // (so reopening the app mid-rehearsal doesn't re-ask every time) is unaffected going forward.
 const MODE_STORAGE_KEY = 'ai-capella-mode-v2';
-// Solo = fully local, no shared playback session at all (even though Firebase may be
-// configured) -- for practicing alone without nudging anyone else's playback. Ensemble = the
-// single shared session. The shared song *library* stays available either way; only playback sync
-// is gated by this choice. Resolved once at startup and changed only via the mode switch, which
-// just reloads -- there's no in-place teardown of an active Firestore subscription.
+// Solo keeps playback local; Together owns the authenticated ensemble session.
+// The shared library remains available in either mode. Leaving the account,
+// ensemble or mode disposes the playback owner before the next arrival.
 let sessionMode: 'solo' | 'ensemble' = 'solo';
 let leavingAccount = false;
 let playerSession: PlayerSession | null = null;

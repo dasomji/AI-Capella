@@ -1,4 +1,4 @@
-// Legacy integration is intentionally disabled. Phase 2 replaces these callers.
+// Disabled scan/feedback compatibility. No Firebase SDK or client credentials.
 export const db = null;
 export async function ensureSignedIn(): Promise<void> {}
 export function currentUid(): string { return ''; }

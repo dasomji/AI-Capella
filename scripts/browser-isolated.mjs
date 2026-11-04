@@ -2,6 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
 import { existsSync } from "node:fs";
 import { chromium } from "playwright";
+let restartServer;
 const names = [],
   children = [];
 const docker = (args) => {
@@ -17,7 +18,8 @@ async function port() {
   return p;
 }
 async function run(args, env) {
-  const c = spawn(process.execPath, args, { env, stdio: "inherit" });
+  const c = spawn(process.execPath, args, { env, stdio: ["inherit","inherit","inherit","ipc"] });
+  c.on("message", async m=>{if(m.type==="restart"){try{await restartServer();c.send({type:"restarted"});}catch(e){c.send({error:String(e)});}}});
   children.push(c);
   const code = await new Promise((r) => c.on("exit", r));
   if (code !== 0) throw Error(`Command failed (${code}): ${args.join(" ")}`);
@@ -86,7 +88,7 @@ try {
     };
   await run(["--import", "tsx", "scripts/migrate.ts"], env);
   await run(["node_modules/vite/bin/vite.js", "build"], env);
-  const server = spawn(
+  let server = spawn(
     process.execPath,
     ["--import", "tsx", "server/entry.ts"],
     { env, stdio: "inherit" },
@@ -103,12 +105,18 @@ try {
     await new Promise((r) => setTimeout(r, 100));
   }
   if (!ready) throw Error("Server did not start");
+  restartServer=async()=>{
+    server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));
+    server=spawn(process.execPath,["--import","tsx","server/entry.ts"],{env,stdio:"inherit"});children.push(server);
+    for(let i=0;i<150;i++){try{if((await fetch(base+'/readyz')).ok)return;}catch{}await new Promise(r=>setTimeout(r,100));}
+    throw Error('Restart readiness timeout');
+  };
   if (!process.env.CHROMIUM_PATH && !existsSync(chromium.executablePath())) {
     env.PLAYWRIGHT_BROWSERS_PATH = `${process.cwd()}/.review-evidence/browsers`;
     await run(["node_modules/playwright/cli.js", "install", "chromium"], env);
   }
   await run([process.env.BROWSER_SCRIPT || "scripts/browser-phase2b.mjs"], env);
-  if(!process.env.BROWSER_SCRIPT) await run(["scripts/browser-sync.mjs"],env);
+  if(!process.env.BROWSER_SCRIPT) {await run(["scripts/browser-sync.mjs"],env);await run(["scripts/browser-sync-acceptance.mjs"],env);}
 } finally {
   for (const c of children)
     if (c.exitCode === null) {
