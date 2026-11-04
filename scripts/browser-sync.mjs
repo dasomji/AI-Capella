@@ -178,6 +178,7 @@ try {
   await p.getByRole('slider',{name:'Output latency offset'}).evaluate(el=>{el.value='200';el.dispatchEvent(new Event('change',{bubbles:true}));});
   assert.equal(await p.evaluate(()=>localStorage.getItem('ai-capella-output-latency-ms')),'200');
   assert.equal(await q.evaluate(()=>localStorage.getItem('ai-capella-output-latency-ms')),null);
+  await p.evaluate(()=>sessionStorage.setItem('ai-capella-mode-switch','ensemble'));
   await p.reload();await p.waitForFunction(()=>window.__lightscoreSync?.ready);
   await p.locator('#player-menu-btn').click();await p.getByText('Settings',{exact:true}).click();
   await p.getByText('Output latency offset',{exact:true}).click();
