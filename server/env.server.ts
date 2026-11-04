@@ -35,6 +35,18 @@ export function parseEnv(input: NodeJS.ProcessEnv) {
     S3_BUCKET: z.string().optional(),
     S3_ACCESS_KEY_ID: z.string().optional(),
     S3_SECRET_ACCESS_KEY: z.string().optional(),
+    TRANSCRIPTION_PDF_MAX_BYTES: z.coerce.number().int().positive().default(50*1024*1024),
+    TRANSCRIPTION_PHOTO_MAX_BYTES: z.coerce.number().int().positive().default(20*1024*1024),
+    TRANSCRIPTION_MAX_PAGES: z.coerce.number().int().positive().max(60).default(60),
+    TRANSCRIPTION_MAX_PIXELS: z.coerce.number().int().positive().default(40000000),
+    TRANSCRIPTION_USER_MAX: z.coerce.number().int().positive().default(2),
+    TRANSCRIPTION_ENSEMBLE_MAX: z.coerce.number().int().positive().default(4),
+    TRANSCRIPTION_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
+    TRANSCRIPTION_LEASE_MS: z.coerce.number().int().min(1000).default(30000),
+    TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
+    TRANSCRIPTION_MAX_ATTEMPTS: z.coerce.number().int().positive().max(10).default(3),
+    TRANSCRIPTION_EMERGENCY_STOP: z.enum(['0','1']).default('0'),
+    TRANSCRIPTION_PRICE_TABLE: z.string().default('{}'),
     OPENAI_API_KEY: z.string().optional(),
     APP_TIME_ZONE: z
       .string()

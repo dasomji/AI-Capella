@@ -60,6 +60,8 @@ api.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store");
 });
 api.use("/api/*", async (c, next) => {
+  // Originals own their streaming limit and inspection semaphore, never bodyLimit buffering.
+  if(c.req.method==='POST' && /^\/api\/ensembles\/[^/]+\/originals$/.test(c.req.path)) return next();
   const scorePath = c.req.path.match(/^\/api\/ensembles\/([^/]+)\/pieces(?:\/[^/]+\/versions)?$/);
   let release: (() => void) | undefined;
   if(c.req.method === "POST" && scorePath) {
