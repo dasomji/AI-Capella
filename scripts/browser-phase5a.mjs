@@ -210,7 +210,7 @@ try {
   await a.setOffline(false);await p.goto(base);await signin(p,emailA);await p.waitForURL('**/app');
   await p.waitForFunction(()=>!!localStorage.getItem('lightscore-offline-account'));
   await a.clearCookies();await p.goto(base+'/app');await p.waitForURL('**/?state=expired');
-  assert(!(await p.evaluate(()=>indexedDB.databases())).some(db=>db.name.startsWith('lightscore-private:')));
+  await p.waitForFunction(async()=>!(await indexedDB.databases()).some(db=>db.name?.startsWith('lightscore-private:')));
   console.log('online cookie-loss app entry purges all private stores');
   console.log('PASS Phase 5a: preparation, offline reload/solo, public cache boundary and logout purge', {ensemble,pieceId});
 } catch(e){console.log('FAIL URL',p.url(),await p.locator('body').innerText());console.log('FAIL DATA',await p.evaluate(async()=>{const data=[];for(const {name} of await indexedDB.databases()){if(!name?.endsWith('_identity'))continue;data.push(await new Promise(resolve=>{const r=indexedDB.open(name);r.onsuccess=()=>{const db=r.result;const t=db.transaction('data');const q=t.objectStore('data').get('session');t.oncomplete=()=>{db.close();resolve(q.result);};};}));}return {data,keys:{...localStorage}};}));await p.screenshot({path:evidence+'/offline-failure.png'});throw e;} finally { await browser.close(); }
