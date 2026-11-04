@@ -2252,3 +2252,75 @@ changes. Browser verification caught and fixed deferred cleanup deleting a newly
 created preview; the new switch fixture was then made deterministic before
 hydration. The serialized final runs above are green. All commits remain local
 on production-v1; nothing was pushed.
+
+
+### Phase 5a — private offline rehearsal (2026-11-04, AICAP-7)
+
+The worker now uses an exact build-generated public asset allowlist. It precaches
+only a generated, data-free fallback shell, hashed scripts/styles/fonts (including
+PDF fonts/Verovio), bundled sample music and piano samples. Runtime HTML and every
+API/auth/admin/invitation/original/signed/realtime URL bypass shared caching.
+Existing HTTP middleware keeps API and HTML responses no-store. Activation removes
+legacy ai-capella/public worker caches; private account stores never belong to the
+worker. Updates wait for an explicit reload notice rather than activating during
+rehearsal. The initial installation does not show an update notice.
+
+The page owns IndexedDB databases named lightscore-private:<encoded account>:<encoded
+ensemble>, with immutable piece-id/content-hash body keys, current metadata/settings
+and an ensemble catalogue. A separate account identity record stores the last
+verified memberships and verification instant. Offline access defaults to 14 days;
+VITE_OFFLINE_WINDOW_DAYS may shorten this to 1–14 days at build time. Clock rollback,
+expiry and missing identity deny offline access. This is device-local access policy,
+not encryption against someone controlling the browser profile.
+
+Heading and piece menus prepare/evict repertoire, show usage, gold cloud/check marks,
+progress and cancellation. Preparation waits for the public shell/assets to be ready.
+Prepared versions/settings refresh after authorized library events and reconnects.
+Offline reload lists the stored catalogue; unprepared pieces are disabled. Solo,
+staff rendering and PDF export use local assets. Together, imports/editing, membership
+management and transcription require connectivity; no playback or edit commands are
+queued. Offline logout clears private access immediately and retains only a pending
+sign-out operation for the server when connectivity returns.
+
+Logout/account switching remove all account databases and private in-memory context,
+including private local imports; the invitation account-switch path also purges.
+Other tabs learn logout through storage events and ensemble revocation through a
+BroadcastChannel. Fresh online membership checks purge revoked ensemble copies and
+clear their visible/hidden UI. Remote revocation cannot erase an already downloaded
+copy on a disconnected device; it is enforced when the device learns of revocation
+or reaches its bounded offline access expiry.
+
+Browser harnesses use separate build roots under .review-evidence so concurrent
+verification cannot replace a running server's hashed chunks. Server/start and the
+secret scanner support LIGHTSCORE_BUILD_ROOT; ordinary builds still use dist.
+
+Validation (local production-v1, no push or deployment):
+
+- `npm run typecheck`: passed.
+- `npm test`: 249/249 passed, including route allowlist, namespace isolation,
+  account/ensemble purge, blocked pending writes after logout and bounded access.
+- `npm run build`: passed; generated worker and data-free fallback shell included.
+- `npm run test:integration`: 82/82 passed.
+- `npm run check:secrets`: positive control detected; every client artifact,
+  including sw.js, clean; no public source maps.
+- `npm run db:generate`: no schema changes or drift.
+- `npm run test:browser`: complete account/design matrix, Phase 5a acceptance,
+  two-account sync and full three-client acceptance passed, including offline,
+  count-in, sleep, loops and restart. Final focused Phase 5a reruns additionally
+  verify Together/edit disabling, two-tab revocation clearing and offline logout.
+- `git diff --check`: passed.
+
+Focused acceptance covers ensemble preparation, offline reload/audio/staff/PDF,
+background version refresh, the waiting-worker notice, membership revocation,
+A logout/B offline isolation, offline logout and expiry of the access window.
+No paid provider, real email or production service was used. No data schema was
+added by Phase 5a. Earlier failed logs remain retained: overlapping dist rebuilds,
+a removed Vite CSS facade in the first manifest, and an update notice intercepting
+menu clicks. The harness now isolates build roots, manifests enumerate final files,
+and notices require an existing active worker and sit beneath menus.
+
+Evidence: `.review-evidence/phase5a-{typecheck,unit,build,secrets,db}.log`,
+`phase5a-integration-final.log`, `phase5a-all-browser-green.log`, and
+`phase5a-offline-final-verified.log` (all beneath `.review-evidence`).
+
+Phase 5a implementation commit: `61709d4`. All commits remain local on production-v1.
