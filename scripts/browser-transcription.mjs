@@ -77,9 +77,11 @@ try{
  await req(context,`/ensembles/${e}/members/${membership.id}`,'PATCH',{editPieces:false});await memberPage.waitForFunction(()=>document.querySelector('.tx-review-actions .primary')?.disabled===true);
  await req(context,`/ensembles/${e}/members/${membership.id}`,'PATCH',{transcribe:false});await memberPage.locator('dialog.transcription-review').waitFor({state:'detached'});assert.ok(await memberPage.locator('#transcription-entry').isHidden());assert.ok(await memberPage.locator('#transcription-jobs').isHidden());assert.equal((await memberContext.request.get(base+`/api/ensembles/${e}/transcriptions`)).status(),403);await memberContext.close();
  const next=await req(context,'/ensembles','POST',{name:'Destination Choir'});
- await page.reload();await page.locator('.ded-other').filter({hasText:'Destination Choir'}).click();
+ await page.addInitScript(()=>localStorage.removeItem('ai-capella-mode-v2'));await page.reload();await page.locator('.ded-other').filter({hasText:'Destination Choir'}).click();await page.locator('#mode-solo-btn').click();
+ await page.route('**/api/transcription/config',route=>route.fulfill({json:{pdf:50*1024*1024,photo:20*1024*1024,pages:1}}));
  await page.locator('#transcription-entry').click();assert.match(await page.locator('dialog h1').innerText(),/Destination Choir/);
- await page.locator('input[accept="image/jpeg,image/png,image/webp"]').setInputFiles({name:'destination.png',mimeType:'image/png',buffer:png});
+ await page.locator('input[accept="image/jpeg,image/png,image/webp"]').setInputFiles([{name:'destination.png',mimeType:'image/png',buffer:png},{name:'extra.png',mimeType:'image/png',buffer:png}]);
+ assert.ok(await page.getByRole('button',{name:'Start reading',exact:true}).isDisabled());assert.ok(await page.locator('dialog .tx-error[role=alert]').innerText());await page.getByRole('button',{name:'Remove',exact:true}).last().click();
  const created=page.waitForResponse(r=>r.url().endsWith(`/ensembles/${next.id}/transcriptions`)&&r.request().method()==='POST');
  await page.getByRole('button',{name:'Start reading',exact:true}).click();assert.equal((await created).status(),201);
  assert.equal((await req(context,`/ensembles/${next.id}/transcriptions`)).length,1);
