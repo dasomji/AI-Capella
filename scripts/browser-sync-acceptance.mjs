@@ -159,7 +159,11 @@ try {
     page.on('websocket',socket=>{socket.on('framesent',frame=>{const f=frames.get(page),s=String(frame.payload);if(s.includes('rehearsal:command'))f.commands++;if(s.includes('clock:ping'))f.pings++;});socket.on('close',()=>frames.get(page).closed++);});
     await page.addInitScript(()=>{
       const Original=window.AudioContext;
-      window.AudioContext=new Proxy(Original,{construct(target,args){const ctx=new target(...args);window.fixtureAudio=ctx;return ctx;}});
+      window.AudioContext=new Proxy(Original,{construct(target,args){const ctx=new target(...args);window.fixtureAudio=ctx;window.fixtureClicks=[];
+        const create=ctx.createOscillator.bind(ctx);
+        ctx.createOscillator=()=>{const osc=create(),set=osc.frequency.setValueAtTime.bind(osc.frequency);
+          osc.frequency.setValueAtTime=(value,at)=>{if(osc.type==='square')window.fixtureClicks.push({frequency:value,at});return set(value,at);};return osc;};
+        return ctx;}});
       const dateNow=Date.now.bind(Date),performanceNow=performance.now.bind(performance);window.fixtureJump=0;window.fixturePerformanceJump=0;Date.now=()=>dateNow()+window.fixtureJump;Object.defineProperty(performance,'now',{value:()=>performanceNow()+window.fixturePerformanceJump});
       localStorage.setItem('ai-capella-intro-off','1');
     });
@@ -261,6 +265,7 @@ try {
   await p.locator('.play-btn').click();const counting=await status('countingIn');
   const clicks=await Promise.all(pages.map(async page=>(await hook(page)).scheduledClicks));
   assert.equal(clicks[0].length,4);clicks.slice(1).forEach(x=>assert.deepEqual(x,clicks[0]));
+  for(const page of pages)assert.deepEqual(await page.evaluate(()=>window.fixtureClicks.slice(-4).map(c=>c.frequency)),[1500,1000,1000,1000]);
   await next(q,()=>action(q,'metronome'));
   const preserved=await converge();const remainingClicks=await Promise.all(pages.map(async page=>(await hook(page)).scheduledClicks));assert.ok(remainingClicks.every(list=>list.length>0 && list.every(time=>clicks[0].includes(time))));assert.equal(preserved.countInUntil,counting.countInUntil);assert.equal(preserved.startingTonesUntil,counting.startingTonesUntil);
   await after(p,counting.countInUntil+100);await aligned();results.f={passed:true,clicks:clicks[0]};console.log('acceptance: count-in passed');
