@@ -1993,19 +1993,30 @@ actual Solo playback, double-click-safe import of exactly one piece, three-photo
 reordering, HEIC rejection, pause, cancel/retry, independent transcribe/edit rights,
 ordinary-member denial and live permission changes. Screenshots cover start and
 review at 390/1440 px in light/dark plus running/paused/cancelled cards; text
-contrast assertions pass. Evidence lives in `.review-evidence/p4c/shots/index.html`.
+contrast assertions pass. Evidence lives in `/tmp/aicap-p4c/shots/index.html`.
 
-Local verification: `npm run typecheck` passed; `npm test` passed (226 tests);
-`npm run db:generate` reported no schema changes. Built-start transcription
-browser acceptance passed (including live edit/transcribe revocation); standard
-`npm run test:browser` passed including the complete sync/restart acceptance.
-Logs: `.review-evidence/p4c-final-browser.log` and
-`.review-evidence/p4c-standard-browser.log`. The first full integration run passed
-76/77; the concurrent evaluation agent corrected its unrelated UTC/DST fixture
-selection and verified the targeted usage cases. A coordinated full integration,
-explicit build and secret scan are running separately to avoid concurrent dist
-rebuilds. The final mobile engraving adjustment is typechecked; a refreshed visual
-capture is pending that quiet window.
+Final verification: `npm run typecheck` passed; `npm test` passed (227 tests,
+including 53 UI tests); `npm run build` passed; `npm run test:integration`
+passed 77/77 in the coordinated run; `npm run check:secrets` passed its positive
+control and clean-client/no-source-map checks; `npm run db:generate` reported no
+drift. Standard `npm run test:browser` passed including sync/restart acceptance.
+The final `npm run test:browser:transcription` passed against the committed UI,
+including persisted photo order, canonical measure IDs, actual Solo playback,
+idempotent import, live permission revocation and desktop/mobile contrast checks.
+MusicXML measure IDs survive engraving directly; multi-measure rests expand only
+in the review copy so individual bars remain reviewable. Original XML downloads
+remain canonical. All final transcription screenshots are refreshed, including
+readable mobile notation/marks and the existing comparison switch.
+
+Contact sheet: `/tmp/aicap-p4c/shots/index.html`. Logs:
+`.review-evidence/p4c-browser-complete.log`,
+`.review-evidence/p4c-standard-browser.log`, `.review-evidence/p4c-ui-unit.log`,
+`.review-evidence/p4c-typecheck.log`, `.review-evidence/p4c-secrets.log`;
+full integration evidence: `.transcription-tmp/eval-integration-green.log`.
+The earlier usage failure was a UTC/DST fixture selection error, and simultaneous
+unit runs exposed an evaluation fixture-path race; the evaluation agent corrected
+both before the green runs. Builds were serialized for final browser verification.
+All commits are local; no push or paid-provider call.
 
 ### Phase 4b eval fixes — 2026-11-04
 
