@@ -440,3 +440,8 @@ it('clips replacement pre-roll to effective time instead of replaying surviving 
  const d=playbackSchedule(state,1400,t);
  expect(countInClickTimes(d.countIn!.from,d.countIn!.until,500,d.effectiveAt)).toEqual([2000,2500,3000,3500,4000,4500]);
 });
+
+it('falls back to 100 for missing or invalid score tempo while clamping explicit marks',()=>{
+ for(const tempo of [undefined,NaN,0,-10])expect(timingFromScore({tempo,totalBeats:4,measures:[]} as any).baseBpm).toBe(100);
+ expect(timingFromScore({tempo:0,totalBeats:4,measures:[],marks:[{kind:'tempo',beat:0,tempoBpm:.1}]} as any).baseBpm).toBe(1);
+});
