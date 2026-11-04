@@ -51,7 +51,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
       }
     })();
   };
-  private received = (raw: unknown) => { void this.apply(raw).catch(() => {this.setReady(false);this.notice('invalid');void this.snapshot().catch(()=>this.reconnect());}); };
+  private received = (raw: unknown) => { void this.apply(raw).catch(() => {this.setReady(false);console.warn('rehearsal.state.invalid');this.notice('invalid');void this.snapshot().catch(()=>this.reconnect());}); };
   private request(event: string, input?: unknown): Promise<any> {
     if (!this.socket.connected || this.closed) return Promise.reject(new Error('disconnected'));
     const epoch = this.epoch;
