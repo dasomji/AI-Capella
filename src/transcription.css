@@ -20,3 +20,5 @@
 #transcription-jobs {--tx-gold:#bd903b}
 :root[data-ground='pergament'] #transcription-jobs {--tx-gold:#866018}
 .tx-segment {background:var(--paper-dim)}.tx-segment.completed {background:var(--tx-gold)}.tx-segment.running {background:var(--paper-dim)}.tx-segment.failed {background:var(--danger)}
+.tx-field.capability-switch {position:relative;flex-direction:row;align-items:center;cursor:pointer;min-height:36px}
+.tx-field.capability-switch input {padding:0;border:0}
