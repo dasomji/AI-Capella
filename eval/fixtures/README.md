@@ -22,7 +22,7 @@ references must match actual engraved page boundaries (regenerate/check when
 engraving settings change). No evaluation result establishes production accuracy.
 
 `npm run eval:transcription -- --dry-run` is safe offline, including in CI: it
-renders recorded PNG rasters through the bounded renderer and replays responses
+renders recorded PNG rasters for PDF jobs and distinct degraded JPEG photos for photo jobs through the bounded renderer and replays responses
 at the SDK HTTP boundary. It does not exercise PDF rasterization (Poppler).
 Live: `OPENAI_API_KEY=... npm run eval:transcription -- --set eval/fixtures --confirm-paid --pages --limit 1`.
 Provide keys in the shell environment, never in files committed to Git. Live mode
@@ -34,3 +34,9 @@ e.g. '{"gpt-6.1-sol":{"input":1,"output":2}}' (illustrative, not current pricing
 Missing prices report null/unknown. Reports default to gitignored reports/eval-*.
 `--pages` prints per-page scores as well as job summaries. JSON always retains
 per-page metrics, validation diagnostics, uncertainties, outcomes and attempts.
+
+The bundled original CC0 study `eval/samples/round.musicxml` adds two voices per part,
+two verses, ties and a repeat. It remains synthetic smoke material, not a measured
+recognition-quality corpus. Dry-run token counters and all derived costs are synthetic.
+Jobs are selected in sorted manifest-path order. Each job is appended to JSONL and
+checkpointed to JSON; the final JSONL record summarizes completion.
