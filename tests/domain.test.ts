@@ -1668,7 +1668,7 @@ test('authoritative rehearsal serializes ordinary members, snapshots, rejection 
   assert.equal((await emit(clients[0],'rehearsal:command',env({type:'selectPiece',pieceId:foreign.id,versionNo:1}))).code,'not_found');
   await pool.query("update score_versions set timing=timing || '{\"derivationVersion\":0}'::jsonb where piece_id=$1",[piece.id]);
   const selected=env({type:'selectPiece',pieceId:piece.id,versionNo:1});assert.equal((await emit(clients[0],'rehearsal:command',selected)).status,'accepted');revision++;
-  assert.equal((await pool.query('select timing from score_versions where piece_id=$1',[piece.id])).rows[0].timing.derivationVersion,2);
+  assert.equal((await pool.query('select timing from score_versions where piece_id=$1',[piece.id])).rows[0].timing.derivationVersion,3);
   assert.deepEqual(await emit(clients[0],'rehearsal:command',selected),{commandId:selected.commandId,status:'accepted',revision:1});
   const results=await Promise.all(Array.from({length:6},(_,i)=>emit(clients[i%3],'rehearsal:command',env({type:'setTempo',pieceId:piece.id,versionNo:1,bpm:120+i}))));
   assert.deepEqual(results.map(r=>r.revision).sort((a,b)=>a-b),[2,3,4,5,6,7]);revision=7;
@@ -1864,9 +1864,16 @@ test('stored version timing is authoritative and lazily refreshed by derivation 
  const piece=await ok(`ensembles/${e.id}/pieces`,'POST',{title:'Timing',content:{format:'score',body}},singer.cookie);
  await pool.query("update score_versions set timing=timing || '{\"derivationVersion\":0,\"baseBpm\":42}'::jsonb where piece_id=$1",[piece.id]);
  const stored=await ok(`ensembles/${e.id}/pieces/${piece.id}/versions/1?timing=1`,'GET',undefined,singer.cookie);
- assert.equal(stored.timing.baseBpm,120);assert.equal(stored.timing.derivationVersion,2);
+ assert.equal(stored.timing.baseBpm,120);assert.equal(stored.timing.derivationVersion,3);
  assert.equal(stored.pieceId,piece.id);assert.equal(stored.versionNo,1);
  assert.deepEqual((await pool.query('select timing from score_versions where piece_id=$1',[piece.id])).rows[0].timing,stored.timing);
+ for(const tempo of [0,-20]){
+  const invalid=await ok(`ensembles/${e.id}/pieces`,'POST',{title:'Invalid tempo',content:{format:'score',body:{...body,tempo}}},singer.cookie);
+  await pool.query("update score_versions set timing=timing || '{\"derivationVersion\":2,\"baseBpm\":1}'::jsonb where piece_id=$1",[invalid.id]);
+  const refreshed=await ok(`ensembles/${e.id}/pieces/${invalid.id}/versions/1?timing=1`,'GET',undefined,singer.cookie);
+  assert.equal(refreshed.timing.baseBpm,100);assert.equal(refreshed.timing.derivationVersion,3);
+ }
+
 });
 test('recipient mail window rolls each send and twenty requester shares cannot fill it',async()=>{
  const {allowAccountMail}=await import('../server/auth-guards.server');

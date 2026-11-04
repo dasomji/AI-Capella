@@ -1,5 +1,5 @@
 import { metronomeBpm, type Score } from '../score';
-export const TIMING_DERIVATION_VERSION = 2;
+export const TIMING_DERIVATION_VERSION = 3;
 /** Quarter-note units, matching Score, AudioEngine and getBeatMarkers. */
 export interface PieceTiming {
     derivationVersion?: number;

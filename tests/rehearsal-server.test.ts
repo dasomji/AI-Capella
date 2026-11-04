@@ -8,7 +8,7 @@ vi.mock('../server/score-validation.server',()=>({validateScore:mocks.validate})
 import {installRehearsal} from '../server/rehearsal.server';
 import {initialState} from '../src/rehearsal/controller';
 const ensemble='00000000-0000-4000-8000-000000000001';
-const timing={derivationVersion:2,baseBpm:120,totalBeats:100,tempos:[{beat:0,bpm:120}],measures:[]};
+const timing={derivationVersion:3,baseBpm:120,totalBeats:100,tempos:[{beat:0,bpm:120}],measures:[]};
 let stored=new Map<string,any>(), recovery:any[]=[];
 let cleanup:(()=>void)|undefined;
 beforeEach(()=>{mocks.heartbeatFail=false;mocks.failBegin=false;mocks.released.mockClear();mocks.locked=true;vi.useFakeTimers();mocks.query.mockReset();mocks.authorize.mockReset();stored=new Map();recovery=[];
@@ -150,7 +150,7 @@ it('lazily backfills legacy timing once through the bounded worker',async()=>{
  await c.emit('rehearsal:command',command('selectPiece',{command:selection}));
  await c.emit('rehearsal:command',command('selectPiece',{command:selection}));
  expect(mocks.validate).toHaveBeenCalledTimes(1);
- expect(mocks.query.mock.calls.find(([sql])=>sql.startsWith('update score_versions'))?.[1]).toEqual([ensemble,'p',1,JSON.stringify(timing),'2']);
+ expect(mocks.query.mock.calls.find(([sql])=>sql.startsWith('update score_versions'))?.[1]).toEqual([ensemble,'p',1,JSON.stringify(timing),'3']);
 });
 it.each([['invalid_score','invalid'],['validation_timeout','unavailable'],['validation_busy','unavailable']])('maps worker %s to %s',async(error,expected)=>{
  const normal=mocks.query.getMockImplementation()!;

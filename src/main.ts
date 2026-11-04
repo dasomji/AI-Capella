@@ -305,9 +305,6 @@ let loopRegion: LoopRegion | null = null;
 let manualSections: { label: string; beat: number }[] = [];
 let loopEnabled = false;
 let startTonesOn = false;
-// Leading mode (Ensemble): the device controlling playback for everyone, or null.
-let leaderId: string | null = null;
-const myDeviceId = sync.getDeviceId();
 let libraryFromCache = false;
 // Whether the next Play should count-in (see PlaybackState.freshStart's doc comment in sync.ts).
 // Kept in sync via applyPlaybackState the same way metronomeOn/loopEnabled are.
@@ -550,40 +547,10 @@ function renderModeControls() {
     b.setAttribute('aria-pressed', String(b.dataset.mode === sessionMode));
   });
   document.querySelector<HTMLElement>('#mode-seg')!.hidden = !serverLibraryEnabled || inPublicFolder();
-  const leading = syncEnabled() && leaderId === myDeviceId;
-  const following = isFollower();
   if (sessionMode === 'solo') modeBadge.innerHTML = `${icon('user')}<span>${modeName('solo')}</span>`;
-  else if (leading) modeBadge.innerHTML = `${icon('crown')}<span>${t('leading')}</span><i class="live-dot" aria-hidden="true"></i>`;
-  else if (following && isSingAlong()) modeBadge.innerHTML = `${icon('crown')}<span>${t('led')}</span><b class="follow-pos" data-bind="pos-bar"></b><i class="live-dot" aria-hidden="true"></i>`;
-  else if (following) modeBadge.innerHTML = `${icon('users')}<span>${t('following')}</span><i class="live-dot" aria-hidden="true"></i>`;
   else modeBadge.innerHTML = `${icon('users')}<span>${modeName('ensemble')}</span><i class="live-dot" aria-hidden="true"></i>`;
-  modeBadge.classList.toggle('is-leading', leading);
-  modeBadge.title = following ? t('followingHint') : '';
   modeBadge.hidden = !serverLibraryEnabled || inPublicFolder();
   fillBindings(modeBadge);
-  app.classList.toggle('following', following);
-  const singAlong = isSingAlong();
-  if (singAlong !== app.classList.contains('sing-along')) {
-    app.classList.toggle('sing-along', singAlong);
-    applyAutoFit();
-    renderChipTitles();
-    if (singAlong) toast(t('singAlongOn'));
-  }
-}
-
-// Sing-along view: when someone else leads the rehearsal, this device shows only the music and
-// the voices (see style.css, #app.sing-along). The full view stays one menu tap away, and that
-// choice is remembered on this device.
-const FULL_VIEW_KEY = 'ai-capella-full-view';
-let fullViewChosen = localStorage.getItem(FULL_VIEW_KEY) === '1';
-function isSingAlong(): boolean {
-  return isFollower() && !fullViewChosen;
-}
-function setFullView(full: boolean) {
-  fullViewChosen = full;
-  if (full) localStorage.setItem(FULL_VIEW_KEY, '1');
-  else localStorage.removeItem(FULL_VIEW_KEY);
-  renderModeControls();
 }
 
 // Follow the music (piano roll rows zoom to what's being sung): on by default, remembered per
@@ -648,16 +615,6 @@ modeBadge.addEventListener('click', () => {
   items.push({ label: t('practiseAlone'), icon: 'user', onSelect: () => void requestModeSwitch('solo') });
   openMenu(modeBadge, items, modeName('ensemble'));
 });
-
-function takeLead() {
-  pushState({ leaderId: myDeviceId }, { leadershipChange: true });
-  toast(t('nowLeading'));
-}
-
-async function takeOverLead() {
-  const ok = await confirmDialog({ title: t('takeOverTitle'), body: t('takeOverBody'), confirmLabel: t('takeOver') });
-  if (ok) takeLead();
-}
 
 function chooseMode(mode: 'solo' | 'ensemble') {
   // The public folder is for looking and listening only: no rehearsing together there (and the
@@ -1107,7 +1064,7 @@ function feedbackContext(): string {
     parts.push(`„${currentScore.title}“`, `Takt ${measure?.number ?? 1}`, activeView === 'staff' ? 'Noten' : 'Klavierrolle');
     if (transpose) parts.push(`Tonart ${transpose > 0 ? '+' : ''}${transpose}`);
   } else parts.push('Repertoire');
-  parts.push(syncEnabled() ? (leaderId === myDeviceId ? 'gemeinsam, leitet' : isFollower() ? 'gemeinsam, folgt' : 'gemeinsam') : 'allein');
+  parts.push(syncEnabled() ? 'gemeinsam' : 'allein');
   if (app.classList.contains('sing-along')) parts.push('Mitsing-Ansicht');
   parts.push(deviceSummary(), lang);
   return parts.join(' · ');
@@ -1783,7 +1740,7 @@ function currentStateSnapshot(): PlaybackState {
     freshStart,
     startTonesOn,
     startTones: [],
-    leaderId,
+    leaderId: null,
   };
 }
 
@@ -1797,13 +1754,7 @@ function currentStateSnapshot(): PlaybackState {
  * one exception -- deliberately local-only, see PlaybackState's doc comment in sync.ts -- so they
  * mutate state directly instead of going through here.
  */
-function pushState(patch: Partial<PlaybackState>, opts?: { leadershipChange?: boolean }) {
-  // Following another device's lead: transport changes are locked (the leader's device is the only
-  // one that moves playback for everyone). Taking over the lead itself is the one exception.
-  if (isFollower() && !opts?.leadershipChange) {
-    toast(t('followingHint'));
-    return;
-  }
+function pushState(patch: Partial<PlaybackState>) {
   if (syncEnabled()) {
     if(sharedState) for(const command of preferenceCommands(patch,sharedState,currentScore?.totalBeats)) sendShared(command);
   } else {
@@ -1826,26 +1777,13 @@ function pushState(patch: Partial<PlaybackState>, opts?: { leadershipChange?: bo
  */
 async function publishPlayingAt(originBeat: number, extra: Partial<PlaybackState> = {}, extraLeadMs = 0) {
   if(syncEnabled()){if(sharedState)for(const command of preferenceCommands(extra,sharedState,currentScore?.totalBeats))sendShared(command);return;}
-  if (isFollower()) {
-    toast(t('followingHint'));
-    return;
-  }
   // startTones explicitly empty unless this is a fresh Play that asked for them (merge-write rule).
   pushState({ startTones: [], ...extra, playing: true, originBeat, originServerTimeMs: sync.computeFutureOriginServerTimeMs(extraLeadMs) });
 }
 
-function isFollower(): boolean {
-  return false;
-}
-
-// Development builds only: lets automated tests show this device as following someone else's lead
-// without writing to the shared session.
+// Development-only local playback diagnostics.
 if (import.meta.env.DEV) {
   (window as unknown as { __aiCapellaDev: unknown }).__aiCapellaDev = {
-    setLeader(id: string | null) {
-      leaderId = id;
-      renderModeControls();
-    },
     // For the sync tests: where playback is on this device, against the wall clock.
     position: () => ({ at: Date.now(), beat: engineBeat(), playing: !!audioEngine?.isPlaying(), heldUp: !!audioEngine?.isHeldUp(), drift: audioEngine?.clockDrift() ?? 0, offset: sync.getServerTimeOffsetMs(), bpm, applying: applying !== null, song: loadedSongId }),
   };
@@ -1911,7 +1849,6 @@ async function applyPlaybackStateNow(state: PlaybackState) {
   // unconditional/undedup'd so it's never staler than necessary.
   freshStart = state.freshStart;
   startTonesOn = state.startTonesOn;
-  leaderId = syncEnabled() ? state.leaderId : null;
   renderModeControls();
 
   if (!audioEngine) {
@@ -2973,9 +2910,9 @@ function openPlayerMenu(anchor: HTMLElement) {
 /** The player's settings, a menu of their own: swing, light and sound, paper. */
 function openSettingsMenu(anchor: HTMLElement) {
   const items: Parameters<typeof openMenu>[1] = [];
-  // Swing or straight, for this song (not in 6/8 and the like). In a rehearsal only the leader -- or
-  // anyone, while nobody leads -- changes it for everyone.
-  if (currentSong && currentScore && canSwing(currentScore) && (currentSong.imported ? editable() && !isFollower() : true)) {
+  // Swing or straight, for this song (not in 6/8 and the like). Imported scores require
+  // permission to edit.
+  if (currentSong && currentScore && canSwing(currentScore) && (currentSong.imported ? editable() : true)) {
     const on = swingChosen(currentSong);
     items.push({ label: t('swingItem'), icon: 'quarter', checked: on, onSelect: () => void setSwing(!on) });
   }
@@ -3613,11 +3550,7 @@ function audioTick() {
   if (beat < boundary) return;
 
   if (loopEnabled) {
-    // In a rehearsal the loop comes round at the same instant on every device (sharedAnchor);
-    // alone, from where this device is.
-    const shared = sharedAnchor(boundary);
-    if (shared) audioEngine.play(shared.beat, bpm, transpose, shared.atMs);
-    else audioEngine.play(loopRegion ? loopRegion.start : 0, bpm, transpose);
+    audioEngine.play(loopRegion ? loopRegion.start : 0, bpm, transpose);
     return;
   }
 
@@ -3630,56 +3563,8 @@ function audioTick() {
   stopRenderLoop();
   renderNow();
 }
-/**
- * Where the rehearsal's shared timeline is: a beat and the instant it sounds, on this device's
- * clock -- the last start, or, once the loop (or the whole piece, with Loop on) has come round since,
- * its latest round. The same on every device, so they wrap together. Null alone (nothing shared).
- */
-function sharedAnchor(reached = 0): { beat: number; atMs: number } | null {
-  const t = lastAppliedTiming;
-  if (!t?.playing || !(t.originServerTimeMs > 0) || !currentScore) return null;
-  const atMs = t.originServerTimeMs - sync.getServerTimeOffsetMs();
-  const msPerBeat = 60_000 / t.bpm;
-  const start = loopRegion ? loopRegion.start : 0;
-  const end = loopRegion ? loopRegion.end : currentScore.totalBeats;
-  // (At the loop's end, `reached`: the sound got there a hair before this device's wall clock did.)
-  const raw = Math.max(reached, t.originBeat + (Date.now() - atMs) / msPerBeat);
-  if (!loopEnabled || end - start <= 0 || t.originBeat >= end || raw < end) return { beat: t.originBeat, atMs };
-  const rounds = Math.floor((raw - end) / (end - start));
-  return { beat: start, atMs: atMs + (end - t.originBeat + rounds * (end - start)) * msPerBeat };
-}
-
-/**
- * Lays this device's schedule again from the shared timeline -- after its sound fell out of step
- * (see the check below) or its idea of the server's clock moved. Before the start, with the start's
- * count-in and starting tones.
- */
-function relaySchedule() {
-  const t = lastAppliedTiming;
-  const shared = sharedAnchor();
-  if (!audioEngine || !t || !shared) return;
-  const before = shared.beat === t.originBeat && shared.atMs > Date.now();
-  audioEngine.play(shared.beat, t.bpm, t.transpose, shared.atMs, before ? t.countInBeats : 0, before ? t.countInPulseBeats : 1, before ? t.startTones : []);
-}
-
-// A rehearsal keeps every device on the shared timeline: once a second the sound's clock is held
-// against the page's, and when they've parted by more than DRIFT_LIMIT_SEC twice running (the
-// output started late or stalled, the device's audio clock runs off) the schedule is laid again.
-const DRIFT_LIMIT_SEC = 0.05;
-let driftStrikes = 0;
 let heldUpSince = 0;
-window.setInterval(() => {
-  updateSoundPrompt();
-  if (!audioEngine?.isPlaying() || !sharedAnchor()) {
-    driftStrikes = 0;
-    return;
-  }
-  driftStrikes = Math.abs(audioEngine.clockDrift()) > DRIFT_LIMIT_SEC ? driftStrikes + 1 : 0;
-  if (driftStrikes >= 2) {
-    driftStrikes = 0;
-    relaySchedule();
-  }
-}, 1000);
+window.setInterval(updateSoundPrompt, 1000);
 
 // Browsers let sound start only in answer to a touch, click or key: any of them lets it (and a
 // device that follows a rehearsal untouched gets a button for it, below).
@@ -3964,8 +3849,8 @@ async function runBootstrap() {
       initFeedback({
         ensemble: currentEnsemble,
         context: feedbackContext,
-        // Not while music plays, nor in a rehearsal someone leads.
-        isBusy: () => !!audioEngine?.isPlaying() || (syncEnabled() && leaderId != null),
+        // Not while music plays.
+        isBusy: () => !!audioEngine?.isPlaying(),
         onNewCount: showFeedbackCount,
       });
       offerIntro('library');
