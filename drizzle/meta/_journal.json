@@ -57,6 +57,13 @@
       "when": 1793759750713,
       "tag": "0007_curved_peter_quill",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793763510087,
+      "tag": "0008_cold_miss_america",
+      "breakpoints": true
     }
   ]
 }

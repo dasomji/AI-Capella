@@ -103,7 +103,7 @@ const { S3Client,CreateBucketCommand,ListObjectsV2Command,DeleteObjectsCommand,D
 const {PDFDocument}=await import('pdf-lib');
 const sharp=(await import('sharp')).default;
 const {TranscriptionWorker,transcriptionClock}=await import('../server/transcription.server');
-const {FakeProvider}=await import('../server/transcription-provider.server');
+const {FakeProvider,FakeAssembler}=await import('../server/transcription-provider.server');
 const {sourceLimits,cleanupDerived,cleanupObjects}=await import('../server/originals.server');
 const {env}=await import('../server/env.server');
 const s3=new S3Client({endpoint:env.S3_ENDPOINT,region:env.S3_REGION,forcePathStyle:true,credentials:{accessKeyId:env.S3_ACCESS_KEY_ID!,secretAccessKey:env.S3_SECRET_ACCESS_KEY!}});
@@ -405,4 +405,13 @@ test('usage sysadmin gate and SQL DST half-open buckets retain failed attempts',
  assert.equal(rows.length,1);assert.equal(rows[0].day,'2026-03-08');assert.equal(rows[0].calls,2);assert.equal(rows[0].retries,2);assert.equal(Number(rows[0].input_tokens),20);assert.equal(Number(rows[0].estimated_cost_usd),.5);assert.equal(Number(rows[0].estimated_cost_per_page_usd),.5);assert.equal(Number(rows[0].latency_p95_ms),1000);
  const response=await ok(path,'GET',undefined,lead.cookie);assert.equal(response.timeZone,env.APP_TIME_ZONE);assert.equal(response.groups.filter((r:any)=>r.model==='usage-fixture').reduce((n:number,r:any)=>n+r.calls,0),2);
  const fall=(await pool.query(`select to_char(t at time zone $1,'YYYY-MM-DD') as day,count(*)::int as calls from unnest(array['2026-11-01T04:00:00Z'::timestamptz,'2026-11-02T04:59:59Z'::timestamptz,'2026-11-02T05:00:00Z'::timestamptz]) t where t >= '2026-11-01T04:00:00Z'::timestamptz and t < '2026-11-02T05:00:00Z'::timestamptz group by day`,['America/New_York'])).rows;assert.deepEqual(fall,[{day:'2026-11-01',calls:2}]);
+});
+
+test('assembly validation_busy backs off and explicit retry resets completed pages after assembly failure',async()=>{
+ const {DomainError}=await import('../server/domain.server');const {retryJob}=await import('../server/transcription.server');
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);let fail=true;
+ const assembler={assemble:async()=>{if(fail)throw new DomainError('validation_busy',503);return new FakeAssembler().assemble([{musicxmlFragment:'<measure><attributes><divisions>1</divisions></attributes><note><rest/><duration>4</duration></note></measure>'} as any]);}};
+ const worker=new TranscriptionWorker(new FakeProvider(),undefined,assembler);await worker.tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'running');
+ fail=false;await pool.query("update transcription_jobs set provenance=provenance-'assemblyRetryAt' where id=$1",[j.id]);await worker.recoverAssembly();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+ await pool.query("update transcription_jobs set state='failed',failure_reason='assembly_failed' where id=$1",[j.id]);await retryJob(lead.id,e.id,j.id);assert.equal((await view(e.id,lead.cookie,j.id)).pages[0].state,'queued');await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
 });

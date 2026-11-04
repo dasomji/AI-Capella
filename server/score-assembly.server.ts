@@ -7,28 +7,53 @@ import { ProviderError,type JobAssembler,type PageResult } from './transcription
 export function scoreDocument(xml:string){
  try{xml=cleanMusicXML(xml,true);}catch{throw new ProviderError('invalid_output',true);}
  if(XMLValidator.validate(xml)!==true)throw new ProviderError('invalid_output');
+ let depth=0;for(const tag of xml.matchAll(/<([^>]+)>/g)){const t=tag[1];if(t.startsWith('/') )depth--;else if(!t.startsWith('?')&&!t.startsWith('!')&&!t.endsWith('/'))depth++;if(depth>256)throw new ProviderError('invalid_output',true);}
  const dom=new JSDOM(xml,{contentType:'text/xml'});if(dom.window.document.documentElement.tagName!=='score-partwise'){dom.window.close();throw new ProviderError('invalid_output');}return dom;
 }
-const identity=(p:Element)=>[text(p,'part-name').trim().toLowerCase(),text(p,'score-instrument > instrument-name').trim().toLowerCase()].join('|');
+export const normalizePartName=(name:string)=>name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/soprano?|sopran|s(?=\s*\d)/g,'soprano').replace(/alto?|alt|a(?=\s*\d)/g,'alto').replace(/tenore?|t(?=\s*\d)/g,'tenor').replace(/basso?|bass|b(?=\s*\d)/g,'bass').replace(/[^a-z0-9]/g,'');
+const identity=(p:Element)=>normalizePartName(text(p,'part-name'));
+/** Page validation uses the same parser/validator as assembly; inherited attributes come from context. */
+export function validatePage(page:PageResult, prior:PageResult[]=[]){
+ if(page.flags?.includes('no_music'))return 'skipped';
+ const dom=scoreDocument(page.musicxmlFragment);
+ try{
+ const doc=dom.window.document;
+ if(page.flags?.includes('no_music') || (!doc.querySelector('part')&&!doc.querySelector('score-part'))){page.flags=[...new Set([...(page.flags??[]),'no_music'])];return 'skipped';}
+ if(!doc.querySelector('note'))throw new ProviderError('invalid_output',true);
+ for(const part of children(doc.documentElement,'part')){
+ const inherited=doc.createElement('attributes');
+ for(const previous of prior){if(previous.flags?.includes('no_music'))continue;const d=scoreDocument(previous.musicxmlFragment);try{const local=children(d.window.document.documentElement,'part').find(p=>p.id===part.id);if(local)for(const a of Array.from(local.querySelectorAll('measure > attributes')))for(const child of Array.from(a.children)){for(const old of children(inherited,child.tagName))old.remove();inherited.append(doc.importNode(child,true));}}finally{d.window.close();}}
+ const first=children(part,'measure')[0];if(first){const own=first.querySelector('attributes');for(const child of Array.from(inherited.children))if(!own?.querySelector(child.tagName)){const a=own??doc.createElement('attributes');if(!own)first.prepend(a);a.append(child);}}
+ }
+ const report=validateMusicDocument(doc);
+ // Later pages may omit attributes already supplied by preceding notation.
+ const errors=report.errors;
+ if(errors.length)throw new ProviderError('invalid_output',true);
+ return 'completed';
+ }finally{dom.window.close();}
+}
 export class ScoreAssembler implements JobAssembler {
  async assemble(pages:PageResult[]){return (await this.assembleDetailed(pages)).xml;}
  async assembleDetailed(pages:PageResult[]){
  const output=new JSDOM('<score-partwise version="4.0"><part-list/></score-partwise>',{contentType:'text/xml'});const doc=output.window.document;const root=doc.documentElement;const list=doc.querySelector('part-list')!;
- const registry:newPart[]=[];const provenance:MeasureSource[]=[];let total=0;
+ const registry:newPart[]=[];const provenance:MeasureSource[]=[];let total=0;const identityWarnings:import('../src/score-validation').Diagnostic[]=[];const skippedPages:number[]=[];
  type newPart={id:string;identity:string;clef:string;declaration:Element;element:Element;attributes?:Element};
  try{
  for(const [pageIndex,page] of pages.entries()){
+ if(page.flags?.includes('no_music')){skippedPages.push(pageIndex+1);continue;}
  const dom=scoreDocument(page.musicxmlFragment);
  try{
- const source=dom.window.document;if(pageIndex===0)for(const child of Array.from(source.documentElement.children))if(!['part','part-list'].includes(child.tagName))root.insertBefore(doc.importNode(child,true),list);const mapped=new Map<string,Element>();
- for(const declaration of Array.from(source.querySelectorAll('part-list > score-part'))){
- const local=children(source.documentElement,'part').find(p=>p.id===declaration.id);if(!local)throw new ProviderError('invalid_output');
- const name=identity(declaration),clef=text(local,'clef');
- // Context ids are trusted only with corroborating identity. Never match by order.
- let entry=registry.find(p=>p.id===declaration.id&&p.identity===name);
- if(!entry){const candidates=registry.filter(p=>p.identity===name&&(!p.clef||!clef||p.clef===clef)&&!mapped.has(p.id));if(candidates.length===1)entry=candidates[0];}
- if(!entry){let id=declaration.id||'P1';while(registry.some(p=>p.id===id))id+='n';const copy=doc.importNode(declaration,true);copy.id=id;list.append(copy);const element=doc.createElement('part');element.id=id;root.append(element);entry={id,identity:name,clef,declaration:copy,element};registry.push(entry);}
- if(mapped.has(entry.id))throw new ProviderError('invalid_output');mapped.set(entry.id,local);
+ const source=dom.window.document;if(!source.querySelector('part')&&!source.querySelector('score-part')){skippedPages.push(pageIndex+1);continue;}if(total===0)for(const child of Array.from(source.documentElement.children))if(!['part','part-list'].includes(child.tagName))root.insertBefore(doc.importNode(child,true),list);const mapped=new Map<string,Element>();
+ const declarations=Array.from(source.querySelectorAll('part-list > score-part')).sort((a,b)=>a.id.localeCompare(b.id));
+ const reserved=new Set(declarations.filter(d=>registry.some(p=>p.id===d.id)).map(d=>d.id));
+ for(const declaration of declarations){
+ const local=children(source.documentElement,'part').find(p=>p.id===declaration.id);if(!local)throw new ProviderError('invalid_output',true);
+ const name=identity(declaration),clef=Array.from(local.querySelectorAll('attributes > clef')).map(c=>c.textContent).join('|');
+ const compatible=(p:newPart)=>!p.clef||!clef||p.clef===clef;
+ let entry=registry.find(p=>p.id===declaration.id&&compatible(p));
+ if(!entry){const candidates=registry.filter(p=>p.identity===name&&compatible(p)&&!mapped.has(p.id)&&!reserved.has(p.id));if(candidates.length===1)entry=candidates[0];else if(candidates.length>1)identityWarnings.push({code:'ambiguous_part_identity',part:declaration.id,measure:total+1});}
+ if(!entry){let id=declaration.id||'P1';while(registry.some(p=>p.id===id))id+='n';const copy=doc.importNode(declaration,true);copy.id=id;list.append(copy);const element=doc.createElement('part');element.id=id;root.append(element);entry={id,identity:name,clef,declaration:copy,element};if(total)identityWarnings.push({code:'new_part_identity',part:id,measure:total+1,message:`part ${id} first appears on page ${pageIndex+1}`} as import('../src/score-validation').Diagnostic);registry.push(entry);}
+ mapped.set(entry.id,local);
  }
  if(children(source.documentElement,'part').length!==mapped.size)throw new ProviderError('invalid_output');
  const width=Math.max(0,...[...mapped.values()].map(p=>children(p,'measure').length));if(!width)throw new ProviderError('invalid_output');
@@ -51,7 +76,8 @@ export class ScoreAssembler implements JobAssembler {
  for(const entry of registry)for(let i=0;i<total;i++)if(!provenance.some(p=>p.part===entry.id&&p.measure===i+1)){const template=provenance.find(p=>p.measure===i+1)!;provenance.push({...template,part:entry.id,synthetic:true});}
  const report=validateMusicDocument(doc,provenance,pages.flatMap((p,index)=>[...p.uncertainties,...(p.flags??[]).map(flag=>({flag,page:index+1}))]));
  for(const source of provenance)if(source.synthetic)report.warnings.push({code:'inferred_tacet_rest',part:source.part,measure:source.measure,source});
- return {xml:root.outerHTML,provenance,report};
+ report.warnings.push(...identityWarnings,...skippedPages.map(page=>({code:'skipped_page',page})));
+ return {xml:root.outerHTML,provenance,report,skippedPages};
  }finally{output.window.close();}
  }
 }
