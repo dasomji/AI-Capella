@@ -2585,19 +2585,19 @@ Implementation `d5e3ed3` follows concurrent migration commit `c4a7414`; only own
 operations paths/package script hunks were committed through a separate index.
 No provisioning, deploy, push, real mail/paid AI, secret rotation or legacy access.
 
-Replaced the historical feature-branch Pages deployment with read-only PR/main CI:
+Replaced the historical feature-branch Pages deployment with read-only PR/main/production-v1 CI:
 typecheck, unit suites (default + America/New_York), build, sentinel secrets,
 recorded evaluation, mandatory Phase 6a migration tests, disposable backup drill,
 app/worker image builds (no push), fresh Postgres migrations/schema drift and
 integration/browser/transcription suites. npm and Playwright caches, per-ref
-concurrency, Postgres/Mailpit service containers and an owned authenticated SeaweedFS
+concurrency, a Postgres service container, harness-owned mail and an authenticated SeaweedFS
 container are configured. SeaweedFS requires a Docker step because Actions services
 cannot override its server command. Legacy Firebase rules-test is deliberately
 excluded as a standalone suite (migration CI still installs its emulator tooling), and legacy source/config remains retained for migration/retirement.
 `act` is unavailable locally; the corresponding npm/Docker commands were run directly.
 
 Added separate railway.web.toml / railway.worker.toml with direct Node start,
-single web replica, /healthz, DATABASE_URL-only locked pre-deploy migration and drain
+single web replica, /readyz admission, DATABASE_URL-only locked pre-deploy migration and drain
 windows. /readyz checks DB/migration readiness and reports sandbox/rehearsal separately;
 /readyz/rehearsal is the owner probe, never rolling-deploy admission. Sandbox failure
 preserves ordinary HTTP while upload inspection and worker startup fail closed.
@@ -2779,6 +2779,38 @@ checked against action repositories. Optional Playwright preload produced PNG/ZI
 artifacts in a real local Chromium fixture. No Railway/Resend/OpenAI calls or provisioning.
 Broader integration/browser runs are concurrent with the other review agents; preserve
 .review-evidence/p6b-fixes-*.log for their final outcomes rather than implying green.
+
+
+Phase 6b follow-up verification: runtime copies now contain only shared parser,
+validation, API-schema and rehearsal source (plus server/dist/migrations/operator
+canary); both reduced images passed sandbox/Poppler and in-image MusicXML validation
+with timeline derivation. Recursive package.json scans found none of the five
+forbidden development packages. Backup signed-URL smoke passed against the owned
+SeaweedFS fixture, then full downloaded restore/corruption checks passed; absent
+credentials explicitly skip optional S3 testing. Missing-dist ops test failed with
+its intended actionable message. Eval replay passed without provider calls.
+B2's restart consumer is committed in 552ac65; deployment/runbook now describe its
+bounded hint-driven disconnect/reconnect behavior.
+
+The first full concurrent integration run was 85 pass / 3 fail: stale admin-message
+assertion, worker-claim fixture interference/timing, and heartbeat deadline under
+load. Updated admin assertion, isolated worker-death and heartbeat rechecks passed.
+The first full browser run passed account/theme/offline and minimal Together checks,
+then timed out on three-client loop alignment (browser-sync-acceptance.mjs:307).
+Failures are retained in p6b-fixes-integration.log / p6b-fixes-browser.log; do not
+report those invocations as green. Final rerun results are recorded below.
+
+Final stable-tree checks: typecheck and build passed; unit suites passed 271/271
+in both UTC and America/New_York. The isolated three-client acceptance rerun
+passed all a–n scenarios, including loop alignment, real restart, offset, revocation
+and account switching (p6b-fixes-sync-recheck.log). The prior full browser invocation
+remains a recorded failure; its account/theme/offline/minimal Together components
+passed before the alignment timeout. Both runtime image builds/canaries and reduced
+source score-validation/timeline checks passed. Final integration rerun passed
+90/90 (p6b-fixes-integration-final.log, exit 0). The final secret scan passed too.
+B2's complete browser run also passed (final-polish-browser.log, verified alongside
+its committed 7cfd5d4 evidence); our isolated acceptance rerun independently passed.
+Earlier failed invocations remain retained and are not counted as successful runs.
 
 
 ### Final polish — 2026-11-04 (Phase 5 verification and admin UI)

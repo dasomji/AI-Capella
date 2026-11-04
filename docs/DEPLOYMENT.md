@@ -20,7 +20,9 @@ A dedicated PostgreSQL connection holds advisory lock `(714083,1)`; a replacemen
 can serve HTTP before acquiring it. `/healthz` is process liveness; `/readyz` is the Railway deploy healthcheck and database/migration readiness, reporting sandbox and
 rehearsal booleans. `/readyz/rehearsal` is 503 on standby, for ownership monitoring,
 not deploy admission. During overlap there must be only one owner. Expect a short
-Together outage until old sockets drain and the lock transfers. Clients reconnect,
+Together outage until old sockets drain and the lock transfers. Socket owners consume
+`server:restarting`, disconnect, then attempt reconnect after the bounded server hint
+(2 seconds on normal shutdown). Clients reconnect,
 join, recheck membership and obtain paused/reconciled snapshots. No commands queue
 offline. Check `/readyz/rehearsal` after admission to confirm ownership handoff. Standbys poll
 the lock every second; only genuine errors use exponential backoff.

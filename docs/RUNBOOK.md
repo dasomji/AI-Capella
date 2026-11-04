@@ -27,7 +27,8 @@ First deploy:
 Routine deploy: record commit/image IDs and migration delta; take/download/verify
 backup; ensure capacity for overlap; deploy web migration first, then web and worker.
 Wait for terminal success and /readyz, then /readyz/rehearsal ownership. SIGTERM stops
-web admission, emits server:restarting with a 2s reconnect hint, drains HTTP/sockets,
+web admission, emits server:restarting with a 2s reconnect hint (consumed by client
+socket owners to disconnect and reconnect), drains HTTP/sockets,
 releases ownership, waits up to 5s for mail and closes the pool (10s hard deadline).
 Worker stops claims and aborts in-flight page work, requeues with leases released
 at the checkpoint, retaining completed pages; 20s hard deadline. A forced kill leaves

@@ -586,7 +586,7 @@ pitches the existing scroll position shows changes, so this needed no `scrollY` 
 own and doesn't disturb the untransposed case at all.
 
 **Piano-key gutter, reintroduced in a non-persistent form.** An earlier version kept a full
-keyboard permanently down the left edge (removed in favor of click-to-preview, see §2); a
+keyboard permanently down the left edge (removed in favor of click-to-preview, see the feature descriptions above); a
 simplified version is back — a light/dark band per semitone row (matching real piano key
 coloring, not literal interlocking key shapes) drawn once immediately before beat 0, painted
 directly into `contentBuffer`/`paintContent` like gridlines or notes rather than as a separate
@@ -869,7 +869,7 @@ sharing `PianoRoll`'s code: the two are different enough (staff positions vs. pi
 noteheads/stems vs. proportional bars) that a shared base would mostly be indirection.
 Deliberately simpler than `PianoRoll`'s pipeline too — no offscreen content buffer, it redraws
 directly every frame — since this view is read-only (no click-to-seek/loop-drag of its own; see
-§2) and meant primarily for reading rather than driving playback, where `PianoRoll`'s buffering
+the feature tour) and meant primarily for reading rather than driving playback, where `PianoRoll`'s buffering
 exists specifically to keep long continuous-scroll playback sessions smooth.
 
 **Pitch spelling.** `NoteEvent` carries optional `step`/`alter`/`octave` — MusicXML's `<pitch>`
@@ -929,7 +929,7 @@ plotting them at their literal sounding octave against a plain treble clef (whic
 on many ledger lines below it).
 
 All notation symbols are glyphs from **Eugene** (bundled as a 24 KB subset, Bravura behind it for
-the few it lacks — see §2 Design). SMuFL fonts are drawn at 4 staff spaces per em with each glyph's origin
+the few it lacks — see the design modules). SMuFL fonts are drawn at 4 staff spaces per em with each glyph's origin
 at its musical reference point, so `fillText` at a staff position places it exactly: a G clef
 on the G line, an F clef on the F line, a notehead on its line/space, rests on the middle line
 (the whole rest on the 4th). The tenor's `clef-octave-change -1` uses the `gClef8vb` glyph (the
@@ -1050,4 +1050,3 @@ beam — full beam-grouping (grouping rules, cross-barline handling) is a materi
 typesetting problem, left as a possible follow-up rather than built speculatively.
 
 ---
-

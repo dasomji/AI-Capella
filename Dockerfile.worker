@@ -13,7 +13,9 @@ COPY package*.json ./
 RUN npm ci --omit=dev --omit=peer && rm -rf node_modules/vite node_modules/vitest node_modules/playwright node_modules/drizzle-kit node_modules/firebase-admin && node -e "for (const name of ['vite','vitest','playwright','drizzle-kit','firebase-admin']) { try { require.resolve(name); throw Error(name + ' present in runtime'); } catch (e) { if(e.code !== 'MODULE_NOT_FOUND') throw e; } }"
 COPY --from=build /app/dist ./dist
 COPY server ./server
-COPY src ./src
+COPY src/api ./src/api
+COPY src/rehearsal/contract.ts src/rehearsal/controller.ts src/rehearsal/timeline.ts ./src/rehearsal/
+COPY src/score.ts src/score-validation.ts src/musicxml.ts src/i18n.ts src/admin-time.ts ./src/
 COPY drizzle ./drizzle
 COPY scripts/migrate.ts scripts/renderer-smoke.mjs scripts/ops-canary.ts ./scripts/
 RUN mkdir -p .transcription-tmp && chown node:node .transcription-tmp
