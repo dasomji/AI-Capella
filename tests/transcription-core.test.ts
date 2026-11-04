@@ -60,3 +60,9 @@ test('prior-art Evening Rise retains all original notation through page assembly
 test('abort during HTTP request cancels provider, without hidden retries',async()=>{
  let count=0;const client=new OpenAI({apiKey:'fixture-only',fetch:async(_url,init)=>{count++;return new Promise((_resolve,reject)=>{init?.signal?.addEventListener('abort',()=>reject(new DOMException('aborted','AbortError')),{once:true});});}});const controller=new AbortController();const pending=new OpenAITranscriptionProvider('gpt-6.1-sol',client).transcribePage(input,[],{},controller.signal);setTimeout(()=>controller.abort(),10);await expect(pending).rejects.toMatchObject({reason:'provider_timeout'});expect(count).toBe(1);
 });
+
+test('interior rhythm errors and unmatched stops are review warnings; nonfinite durations block import',()=>{
+ const xml=page(['S'],'stop').replace('</part>',`<measure number="2">${note().replace('<duration>4','<duration>2')}</measure><measure number="3">${note()}</measure></part>`);
+ const dom=scoreDocument(xml);const report=validateMusicDocument(dom.window.document);expect(report.errors).toEqual([]);expect(report.warnings.map(w=>w.code)).toContain('measure_duration');expect(report.warnings.map(w=>w.code)).toContain('unmatched_tie_stop');dom.window.close();
+ const invalid=scoreDocument(xml.replace('<duration>4','<duration>NaN'));expect(validateMusicDocument(invalid.window.document).errors.map(e=>e.code)).toContain('invalid_duration');invalid.window.close();
+});

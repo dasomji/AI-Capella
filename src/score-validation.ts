@@ -13,6 +13,7 @@ export function validateMusicDocument(doc:Document,sources:MeasureSource[]=[],un
  if(new Set(ids).size!==ids.length||ids.some(id=>!id))add(errors,'duplicate_part_id');
  const parts=children(root,'part');if(!parts.length)add(errors,'empty_score');
  if(parts.length!==ids.length || new Set(parts.map(p=>p.id)).size!==parts.length)add(errors,'part_list_mismatch');
+ const alignment=new Map<number,{part:string;duration:number}[]>();
  const count=Math.max(0,...parts.map(p=>children(p,'measure').length));
  for(const part of parts){const id=part.id;if(!ids.includes(id))add(errors,'unknown_part',id);
  const measures=children(part,'measure');if(measures.length!==count)add(errors,'discontinuous_part',id);
@@ -39,6 +40,7 @@ export function validateMusicDocument(doc:Document,sources:MeasureSource[]=[],un
  const k=v+':'+(pitch?['step','alter','octave'].map(k=>text(pitch,k)||'0').join(':'):'');for(const tie of children(node,'tie')){if(tie.getAttribute('type')==='stop'){if(!ties.delete(k))add(warnings,'unmatched_tie_stop',id,number,voice);}if(tie.getAttribute('type')==='start'){if(ties.has(k))add(warnings,'duplicate_tie_start',id,number,voice);ties.set(k,number);}}
  for(const slur of Array.from(node.querySelectorAll('notations > slur'))){const k=v+':'+(slur.getAttribute('number')??'1');if(slur.getAttribute('type')==='stop'&&!slurs.delete(k))add(warnings,'unmatched_slur_stop',id,number,voice);if(slur.getAttribute('type')==='start')slurs.set(k,number);}
  }
+ const duration=Math.max(0,...end.values());alignment.set(number,[...(alignment.get(number)??[]),{part:id,duration}]);
  const expected=beats*4/beatType;
  for(const [voice,duration] of end)if(Number.isFinite(expected)&&expected>0&&Math.abs(duration-expected)>1e-6){const pickup=(index===0||index===measures.length-1||m.getAttribute('implicit')==='yes')&&duration<expected;add(warnings,pickup?'pickup_or_final_measure':'measure_duration',id,number,voice);}
  if(!end.size)add(errors,'empty_measure',id,number);
@@ -46,5 +48,7 @@ export function validateMusicDocument(doc:Document,sources:MeasureSource[]=[],un
  for(const [voice,measure] of ties)add(warnings,'unmatched_tie_start',id,measure,voice);
  for(const [voice,measure] of slurs)add(warnings,'unmatched_slur_start',id,measure,voice);
  }
+ for(const [measure,parts] of alignment)if(parts.some(p=>Math.abs(p.duration-parts[0].duration)>1e-6))for(const p of parts)add(warnings,'cross_part_alignment',p.part,measure);
+ for(const lyric of Array.from(doc.querySelectorAll('lyric')))if(lyric.parentElement?.tagName!=='note')add(errors,'unattached_lyric',lyric.closest('part')?.id);
  return {structurallyValid:errors.length===0,accuracy:'unknown',reviewRequired:true,errors,warnings,uncertainties};
 }

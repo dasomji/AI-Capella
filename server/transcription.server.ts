@@ -73,7 +73,7 @@ export class TranscriptionWorker {
  const call=Promise.resolve().then(()=>this.provider.transcribePage(input,context,page.options??{},abort.signal)).then(async value=>{
  const price=JSON.parse(env.TRANSCRIPTION_PRICE_TABLE)[this.provider.model]??{input:0,output:0};
  await pool.query("update provider_calls set finished_at=now(),outcome='completed',usage=$2,estimated_cost=$3,error_kind=null where lease_owner=$1",[token,{...value.usage,requestId:value.requestId},JSON.stringify((value.usage.inputTokens*price.input+value.usage.outputTokens*price.output)/1000000)]);return value;
- },async error=>{await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2,usage=$3 where lease_owner=$1",[token,error instanceof ProviderError?error.reason:'infrastructure_error',error instanceof ProviderError?error.usage??{}:{}]);throw error;});
+ },async error=>{await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2,usage=$3 where lease_owner=$1",[token,error instanceof ProviderError?error.reason:'infrastructure_error',error instanceof ProviderError?{...error.usage,requestId:error.requestId}:{}]);throw error;});
  try{result=await Promise.race([call,deadline]);}catch(error){await pool.query("update provider_calls set finished_at=now(),outcome='failed',error_kind=$2 where lease_owner=$1 and outcome='running'",[token,error instanceof ProviderError?error.reason:'infrastructure_error']);throw error;}finally{abort.signal.removeEventListener('abort',timeoutReject);}
 
  if(this.provider instanceof FakeProvider && !result.musicxmlFragment.endsWith('</measure>'))throw new ProviderError(result.musicxmlFragment.startsWith('<measure')?'truncated':'invalid_output');
@@ -110,8 +110,8 @@ export class TranscriptionWorker {
  const assembledPages=(pages.map(p=>({musicxmlFragment:p.result_xml,uncertainties:p.metrics?.uncertainties??[],usage:p.metrics?.usage??{inputTokens:0,outputTokens:0},promptVersion:j.prompt_version,flags:p.metrics?.flags??[],model:j.model,latency:p.metrics?.latency??0})));
  const detailed=this.assembler instanceof ScoreAssembler?await this.assembler.assembleDetailed(assembledPages):undefined;
  const xml=detailed?.xml??await this.assembler.assemble(assembledPages);
- if(detailed && !detailed.report.structurallyValid)throw new ProviderError('invalid_output');
  if(detailed)await db.query('update transcription_jobs set provenance=provenance || $2::jsonb where id=$1',[id,JSON.stringify({measures:detailed.provenance,validation:detailed.report})]);
+ if(detailed && !detailed.report.structurallyValid){await db.query("update transcription_jobs set state='failed',failure_reason='invalid_output' where id=$1",[id]);return;}
  await validateScore(xml,'musicxml');
  await db.query("update transcription_jobs set state='completed',result_xml=$2 where id=$1",[id,xml]);
  });
