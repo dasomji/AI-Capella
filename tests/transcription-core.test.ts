@@ -212,3 +212,9 @@ test('page preview has independent bounded admission and byte-bounded LRU',async
  const c=new PreviewCache(4);c.set('a',new Uint8Array(2));c.set('b',new Uint8Array(2));c.get('a');c.set('c',new Uint8Array(2));expect(c.get('b')).toBeUndefined();expect(c.get('a')).toHaveLength(2);
  expect(needsPreviewAudit('u','o',0)).toBe(true);expect(needsPreviewAudit('u','o',1)).toBe(false);expect(needsPreviewAudit('v','o',1)).toBe(true);expect(needsPreviewAudit('u','o',600000)).toBe(true);
 });
+
+test('lease staleness includes a safety interval and abort races hung preparatory work',async()=>{
+ const {heartbeatStale,withinAbort}=await import('../server/lease-deadline');
+ expect(heartbeatStale(7999,0,10000)).toBe(false);expect(heartbeatStale(8000,0,10000)).toBe(true);
+ const abort=new AbortController();const hung=withinAbort(abort.signal,()=>new Promise(()=>{}));abort.abort();await expect(hung).rejects.toThrow('lease_deadline');
+});

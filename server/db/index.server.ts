@@ -8,6 +8,8 @@ const globals = globalThis as typeof globalThis & { [key]?: pg.Pool };
 export const pool = (globals[key] ??= new pg.Pool({
   connectionString: env.DATABASE_URL,
   connectionTimeoutMillis: 5000,
+  query_timeout: 5000,
+  statement_timeout: 5000,
   keepAlive: true,
   keepAliveInitialDelayMillis: 5000,
   max: env.DB_POOL_MAX,

@@ -43,7 +43,7 @@ export function parseEnv(input: NodeJS.ProcessEnv) {
     TRANSCRIPTION_USER_MAX: z.coerce.number().int().positive().default(2),
     TRANSCRIPTION_ENSEMBLE_MAX: z.coerce.number().int().positive().default(4),
     TRANSCRIPTION_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
-    TRANSCRIPTION_LEASE_MS: z.coerce.number().int().min(1000).default(30000),
+    TRANSCRIPTION_LEASE_MS: z.coerce.number().int().min(10000).default(30000),
     TRANSCRIPTION_TIMEOUT_MS: z.coerce.number().int().positive().default(180000),
     TRANSCRIPTION_UNCLAIMED_MS: z.coerce.number().int().positive().default(15*60*1000),
     TRANSCRIPTION_MAX_ATTEMPTS: z.coerce.number().int().positive().max(10).default(3),

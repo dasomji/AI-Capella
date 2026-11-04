@@ -1,3 +1,5 @@
+import { heartbeatInterval,heartbeatStale,withinAbort } from './lease-deadline';
+export { heartbeatInterval } from './lease-deadline';
 import { optionalTitle } from '../src/api/title';
 import { sanitizeOriginalFilename } from './originals.server';
 import { assembleOffThread } from './assembly-worker.server';
@@ -60,23 +62,24 @@ export class TranscriptionWorker {
  const abort=new AbortController();const timeout=setTimeout(()=>abort.abort(),env.TRANSCRIPTION_TIMEOUT_MS);
  let heartbeatBusy=false;let lastHeartbeat=performance.now(),lastControl=0;
  const heartbeat=setInterval(()=>{void (async()=>{
+ if(heartbeatStale(performance.now(),lastHeartbeat,env.TRANSCRIPTION_LEASE_MS)){abort.abort();return;}
  if(heartbeatBusy)return;heartbeatBusy=true;
  try{
  const r=await pool.query("update job_pages p set lease_expires_at=now()+$3*interval '1 millisecond' from transcription_jobs j where p.id=$1 and p.lease_owner=$2 and p.state='running' and p.lease_expires_at>now() and j.id=p.job_id and j.state='running' returning p.id",[page.id,token,env.TRANSCRIPTION_LEASE_MS]);
  if(!r.rowCount){abort.abort();return;}lastHeartbeat=performance.now();
  if(performance.now()-lastControl>=Math.max(5000,env.TRANSCRIPTION_LEASE_MS/2)){lastControl=performance.now();if(await processingPaused()){paused=true;abort.abort();}}
- }catch(error){logError('transcription.heartbeat',error);if(performance.now()-lastHeartbeat>=env.TRANSCRIPTION_LEASE_MS)abort.abort();}finally{heartbeatBusy=false;}
+ }catch(error){logError('transcription.heartbeat',error);if(performance.now()-lastHeartbeat>=env.TRANSCRIPTION_LEASE_MS-heartbeatInterval(env.TRANSCRIPTION_LEASE_MS))abort.abort();}finally{heartbeatBusy=false;}
  })();},heartbeatInterval(env.TRANSCRIPTION_LEASE_MS));
 
  const started=Date.now();let result:PageResult|undefined;let failure:ProviderError|undefined;let paused=false;
  try {
  if(page.job_model!==this.provider.model || page.job_prompt!==this.provider.promptVersion)throw new ProviderError('model_unavailable');
  if(page.attempts>=env.TRANSCRIPTION_MAX_ATTEMPTS)throw new ProviderError('abandoned');
- await authorize(pool,page.user_id,page.ensemble_id,'transcribe').catch(error=>{if(error instanceof DomainError && [403,404].includes(error.status))throw new ProviderError('permission_revoked');throw error;});
- paused=await processingPaused();if(!paused){
- const input=await this.renderer.render({objectKey:page.object_key,contentType:page.content_type,sourcePage:page.source_page,pageIndex:page.page_number},abort.signal);
- await authorize(pool,page.user_id,page.ensemble_id,'transcribe').catch(error=>{if(error instanceof DomainError && [403,404].includes(error.status))throw new ProviderError('permission_revoked');throw error;});
- paused=await processingPaused();
+ await withinAbort(abort.signal,()=>authorize(pool,page.user_id,page.ensemble_id,'transcribe')).catch(error=>{if(error instanceof DomainError && [403,404].includes(error.status))throw new ProviderError('permission_revoked');throw error;});
+ paused=await withinAbort(abort.signal,processingPaused);if(!paused){
+ const input=await withinAbort(abort.signal,()=>this.renderer.render({objectKey:page.object_key,contentType:page.content_type,sourcePage:page.source_page,pageIndex:page.page_number},abort.signal));
+ await withinAbort(abort.signal,()=>authorize(pool,page.user_id,page.ensemble_id,'transcribe')).catch(error=>{if(error instanceof DomainError && [403,404].includes(error.status))throw new ProviderError('permission_revoked');throw error;});
+ paused=await withinAbort(abort.signal,processingPaused);
  if(!paused){
  let context=(await pool.query("select metrics,result_xml from job_pages where job_id=$1 and state='completed' order by page_number desc limit 1",[page.job_id])).rows.map(r=>({musicxmlFragment:r.result_xml,contextState:r.metrics?.contextState,uncertainties:r.metrics?.uncertainties??[],usage:r.metrics?.usage??{inputTokens:0,outputTokens:0},promptVersion:page.job_prompt,flags:r.metrics?.flags??[],model:page.job_model,latency:r.metrics?.latency??0}) as PageResult);
  // Upgrade pre-checkpoint jobs once; subsequent pages read only the last checkpoint.
@@ -146,4 +149,4 @@ export async function maintainTranscription(worker:TranscriptionWorker,cleanup:(
 
 async function refreshMetrics(id:string){await pool.query(`update transcription_jobs j set metrics=(select jsonb_build_object('attempts',count(*),'latency',coalesce(sum(extract(epoch from (finished_at-started_at))*1000),0),'estimatedCost',case when count(*) filter(where estimated_cost is null)>0 then null else sum(estimated_cost::text::numeric) end,'knownCostUSD',coalesce(sum(estimated_cost::text::numeric),0),'unpricedCalls',count(*) filter(where estimated_cost is null),'costUnknown',count(*) filter(where estimated_cost is null)>0,'usage',jsonb_build_object('inputTokens',coalesce(sum((usage->>'inputTokens')::numeric),0),'outputTokens',coalesce(sum((usage->>'outputTokens')::numeric),0)),'model',j.model,'promptVersion',j.prompt_version,'outcome',j.state) from provider_calls where job_id=j.id) where j.id=$1`,[id]);}
 
-export const heartbeatInterval=(leaseMs:number)=>Math.max(1000,leaseMs/5);
+
