@@ -66,7 +66,8 @@ export interface OutputClock {
 export function serverToAudioTime(serverTime: number, offsetMs: number, context: OutputClock,
   performanceTime = performance.now(), timeOrigin = performance.timeOrigin) {
   const target = serverTime-offsetMs-timeOrigin;
-  const stamp=context.getOutputTimestamp?.();
+  let stamp: ReturnType<NonNullable<OutputClock['getOutputTimestamp']>> | undefined;
+  if(context.state==='running') {try{stamp=context.getOutputTimestamp?.();}catch{/* Unsupported output clocks use the latency fallback. */}}
   if(context.state==='running' && stamp && Math.abs(stamp.performanceTime-performanceTime)<=1000 && stamp.performanceTime>0 && Number.isFinite(stamp.contextTime))
     return stamp.contextTime+(target-stamp.performanceTime)/1000;
   return context.currentTime+(target-performanceTime)/1000-(context.outputLatency || context.baseLatency || 0);

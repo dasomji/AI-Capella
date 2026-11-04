@@ -309,6 +309,7 @@ it('isolates a throwing subscriber and repairs an invalid broadcast with a snaps
 it('rejects stale and suspended output timestamps',async()=>{
  const {serverToAudioTime}=await import('../src/rehearsal/client-clock');
  for(const state of ['running','suspended'])expect(serverToAudioTime(145000,0,{state,currentTime:10,outputLatency:.1,getOutputTimestamp:()=>({contextTime:0,performanceTime:1000})},44000,100000)).toBeCloseTo(10.9);
+ expect(serverToAudioTime(145000,0,{state:'suspended',currentTime:10,outputLatency:.1,getOutputTimestamp:()=>{throw Error('unsupported');}},44000,100000)).toBeCloseTo(10.9);
 });
 it('clamps the first tempo mark and keeps pre-roll grid origin after a preference change',async()=>{
  const timing=timingFromScore({tempo:120,totalBeats:16,measures:[],marks:[{kind:'tempo',beat:0,tempoBpm:2000}]} as any);
