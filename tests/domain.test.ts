@@ -1840,3 +1840,16 @@ test('parallel attackers cannot exclude a fresh IP password attempt', {timeout:9
  try {await delay(30);for(let n=0;n<5;n++)assert.equal((await attempt('203.0.113.90',victim.password)).status,200);}
  finally{active=false;await Promise.all(attackers);}
 });
+
+test('rehearsal ownership survives pg_terminate_backend', {timeout:20000},async()=>{
+ const {rehearsalReady}=await import('../server/rehearsal.server');
+ for(let n=0;n<50 && !rehearsalReady();n++)await delay(100);
+ assert.ok(rehearsalReady());
+ const owner=(await pool.query("select pid from pg_locks where locktype='advisory' and classid=714083 and objid=1 and granted")).rows[0];
+ assert.ok(owner);await pool.query('select pg_terminate_backend($1)',[owner.pid]);
+ await delay(100);
+ for(let n=0;n<100 && !rehearsalReady();n++)await delay(100);
+ assert.ok(rehearsalReady());
+ const replacement=(await pool.query("select pid from pg_locks where locktype='advisory' and classid=714083 and objid=1 and granted")).rows[0];
+ assert.ok(replacement);assert.notEqual(replacement.pid,owner.pid);
+});

@@ -1,6 +1,6 @@
 import {it,expect,vi,beforeEach,afterEach} from 'vitest';
 const mocks=vi.hoisted(()=>({failBegin:false,released:vi.fn(),ownerError:undefined as any,locked:true,query:vi.fn(),authorize:vi.fn(),library:undefined as any,member:undefined as any,validate:vi.fn()}));
-vi.mock('../server/db/index.server',()=>({pool:{query:mocks.query,connect:async()=>({query:async(sql:string,args:any[])=>{if(sql==='begin'&&mocks.failBegin)throw Error('database');return sql.includes('advisory')?{rows:[{locked:mocks.locked}]}:['begin','commit','rollback'].includes(sql)?{}:mocks.query(sql,args);},on:(_event:string,fn:any)=>{mocks.ownerError=fn;},release:mocks.released})}}));
+vi.mock('../server/db/index.server',()=>({pool:{query:mocks.query,connect:async()=>({query:async(sql:string,args:any[])=>{if(typeof sql==='object') return {rows:[{}]};if(sql==='begin'&&mocks.failBegin)throw Error('database');return sql.includes('advisory')?{rows:[{locked:mocks.locked}]}:['begin','commit','rollback'].includes(sql)?{}:mocks.query(sql,args);},on:(_event:string,fn:any)=>{mocks.ownerError=fn;},release:mocks.released})}}));
 vi.mock('../server/domain.server',()=>({authorize:mocks.authorize,onMembershipChange:(fn:any)=>{mocks.member=fn;return ()=>{};},onLibraryChange:(fn:any)=>{mocks.library=fn;return ()=>{};}}));
 vi.mock('../server/env.server',()=>({env:{PLAYBACK_LEAD_MS:400}}));
 vi.mock('../server/logger.server',()=>({logError:vi.fn()}));
@@ -192,4 +192,26 @@ it('releases a checked-out database client when transaction startup fails',async
  const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
  mocks.failBegin=true;expect((await c.emit('rehearsal:command',command())).code).toBe('unavailable');
  expect(mocks.released).toHaveBeenCalledTimes(1);expect(app.broadcasts).toEqual([]);
+});
+
+it('retries ownership when the previous process releases its lock',async()=>{
+ mocks.locked=false;const app=setup(),c=app.socket('one');
+ expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).code).toBe('unavailable');
+ mocks.locked=true;await vi.advanceTimersByTimeAsync(1000);
+ expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).state).toBeDefined();
+});
+it('reacquires after owner connection loss and repeats recovery',async()=>{
+ const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ recovery=[{ensemble_id:ensemble,revision:1,state:{...initialState(ensemble,'u',0),revision:1,status:'playing'}}];
+ mocks.ownerError(Error('terminated'));await vi.advanceTimersByTimeAsync(1000);
+ expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).state).toMatchObject({status:'paused',revision:2});
+});
+it('never serves the raw playing snapshot after recovery persistence failure',async()=>{
+ recovery=[{ensemble_id:ensemble,revision:1,state:{...initialState(ensemble,'u',0),revision:1,status:'playing'}}];
+ const normal=mocks.query.getMockImplementation()!;let fail=true;
+ mocks.query.mockImplementation(async(sql,args)=>{if(fail && sql.startsWith('insert into rehearsal_sessions'))throw Error('offline');return normal(sql,args);});
+ const app=setup(),c=app.socket('one');
+ expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).code).toBe('unavailable');
+ fail=false;await vi.advanceTimersByTimeAsync(1000);
+ expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).state.status).toBe('paused');
 });

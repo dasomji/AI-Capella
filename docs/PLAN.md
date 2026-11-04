@@ -973,3 +973,20 @@ multi-client timing browser suite: repeated tolerance measurements, mobile sleep
 offline/reconnect races, autoplay suspension, pre-roll, live tempo/key/loop edits,
 account isolation and physical output uncertainty. No push, PR, external
 provisioning, paid AI or real email was performed.
+
+### Phase 3e-1 — review remediation (2026-11-04, in progress)
+
+- Password admission now exclusively reserves email/IP pairs. Only IPs with recent
+  failures share the email's four-attempt concurrency cap; fresh IPs retain access.
+  Concurrent real-auth attacker/victim regression passes, alongside 80-guess admission.
+- Rehearsal acquisition/recovery retries with capped exponential backoff. Owner
+  connections use TCP keepalive and a 5-second bounded heartbeat. Connection loss
+  stops timers, destroys the owner connection, clears cached states, reacquires
+  and repeats recovery. `/readyz` requires rehearsal ownership and recovery.
+  Join/command readiness waits are bounded to 500 ms, then return unavailable.
+  Deployment requires direct PostgreSQL or PgBouncer session pooling: transaction
+  pooling breaks session advisory locks and is unsupported. This remains one active
+  owner, not replica routing; the inactive instance must not receive rehearsal traffic.
+- Recovery commits paused/stopped state in memory before attempting persistence;
+  failed persistence retains that recovered state for retry and keeps readiness off.
+  Unit takeover/recovery probes and real pg_terminate_backend recovery pass.
