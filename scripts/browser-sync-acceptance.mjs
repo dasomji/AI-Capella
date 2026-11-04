@@ -224,11 +224,18 @@ try {
   assert.ok(Math.abs(sent[0]-sent[1])<=20,`Concurrent dispatch exceeded 20 ms: ${sent}`);
   await Promise.all(pages.map(page=>page.waitForFunction(r=>window.__lightscoreSync.revision>r,concurrentRevision)));
   await converge();assert.equal(frames.get(p).commands,counts[0]+1);assert.equal(frames.get(q).commands,counts[1]+1);results.c={passed:true,dispatchSpanMs:Math.abs(sent[0]-sent[1])};
+  // Exercise an actually expired count-in/tones window before the late join.
+  await p.setViewportSize({width:650,height:1000});await p.locator('[data-action="open-controls"]').click();
+  await next(p,()=>p.locator('[data-bind="count-in"]').click());await p.keyboard.press('Escape');await p.setViewportSize({width:1440,height:1000});
+  await next(p,()=>action(p,'start-tones'));
   await z.goto(base); // leave room, then join while playing in the tempo-change section
-  await next(p,()=>p.locator('.play-btn').click(),[p,q]);const moving=await status('playing',[p,q]);
-  await after(p,moving.anchor.serverTime+200);
+  await next(p,()=>p.locator('.play-btn').click(),[p,q]);const moving=await status('countingIn',[p,q]);
+  await after(p,moving.countInUntil+200);
   await together(z);await z.locator('.play-btn').waitFor({state:'visible'});await z.evaluate(()=>window.fixtureAudio.resume());
-  await converge();await aligned();assert.deepEqual((await hook(z)).scheduledClicks,[]);results.d='passed: bar 6 tempo section, no pre-roll';
+  await converge();await aligned();assert.deepEqual((await hook(z)).scheduledClicks,[]);results.d='passed: bar 6 tempo section, expired count-in/tones skipped';
+  await p.setViewportSize({width:650,height:1000});await p.locator('[data-action="open-controls"]').click();
+  await next(p,()=>p.locator('[data-bind="count-in"]').click());await p.keyboard.press('Escape');await p.setViewportSize({width:1440,height:1000});
+  await next(p,()=>action(p,'start-tones'));
   const tempo=await next(q,()=>action(q,'bpm-up'));await after(p,tempo.effectiveAt+1000);await aligned();results.e='passed';
   console.log('acceptance: a-e passed');
   // Offline transport must gate commands and recover an authorized snapshot.
