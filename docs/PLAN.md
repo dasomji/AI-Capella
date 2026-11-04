@@ -2403,6 +2403,100 @@ Implementation commits: `2c493d9`, `338474e`, `90c03c8`. Shared main/package hun
 were staged separately from Phase 5a; its work was preserved. All commits remain
 local on production-v1. This Phase 5b plan entry is committed separately.
 
+### Phase 5a fixes — 2026-11-04
+
+Review remediation on `production-v1`, concurrent with the sysadmin fixes. No
+provider calls, deployment, push, or production infrastructure changes.
+
+- B1: the expired/signed-out landing page purges the remembered account; a landing
+  `/api/me` 401 also purges. `/app` serves its public shell so the client clears
+  private stores before redirecting on a failed identity check. Every app start checks the stored access expiry before
+  checking the online session. Offline expiry denies rehearsal and clears data.
+- S1: score version bodies use `private, no-cache` with ETag authorization checks;
+  both browser body-fetch paths use `cache: 'no-store'`. Sign-out sends
+  `Clear-Site-Data: "cache"`; account IndexedDB deletion remains targeted rather
+  than issuing a blanket storage wipe.
+- S2: each prepared-piece refresh catches its own failure, retains its prior copy,
+  and emits a small localized refresh notice. HTTP 500s from currently displayed
+  scores also preserve online controls and can use the prior prepared body.
+- S3: identity persistence/reconciliation runs outside online sign-in completion.
+  IndexedDB failures disable offline preparation and show its unavailable state;
+  online account and catalogue requests continue.
+- S4: explicit ensemble eviction is broadcast independently of revocation. Other
+  tabs clear their prepared marks without losing membership. A localStorage epoch
+  per account/ensemble fences pending writes and delayed catalogue hydration.
+- S5: the first successful preparation requests persistent storage once; storage
+  estimates and persistence status appear quietly with usage. Quota exhaustion
+  has the specific German offline-storage message. Safari may evict browser data
+  earlier than the access window, especially for inactive sites; neither a
+  persistence request nor the 14-day policy promises 14 days of retained data.
+- S6: unpreparing one piece invalidates only that piece's pending preparation.
+  Bulk preparation continues after failures and reports skipped/failed totals.
+- N1: verification instants come from successful `/api/me` HTTP Date headers.
+  A clock behind that instant denies offline access without deleting the copy;
+  deletion requires clear positive expiry. Windows are elapsed durations, not
+  local calendar-day calculations, and remain independent of DST.
+- N2: the worker matches the navigation pathname, including `/app/` and `/app?x`.
+- N3: the account section's default-off shared-device setting caps offline access
+  at 24 hours. Residual shared-tablet risk remains: anyone using the same unlocked
+  browser profile can read its prepared scores within that window. This is not
+  encryption, and remote revocation cannot erase disconnected devices immediately.
+- N4: destructive reconciliation rechecks current memberships and rejects stale
+  refresh generations before deleting a store.
+- N5: install caches the data-free shell and JS/CSS; large public samples, fonts
+  and WASM warm on first browser idle (bounded fallback) or explicit preparation.
+  Preparation waits for the full asset-cache acknowledgement. Stale lazy-chunk
+  loading failures prompt the user to reload.
+- N6: pending offline sign-out is sent to the server on the next online app or
+  landing entry; success clears the flag and does not get overwritten by the
+  app route's generic expired-session redirect.
+- P1: piece rename persists the parsed shared `pieceTitle` value.
+- P2: title newlines/tabs become spaces; tag characters, soft hyphens and Unicode
+  line separators are removed. Filename-derived titles truncate on code points.
+- P3: measure fingerprints sort note/rest multisets while retaining duplicates;
+  regressions cover voice/chord order, dropped measures (10/11 F1) and voices.
+- P4: both context queries and provider-call insertion race abort before provider
+  invocation. Worker query/statement timeouts are scoped away from admin/usage.
+  Config has a direct authenticated route regression, render/lease hangs have an
+  explicit test timeout, and preview mode is captured with `??=`.
+
+Verification evidence is retained in `.review-evidence/fixes-*.log`; failed
+intermediate runs remain available. Poppler was absent on the host: browser PDF
+preview validation uses a local extraction under `.review-evidence/poppler`,
+with its executable directory added to PATH; no system installation was changed.
+
+
+Phase 5a fixes verification (local, no push):
+
+- `npm run typecheck`: passed (`fixes-typecheck-final.log`).
+- `npm test`: 260/260 passed (`fixes-unit-final.log`).
+- `npm run build`: passed (`fixes-build-final.log`).
+- `npm run test:integration`: 86/86 passed (`fixes-integration-final.log`).
+  Additional focused runs passed worker abort/config/timeout scoping and the
+  cache-clearing/session-revocation route (`fixes-worker-focused.log`,
+  `fixes-logout-focused.log`).
+- `npm run check:secrets`: positive control detected; client artifacts clean
+  (`fixes-secrets-final.log`).
+- `npm run test:browser`: complete account/design matrix, Phase 5a, two-account
+  sync and full three-client acceptance passed, including sleep, loops, output
+  offset, bfcache, process restart, revocation and account switching
+  (`fixes-browser-all-green.log`).
+- `PATH="$PWD/.review-evidence/poppler/bin:$PATH" npm run test:browser:transcription`:
+  passed (`fixes-transcription-final.log`).
+- Focused Phase 5a browser acceptance also passed with an explicitly primed
+  HTTP-cache request before logout (`fixes-offline-cache-verified.log`).
+- `npm run db:generate`: no schema changes/drift (`fixes-db-final.log`).
+- `npm run eval:transcription -- --dry-run`: all eight recorded fixture sets
+  completed without provider calls (`fixes-eval-final.log`).
+- `git diff --check`: passed.
+
+The repeated-measure/voice-order differential probe scores 0.7272727 on the old
+implementation and the expected 0.9090909 after the fix
+(`fixes-reference-red-proof.log`). Plane MCP was unavailable in this session;
+existing project mapping was preserved and no remote ticket update was claimed.
+Implementation commits: `4c2b1cc`, `3ec7cb7`, `351136a`. The concurrent agent's
+admin implementation and plan entry remain separate from these owned commits.
+
 ### Phase 5b fixes — 2026-11-04 (AICAP-20)
 
 Review findings verified against production-v1 at 73d54fa. Implementation commit
