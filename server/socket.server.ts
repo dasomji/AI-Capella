@@ -187,13 +187,14 @@ export function attachSockets(server: ServerType) {
   }, 15000);
   timer.unref();
   const close = io.close.bind(io);
-  io.close = ((callback?: () => void) => {
-    closeRehearsal();
+  io.close = (async (callback?: (error?: Error) => void) => {
+    const released = closeRehearsal();
     clearInterval(timer);
     unsubscribe();
     unsubscribeMembership();
     unsubscribeLibrary();unsubscribeTranscription();
-    return close(callback);
+    await released;
+    await close(callback);
   }) as typeof io.close;
   return io;
 }

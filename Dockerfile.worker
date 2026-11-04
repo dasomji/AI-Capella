@@ -6,7 +6,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 COPY server ./server
 COPY src ./src
-COPY scripts/renderer-smoke.mjs ./scripts/renderer-smoke.mjs
+COPY scripts/renderer-smoke.mjs scripts/ops-canary.ts ./scripts/
 RUN mkdir -p .transcription-tmp && chown node:node .transcription-tmp
 USER node
-CMD ["npm", "run", "worker"]
+CMD ["node", "--import", "tsx", "server/transcription-worker.ts"]

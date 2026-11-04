@@ -1,175 +1,74 @@
-# Local development
+# Development
 
-Use Node 22.22+ and the existing rootless Docker context. All commands run from
-`/home/dev/Development/AI-Capella-production` on `production-v1`. Never configure
-this fork with the prototype's Firebase project, scan endpoint or credentials.
+Use Node >=22.22 and Docker with local-container access. Install python3, libseccomp2,
+poppler-utils for inspection/render tests; install Playwright Chromium with
+`npx playwright install --with-deps chromium`. On this rehearsal host Poppler is
+available via `.review-evidence/bin`; other machines should use their installed tools.
 
 ```sh
 npm ci
 cp .env.example .env
-# Replace BETTER_AUTH_SECRET with a random value of at least 32 characters.
+# Use local-only credentials/URLs from compose.yaml; replace placeholders.
 docker compose up -d
 npm run db:migrate
 npm run dev
 ```
 
-Open http://localhost:3000. Register, open the verification email in Mailpit at
-http://localhost:28025, verify, and sign in. English/German follows the stored
-`ai-capella-lang` preference or the browser language; the account records the
-language chosen at registration. Imported scores remain in memory until reload.
-The bundled Evening Rise and local MusicXML/MXL/MIDI import run without Firebase.
-The audio engine, rendering and PDF export implementations are preserved.
-Shared playback and transcription are unavailable until later phases.
-
-Compose owns an isolated project (`lightscore-foundation`), persistent PostgreSQL
-and SeaweedFS volumes, and loopback-only ports 25432, 21025, 28025 and 28333.
-SeaweedFS uses explicitly local credentials from `scripts/s3-local.json`; it is
-not a production configuration. Bucket creation/object APIs arrive in Phase 4.
-`docker compose down` preserves data; `docker compose down -v` deliberately
-removes **only this compose project's** local data. Do not run that against any
-other project. No external services are provisioned by these commands.
+Compose exposes Postgres 25432, SeaweedFS S3 28333, Mailpit SMTP 21025/UI 28025.
+MAIL_TRANSPORT=smtp delivers only to local Mailpit. `capture` is an in-process test
+adapter. Production requires HTTPS + Resend. Development worker uses a real provider
+unless deliberately injected; routine tests run NODE_ENV=test with FakeProvider.
+Never use production keys or invoke paid AI accidentally.
 
 ```sh
 npm run typecheck
 npm test
+TZ=America/New_York npm test
 npm run build
 npm run test:integration
 npm run check:secrets
+npm run test:browser
+npm run test:browser:transcription
+npm run eval:transcription -- --dry-run
+npm run db:generate
+npm run test:backup
+npm run test:ops
 ```
 
-Integration tests require Docker, local Mailpit, and a current build. The harness
-creates, migrates, stops/restarts, and removes its own disposable PostgreSQL
-container and volume; it never uses the development database. They launch real HTTP servers and the actual npm dev/start commands on
-23001–23003. Fixtures use real accounts and session cookies, in-process capture
-or SMTP to Mailpit, never an auth bypass, Resend or an AI provider. They create fixture accounts only in the disposable database. The time scenario
-runs with `TZ=Pacific/Honolulu`. The secret check rebuilds with sentinel runtime
-credentials and scans all browser artifacts, with a VITE positive control, forbidden server/prototype markers, and no public source maps.
+Integration owns disposable Postgres and launches actual HTTP/dev/start servers;
+SeaweedFS and Mailpit must be running at the compose endpoints. Browser harnesses
+own disposable DB/mail and separate build roots, use real account sessions and
+exercise account/theme, offline/logout, sync/restart and transcription flows.
+CHROMIUM_PATH overrides the executable. Evidence is local under .review-evidence;
+never use these harnesses against existing users/production services. They stub
+external AI/mail boundaries, not authorization. The foundation browser suite is
+available separately with test:browser:foundation. Concurrent build/test runs should
+use `LIGHTSCORE_BUILD_ROOT="$PWD/.review-evidence/my-build"` so hashed chunks remain
+consistent; the browser/secret harnesses already isolate builds.
 
-`npm run db:generate` generates versioned SQL after schema changes;
-`npm run db:migrate` applies committed migrations using only DATABASE_URL and a
-Postgres advisory lock (17031501) to serialize migrators. `/healthz` is liveness;
-`/readyz` verifies DB connectivity and the complete committed migration hashes.
-Database/schema/repository modules are server-only (`*.server.ts`). Never add
-server credentials to `VITE_*`, router loaders or browser configuration.
+`db:generate` should produce no diff unless schema was intentionally changed.
+Review generated SQL + metadata; do not edit applied migrations. `db:migrate` only
+requires DATABASE_URL and serializes via advisory lock 17031501. Backups/restore
+require Docker, write sensitive artifacts outside Git and own their disposable
+containers; see RUNBOOK.md. `npm run ops:canary` needs no database or secrets.
 
-To exercise the built artifact locally without sending real mail:
+Built local serving: `npm run build`, then `NODE_ENV=test npm start` with local
+SMTP/test config. General /readyz verifies DB and committed migrations; it reports
+sandbox and rehearsal state independently. /readyz/rehearsal is owner-only and must
+not gate rolling-deploy admission. Exactly one web process owns shared rehearsal;
+a standby can serve ordinary HTTP. Socket.IO attaches to the same HTTP server.
 
-```sh
-npm run build
-NODE_ENV=test npm start
-```
+For uploads start `npm run worker` separately, with private S3 configuration on both
+services. Development alone may initialize a missing bucket; production never does.
+Configured public browser origin must reach S3 for signed downloads. Preserve originals
+indefinitely; cleanup removes transient artifacts and explicitly deleted ensemble data.
 
-`npm start` defaults to production safeguards. Real production requires HTTPS
-Better Auth URL/trusted origins, a strong secret, database access, and configured
-Resend. Production refuses auth bypass flags and nonproduction mail transports.
-Do not provision/deploy as part of this phase. Runtime Node dependencies must be
-installed, including `tsx`, used to run the typed persistent host. One HTTP/1
-Node server serves Start and Socket.IO; use one instance until Phase 3 specifies
-ordering/fanout across replicas. Secure cookies are HTTP-only, SameSite=Lax and
-Secure in production. Cookie caching is disabled so session revocation is checked
-against PostgreSQL. Session-deletion hooks immediately disconnect existing sockets on sign-out,
-revocation and password reset. A single batched query every 15 seconds checks
-expiry/external deletion and tolerates two consecutive database failures; no rehearsal commands or ensemble rooms exist yet.
-
-Legacy suites remain separate and unchanged:
-
-```sh
-npm --prefix rules-test ci
-npm --prefix rules-test test
-```
-
-The rules suite uses its `demo-ls` emulator project and requires Java. Do not point
-this suite at any real Firebase project. The production transcription suites
-use fake provider boundaries; see eval/fixtures/README.md for explicit paid evaluation.
-
-
-Auth rate limits use PostgreSQL (`rate_limit`), enabled in all modes: sign-in and
-signup allow 60/minute plus 10/minute per normalized email; password reset and verification resend allow 5/minute.
-The general limit is 100/minute. Without proxy configuration, the Node socket supplies the client IP. For Railway, configure `AUTH_IP_HEADERS` (for
-example `x-forwarded-for`) and `AUTH_TRUSTED_PROXIES` (comma-separated actual proxy
-IPs/CIDRs). Only trust headers overwritten by the ingress; restrict direct origin
-access to that ingress. The Node host checks the immediate socket peer against those proxies before
-interpreting the header chain; missing client headers from a trusted peer fail closed. Do not trust broad client-accessible private ranges.
-Tests keep origin checks and rate limiting enabled. NODE_ENV=test requires a
-loopback Better Auth URL; unset/unknown environments do not relax production
-safety. There is one process-global pool and auth instance across native/Vite
-module graphs, guarded by symbol keys and verified by duplicate-module tests.
-
-Run `npm run accounts:cleanup` daily via the eventual deployment scheduler to
-delete unverified accounts older than seven days. Scheduling is documented only;
-no task has been deployed. This command logs only UTC capture time and count.
-Production account closure requires the Phase 2 last-lead transaction guard
-specified in PLAN.md. Mail runs in background tasks with sanitized error logs;
-there is no durable mail queue yet, so failed delivery requires requesting a link
-again. Verification JWT replay is idempotent and never creates a session; reset
-identifiers are hashed and reset tokens are single-use and expire.
-
-Built-mode browser smoke: create a disposable database on loopback port 25435,
-migrate it, then start with NODE_ENV=test, PORT=3005, BETTER_AUTH_URL and
-TRUSTED_ORIGINS=http://localhost:3005, and MAIL_TRANSPORT=smtp. Run
-`PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs node scripts/browser-smoke.mjs`.
-Run `npm run test:browser` (optionally `CHROMIUM_PATH=/path/to/chromium`). The script uses Playwright Chromium by default, writes evidence in a temporary directory, and exercises the production CSP (also enforced in test mode).
-Remove the fixture container with `docker rm -fv` when finished. Never point this
-script at an existing account or real mail service.
-
-Phase 2b: accounts now create ensembles or browse Samples from the title screen.
-Ensemble repertoire persists through the authenticated API; ordinary members may
-open local MusicXML/MXL/MIDI files privately without uploading them. Together uses
-the local transport until Phase 3. No service worker is installed.
-
-`npm run test:browser` runs the two-context Phase 2b workflow; the retained musical,
-auth/recovery/PDF and full theme harness is `npm run test:browser:foundation`.
-Install Chromium with `npx playwright install chromium`, or set CHROMIUM_PATH.
-Both require the disposable built-mode server and Mailpit described above.
-Phase 2b evidence defaults to `/tmp/aicap-p2b/shots/` (override BROWSER_EVIDENCE);
-BROWSER_BASE defaults to `http://localhost:3005`. The implementation run used an
-owned `aicap-p2b-client` Postgres container on loopback port 25436; it never used
-or altered development database fixtures. Remove only your owned fixture container
-after stopping its server. SMTP must target the local Mailpit, never Resend.
-
-Phase 3 prerequisite changes: score POST bodies are raw MusicXML (`text/xml`) or
-native Score JSON (`application/json`), with percent-encoded `X-Score-Title`,
-`Idempotency-Key` and version replacement `X-Expected-Revision` headers. Verification
-email links now ask for the password the user chose; link navigation alone no
-longer verifies an account. Unknown passwords must use the recovery flow.
-Account mail shares a recipient budget of 3/hour and 10/24 hours. Sign-in email
-budgets count failures, with a bounded global delay rather than global lockout.
-Playback remains local until the remaining Phase 3 protocol work lands.
-
-Phase 3 deployment probes: Railway should use `/readyz` for HTTP readiness
-(database connectivity and committed migration hashes). It returns a `rehearsal`
-boolean but a standby without the advisory lock can still serve HTTP. Use
-`/readyz/rehearsal` for ownership/recovery monitoring, not rolling-deploy admission.
-Only one instance owns shared playback; other instances reject playback commands
-until they acquire ownership. Route rehearsal sockets to the owner.
-
-Ownership heartbeat: probe every 5 seconds with a 2-second query timeout; require
-three consecutive probe failures before discarding ownership. Successful probes
-reset the count; connection error events still invalidate ownership immediately.
-This tolerates transient stalls at the cost of roughly 15–17 seconds to detect
-a silent failure. Commands still fail on database errors; the advisory lock and
-revision guard protect against simultaneous owners. Probe failures remain logged.
-
-`/app?debug=sync` intentionally enables a read-only diagnostic hook in production.
-It exposes this signed-in device's canonical rehearsal state, clock uncertainty,
-scheduled clicks and output position; it adds no authorization or control API.
-Use it for the device's own diagnostics. Closing/reloading without the query
-removes the hook; signout also clears the active account/session state.
-
-Phase 4a transcription: run `npm run worker` alongside `npm run dev` (or construct
-TranscriptionWorker in-process). Tests use FakeProvider; development/production require the server-only AI key. In development the adapter creates a missing configured bucket; tests
-explicitly create/remove a dedicated `transcription-test-*` bucket on local
-SeaweedFS. Start `docker compose up -d seaweedfs mailpit` before integration tests.
-Production never creates buckets. An authorized operator must configure a private
-Railway bucket and set `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`,
-`S3_SECRET_ACCESS_KEY` in both API and worker environments. Use an endpoint
-reachable by browsers if signed links are enabled. Do not configure public bucket
-access or age-based lifecycle expiry for originals. No bucket was provisioned.
-
-Transcription limits, lease duration, concurrency, timeout, attempts, price table
-and emergency flag are listed in `.env.example`. Set process memory/disk limits
-in the eventual worker image too. The local staging directory is
-`.transcription-tmp/` (gitignored, private files); the worker reaps abandoned upload dirs older than one hour in bounded batches. DB/object-store backups
-must cover originals together with references. Original deletion after sole-member
-ensemble account closure is eventual via the worker deletion outbox; allow at
-least one hour plus the next successful cleanup pass.
+CI runs on PRs and main pushes, builds app/worker Docker images without pushing and
+has no deployment permissions. It runs typecheck, UTC/non-UTC unit suites, build,
+sentinel scanner, disposable integration + browser suites, fresh migrations/drift,
+eval replay, backup and graceful operations; Phase 6a migration tests are conditional
+on the script being present. SeaweedFS is launched by a workflow Docker step because
+GitHub service definitions cannot set its server command; Postgres/Mailpit use service
+containers. No paid APIs or repository secrets. Legacy rules-test is skipped: its
+Firebase-only semantics are superseded by app authorization tests. Legacy files stay
+for migration/retirement evidence. See DEPLOYMENT.md and SYSADMIN.md for operations.

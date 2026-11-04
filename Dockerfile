@@ -7,4 +7,4 @@ RUN npm ci
 COPY . .
 RUN npm run build && mkdir -p .transcription-tmp && chown node:node .transcription-tmp
 USER node
-CMD ["npm", "start"]
+CMD ["node", "--import", "tsx", "server/entry.ts"]

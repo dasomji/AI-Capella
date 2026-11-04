@@ -44,23 +44,27 @@ export async function jobReport(user:string,e:string,id:string){
 export async function cancelJob(user:string,e:string,id:string){await transaction(async db=>{await authorize(db,user,e,'transcribe');const job=(await db.query('update transcription_jobs set state=\'cancelled\',failure_reason=\'cancelled\' where id=$1 and ensemble_id=$2 and state in (\'queued\',\'running\') returning id',[id,e])).rows[0];if(!job)throw new DomainError('invalid_state',409);await db.query("update job_pages set state='cancelled',failure_reason='cancelled',lease_owner=null,lease_expires_at=null where job_id=$1 and state!='completed'",[id]);await db.query("update provider_calls c set outcome='abandoned',error_kind='cancelled',finished_at=now(),usage=coalesce(usage,'{}') || jsonb_build_object('usage_unknown',true) where job_id=$1 and outcome='running' and not exists(select 1 from job_pages p where p.lease_owner=c.lease_owner and p.state='running' and p.lease_expires_at>now())",[id]);});await emit(e,id);}
 export async function retryJob(user:string,e:string,id:string){const provider:TranscriptionProvider=defaultProvider();const result=await transaction(async db=>{const owner=(await db.query('select user_id from transcription_jobs where id=$1 and ensemble_id=$2',[id,e])).rows[0];if(!owner)throw new DomainError('not_found',404);await db.query('select pg_advisory_xact_lock(hashtextextended($1,0))',['transcription-user:'+user]);await lockEnsemble(db,e);await authorize(db,user,e,'transcribe');const j=(await db.query('select * from transcription_jobs where id=$1 and ensemble_id=$2 for update',[id,e])).rows[0];if(!j || !['failed','cancelled'].includes(j.state))throw new DomainError('invalid_state',409);const n=(await db.query("select count(*) filter(where started_by=$1)::int as own,count(*) filter(where ensemble_id=$2)::int as ensemble from transcription_jobs where state in ('queued','running')",[user,e])).rows[0];if(n.own>=env.TRANSCRIPTION_USER_MAX || n.ensemble>=env.TRANSCRIPTION_ENSEMBLE_MAX)throw new DomainError('concurrency_limit',429);await db.query("update job_pages set state='queued',attempts=0,failure_reason=null,result_xml=null,metrics=null,model=$3,prompt_version=$4,next_attempt_at=now(),lease_owner=null,lease_expires_at=null where job_id=$1 and (state!='completed' or $2)",[id,j.model!==provider.model||j.prompt_version!==provider.promptVersion||['assembly_failed','invalid_output'].includes(j.failure_reason),provider.model,provider.promptVersion]);return (await db.query("update transcription_jobs set state='queued',failure_reason=null,result_xml=null,model=$3,prompt_version=$4,provenance=(provenance-'assemblyAttempts'-'assemblyRetryAt') || jsonb_build_object('promptSha256',$5::text),started_by=$2 where id=$1 returning id,state",[id,user,provider.model,provider.promptVersion,provider.promptSha256??null])).rows[0];});await emit(e,id);return result;}
 export class TranscriptionWorker {
+ private stopping=false;
+ private active=new Set<AbortController>();
+ stop(){this.stopping=true;for(const controller of this.active)controller.abort();}
+
  constructor(private provider:TranscriptionProvider=defaultProvider(),private renderer:PageRenderer=env.NODE_ENV==='test'?new ReferenceRenderer():new BoundedPageRenderer(),private assembler:JobAssembler=env.NODE_ENV==='test'?new FakeAssembler():new ScoreAssembler()){}
  async tick():Promise<boolean>{return workerQueries(()=>this.tickWork());}
  private async tickWork():Promise<boolean>{
- if(await processingPaused())return false;
+ if(this.stopping || await processingPaused())return false;
  const token=randomUUID();
  const page=await transaction(async db=>{
  await db.query("select pg_advisory_xact_lock(17031504)");
  if((await db.query("select count(*)::int as n from job_pages where state='running' and lease_expires_at>now()")).rows[0].n>=env.TRANSCRIPTION_WORKER_CONCURRENCY)return;
  const p=(await db.query(`select p.*,j.started_by as user_id,j.options,j.model as job_model,j.prompt_version as job_prompt,s.object_key,s.content_type from job_pages p join transcription_jobs j on j.id=p.job_id join stored_objects s on s.id=p.object_id where j.model=$1 and j.prompt_version=$2 and j.state in ('queued','running') and (p.state='queued' and p.next_attempt_at<=now() or p.state='running' and p.lease_expires_at<=now()) and not exists(select 1 from job_pages prev where prev.job_id=p.job_id and prev.page_number<p.page_number and prev.state not in ('completed','skipped')) order by j.created_at,p.page_number for update of j skip locked limit 1`,[this.provider.model,this.provider.promptVersion])).rows[0];
- if(!p)return;
+ if(!p || this.stopping)return;
  if(p.state==='running')await db.query("update provider_calls set outcome='abandoned',error_kind='lease_expired',finished_at=now() where lease_owner=$1 and outcome='running'",[p.lease_owner]);
  if(p.attempts>=env.TRANSCRIPTION_MAX_ATTEMPTS){await db.query("update job_pages set state='failed',failure_reason='abandoned',lease_owner=null,lease_expires_at=null where id=$1",[p.id]);await db.query("update transcription_jobs set state='failed',failure_reason='abandoned' where id=$1",[p.job_id]);return;}
 
  await db.query("update job_pages set state='running',lease_owner=$2,lease_expires_at=now()+$3*interval '1 millisecond',attempts=attempts+1 where id=$1",[p.id,token,env.TRANSCRIPTION_LEASE_MS]);await db.query("update transcription_jobs set state='running',attempts=attempts+1 where id=$1",[p.job_id]);return p;
  });
  if(!page)return false;
- const abort=new AbortController();const timeout=setTimeout(()=>abort.abort(),env.TRANSCRIPTION_TIMEOUT_MS);
+ const abort=new AbortController();this.active.add(abort);if(this.stopping)abort.abort();const timeout=setTimeout(()=>abort.abort(),env.TRANSCRIPTION_TIMEOUT_MS);
  let heartbeatBusy=false;let lastHeartbeat=performance.now(),lastControl=0;
  const heartbeat=setInterval(()=>{void (async()=>{
  if(heartbeatStale(performance.now(),lastHeartbeat,env.TRANSCRIPTION_LEASE_MS)){abort.abort();return;}
@@ -100,7 +104,7 @@ export class TranscriptionWorker {
  }
  }
  }catch(error){failure=error instanceof ProviderError?error:new ProviderError('infrastructure_error',true);}
- finally{clearTimeout(timeout);clearInterval(heartbeat);}
+ finally{clearTimeout(timeout);clearInterval(heartbeat);this.active.delete(abort);if(this.stopping)paused=true;}
  await transaction(async db=>{
  await db.query('select id from transcription_jobs where id=$1 for update',[page.job_id]);
  const p=(await db.query('select p.*,j.state as job_state from job_pages p join transcription_jobs j on j.id=p.job_id where p.id=$1 for update of p',[page.id])).rows[0];

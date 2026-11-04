@@ -1,45 +1,100 @@
-name: Deploy to GitHub Pages
-
+name: Production CI (no deployment)
 on:
+  pull_request:
   push:
-    branches:
-      - claude/amazing-bardeen-c4fcke
-  workflow_dispatch:
-
+    branches: [main]
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
 concurrency:
-  group: pages
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
-  build:
+  checks:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [typecheck, unit, build, secrets, eval, migration, backup, docker]
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          # Node 24 from 24.22.1 on: its CA bundle has the eMudhra fix (Oct 2026 security release).
-          # check-latest: don't settle for an older 24.x the runner may have cached.
-          node-version: 24
-          check-latest: true
-      - name: Node has the CA fix
-        run: node -e "const [a,b,c]=process.versions.node.split('.').map(Number); if (a*1e6+b*1e3+c < 24022001) { console.error('Node '+process.version+' predates the eMudhra CA fix'); process.exit(1) }"
+          node-version: 22
+          cache: npm
       - run: npm ci
-      - run: npm run build
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: dist
-
-  deploy:
-    needs: build
+      - name: Sandbox dependencies
+        if: contains(fromJSON('["unit", "eval", "backup"]'), matrix.task)
+        run: sudo apt-get update && sudo apt-get install -y python3 libseccomp2 poppler-utils
+      - name: Run check
+        env:
+          CI: 'true'
+        run: |
+          case '${{ matrix.task }}' in
+            typecheck) npm run typecheck ;;
+            unit) npm test && TZ=America/New_York npm test ;;
+            build) npm run build ;;
+            secrets) npm run check:secrets ;;
+            eval) npm run eval:transcription -- --dry-run ;;
+            migration) if node -e 'process.exit(Object.hasOwn(require("./package.json").scripts,"test:migration")?0:1)'; then npm run test:migration; else echo 'Phase 6a migration suite not yet present'; fi ;;
+            backup) npm run test:backup ;;
+            docker) docker build -t lightscore-ci-web -f Dockerfile . && docker build -t lightscore-ci-worker -f Dockerfile.worker . ;;
+          esac
+  integration-browser:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: fixture
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 30
+      mailpit:
+        image: axllent/mailpit:v1.27
+        ports: ['21025:1025', '28025:8025']
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://postgres:fixture-only@127.0.0.1:5432/fixture
+      BETTER_AUTH_SECRET: ci-fixture-only-secret-at-least-32-characters
+      BETTER_AUTH_URL: http://localhost:23001
+      TRUSTED_ORIGINS: http://localhost:23001
+      MAIL_TRANSPORT: smtp
+      SMTP_URL: smtp://127.0.0.1:21025
+      S3_ENDPOINT: http://127.0.0.1:28333
+      S3_BUCKET: ci-fixture
+      S3_ACCESS_KEY_ID: local-only
+      S3_SECRET_ACCESS_KEY: local-only
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y python3 libseccomp2 poppler-utils
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - name: Start local S3 service
+        run: docker run -d --name ci-seaweedfs -p 127.0.0.1:28333:8333 -v "$PWD/scripts/s3-local.json:/etc/seaweedfs/s3.json:ro" chrislusf/seaweedfs:4.06 server -s3 -s3.config=/etc/seaweedfs/s3.json
+      - name: Wait for S3
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --silent --output /dev/null http://127.0.0.1:28333/; then exit 0; fi
+            sleep 1
+          done
+          docker logs ci-seaweedfs
+          exit 1
+      - run: npm run db:migrate
+      - name: Schema drift
+        run: npm run db:generate && git diff --exit-code -- drizzle && test -z "$(git ls-files --others --exclude-standard drizzle)"
+      - run: npm run build
+      - run: npm run test:ops
+      - run: npm run test:integration
+      - run: npm run test:browser
+      - run: npm run test:browser:transcription
+      - name: Stop owned S3 service
+        if: always()
+        run: docker rm -fv ci-seaweedfs

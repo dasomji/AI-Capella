@@ -19,3 +19,11 @@ coverage
 
 **/*.log
 **/.review-evidence
+
+functions
+rules-test
+omr-service
+firebase.json
+firestore.rules
+.review-evidence
+backups

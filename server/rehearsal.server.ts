@@ -355,7 +355,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
             armIdle(ensembles ?? []);
         });
     });
-    return () => { closed = true; ownershipReady=false;clearInterval(heartbeat);clearTimeout(retry); offMember(); offLibrary(); for(const timer of idle.values()) clearTimeout(timer);
-        void ready.finally(async()=>{ if(owner) { const client=owner; owner=undefined; try { await client.query('select pg_advisory_unlock(714083,1)'); } finally { client.release(); } } }).catch(error=>logError('rehearsal.close',error)); for (const timer of timers.values())
+    return async () => { closed = true; ownershipReady=false;clearInterval(heartbeat);clearTimeout(retry); offMember(); offLibrary(); for(const timer of idle.values()) clearTimeout(timer);
+        await Promise.allSettled([...queues.values()]); await ready.finally(async()=>{ if(owner) { const client=owner; owner=undefined; try { await client.query('select pg_advisory_unlock(714083,1)'); } finally { client.release(); } } }).catch(error=>logError('rehearsal.close',error)); for (const timer of timers.values())
         clearTimeout(timer); };
 }

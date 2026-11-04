@@ -30,7 +30,13 @@
     "migrate:import": "node --env-file-if-exists=.env --import tsx scripts/migrate-legacy/run.ts import",
     "migrate:reconcile": "node --env-file-if-exists=.env --import tsx scripts/migrate-legacy/run.ts reconcile",
     "migrate:rollback-rehearsal": "node scripts/migrate-legacy/rollback.mjs",
-    "test:migration": "node scripts/migrate-legacy/test.mjs"
+    "test:migration": "node scripts/migrate-legacy/test.mjs",
+    "backup:db": "node --env-file-if-exists=.env --import tsx scripts/ops-backup.mjs db",
+    "backup:objects": "node --env-file-if-exists=.env --import tsx scripts/ops-backup.mjs objects",
+    "restore:verify": "node --import tsx scripts/ops-backup.mjs verify",
+    "test:backup": "node --import tsx scripts/ops-backup-test.mjs",
+    "ops:canary": "node --import tsx scripts/ops-canary.ts",
+    "test:ops": "node --import tsx scripts/ops-shutdown-test.mjs"
   },
   "devDependencies": {
     "@types/jsdom": "^30.0.0",

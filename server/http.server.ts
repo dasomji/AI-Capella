@@ -120,8 +120,8 @@ api.get("/readyz", async (c) => {
       expected.some((m, i) => m.hash !== result.rows[i]?.hash)
     )
       return c.json({ status: "migrations pending" }, 503);
-    if(!await sandboxReady())return c.json({status:'sandbox_unavailable',uploads:false,transcription:false},503);
-    return c.json({ status: "ready", rehearsal: rehearsalReady() });
+    const sandbox = await sandboxReady();
+    return c.json({ status: "ready", rehearsal: rehearsalReady(), sandbox, uploads: sandbox, transcription: sandbox });
   } catch (error) {
     logError("database.readiness", error);
     return c.json({ status: "not ready" }, 503);
