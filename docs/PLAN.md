@@ -1450,3 +1450,29 @@ Scenario g records non-click oscillator and buffer-source starts and requires ne
 notes after each of four wraps at both 113 and 77.7 BPM on all three clients.
 All measurements are scheduling/position measurements in headless Chromium,
 not acoustic measurements. Final measured results and validation follow below.
+
+Removed obsolete leader/follower UI branches and the legacy sharedAnchor/relay
+scheduler; Solo keeps its local loop path and Together keeps the canonical engine.
+Timing derivation version is now 3; an integration regression loads stored v2
+scores with tempo 0/-20 and verifies recomputation to the 100 BPM fallback.
+
+Final validation: `npm run typecheck`, `npm test` (**111/111**), `npm run build`,
+`npm run test:integration` (**49/49**, no skips), `npm run check:secrets`
+(positive control detected, clean client artifacts, no public source maps), and
+`npm run db:generate` (no schema/migration drift) all passed.
+`npm run test:browser` passed the complete design/language/capability matrix,
+two-account sync, and all three-account a–n scenarios plus offset/bfcache checks;
+zero page errors. Ten independently mapped starts: mean **0.099 ms**, p95/max
+**0.167/0.167 ms**; maximum pairwise AudioEngine position error **11.521 ms**.
+All **24 client/wrap checks** observed non-click starts (four wraps × two tempos
+× three clients; minimum one source per check). The canonical position spread
+remains a separate consistency check, not a measured client scheduling difference.
+`BROWSER_SCRIPT=scripts/browser-smoke.mjs npm run test:browser` passed playback,
+staff, PDF export (**121433 bytes**), reset/sign-in and player themes; zero
+browser errors and zero forbidden external requests. Evidence is retained in
+`.review-evidence/phase3g-*.log` and `.review-evidence/browser/sync-acceptance.json`.
+The initial wrap regression failed before the fix. Initial browser failures
+exposed an overly short whole-note observation window and a concurrent secrets
+build replacing served assets; the final complete browser run passed without
+concurrent builds. Physical/acoustic output, Safari/iOS and Bluetooth remain
+outside this headless check. No production resources changed; no push or PR.
