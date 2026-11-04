@@ -300,3 +300,9 @@ test('unsupported image formats, animation, truncated PDFs and mixed sources hav
  const pdf=await PDFDocument.create();pdf.addPage();const p=await (await upload(e.id,lead.cookie,await pdf.save())).json();
  const mixed=await request(`ensembles/${e.id}/transcriptions`,'POST',{sourceObjects:[p.id,source.id]},lead.cookie);assert.equal((await mixed.json()).code,'mixed_sources');
 });
+test('authorized retrier becomes the billable actor after initiator revocation',async()=>{
+ const {lead,e,source}=await setup();const member=await account();await pool.query('insert into memberships(ensemble_id,user_id,ai_transcription) values($1,$2,true)',[e.id,member.id]);
+ const j=await job(e.id,member.cookie,source.id);await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);
+ await pool.query('update memberships set ai_transcription=false where ensemble_id=$1 and user_id=$2',[e.id,member.id]);
+ await ok(`ensembles/${e.id}/transcriptions/${j.id}/retry`,'POST',{},lead.cookie);await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+});

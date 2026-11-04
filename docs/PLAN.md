@@ -1524,3 +1524,10 @@ S6: HEIC/HEIF and AVIF return unsupported_image_format; HEIC is not supported
 server-side. Pickers explicitly accept PDF/JPEG/PNG/WebP for iOS conversion;
 German/English errors explain JPEG export. Multi-frame images return
 animated_image, encrypted PDFs encrypted_pdf, mixed PDF/photo sources mixed_sources.
+
+Retry policy: start/retry/cancel checks the ACTING user's current permission.
+Billable steps and assembly require transcribe for started_by, the user who last
+started/retried the job. A current authorized retrier replaces a departed initiator
+for this purpose. Explicit retries are unbounded except active-job admission;
+no monetary budgets exist. Retry emits durable progress. Pauses return the page
+attempt to the queue without consuming the automatic attempt allowance.

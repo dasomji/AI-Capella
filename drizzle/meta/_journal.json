@@ -50,6 +50,13 @@
       "when": 1793759529197,
       "tag": "0006_black_young_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793759750713,
+      "tag": "0007_curved_peter_quill",
+      "breakpoints": true
     }
   ]
 }
