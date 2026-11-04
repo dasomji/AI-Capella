@@ -480,8 +480,9 @@ test('persistent or hung heartbeat and stuck rendering release before lease expi
 test('worker upgrades legacy context once and then consumes checkpoint without replay',async()=>{
  const {lead,e,source}=await setup();const j=await ok(`ensembles/${e.id}/transcriptions`,'POST',{sourceObjects:[source.id,source.id,source.id]},lead.cookie);
  const provider=new FakeProvider();const transcribe=provider.transcribePage.bind(provider);const contexts:any[]=[];
- provider.transcribePage=async(i,c,o,signal)=>{contexts.push(c);return transcribe(i,c,o,signal);};
+ provider.transcribePage=async(i,c,o,signal)=>{contexts.push(c);const value=await transcribe(i,c,o,signal);value.uncertainties=Array.from({length:201},()=>({reason:'x'.repeat(600),part:'p'.repeat(600)}));return value;};
  const worker=new TranscriptionWorker(provider);await worker.tick();
+ const metrics=(await pool.query('select metrics from job_pages where job_id=$1 and page_number=0',[j.id])).rows[0].metrics;assert.equal(metrics.uncertainties.length,200);assert.equal(metrics.uncertainties[0].reason.length,500);assert.equal(metrics.uncertainties[0].part.length,500);
  await pool.query("update job_pages set metrics=metrics-'contextState' where job_id=$1",[j.id]);await worker.tick();await worker.tick();
  assert.equal(contexts.length,3);assert.equal(contexts[1].length,1);assert.equal(contexts[1][0].contextState,undefined);assert.equal(contexts[2].length,1);assert.ok(contexts[2][0].contextState);assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
 });
