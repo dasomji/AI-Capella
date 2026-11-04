@@ -1,3 +1,4 @@
+import { randomId } from './uuid';
 import { unzipSync, strFromU8 } from "fflate";
 import { api, ApiError } from "./domain-client";
 import { localLibrary } from "./local-library";
@@ -224,7 +225,7 @@ export async function saveImportedSong(song: {
       schemaVersion: 1,
       body: song.format === "score" ? JSON.parse(song.xml) : song.xml,
     },
-    idempotencyKey: crypto.randomUUID(),
+    idempotencyKey: randomId(),
   });
   metadata.set(m.id, m);
   notify?.();

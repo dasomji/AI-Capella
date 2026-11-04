@@ -1,6 +1,8 @@
 import { metronomeBpm, type Score } from '../score';
+export const TIMING_DERIVATION_VERSION = 2;
 /** Quarter-note units, matching Score, AudioEngine and getBeatMarkers. */
 export interface PieceTiming {
+    derivationVersion?: number;
     totalBeats: number;
     baseBpm: number;
     tempos: {
@@ -24,7 +26,7 @@ export function timingFromScore(score: Score): PieceTiming {
         if (Number.isFinite(bpm) && bpm > 0 && mark.beat >= 0)
             tempos.set(mark.beat, Math.min(1000,Math.max(1,bpm)));
     }
-    return { totalBeats: score.totalBeats, baseBpm: [...tempos].sort((a,b) => a[0]-b[0])[0][1], tempos: [...tempos].sort((a, b) => a[0] - b[0]).map(([beat, bpm]) => ({ beat, bpm })), measures: score.measures.map(({ startBeat, beats, beatType }) => ({ startBeat, beats, beatType })) };
+    return { derivationVersion:TIMING_DERIVATION_VERSION, totalBeats: score.totalBeats, baseBpm: [...tempos].sort((a,b) => a[0]-b[0])[0][1], tempos: [...tempos].sort((a, b) => a[0] - b[0]).map(([beat, bpm]) => ({ beat, bpm })), measures: score.measures.map(({ startBeat, beats, beatType }) => ({ startBeat, beats, beatType })) };
 }
 export function secondsAt(beat: number, t: PieceTiming): number {
     let seconds = 0;

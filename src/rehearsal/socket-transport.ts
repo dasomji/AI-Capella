@@ -1,9 +1,4 @@
-function randomCommandId() {
-  if(crypto.randomUUID) return crypto.randomUUID();
-  const bytes=crypto.getRandomValues(new Uint8Array(16));bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
-  const h=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
-  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
-}
+import { randomId } from '../uuid';
 import { stateSchema, ackSchema, snapshotAckSchema, type Ack, type Command, type Envelope, type RehearsalState, type RehearsalTransport } from './contract';
 /** A small socket boundary supports real Socket.IO and deterministic client tests. */
 export interface PlaybackSocket {
@@ -22,6 +17,8 @@ export class SocketPlaybackTransport implements RehearsalTransport {
   private applying: Promise<void> = Promise.resolve();
   private snapshotApplied = false;
   private closed = false;
+  private terminalCode: string | undefined;
+  private serverClosed=(input:unknown)=>{if((input as any)?.code==='socket_limit')this.terminalCode='socket_limit';};
   private pending = new Set<(error: Error) => void>();
   ready = false;
   constructor(private socket: PlaybackSocket, readonly ensembleId: string,
@@ -32,10 +29,11 @@ export class SocketPlaybackTransport implements RehearsalTransport {
     socket.on('connect', this.reconnect);
     socket.on('disconnect', this.disconnected);
     socket.on('playback:state', this.received);
+    socket.on('rehearsal:closed',this.serverClosed);
   }
   private setReady(value: boolean) { this.ready = value; this.onReady(value); }
   private disconnected = (reason?: string) => {
-    if(reason==='io server disconnect') {this.notice('session_expired');this.socket.disconnect();}
+    if(reason==='io server disconnect') {this.notice(this.terminalCode ?? 'session_expired');this.socket.disconnect();}
     this.epoch++; this.snapshotApplied = false; this.latest = null; this.setReady(false);
     for (const reject of this.pending) reject(new Error('disconnected'));
     this.pending.clear();
@@ -125,7 +123,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
   }
   async send(command: Command) {
     if (!this.ready || !this.latest) return Promise.reject(new Error('connecting'));
-    return this.command({ensembleId:this.ensembleId,commandId:randomCommandId(),baseRevision:this.latest.revision,clientSentAt:this.now(),command});
+    return this.command({ensembleId:this.ensembleId,commandId:randomId(),baseRevision:this.latest.revision,clientSentAt:this.now(),command});
   }
   subscribe(listener: (state: RehearsalState) => void | Promise<void>) {
     this.listeners.add(listener); return () => {this.listeners.delete(listener);};
@@ -137,7 +135,7 @@ export class SocketPlaybackTransport implements RehearsalTransport {
   }
   dispose() {
     this.closed = true; this.disconnected(); this.listeners.clear();
-    this.socket.off('connect',this.reconnect);this.socket.off('disconnect',this.disconnected);this.socket.off('playback:state',this.received);
+    this.socket.off('rehearsal:closed',this.serverClosed);this.socket.off('connect',this.reconnect);this.socket.off('disconnect',this.disconnected);this.socket.off('playback:state',this.received);
     this.socket.disconnect();
   }
 }

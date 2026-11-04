@@ -454,9 +454,10 @@ function sharedReadiness(ready:boolean) {
 function sharedNotice(code:string) {
  if(code==='session_expired'){leavePlaybackSession();location.replace('/?state=expired');return;}
  if(code==='forbidden'){leavePlaybackSession();void checkMembership();return;}
- const messages:Record<string,MessageKey>={stale:'syncStale',unavailable:'syncUnavailable',rate_limited:'syncRateLimited',connecting:'syncConnecting'};
+ const messages:Record<string,MessageKey>={socket_limit:'syncSocketLimit',stale:'syncStale',unavailable:'syncUnavailable',rate_limited:'syncRateLimited',connecting:'syncConnecting'};
  toast('✎ '+(messages[code]?t(messages[code]):domainError(code)));
 }
+let sharedTiming: ReturnType<typeof timingFromScore> | null=null;
 let sharedVersion:number|null=null;
 let lastScheduledStartServerMs:number|null=null;
 let lastScheduledStartAudioTime:number|null=null;
@@ -470,6 +471,10 @@ async function receiveSharedState(state:RehearsalState) {
     if(!response.ok)throw new Error('not_found');
     const xml=await response.text();
     await loadSongLocally({id:state.pieceId,title:meta.title,format:meta.format,xml,imported:true},state.effectiveAt);
+    const canonical=await api(`/ensembles/${currentEnsemble}/pieces/${state.pieceId}/versions/${state.versionNo}?timing=1`);
+    const local=timingFromScore(currentScore!);
+    if(JSON.stringify(local)!==JSON.stringify(canonical.timing))console.warn('rehearsal.timing_mismatch',{pieceId:state.pieceId,versionNo:state.versionNo});
+    sharedTiming=canonical.timing;
     sharedVersion=state.versionNo;
   }
   sharedState=state;
@@ -479,7 +484,7 @@ async function receiveSharedState(state:RehearsalState) {
   loopRegion=state.loop.startBeat!=null && state.loop.endBeat!=null?{start:state.loop.startBeat,end:state.loop.endBeat}:null;
   pianoRoll?.setTranspose(transpose);staffView?.setTranspose(transpose);pianoRoll?.setLoopRegion(loopRegion);overview?.setLoopRegion(loopRegion);
   refreshBindings();
-  const moving=lateJoin(state,playerSession!.clock.serverNow(),timingFromScore(currentScore!)).status;
+  const moving=lateJoin(state,playerSession!.clock.serverNow(),(sharedTiming ?? timingFromScore(currentScore!))).status;
   syncPlayButtons(moving==='playing'||moving==='countingIn');
   startRenderLoop();
   if(state.status==='paused'||state.status==='stopped')setTimeout(()=>{if(sharedState===state){syncPlayButtons(false);renderNow();}},Math.max(0,(state.effectiveAt??state.anchor.serverTime)-playerSession!.clock.serverNow())+20);
@@ -489,7 +494,7 @@ async function receiveSharedState(state:RehearsalState) {
 function scheduleSharedAudio(at?:number){
  if(!audioEngine || !currentScore || !sharedState || !playerSession?.clock.usable)return;
  const now=at??playerSession.clock.serverNow();
- const result=audioEngine.scheduleShared(sharedState,timingFromScore(currentScore),now,playerSession.clock.diagnostics!.offsetMs,startingPitches(positionAt(sharedState,now,timingFromScore(currentScore))));
+ const result=audioEngine.scheduleShared(sharedState,(sharedTiming ?? timingFromScore(currentScore)),now,playerSession.clock.diagnostics!.offsetMs,startingPitches(positionAt(sharedState,now,(sharedTiming ?? timingFromScore(currentScore)))));
  lastScheduledStartServerMs=result.serverTime;lastScheduledStartAudioTime=result.audioTime;
 }
 const syncDebug=new URLSearchParams(location.search).get('debug')==='sync';
@@ -498,7 +503,7 @@ if(syncDebug || import.meta.env.MODE==='test'){
 }
 window.setInterval(()=>{
  if(!syncEnabled() || !sharedState || !currentScore || !playerSession?.clock.usable || !audioEngine)return;
- const timing=timingFromScore(currentScore),now=playerSession.clock.serverNow();
+ const timing=(sharedTiming ?? timingFromScore(currentScore)),now=playerSession.clock.serverNow();
  const joined=lateJoin(sharedState,now,timing);
  if(joined.status==='playing' && audioEngine.context.state==='running'){
   lastSharedDrift=playbackDriftMs(sharedState,now,audioEngine.getCurrentBeat(),timing);
@@ -707,6 +712,16 @@ let lightOffsetMs = (() => {
     return 0;
   }
 })();
+
+const OUTPUT_LATENCY_KEY='ai-capella-output-latency-ms';
+let outputLatencyMs=(()=>{try{return Math.max(-500,Math.min(500,Number(localStorage.getItem(OUTPUT_LATENCY_KEY))||0));}catch{return 0;}})();
+function openOutputLatencySheet(opener:HTMLElement|null){
+ const body=document.createElement('div');body.className='sheet-body offset-body';
+ body.innerHTML=`<p class="ctl-note">${t('outputLatencyHint')}</p><div class="offset-row"><span>−500 ms</span><input type="range" min="-500" max="500" step="5" value="${outputLatencyMs}" aria-label="${t('outputLatency')}"><span>500 ms</span></div><p class="offset-value"><output>${outputLatencyMs} ms</output></p>`;
+ const input=body.querySelector('input')!,out=body.querySelector('output')!;
+ input.addEventListener('change',()=>{outputLatencyMs=Number(input.value);out.textContent=`${outputLatencyMs} ms`;try{localStorage.setItem(OUTPUT_LATENCY_KEY,String(outputLatencyMs));}catch{}if(audioEngine)audioEngine.outputLatencyOffsetMs=outputLatencyMs;scheduleSharedAudio();});
+ openSheet(t('outputLatency'),body,opener);
+}
 
 /** The "?" by the bar numbers of a scanned song's places to check, in both rulers. */
 function renderScanMarks() {
@@ -1682,6 +1697,7 @@ async function loadSongLocally(song: SongEntry, replaceAt?:number) {
   audioEngine?.dispose();
   audioEngine = new AudioEngine(played, playbackSound);
   audioEngine.setLightOffsetMs(lightOffsetMs);
+  audioEngine.outputLatencyOffsetMs=outputLatencyMs;
   audioEngine.setDuckedVolume(duckVolume);
   const partColor = (partId: string) => colorForPart(score.parts.findIndex((p) => p.id === partId), score.parts.length);
   currentPartColor = partColor;
@@ -2935,7 +2951,7 @@ function openSettingsMenu(anchor: HTMLElement) {
     const on = swingChosen(currentSong);
     items.push({ label: t('swingItem'), icon: 'quarter', checked: on, onSelect: () => void setSwing(!on) });
   }
-  items.push({ label: t('lightOffset'), icon: 'metronome', onSelect: () => openLightOffsetSheet(anchor) }, ...appearanceItems(), ...paperItems(anchor));
+  items.push({label:t('outputLatency'),icon:'metronome',onSelect:()=>openOutputLatencySheet(anchor)}, { label: t('lightOffset'), icon: 'metronome', onSelect: () => openLightOffsetSheet(anchor) }, ...appearanceItems(), ...paperItems(anchor));
   openMenu(anchor, items, t('settings'));
 }
 

@@ -8,7 +8,7 @@ vi.mock('../server/score-validation.server',()=>({validateScore:mocks.validate})
 import {installRehearsal} from '../server/rehearsal.server';
 import {initialState} from '../src/rehearsal/controller';
 const ensemble='00000000-0000-4000-8000-000000000001';
-const timing={baseBpm:120,totalBeats:100,tempos:[{beat:0,bpm:120}],measures:[]};
+const timing={derivationVersion:2,baseBpm:120,totalBeats:100,tempos:[{beat:0,bpm:120}],measures:[]};
 let stored=new Map<string,any>(), recovery:any[]=[];
 let cleanup:(()=>void)|undefined;
 beforeEach(()=>{mocks.failBegin=false;mocks.released.mockClear();mocks.locked=true;vi.useFakeTimers();mocks.query.mockReset();mocks.authorize.mockReset();stored=new Map();recovery=[];
@@ -26,7 +26,7 @@ function setup(){
  const ns={sockets,adapter:{rooms},on:(_e:string,fn:any)=>connected=fn,to:()=>({emit:(_e:string,state:any)=>broadcasts.push(state)})};
  let now=1000;cleanup=installRehearsal(ns as any,{now:()=>now,idleMs:600000});
  function socket(id:string,user=id){const handlers=new Map();const socket:any={id,connected:true,data:{userId:user,expiresAt:1e9},rooms:new Set(),on:(e:string,fn:any)=>handlers.set(e,fn),join:async(room:string)=>{socket.rooms.add(room);const set=rooms.get(room)??new Set();set.add(id);rooms.set(room,set);},leave:async(room:string)=>{socket.rooms.delete(room);rooms.get(room)?.delete(id);},disconnect:()=>{socket.connected=false;for(const set of rooms.values())set.delete(id);handlers.get('disconnect')?.();}};sockets.set(id,socket);connected(socket);
- return {socket,emit:(event:string,input:any)=>new Promise<any>(resolve=>handlers.get(event)(input,resolve))};}
+ return {socket,ping:(ack:any)=>handlers.get('clock:ping')(ack),emit:(event:string,input:any)=>new Promise<any>(resolve=>handlers.get(event)(input,resolve))};}
  return {socket,broadcasts,setNow:(n:number)=>now=n};
 }
 const command=(type:any='stop',extra:any={})=>({ensembleId:ensemble,commandId:crypto.randomUUID(),baseRevision:0,clientSentAt:1000,command:{type},...extra});
@@ -214,4 +214,32 @@ it('never serves the raw playing snapshot after recovery persistence failure',as
  expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).code).toBe('unavailable');
  fail=false;await vi.advanceTimersByTimeAsync(1000);
  expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).state.status).toBe('paused');
+});
+it('rejects an invalid derived state before persistence and maps SQL data errors',async()=>{
+ const normal=mocks.query.getMockImplementation()!;
+ mocks.query.mockImplementation(async(sql,args)=>sql.startsWith('select content_hash')?{rows:[{content_hash:'broken',format:'score',timing:{...timing,baseBpm:2000}}]}:normal(sql,args));
+ const app=setup(),c=app.socket('one');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ expect((await c.emit('rehearsal:command',command('selectPiece',{command:{type:'selectPiece',pieceId:'p',versionNo:1}}))).code).toBe('invalid');
+ expect(app.broadcasts).toEqual([]);
+ mocks.query.mockImplementation(async(sql,args)=>{if(sql.startsWith('insert into rehearsal_sessions'))throw {code:'22003'};return normal(sql,args);});
+ expect((await c.emit('rehearsal:command',command())).code).toBe('invalid');
+});
+it('charges ensemble read admission only after membership authorization',async()=>{
+ const app=setup();mocks.authorize.mockRejectedValue(Error('forbidden'));
+ for(let i=0;i<6;i++){const c=app.socket('spam'+i);for(let j=0;j<20;j++)await c.emit('rehearsal:join',{ensembleId:ensemble});}
+ mocks.authorize.mockResolvedValue(undefined);
+ expect((await app.socket('legit').emit('rehearsal:join',{ensembleId:ensemble})).state).toBeDefined();
+});
+
+it('throttles clock pings independently per socket',()=>{
+ const app=setup(),a=app.socket('pings'),b=app.socket('other');let count=0;
+ for(let n=0;n<25;n++)a.ping(()=>count++);expect(count).toBe(20);
+ b.ping(()=>count++);expect(count).toBe(21);app.setNow(2000);
+ for(let n=0;n<11;n++)a.ping(()=>count++);expect(count).toBe(31);
+});
+it('evicts an idle committed snapshot so a later join loads persistence',async()=>{
+ const app=setup(),c=app.socket('idle');await c.emit('rehearsal:join',{ensembleId:ensemble});c.socket.disconnect();
+ await vi.advanceTimersByTimeAsync(600000);
+ stored.set(ensemble,{...initialState(ensemble,'u',0),revision:10});
+ expect((await app.socket('return').emit('rehearsal:join',{ensembleId:ensemble})).state.revision).toBe(10);
 });

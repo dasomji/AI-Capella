@@ -1,3 +1,4 @@
+import { randomId } from './uuid';
 import { localPlayback } from './playback-transport';
 import { doc, getDocFromServer, onSnapshot, serverTimestamp, setDoc, Timestamp, type Unsubscribe } from './legacy-store';
 import { currentUid, db } from './firebase';
@@ -64,7 +65,7 @@ export interface PlaybackState {
 export function getDeviceId(): string {
   let id = localStorage.getItem(DEVICE_ID_STORAGE_KEY);
   if (!id) {
-    id = crypto.randomUUID();
+    id = randomId();
     localStorage.setItem(DEVICE_ID_STORAGE_KEY, id);
   }
   return id;

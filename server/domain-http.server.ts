@@ -1,3 +1,4 @@
+import { TIMING_DERIVATION_VERSION } from '../src/rehearsal/timeline';
 import { Hono } from "hono";
 import { z } from "zod";
 import { createHash, randomBytes } from "node:crypto";
@@ -923,6 +924,14 @@ domain.get(
       )
     ).rows[0];
     if (!v) throw new DomainError("not_found", 404);
+    if(c.req.query('timing')==='1') {
+      let timing=v.timing;
+      if(timing?.derivationVersion!==TIMING_DERIVATION_VERSION) {
+        timing=(await validateScore(v.format==='musicxml'?v.musicxml:canonicalJSON(v.native_score),v.format,true)).timing;
+        await pool.query('update score_versions set timing=$2 where id=$1',[v.id,JSON.stringify(timing)]);
+      }
+      return c.json({pieceId:v.piece_id,versionNo:v.version_no,contentHash:v.content_hash,timing});
+    }
     c.header(
       "Content-Disposition",
       'attachment; filename="score.' +

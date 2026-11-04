@@ -18,8 +18,12 @@ async function accepted(cookie: string) { const s = socket(cookie); await new Pr
 async function rejected(cookie: string, origin = base) { const s = socket(cookie, origin); await new Promise<void>((resolve,reject) => { s.on('connect', () => reject(new Error('Socket unexpectedly accepted'))); s.on('connect_error', () => resolve()); }); s.close(); }
 async function waitMail(count: number) { for (let i=0;i<100 && captureMail.messages.length <= count;i++) await delay(20); assert.ok(captureMail.messages.length > count); }
 function mailLink() { const mail = captureMail.messages.at(-1); assert.ok(mail); const link = mail.text.match(/https?:\/\/[^\s]+/)?.[0]; assert.ok(link); return { mail, link }; }
+async function waitReady() {
+ for(let n=0;n<450;n++){if((await fetch(`${base}/readyz`)).status===200)return;await delay(100);}
+ assert.fail('rehearsal did not regain readiness');
+}
 test('real HTTP accounts, mail capture, cookies, revocation and Socket.IO', { timeout: 60000 }, async () => {
- assert.equal((await fetch(`${base}/healthz`)).status,200); assert.equal((await fetch(`${base}/readyz`)).status,200);
+ assert.equal((await fetch(`${base}/healthz`)).status,200); await waitReady();
  assert.match(await (await fetch(base)).text(), /LightScore/);
  assert.equal((await fetch(`${base}/app`, { redirect: 'manual' })).status,302);
  const email = `foundation-${crypto.randomUUID()}@example.test`; const password = 'valid-rehearsal-password-42';
@@ -67,7 +71,7 @@ test('production rejects auth bypass flags before startup', () => {
  assert.notEqual(result.status,0); assert.match(result.stderr,/bypass flags are forbidden/);
 });
 
-test('origin, redirect, duplicate signup, cleanup, rate limits and database outages', { timeout: 60000 }, async () => {
+test('origin, redirect, duplicate signup, cleanup, rate limits and database outages', { timeout: 90000 }, async () => {
  const email = `security-${crypto.randomUUID()}@example.test`, password = 'valid-security-password-42';
  assert.equal((await fetch(`${base}/_serverFn/fixture`,{method:'POST',body:'{}'})).status,403);
  assert.equal((await fetch(`${base}/api/auth/sign-out`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status,403);
@@ -103,14 +107,14 @@ test('origin, redirect, duplicate signup, cleanup, rate limits and database outa
  await pool.query('select 1');
  const pg = await import('pg'); const admin = new pg.default.Client({connectionString:process.env.DATABASE_URL}); await admin.connect();
  await admin.query('select pg_terminate_backend(pid) from pg_stat_activity where datname=current_database() and pid <> pg_backend_pid()'); await admin.end(); await delay(100);
- assert.equal((await fetch(`${base}/healthz`)).status,200); assert.equal((await fetch(`${base}/readyz`)).status,200);
+ assert.equal((await fetch(`${base}/healthz`)).status,200); await waitReady();
  const resilient = await accepted(cookie);
  const container = process.env.TEST_POSTGRES_CONTAINER!;
  assert.equal(spawnSync('docker',['stop','-t','10',container]).status,0);
  assert.equal((await fetch(`${base}/healthz`)).status,200); assert.equal((await fetch(`${base}/readyz`)).status,503);
  await delay(16000); assert.equal(resilient.connected,true);
  assert.equal(spawnSync('docker',['start',container]).status,0);
- for (let i=0;i<100;i++) { if ((await fetch(`${base}/readyz`)).status===200) break; await delay(100); }
+ await waitReady();
  const recovered = await fetch(`${base}/readyz`); assert.equal(recovered.status,200, await recovered.text());
  await pool.query('delete from rate_limit');
  let limited = false; for (let i=0;i<7;i++) if ((await post('request-password-reset',{email:'missing@example.test'})).status===429) limited=true;

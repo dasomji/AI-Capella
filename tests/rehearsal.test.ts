@@ -207,7 +207,7 @@ it('schedules an idle pause, normalizes loop start and skips completed count-in'
 });
 it('accepts pause without a selected piece and repeated pause preserves the revision',()=>{
  const paused=run(initialState('ensemble','user',0),{type:'pause'});
- expect(paused.status).toBe('paused');
+ expect(paused.status).toBe('stopped');
  expect(run(paused,{type:'pause'},1000)).toBe(paused);
 });
 it('clears elapsed pre-roll on setting changes without pulling natural end earlier',()=>{
@@ -250,7 +250,7 @@ function fakeSharedEngine(){
  const engine=Object.create(AudioEngine.prototype) as AudioEngine;
  const voice={sources:[],gain:{gain:{cancelAndHoldAtTime:vi.fn(),linearRampToValueAtTime:vi.fn()}}};
  const note=vi.fn((..._args:any[])=>voice);
- Object.assign(engine,{ctx:{currentTime:10,state:'running',baseLatency:0,outputLatency:0},score:{notes:[{partId:'a',startBeat:4,durationBeats:2,midi:60}],totalBeats:16},partGains:new Map([['a',{}]]),scheduledVoices:[],beatMarkers:[],idleTimer:null,lightOffsetSec:0,playNote:note,dynamicLevel:()=>1});
+ Object.assign(engine,{ctx:{currentTime:10,state:'running',baseLatency:0,outputLatency:0},score:{notes:[{partId:'a',startBeat:4,durationBeats:2,midi:60}],totalBeats:16},partGains:new Map([['a',{}]]),scheduledVoices:[],beatMarkers:[],idleTimer:null,lightOffsetSec:0,outputLatencyOffsetMs:0,playNote:note,dynamicLevel:()=>1});
  return {engine,note,voice};
 }
 it('engine schedules tempo-map notes at mapped future start and retains old voices until effective pause',()=>{
@@ -321,4 +321,39 @@ it('keeps stopped pause stopped and disables loop for paused play outside loop',
  expect(run({...s,status:'stopped'},{type:'pause'}).status).toBe('stopped');
  const next=run({...s,status:'paused',loop:{enabled:true,startBeat:2,endBeat:4}},{type:'play',fromBeat:6,pieceId:'piece',versionNo:1});
  expect(next.loop.enabled).toBe(false);expect(next.anchor.beat).toBe(6);
+});
+it('invalidates calibration when wall time advances but performance time pauses',async()=>{
+ const {PlaybackClock}=await import('../src/rehearsal/client-clock');
+ const wall=vi.spyOn(Date,'now');wall.mockReturnValue(1000);
+ const clock=new PlaybackClock(async()=>1500,()=>{},()=>1000);
+ await clock.refresh();expect(clock.usable).toBe(true);
+ wall.mockReturnValue(11000);expect(clock.usable).toBe(false);
+ await clock.refresh();expect(clock.usable).toBe(true);wall.mockRestore();
+});
+it('applies additional device output latency to the shared scheduling batch',()=>{
+ const {engine}=fakeSharedEngine();const now=performance.timeOrigin+performance.now();
+ const state={...s,status:'playing' as const,anchor:{beat:0,serverTime:now+400},effectiveAt:now+400};
+ const first=engine.scheduleShared(state,t,now,0,[]);
+ engine.outputLatencyOffsetMs=200;
+ const second=engine.scheduleShared(state,t,now,0,[]);
+ expect(first.audioTime-second.audioTime).toBeCloseTo(.2,2);
+});
+it('rejects PostgreSQL-overflow version numbers and sends asynchronously without randomUUID',async()=>{
+ expect(commandSchema.safeParse({type:'selectPiece',pieceId:'piece',versionNo:2147483648}).success).toBe(false);
+ const {SocketPlaybackTransport}=await import('../src/rehearsal/socket-transport');let envelope:any;
+ const socket:any={connected:true,on:()=>{},off:()=>{},disconnect:()=>{},volatile:{emit:(event:string,input:any,ack:any)=>{if(event==='rehearsal:command'){envelope=input;ack({commandId:input.commandId,status:'accepted',revision:1});}else ack({state:s});}}};
+ const transport=new SocketPlaybackTransport(socket,'ensemble',()=>{throw Error('clock');});await transport.join();
+ await expect(transport.send({type:'stop'})).rejects.toThrow('clock');transport.dispose();
+ const cryptoWithoutUUID={getRandomValues:crypto.getRandomValues.bind(crypto)};vi.stubGlobal('crypto',cryptoWithoutUUID);
+ const second=new SocketPlaybackTransport(socket,'ensemble',()=>1500);
+ try{await second.join();await second.send({type:'stop'});expect(envelope.clientSentAt).toBe(1500);expect(envelope.commandId).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);}finally{second.dispose();vi.unstubAllGlobals();}
+});
+it('keeps retrying unavailable joins beyond the old four attempts, and stops after server disconnect',async()=>{
+ const {SocketPlaybackTransport}=await import('../src/rehearsal/socket-transport');vi.useFakeTimers();
+ const handlers=new Map<string,any>();let attempts=0;const notices:string[]=[];
+ const socket:any={connected:true,on:(e:string,fn:any)=>handlers.set(e,fn),off:()=>{},disconnect:()=>{socket.connected=false;},volatile:{emit:(_e:string,_input:any,ack:any)=>{attempts++;ack(attempts<=6?{code:'unavailable'}:{state:s});}}};
+ const transport=new SocketPlaybackTransport(socket,'ensemble',()=>1000,()=>{},code=>notices.push(code));
+ try{handlers.get('connect')();await vi.advanceTimersByTimeAsync(30000);expect(attempts).toBe(7);expect(transport.ready).toBe(true);
+ handlers.get('rehearsal:closed')({code:'socket_limit'});handlers.get('disconnect')('io server disconnect');await vi.advanceTimersByTimeAsync(60000);expect(attempts).toBe(7);expect(notices.at(-1)).toBe('socket_limit');expect(transport.ready).toBe(false);
+ }finally{transport.dispose();vi.useRealTimers();}
 });

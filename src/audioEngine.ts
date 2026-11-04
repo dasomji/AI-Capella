@@ -894,12 +894,13 @@ export class AudioEngine {
 
   private canonical: {state:RehearsalState;timing:PieceTiming;offset:number;server:number;audio:number;through:number} | null = null;
   private previousCanonical: typeof this.canonical = null;
+  outputLatencyOffsetMs = 0;
   get context() {return this.ctx;}
   /** Canonical scheduling uses the shared tempo map and explicit effective instant.
    * Existing voices survive until that instant; future voices are faded/cancelled there. */
   scheduleShared(state:RehearsalState,timing:PieceTiming,now:number,offset:number,pitches:number[]) {
     const decision=playbackSchedule(state,now,timing);
-    const at=serverToAudioTime(decision.effectiveAt,offset,{state:this.ctx.state,currentTime:this.ctx.currentTime,outputLatency:this.ctx.outputLatency,baseLatency:this.ctx.baseLatency,getOutputTimestamp:()=>{const t=this.ctx.getOutputTimestamp?.()??{};return {contextTime:t.contextTime??0,performanceTime:t.performanceTime??0};}});
+    const at=serverToAudioTime(decision.effectiveAt,offset,{state:this.ctx.state,currentTime:this.ctx.currentTime,outputLatency:this.ctx.outputLatency,baseLatency:this.ctx.baseLatency,getOutputTimestamp:()=>{const t=this.ctx.getOutputTimestamp?.()??{};return {contextTime:t.contextTime??0,performanceTime:t.performanceTime??0};}})-this.outputLatencyOffsetMs/1000;
     this.clearSchedule(at);
     this.previousCanonical=this.canonical;
     this.canonical={state,timing,offset,server:decision.effectiveAt,audio:at,through:decision.effectiveAt};
@@ -914,14 +915,15 @@ export class AudioEngine {
     }
     if(decision.countIn){
       const measure=timing.measures.findLast(m=>m.startBeat<=state.anchor.beat)??timing.measures[0];
-      const pulse=60000/state.bpm*4/(measure?.beatType??4);
+      const localBpm=(timing.tempos.findLast(p=>p.beat<=state.anchor.beat)?.bpm??timing.baseBpm)*state.bpm/timing.baseBpm;
+      const pulse=60000/localBpm*4/(measure?.beatType??4);
       for(let time=decision.countIn.until-pulse;time>=decision.countIn.from;time-=pulse)
         if(time>=now)this.scheduledVoices.push(playClick(this.ctx,this.metronomeGain,audioAt(time),time===decision.countIn.from));
     }
     this.fillShared();
     return {serverTime:decision.musicAt,audioTime:audioAt(decision.musicAt)};
   }
-  private sharedServerNow(c= this.canonical!) {return c.server+(this.ctx.currentTime-c.audio-this.outputDelay())*1000;}
+  private sharedServerNow(c= this.canonical!) {return c.server+(this.ctx.currentTime-c.audio-this.outputDelay()-this.outputLatencyOffsetMs/1000)*1000;}
   private fillShared() {
     const c=this.canonical;if(!c)return;this.waiting=this.ctx.state!=='running';if(this.waiting)return;
     this.waiting=false;

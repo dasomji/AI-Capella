@@ -1,3 +1,4 @@
+import { randomId } from './uuid';
 import type { StoredSong, SongFormat } from './library';
 export interface LibraryRepository {
  subscribe(listener: (songs: StoredSong[]) => void): () => void;
@@ -15,7 +16,7 @@ class LocalLibrary implements LibraryRepository {
  async update(id: string, patch: Partial<StoredSong>) { this.songs = this.songs.map(song => song.id === id ? { ...song, ...patch } : song); this.listeners.forEach(listener => listener(this.songs)); }
  async remove(id: string) { this.songs = this.songs.filter(song => song.id !== id); this.listeners.forEach(listener => listener(this.songs)); }
  async add(song: { title: string; xml: string; format: SongFormat }) {
-   const id = crypto.randomUUID(); this.songs.push({ ...song, id, importedAt: Date.now() });
+   const id = randomId(); this.songs.push({ ...song, id, importedAt: Date.now() });
    this.listeners.forEach(listener => listener(this.songs)); return id;
  }
 }

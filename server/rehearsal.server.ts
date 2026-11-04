@@ -7,7 +7,7 @@ import { logError } from './logger.server';
 import { env } from './env.server';
 import { envelopeSchema, joinSchema, stateSchema, type RehearsalState, type Ack } from '../src/rehearsal/contract';
 import { apply, initialState, restartPaused } from '../src/rehearsal/controller';
-import type { PieceTiming } from '../src/rehearsal/timeline';
+import { TIMING_DERIVATION_VERSION, type PieceTiming } from '../src/rehearsal/timeline';
 import { validateScore } from './score-validation.server';
 export const serverNow = () => performance.timeOrigin + performance.now();
 const empty: PieceTiming = { baseBpm: 100, totalBeats: 0, tempos: [{ beat: 0, bpm: 100 }], measures: [] };
@@ -52,7 +52,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
             if(row) { versions.set(key,row); if(versions.size>100) versions.delete(versions.keys().next().value!); } }
         if (!row)
             throw Error('not_found');
-        if (row.timing) return row.timing;
+        if (row.timing?.derivationVersion===TIMING_DERIVATION_VERSION) return row.timing;
         let value = timings.get(row.content_hash);
         if (!value) {
             value = (async () => {
@@ -60,7 +60,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
                 const body = await pool.query('select native_score::text,musicxml from score_versions where ensemble_id=$1 and piece_id=$2 and version_no=$3', [e,p,v]);
                 if (!body.rows[0]) throw Error('not_found');
                 const derived = (await validateScore(row.format === 'score' ? body.rows[0].native_score : body.rows[0].musicxml, row.format, true)).timing!;
-                await pool.query('update score_versions set timing=$4 where ensemble_id=$1 and piece_id=$2 and version_no=$3 and timing is null',[e,p,v,JSON.stringify(derived)]);
+                await pool.query("update score_versions set timing=$4 where ensemble_id=$1 and piece_id=$2 and version_no=$3 and (timing is null or timing->>'derivationVersion' is distinct from '2')",[e,p,v,JSON.stringify(derived)]);
                 row.timing=derived;
                 return derived;
             })();
@@ -80,12 +80,16 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
     }
     async function persist(s: RehearsalState, checkLead = false) {
         if(!stateSchema.safeParse(s).success) throw Error('invalid');
+        const ownerAtStart=owner;
+        if(!ownerAtStart || closed)throw Error('unavailable');
         const db = checkLead ? await pool.connect() : pool;
         try {
         if(checkLead) await db.query('begin');
+        if(owner!==ownerAtStart || closed)throw Error('unavailable');
         const result = await db.query('insert into rehearsal_sessions(ensemble_id,revision,state) values($1,$2,$3) on conflict(ensemble_id) do update set revision=excluded.revision,state=excluded.state,updated_at=now() where rehearsal_sessions.revision < excluded.revision returning revision', [s.ensembleId,s.revision,JSON.stringify(s)]);
         if (!result.rowCount) { committed.delete(s.ensembleId); throw Error('unavailable'); }
         if(checkLead && env.PLAYBACK_LEAD_MS>0 && (s.effectiveAt ?? s.anchor.serverTime)-now()<Math.min(50,env.PLAYBACK_LEAD_MS)) throw Error('unavailable');
+        if(owner!==ownerAtStart || closed)throw Error('unavailable');
         if(checkLead) await db.query('commit');
         committed.set(s.ensembleId,s);
         } catch(error) { if(checkLead) await db.query('rollback'); if(!committed.has(s.ensembleId)) await load(s.ensembleId); throw error; }
@@ -94,7 +98,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
     async function publish(s: RehearsalState, checkLead = false) {
         if(closed || !ownershipReady) throw Error('unavailable');
         await persist(s,checkLead);
-        if (closed) return;
+        if (closed || !ownershipReady) return;
         ns.to(`rehearsal:${s.ensembleId}`).emit('playback:state',s); schedule(s);
     }
     function schedule(s: RehearsalState, failures=0) {
@@ -130,8 +134,9 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         retry.unref();
     }
     async function acquire() {
+      let client: PoolClient | undefined;
       try {
-        const client=await pool.connect();
+        client=await pool.connect();
         if(closed) {client.release();throw Error('unavailable');}
         owner=client;
         client.on('error',()=>{if(owner===client)loseOwnership();});
@@ -139,9 +144,14 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         if(!lock.rows[0].locked) throw Error('unavailable');
         // A query detects dead owner sessions even without subsequent commands.
         const probe={text:'select 1',query_timeout:2000};
-        heartbeat=setInterval(()=>{void client.query(probe).catch(()=>{if(owner===client)loseOwnership();});},5000);
+        const ownerClient=client;
+        heartbeat=setInterval(()=>{void ownerClient.query(probe).catch(()=>{if(owner===ownerClient)loseOwnership();});},5000);
         heartbeat.unref();
-        for(const recovered of pendingRecovery.values()) {await persist(recovered);pendingRecovery.delete(recovered.ensembleId);}
+        for(const recovered of pendingRecovery.values()) {
+          const existing=(await pool.query('select state from rehearsal_sessions where ensemble_id=$1',[recovered.ensembleId])).rows[0]?.state;
+          if(!existing || existing.revision<recovered.revision)await persist(recovered);
+          pendingRecovery.delete(recovered.ensembleId);
+        }
         const {rows} = await pool.query('select ensemble_id,revision,state from rehearsal_sessions');
         for(const row of rows) {
             let s: RehearsalState;
@@ -167,7 +177,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         if(owner!==client || closed) throw Error('unavailable');
         ownershipReady=true;failures=0;
       } catch(error) {
-        logError('rehearsal.recovery',error);loseOwnership();throw error;
+        logError('rehearsal.recovery',error);if(owner===client)loseOwnership();else if(!owner)retryOwnership();throw error;
       }
     }
     let ready=acquire();void ready.catch(()=>{});
@@ -221,7 +231,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         return; await waitReady(); await serial(e, async () => { const s = await load(e); if (!changes.some((c: any) => c.deleted && c.pieceId === s.pieceId))
         return; const next = initialState(e, s.updatedBy, now()); await publish({ ...next, revision: s.revision + 1 }); }); });
     ns.on('connection', socket => {
-        if ([...ns.sockets.values()].filter(s=>s.data.userId===socket.data.userId).length>10) { socket.disconnect(true); return; }
+        if ([...ns.sockets.values()].filter(s=>s.data.userId===socket.data.userId).length>10) { socket.emit('rehearsal:closed',{code:'socket_limit'});socket.disconnect(true); return; }
         let inFlight=0;
         socket.on('clock:ping', (ack: unknown) => { if (typeof ack === 'function' && admit('ping:'+socket.id,10,20))
             ack({ serverTime: now() }); });
