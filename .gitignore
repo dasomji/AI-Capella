@@ -31,3 +31,4 @@ dist-ssr
 
 .review-evidence/
 review-*.log
+.transcription-tmp/

@@ -1329,3 +1329,11 @@ themes; zero browser errors and zero forbidden external requests. Final
 hardware/operational limitations documented above. Every review item has its
 own local commit; follow-up test/harness commits preserve the intermediate
 failure evidence. All commits remain on `production-v1`; nothing was pushed.
+
+### Phase 4a — private originals and durable transcription (in progress)
+
+Storage uses a server-only S3 adapter, private scoped random keys, a maximum
+60-second signed GET, and ensemble/hash deduplication for ready originals.
+`stored_objects.kind` separates indefinite originals from disposable derivatives.
+A durable object-deletion outbox supports ensemble deletion without losing keys.
+No infrastructure has been provisioned. Plane MCP is unavailable in this session.
