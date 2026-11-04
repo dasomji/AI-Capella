@@ -496,6 +496,11 @@ async function receiveSharedState(state:RehearsalState) {
   if(arriveDirectly){viewOffsetBeats=0;if(arrivingAt && (arrivingAt.songId??arrivingAt.behind)===loadedSongId)restoreSongSettings(arrivingAt);endArrival();}
   renderNow();
 }
+function recalibrateSharedAudio(){
+ if(!audioEngine || !playerSession?.clock.usable)return;
+ const clock=playerSession.clock;
+ if(Math.abs(audioEngine.sharedDriftMs(clock.serverNow(),clock.diagnostics!.offsetMs))>15)scheduleSharedAudio();
+}
 function scheduleSharedAudio(at?:number){
  if(!audioEngine || !currentScore || !sharedState || !playerSession?.clock.usable)return;
  const now=at??playerSession.clock.serverNow();
@@ -4013,7 +4018,7 @@ async function runBootstrap() {
     );
     if (syncEnabled() && !playerSession) {
       sharedReadiness(false);
-      playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice,()=>scheduleSharedAudio());
+      playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice,recalibrateSharedAudio);
     }
   } catch (err) {
     libraryState = 'offline';
@@ -4346,7 +4351,7 @@ window.addEventListener('pagehide',leavePlaybackSession);
 window.addEventListener('pageshow',event=>{
  if(event.persisted && !leavingAccount && syncEnabled() && currentEnsemble && !playerSession){
   sharedReadiness(false);
-  playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice,()=>scheduleSharedAudio());
+  playerSession=new PlayerSession(currentEnsemble,receiveSharedState,sharedReadiness,sharedNotice,recalibrateSharedAudio);
  }
 });
 window.addEventListener('domain:error', (event)=>{const {status,code}=(event as CustomEvent).detail;if(code==='SESSION_EXPIRED' && !leavingAccount){leavePlaybackSession();audioEngine?.stop();clearLibrary();location.replace('/?state=expired');}if(status===403||status===404)void refreshEnsembleNames().then(()=>{renderLibraryHead();renderSongList();}).catch(()=>{});});
