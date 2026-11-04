@@ -359,3 +359,8 @@ it('keeps retrying unavailable joins beyond the old four attempts, and stops aft
  handlers.get('rehearsal:closed')({code:'socket_limit'});handlers.get('disconnect')('io server disconnect');await vi.advanceTimersByTimeAsync(60000);expect(attempts).toBe(7);expect(notices.at(-1)).toBe('socket_limit');expect(transport.ready).toBe(false);
  }finally{transport.dispose();vi.useRealTimers();}
 });
+it('compares server timing without false JSONB key-order mismatches',async()=>{
+ const {timingMatches}=await import('../src/rehearsal/timeline');
+ const reordered={measures:t.measures,tempos:t.tempos.map(({bpm,beat})=>({bpm,beat})),baseBpm:t.baseBpm,totalBeats:t.totalBeats};
+ expect(timingMatches(t,reordered)).toBe(true);expect(timingMatches(t,{...reordered,baseBpm:42})).toBe(false);
+});

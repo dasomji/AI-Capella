@@ -1,5 +1,5 @@
 import { playbackDriftMs } from './rehearsal/schedule';
-import { timingFromScore, secondsAt } from './rehearsal/timeline';
+import { timingFromScore, timingMatches, secondsAt } from './rehearsal/timeline';
 import { positionAt, lateJoin } from './rehearsal/controller';
 import { PlayerSession } from './rehearsal/player-session';
 import { preferenceCommands, SeekCoalescer } from './rehearsal/player-controls';
@@ -473,7 +473,7 @@ async function receiveSharedState(state:RehearsalState) {
     await loadSongLocally({id:state.pieceId,title:meta.title,format:meta.format,xml,imported:true},state.effectiveAt);
     const canonical=await api(`/ensembles/${currentEnsemble}/pieces/${state.pieceId}/versions/${state.versionNo}?timing=1`);
     const local=timingFromScore(currentScore!);
-    if(JSON.stringify(local)!==JSON.stringify(canonical.timing))console.warn('rehearsal.timing_mismatch',{pieceId:state.pieceId,versionNo:state.versionNo});
+    if(!timingMatches(local,canonical.timing))console.warn('rehearsal.timing_mismatch',{pieceId:state.pieceId,versionNo:state.versionNo});
     sharedTiming=canonical.timing;
     sharedVersion=state.versionNo;
   }

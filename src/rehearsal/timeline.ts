@@ -48,3 +48,8 @@ export function beatAt(seconds: number, t: PieceTiming): number {
     }
     return 0;
 }
+/** Compare musical timing independently of JSON/JSONB object-key ordering. */
+export function timingMatches(a: PieceTiming, b: PieceTiming) {
+    const key=(t:PieceTiming)=>JSON.stringify([t.derivationVersion,t.totalBeats,t.baseBpm,t.tempos.map(p=>[p.beat,p.bpm]),t.measures.map(m=>[m.startBeat,m.beats,m.beatType])]);
+    return key(a)===key(b);
+}
