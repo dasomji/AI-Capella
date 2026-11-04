@@ -2006,3 +2006,104 @@ selection and verified the targeted usage cases. A coordinated full integration,
 explicit build and secret scan are running separately to avoid concurrent dist
 rebuilds. The final mobile engraving adjustment is typechecked; a refreshed visual
 capture is pending that quiet window.
+
+### Phase 4b eval fixes — 2026-11-04
+
+Review remediation from 982019d, concurrent with Phase 4c on production-v1.
+All changes are local; no push, deployment, real email or paid/provider request.
+The following supersedes the earlier metric and remaining-work descriptions.
+
+- E1: isolate page comparison/validation and job failures; append each job to
+  JSONL and checkpoint JSON before advancing. Final JSONL summary plus JSON/MD
+  retain attempts, failures and partial results. Regressions cover a bad page
+  reference, malformed job manifest and successful subsequent job.
+- E2: rests have a separate metric and never contribute to note/pitch/onset/
+  duration totals. Empty pitched categories retain explicit zero denominators.
+- E3: onsets match musical quarter time plus pitch, with 1e-4 quarter tolerance;
+  one-beat shifts fail. Divisions and numeric alters normalize.
+- E4: measure-sequence edit DP aligns insertions/deletions; content fingerprints
+  and pitch/rhythm/clef profiles pair renamed parts; voice streams ignore exporter
+  labels. Attribute changes score once, tied halves merge, and all elided lyric
+  text is retained. Tests cover all eight requested reviewer cases, renamed part
+  reordering and normalization noise. Alignment remains a deterministic heuristic,
+  not a measured human editing estimate or product-quality acceptance threshold.
+- E5: isolated real refusal branches cover absent key, absent confirmation, CI
+  with a key/confirmation, and unknown option. Removing any guard breaks a test.
+- E6: usage cost groups combine completed/failed attempts. known_cost_usd and
+  unpriced_calls retain partial knowledge; totals/averages remain null if any
+  attempt is unpriced. Numeric JSON aggregates are numbers. Job metrics expose
+  null estimatedCost plus costUnknown/unpricedCalls, never unknown-as-zero.
+- E7: migration 0011 adds started_at and (model,started_at) indexes; usage rejects
+  ranges over 366 elapsed days with a 422 response explaining the limit.
+- E8: usage uses the same strict offset-aware Zod ISO validation as /metrics;
+  impossible dates and naive/reversed ranges fail.
+- E9: real usageSQL tests exercise both DST transitions, distinct 2/3-second
+  latency percentiles, mixed failed/completed calls, unknown cost and numeric HTTP
+  types. HTTP assertions select the configured UTC bucket; the SQL fall-back
+  assertion explicitly uses America/New_York, rather than conflating their days.
+- E10: sorted manifest paths determine --limit. Photo dry runs render distinct
+  degraded JPEGs offline. All replay costs are labeled synthetic in JSON/JSONL/MD.
+  Eight two-page jobs now include the bundled original CC0 round study with two
+  voices per part, two lyric verses, ties and a repeat. These remain smoke fixtures,
+  not realistic recognition-quality evidence or coverage of all ensemble idioms.
+- E11: synthetic provenance and inferred-rest warnings use inclusive endMeasure/
+  localMeasureEnd ranges. Template/backfill state avoids repeated sibling scans;
+  part/alignment lookups avoid growing linear searches/copies. Per-page metrics
+  persist compact continuation checkpoints; the next worker page reads only the
+  last checkpoint, with a one-time upgrade path for older jobs. Context includes
+  open ties/slurs/repeats/endings, both octave-shift directions, pedal and lyric
+  syllabic state. Building context across N pages is incremental, not prior-page
+  replay. The UI mapper understands inclusive source ranges.
+- E12: heartbeat interval is lease/5, minimum 1 second; non-overlapping renewals
+  use monotonic elapsed time to tolerate transient errors within the lease.
+  Pause controls are polled less often. Real DB regression injects a heartbeat
+  failure and verifies successful completion without premature abort.
+- E13: the 64k output budget includes reasoning and notation; low reasoning effort
+  reduces pressure on that shared budget. Truncated/partial pages remain terminal
+  with reviewRequired and an explicit page review_reason explaining smaller-region
+  resubmission. Automatic overlapping top/bottom retry is not safely feasible with
+  the current assembler: it concatenates pages and cannot identify overlapping
+  measures without risking deletion of legitimate repeated notation. Split retry
+  remains deferred until an overlap/deduplication policy and fixtures exist.
+- E14: repaired PROJECT development/deployment text and obsolete Firebase client
+  instructions; removed deleted-module references, 127 unused bilingual legacy
+  scan/feedback keys, dead feature CSS and the unused ensemble feedback flag.
+  The translation cleanup was committed separately while preserving concurrent
+  transcription translations. Existing scanMarks review strings/styles remain.
+
+Assembly regressions explicitly preserve two verses, endings, repeats, dacapo,
+rehearsal, tempo, dots and tuplets. Structural validity never asserts accuracy.
+
+Benchmark: `node --import tsx scripts/benchmark-assembly.ts`, 60 pages × 12 parts
+× 30 measures, 12,790 ms including worker startup/transfer; 2,594,197 provenance
+bytes for this all-recognized-measure fixture. Profile: parsing 1,260 ms, merging
+3,525 ms, validation 5,508 ms, serialization/range compression 1,264 ms; internal
+assembly total 11,664 ms. The <3,000 ms target is NOT met. DOM validation/querying
+and node import/merging dominate; replacing those with an ordered compact/streamed
+representation while preserving all notation remains the performance follow-up.
+The benchmark contains no inferred rests, so its sidecar size does not demonstrate
+the synthetic-range compression savings (the 30-measure range regression does).
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `npm test`: 227/227 passed, including the concurrent transcription UI suite.
+  Evaluation tests use unique temporary directories to prevent concurrent test
+  processes from interleaving JSONL artifacts.
+- `npm run build`: passed; `npm run check:secrets`: passed positive control and
+  clean final client scan, with no public source maps.
+- `npm run db:generate`: no drift after committing migration 0011.
+- `npm run eval:transcription -- --dry-run`: 8/8 two-page offline jobs completed,
+  synthetic fixture F1=1, no provider/network request and no live quality claim.
+- `npm run test:browser`: passed in the coordinated Phase 4c run, including full
+  account/design and three-client sync/offline/count-in/sleep/restart acceptance.
+  Earlier overlapping builds caused invitation-navigation failures; final runs
+  serialize builds. Evidence: `.review-evidence/p4c-standard-browser.log`.
+- `npm run test:integration`: final full run passed 77/77 (305,449 ms).
+  Earlier failures were corrected test fixtures: explicit integer casts in
+  interval arithmetic and selecting an unpriced HTTP bucket in the configured
+  UTC zone rather than assuming the New York SQL bucket. Targeted regressions
+  also passed. Evidence: `.transcription-tmp/eval-integration-green.log`.
+
+No live model/account availability, real-score accuracy, acceptance threshold or
+production cost is established by these tests. All commits remain local.
