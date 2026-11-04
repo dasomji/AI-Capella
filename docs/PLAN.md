@@ -2578,3 +2578,81 @@ retained in `.review-evidence/p5b-fixes-integration.log` and
 All changes stay local on production-v1. Only owned admin paths and the small
 HTTP admin-guard hunk were staged; concurrent private/offline changes were
 preserved. No push, production access, paid provider calls or real mail.
+
+### Phase 6a — legacy migration tooling (2026-11-04, AICAP-10)
+
+Implementation commit `c4a7414` adds operator-only Firestore export, transactional
+import/dry-run, reconciliation, delta/conflict handling and downloaded-backup
+rollback rehearsal. Developed exclusively against `demo-migration` emulator data
+and disposable PostgreSQL; no real Firebase connection, prototype mutation,
+production export/import, email delivery, freeze, cutover, push or retirement.
+Operator procedure and release checklist: `docs/MIGRATION.md`.
+
+The Admin exporter uses one read-only transaction for consistent collection and
+nested membership queries, JSONL binary/timestamp encoding and a final complete
+manifest with counts, size, SHA-256 and UTC start/end/read time. Outside the
+loopback emulator it requires explicit production-read acknowledgement and an
+operator-provided read-only credential. The import verifies the complete manifest
+before database work; legacy codes/memberships/sessions/clock pings and public
+samples are intentionally skipped and counted. Malformed/orphan/unknown-ensemble
+songs are quarantined in reports only, never silently made public.
+
+The `legacy_import_map` records source project/collection/document identity,
+legacy content hash, new entity and post-import fingerprint. Each ensemble uses
+one locked transaction; dry-run checks deferred constraints then rolls back.
+Reruns are no-ops; changed legacy content creates an immutable version, sort-only
+changes retain the version, and edited destination metadata/settings/order/version
+or provenance causes a conflict. Source deletions are flags unless explicitly
+applied; edited deletion targets are protected. Ensemble name deltas synchronize
+against their own import baseline. The importer uses shared domain score
+validation/timing/version insertion, title sanitization and granular settings
+schemas. Original-byte SHA and all unmappable legacy metadata/settings survive in
+provenance; reconciliation compares per-field settings/provenance, counts/order,
+normalized content, app-parser notation summaries and stored/recomputed timing.
+
+Leadership comes only from a reviewed operator JSON mapping (JSON chosen over
+YAML to keep the input boundary strict), whose hash is included in the report.
+Imported ensembles initially have zero members and explicit `awaiting_lead` state,
+visible through sysadmin oversight's zero-lead/member counts and import reports.
+Migration-only `lead` invitations require verified matching-email acceptance;
+the normal invitation API cannot create/convert/resend these grants. Acceptance
+clears awaiting-lead and normal last-lead constraints remain active. No anonymous
+UID becomes an account. No sending by default; explicit sends use the normal
+mailer after commit, with capture only in tests. Private JSON reports hold initial
+unsent links; explicit resend rotates them. UTC and configured-zone instants are
+both included in reports, independently of process TZ.
+
+`npm run test:migration` owns random ports/containers and covers 3 ensembles,
+plain/default MusicXML, >900 KB raw gzip, native score JSON, all legacy settings,
+odd sort keys, skipped transient documents and bad/unassigned records. It runs
+export → dry-run → real import → reconcile, checks idempotence and CLI JSON/MD
+reports, legacy version/name deltas, destination conflicts, flagged/applied
+source deletion, captured invitation sending, correct/wrong-email acceptance,
+app parse/timing and actual headless PDF preparation. Firestore write-method
+spies record zero calls during export/import/reconciliation, and source-state
+hashes remain unchanged through import and rollback. The pre-import dump is
+captured inside the owned DB container over its local socket, copied as binary,
+and checked against independent server SHA/size before fully restoring the
+downloaded archive. Post-restore reconciliation correctly reports missing imports;
+accounts and pieces return to their pre-import counts. The rehearsal's restore
+script refuses containers outside its disposable naming convention. The first
+shared-backup-helper attempt failed environment forwarding under rootless Docker;
+that failed evidence was retained, and the direct local-socket rehearsal path
+avoids that external dependency. This does not replace Phase 6b's DB/object
+backup verification or manual production recovery approval.
+
+Verification: `npm run typecheck` passed; `npm test` **260/260** passed;
+`npm run build` passed with isolated `LIGHTSCORE_BUILD_ROOT`;
+`npm run test:integration` **87/87** passed; `npm run check:secrets` passed
+(positive control and clean browser artifacts, no migration Firebase dependency
+in the client); `npm run db:generate` reported no drift; new
+`npm run test:migration` passed, including its separate migration-script
+TypeScript check under non-UTC process TZ. `npm run test:browser` passed the
+complete account/theme, offline-cache, two-account and three-client acceptance
+suites, including sleep, count-in, loops, real server restart, revocation and
+account switching (exit 0). Logs: `migration-test-final3.log` and ignored
+`migration/.runtime/{unit,integration,build,secrets,typecheck-final,browser}.log`;
+synthetic snapshots/backups/results remain in ignored per-run runtime directories.
+All staging/commits used explicit owned paths and a separate index to preserve
+the concurrent Phase 6b work. The validated Plane project mapping was retained;
+AICAP-10 received the implementation/evidence update.
