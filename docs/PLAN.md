@@ -2925,3 +2925,22 @@ shared-dist entry-page 500 and an earlier loop-alignment timeout. The final full
 runs passed without editing those other agents' owned files. Rehearsals used only
 demo Firestore and disposable local PostgreSQL/capture mail. No real Firebase,
 mail delivery, provisioning or push occurred. Plane AICAP-10 tracks this follow-up.
+
+
+### Final CI/harness fixes (2026-11-04)
+
+Follow-up to the final fresh-clone verification, tracked as Plane AICAP-25:
+CI now provides digest-pinned Mailpit and strict bash pipeline failure handling.
+Integration respects configurable S3/Mailpit endpoints; admin/final evidence and
+secret-scan builds are isolated/configurable. Foundation diagnostics identify the
+401s as signed-out `/api/me` probes and correlate each allowed console message
+with its response; unexpected console/HTTP errors still fail. The secret scanner
+accepts React's `server/client` prose while retaining server module/secret checks.
+Development guidance now documents actual evidence/build paths and CI mail needs.
+Verification commands, foundation diagnosis and results are in
+[CI_HARNESS_VERIFICATION.md](CI_HARNESS_VERIFICATION.md); local logs/screenshots
+are under ignored `.review-evidence/ci-fixes/`. All local CI/browser checks passed:
+271 unit tests per timezone, 90 integration tests, 17 migration tests, 8 eval
+cases, full backup/ops rehearsals, both Docker builds/canaries, all browser suites
+including foundation, and YAML parse/manual review. Owned fixtures were removed.
+No push or deployment.
