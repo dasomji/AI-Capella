@@ -14,7 +14,7 @@ import { validateScore } from './score-validation.server';
 import { logError } from './logger.server';
 import { env } from './env.server';
 import { FakeProvider, ReferenceRenderer, FakeAssembler, ProviderError, type TranscriptionProvider, type PageRenderer, type JobAssembler, type PageResult } from './transcription-provider.server';
-const defaultProvider=()=>env.NODE_ENV==='test'?new FakeProvider():new OpenAITranscriptionProvider(env.OPENAI_TRANSCRIPTION_MODEL);
+const defaultProvider=()=>env.NODE_ENV==='test'||env.TRANSCRIPTION_PROVIDER==='fake'?new FakeProvider():new OpenAITranscriptionProvider(env.OPENAI_TRANSCRIPTION_MODEL);
 export async function processingPaused(){return env.TRANSCRIPTION_EMERGENCY_STOP==='1' || !!(await pool.query('select paused from transcription_control where id=1')).rows[0]?.paused;}
 export async function createJob(user:string,ensemble:string,key:string,objects:string[],options:Record<string,unknown>,provider:TranscriptionProvider=defaultProvider()) {
  const requestHash=createHash('sha256').update(JSON.stringify({objects,options})).digest('hex');

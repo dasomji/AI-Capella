@@ -11,9 +11,11 @@ export interface ObjectStorage {
 }
 export class S3Storage implements ObjectStorage {
   private client:S3Client;
+  private signingClient:S3Client;
   constructor(private bucket=env.S3_BUCKET) {
     if(!bucket || !env.S3_ENDPOINT || !env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY) throw Error('S3 configuration required');
     this.client=new S3Client({endpoint:env.S3_ENDPOINT,region:env.S3_REGION,forcePathStyle:env.S3_FORCE_PATH_STYLE,requestChecksumCalculation:'WHEN_REQUIRED',credentials:{accessKeyId:env.S3_ACCESS_KEY_ID,secretAccessKey:env.S3_SECRET_ACCESS_KEY},requestHandler:{requestTimeout:30000}});
+    this.signingClient=env.S3_PUBLIC_ENDPOINT?new S3Client({endpoint:env.S3_PUBLIC_ENDPOINT,region:env.S3_REGION,forcePathStyle:env.S3_FORCE_PATH_STYLE,credentials:{accessKeyId:env.S3_ACCESS_KEY_ID,secretAccessKey:env.S3_SECRET_ACCESS_KEY}}):this.client;
   }
   async initialize(){
     try {await this.client.send(new HeadBucketCommand({Bucket:this.bucket}));}
@@ -23,7 +25,7 @@ export class S3Storage implements ObjectStorage {
   async get(key:string){const r=await this.client.send(new GetObjectCommand({Bucket:this.bucket,Key:key}));return r.Body as Readable;}
   async head(key:string){const r=await this.client.send(new HeadObjectCommand({Bucket:this.bucket,Key:key}));return {size:r.ContentLength!,type:r.ContentType};}
   async delete(key:string){await this.client.send(new DeleteObjectCommand({Bucket:this.bucket,Key:key}));}
-  signedGet(key:string,seconds=60,filename='original'){return getSignedUrl(this.client,new GetObjectCommand({Bucket:this.bucket,Key:key,ResponseContentDisposition:`attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,ResponseContentType:'application/octet-stream'}),{expiresIn:Math.max(1,Math.min(60,seconds))});}
+  signedGet(key:string,seconds=60,filename='original'){return getSignedUrl(this.signingClient,new GetObjectCommand({Bucket:this.bucket,Key:key,ResponseContentDisposition:`attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,ResponseContentType:'application/octet-stream'}),{expiresIn:Math.max(1,Math.min(60,seconds))});}
 }
 let instance:S3Storage|undefined;
 export function storage(){return instance ??=new S3Storage();}

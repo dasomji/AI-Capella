@@ -92,11 +92,11 @@ function makeAuth() {
       disableOriginCheck: false,
       ipAddress: { ipAddressHeaders: ["x-lightscore-socket-ip"] },
       backgroundTasks: { handler: trackBackground },
-      useSecureCookies: env.NODE_ENV === "production",
+      useSecureCookies: env.BETTER_AUTH_URL.startsWith("https://"),
       defaultCookieAttributes: {
         httpOnly: true,
         sameSite: "lax",
-        secure: env.NODE_ENV === "production",
+        secure: env.BETTER_AUTH_URL.startsWith("https://"),
       },
     },
     onAPIError: {

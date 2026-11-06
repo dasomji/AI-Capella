@@ -28,9 +28,11 @@ export function parseEnv(input: NodeJS.ProcessEnv, role: "web" | "worker" = "web
       ),
     MAIL_TRANSPORT: z.enum(["smtp", "capture", "resend"]).default("smtp"),
     SMTP_URL: z.string().default("smtp://127.0.0.1:21025"),
+    SMTP_SOCKET_PATH: z.string().optional(),
     RESEND_API_KEY: z.string().optional(),
     MAIL_FROM: z.string().default("LightScore <noreply@localhost.test>"),
     S3_ENDPOINT: z.string().optional(),
+    S3_PUBLIC_ENDPOINT: z.url().optional(),
     S3_FORCE_PATH_STYLE: z.enum(["true", "false"]).default("true").transform(v => v === "true"),
     S3_REGION: z.string().default("us-east-1"),
     S3_BUCKET: z.string().optional(),
@@ -49,6 +51,7 @@ export function parseEnv(input: NodeJS.ProcessEnv, role: "web" | "worker" = "web
     TRANSCRIPTION_UNCLAIMED_MS: z.coerce.number().int().positive().default(15*60*1000),
     TRANSCRIPTION_MAX_ATTEMPTS: z.coerce.number().int().positive().max(10).default(3),
     TRANSCRIPTION_EMERGENCY_STOP: z.enum(['0','1']).default('0'),
+    TRANSCRIPTION_PROVIDER: z.enum(['openai','fake']).default('openai'),
     TRANSCRIPTION_PRICE_TABLE: z.string().default('{}').refine(value=>{try{return z.record(z.string(),z.object({input:z.number().nonnegative().finite(),output:z.number().nonnegative().finite()}).strict()).safeParse(JSON.parse(value)).success;}catch{return false;}}),
     OPENAI_TRANSCRIPTION_MODEL: z.string().trim().min(1).default("gpt-6.1-sol"),
     OPENAI_API_KEY: z.string().optional(),
@@ -87,6 +90,8 @@ export function parseEnv(input: NodeJS.ProcessEnv, role: "web" | "worker" = "web
       `Invalid server configuration: ${result.error.issues.map((i) => i.path.join(".")).join(", ")}`,
     );
   const env = result.data;
+  if (env.NODE_ENV === "production" && (env.TRANSCRIPTION_PROVIDER === "fake" || env.SMTP_SOCKET_PATH))
+    throw new Error("Development provider and mail socket are forbidden in production");
   if (
     role === "web" && env.NODE_ENV === "production" &&
     /replace-with|change-me/i.test(env.BETTER_AUTH_SECRET)

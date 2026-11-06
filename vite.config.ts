@@ -4,9 +4,17 @@ import { createHash } from 'node:crypto';
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
+const previewOrigin = process.env.LIZARDTAIL_ORIGIN ? new URL(process.env.LIZARDTAIL_ORIGIN) : undefined;
 export default defineConfig({
   build: { outDir: process.env.LIGHTSCORE_BUILD_ROOT ?? 'dist' },
-  server: { port: 3000, strictPort: true },
+  server: {
+    host: '127.0.0.1', port: Number(process.env.PORT ?? 3000), strictPort: true,
+    ...(previewOrigin ? {
+      allowedHosts: [previewOrigin.hostname],
+      origin: previewOrigin.origin,
+      hmr: { protocol: 'wss', host: previewOrigin.hostname, clientPort: Number(previewOrigin.port || 443) },
+    } : {}),
+  },
   plugins: [
     {
       name: 'lightscore-offline-shell',
