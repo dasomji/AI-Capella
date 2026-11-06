@@ -106,6 +106,14 @@ review and independent verification belong to the parent orchestration run.
 
 ## Open questions
 
+Private preview (2026-11-06): main's local gateways and services are configured;
+the serving host times out reaching its own named HTTPS Services. There is no
+linked second tailnet client, so remote browser reachability remains unverified.
+An authorized operator may need to approve the three LightScore main Service
+advertisements and grant client access; do not change host tags/ACLs blindly.
+The shared ladder check:fast/check:full/verify:app contract is also absent; preview
+verification uses the repository's existing checks and task-specific browser proof.
+
 No Phase 1 credential or product blocker. Before release, run the interactive
 musical smoke scenarios, triage retained dependency advisories, and configure
 verified production sender/HTTPS origins through an authorized operator. This

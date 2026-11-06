@@ -16,8 +16,37 @@ npm run dev
 Compose exposes Postgres 25432, SeaweedFS S3 28333, Mailpit SMTP 21025/UI 28025.
 MAIL_TRANSPORT=smtp delivers only to local Mailpit. `capture` is an in-process test
 adapter. Production requires HTTPS + Resend. Development worker uses a real provider
-unless deliberately injected; routine tests run NODE_ENV=test with FakeProvider.
+unless `TRANSCRIPTION_PROVIDER=fake`; routine tests run NODE_ENV=test with FakeProvider.
 Never use production keys or invoke paid AI accidentally.
+
+## Private Lizardtail preview
+
+From `/home/dev/Development/AI-Capella-production` on the development host:
+
+```sh
+# This host's PATH CLI has stale compiled output; use the isolated current build.
+export PATH="$HOME/.local/state/aicap-preview/tools/bin:$PATH"
+lizardtail plan --instance main
+lizardtail up --instance main
+lizardtail exec --instance main -- npm run seed:dev
+lizardtail down --instance main  # preserves data and stable URLs
+```
+
+Use the HTTPS app/mail/storage URLs printed by `up`. `admin@test.com` and
+`user@test.com` both use password `password`, with verified emails. Admin is a
+sysadmin and Testchor lead; Test User is an ordinary member without capabilities.
+The idempotent seed resets those credentials, imports bundled MusicXML through the
+normal piece API, and refuses production mode or non-loopback databases. Never use
+it in production. The manifest provides fresh isolated Postgres 17/SeaweedFS,
+generated host-state secrets, FakeProvider, secure HTTPS cookies and native Mailpit
+v1.27 (extracted from compose's pinned image; installed on the host PATH, no relay).
+Mailpit stores mail and its private SMTP socket outside Git in host state. New
+signups' verification mail appears in its browser UI. `SMTP_SOCKET_PATH` is a
+development alternative to SMTP_URL; `S3_PUBLIC_ENDPOINT` controls only signed
+browser downloads while `S3_ENDPOINT` stays internal. HMR covers client edits;
+restart with `down`/`up` after server/worker changes. Named Tailscale Services need
+host advertisement approval and client ACL grants; local checks cannot prove
+another device's access. See [preview verification](agents/preview.md).
 
 ```sh
 npm run typecheck

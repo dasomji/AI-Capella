@@ -36,7 +36,8 @@
     "restore:verify": "node --import tsx scripts/ops-backup.mjs verify",
     "test:backup": "node --import tsx scripts/ops-backup-test.mjs",
     "ops:canary": "node --import tsx scripts/ops-canary.ts",
-    "test:ops": "node --import tsx scripts/ops-shutdown-test.mjs"
+    "test:ops": "node --import tsx scripts/ops-shutdown-test.mjs",
+    "seed:dev": "node --env-file-if-exists=.env --import tsx scripts/seed-dev.ts"
   },
   "devDependencies": {
     "@types/jsdom": "^30.0.0",
