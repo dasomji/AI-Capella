@@ -1,0 +1,4968 @@
+{
+  "legacyCommit": "3c9d43c",
+  "entries": [
+    {
+      "file": "public/favicon.svg",
+      "kind": "raw-color",
+      "context": "asset",
+      "value": "#1b1621",
+      "count": 1
+    },
+    {
+      "file": "public/favicon.svg",
+      "kind": "raw-color",
+      "context": "asset",
+      "value": "#72B7F2",
+      "count": 1
+    },
+    {
+      "file": "public/favicon.svg",
+      "kind": "raw-color",
+      "context": "asset",
+      "value": "#C891EE",
+      "count": 1
+    },
+    {
+      "file": "public/favicon.svg",
+      "kind": "raw-color",
+      "context": "asset",
+      "value": "#EDC96B",
+      "count": 1
+    },
+    {
+      "file": "public/favicon.svg",
+      "kind": "raw-color",
+      "context": "asset",
+      "value": "#F4879B",
+      "count": 1
+    },
+    {
+      "file": "public/manifest.webmanifest",
+      "kind": "raw-color",
+      "context": "asset",
+      "value": "#1B1621",
+      "count": 2
+    },
+    {
+      "file": "server/page-render.mjs",
+      "kind": "raw-color",
+      "context": "try{ let image=path; if(contentType==='application/pdf'){ const stderr=openSync(dir+'/renderer-stde",
+      "value": "#ffffff",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "raw-color",
+      "context": ".admin-confirm / box-shadow",
+      "value": "#0009",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "raw-color",
+      "context": ".admin-detail / box-shadow",
+      "value": "#0008",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "raw-color",
+      "context": ".admin-management-confirm::backdrop / background",
+      "value": "#0009",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "raw-color",
+      "context": ".admin-shell header / border-bottom",
+      "value": "#ae655c",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "raw-color",
+      "context": ".admin-shell header::after / background",
+      "value": "#ae655c",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "raw-font",
+      "context": ".admin-shell .admin-close / font",
+      "value": "28px sans-serif",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-confirm button",
+      "value": ".admin-confirm button",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-confirm input",
+      "value": ".admin-confirm input",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-management button",
+      "value": ".admin-management button",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell .admin-filters fieldset button,.admin-shell .admin-presets button",
+      "value": ".admin-shell .admin-filters fieldset button,.admin-shell .admin-presets button",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell .admin-id button",
+      "value": ".admin-shell .admin-id button",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell .language-toggle button,.admin-filters fieldset button,.admin-presets button",
+      "value": ".admin-shell .language-toggle button,.admin-filters fieldset button,.admin-presets button",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell .language-toggle button[aria-pressed=true],.admin-filters button[aria-pressed=true]",
+      "value": ".admin-shell .language-toggle button[aria-pressed=true],.admin-filters button[aria-pressed=true]",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell button:disabled",
+      "value": ".admin-shell button:disabled",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell button",
+      "value": ".admin-shell button",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell button[aria-disabled=true]",
+      "value": ".admin-shell button[aria-disabled=true]",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell button[aria-pressed=true]",
+      "value": ".admin-shell button[aria-pressed=true]",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell input,.admin-shell select",
+      "value": ".admin-shell input,.admin-shell select",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell input::placeholder",
+      "value": ".admin-shell input::placeholder",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell input[type=checkbox]",
+      "value": ".admin-shell input[type=checkbox]",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell textarea",
+      "value": ".admin-shell textarea",
+      "count": 1
+    },
+    {
+      "file": "src/admin.css",
+      "kind": "screen-control-selector",
+      "context": ".admin-shell th button",
+      "value": ".admin-shell th button",
+      "count": 1
+    },
+    {
+      "file": "src/artwork.ts",
+      "kind": "raw-color",
+      "context": "export function drawCover(ctx: CanvasRenderingContext2D, w: number, h: number, data: CoverData) {",
+      "value": "#15131F",
+      "count": 1
+    },
+    {
+      "file": "src/artwork.ts",
+      "kind": "raw-color",
+      "context": "export function drawMark(ctx: CanvasRenderingContext2D, size: number, withTile: boolean) { ctx.cle",
+      "value": "#17151F",
+      "count": 1
+    },
+    {
+      "file": "src/artwork.ts",
+      "kind": "raw-color",
+      "context": "export function drawPenRibbons(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, o: Ri",
+      "value": "rgba(255,250,242,0.9)",
+      "count": 1
+    },
+    {
+      "file": "src/artwork.ts",
+      "kind": "raw-color",
+      "context": "export function fadeEnds(ctx: CanvasRenderingContext2D, w: number, h: number, o: RibbonOptions, left",
+      "value": "rgba(0,0,0,0)",
+      "count": 2
+    },
+    {
+      "file": "src/artwork.ts",
+      "kind": "raw-color",
+      "context": "export function fadeEnds(ctx: CanvasRenderingContext2D, w: number, h: number, o: RibbonOptions, left",
+      "value": "rgba(0,0,0,1)",
+      "count": 2
+    },
+    {
+      "file": "src/auth.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .auth-shell .invitation-title / color",
+      "value": "#795315",
+      "count": 1
+    },
+    {
+      "file": "src/auth.css",
+      "kind": "raw-color",
+      "context": ".account-wordmark .ls-score / filter",
+      "value": "#0003",
+      "count": 1
+    },
+    {
+      "file": "src/auth.css",
+      "kind": "screen-control-selector",
+      "context": ".account-links button:disabled",
+      "value": ".account-links button:disabled",
+      "count": 1
+    },
+    {
+      "file": "src/auth.css",
+      "kind": "screen-control-selector",
+      "context": ".account-links button:hover",
+      "value": ".account-links button:hover",
+      "count": 1
+    },
+    {
+      "file": "src/auth.css",
+      "kind": "screen-control-selector",
+      "context": ".auth-shell input:focus",
+      "value": ".auth-shell input:focus",
+      "count": 1
+    },
+    {
+      "file": "src/auth.css",
+      "kind": "screen-control-selector",
+      "context": ".auth-shell input",
+      "value": ".auth-shell input",
+      "count": 1
+    },
+    {
+      "file": "src/auth.css",
+      "kind": "screen-control-selector",
+      "context": ".language-toggle button",
+      "value": ".language-toggle button",
+      "count": 1
+    },
+    {
+      "file": "src/auth.css",
+      "kind": "screen-control-selector",
+      "context": ".password-line input",
+      "value": ".password-line input",
+      "count": 1
+    },
+    {
+      "file": "src/backdrop.ts",
+      "kind": "raw-color",
+      "context": "draw",
+      "value": "#0c0a14",
+      "count": 1
+    },
+    {
+      "file": "src/backdrop.ts",
+      "kind": "raw-color",
+      "context": "draw",
+      "value": "#120e1c",
+      "count": 1
+    },
+    {
+      "file": "src/backdrop.ts",
+      "kind": "raw-color",
+      "context": "TONES",
+      "value": "#110d1b",
+      "count": 1
+    },
+    {
+      "file": "src/backdrop.ts",
+      "kind": "raw-color",
+      "context": "TONES",
+      "value": "#141020",
+      "count": 1
+    },
+    {
+      "file": "src/backdrop.ts",
+      "kind": "raw-color",
+      "context": "TONES",
+      "value": "#181326",
+      "count": 1
+    },
+    {
+      "file": "src/backdrop.ts",
+      "kind": "raw-color",
+      "context": "TONES",
+      "value": "#1c162d",
+      "count": 1
+    },
+    {
+      "file": "src/backdrop.ts",
+      "kind": "raw-color",
+      "context": "TONES",
+      "value": "#211934",
+      "count": 1
+    },
+    {
+      "file": "src/backdrop.ts",
+      "kind": "raw-color",
+      "context": "TONES",
+      "value": "#261c3a",
+      "count": 1
+    },
+    {
+      "file": "src/goldInk.ts",
+      "kind": "raw-color",
+      "context": "[a, b, c]",
+      "value": "rgb(104,72,20)",
+      "count": 1
+    },
+    {
+      "file": "src/goldInk.ts",
+      "kind": "raw-color",
+      "context": "[a, b, c]",
+      "value": "rgb(112,78,22)",
+      "count": 1
+    },
+    {
+      "file": "src/goldInk.ts",
+      "kind": "raw-color",
+      "context": "[a, b, c]",
+      "value": "rgb(140,106,46)",
+      "count": 1
+    },
+    {
+      "file": "src/goldInk.ts",
+      "kind": "raw-color",
+      "context": "[a, b, c]",
+      "value": "rgb(150,114,50)",
+      "count": 1
+    },
+    {
+      "file": "src/goldInk.ts",
+      "kind": "raw-color",
+      "context": "[a, b, c]",
+      "value": "rgb(160,116,40)",
+      "count": 1
+    },
+    {
+      "file": "src/goldInk.ts",
+      "kind": "raw-color",
+      "context": "[a, b, c]",
+      "value": "rgb(196,158,84)",
+      "count": 1
+    },
+    {
+      "file": "src/goldInk.ts",
+      "kind": "raw-font",
+      "context": "FONT_SCRIPT",
+      "value": "\"Italianno\", cursive",
+      "count": 1
+    },
+    {
+      "file": "src/inkWordmark.ts",
+      "kind": "named-color",
+      "context": "export function renderInk(canvas: HTMLCanvasElement, text: string, size: number, weight = 500, tone:",
+      "value": "gold",
+      "count": 2
+    },
+    {
+      "file": "src/inkWordmark.ts",
+      "kind": "raw-color",
+      "context": "export function renderInk(canvas: HTMLCanvasElement, text: string, size: number, weight = 500, tone:",
+      "value": "#fff",
+      "count": 2
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "under <- HOT_STOPS",
+      "value": "[0.08, 0.22, 0.11]",
+      "count": 3
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "under <- HOT_STOPS",
+      "value": "[0.3, 0.82, 0.4]",
+      "count": 3
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-color",
+      "context": "THROUGH_STOPS",
+      "value": "rgba(232,216,182,0.1)",
+      "count": 1
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-color",
+      "context": "THROUGH_STOPS",
+      "value": "rgba(232,216,182,0.18)",
+      "count": 1
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-color",
+      "context": "THROUGH_STOPS",
+      "value": "rgba(232,216,182,0)",
+      "count": 2
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-color",
+      "context": "THROUGH_STOPS",
+      "value": "rgba(6,4,12,0.22)",
+      "count": 1
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-color",
+      "context": "THROUGH_STOPS",
+      "value": "rgba(6,4,12,0.38)",
+      "count": 1
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-color",
+      "context": "THROUGH_STOPS",
+      "value": "rgba(6,4,12,0.46)",
+      "count": 1
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-color",
+      "context": "THROUGH_STOPS",
+      "value": "rgba(6,4,12,0)",
+      "count": 2
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-template-channels",
+      "context": "HOT_WHITE",
+      "value": "rgba(255,226,166,",
+      "count": 1
+    },
+    {
+      "file": "src/lantern.ts",
+      "kind": "raw-template-channels",
+      "context": "HOT_WHITE",
+      "value": "rgba(255,249,240,",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "named-color",
+      "context": "ink",
+      "value": "gold",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "raw-color",
+      "context": "frame",
+      "value": "#000",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "raw-color",
+      "context": "frame",
+      "value": "rgba(255,200,140,0)",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "raw-color",
+      "context": "function renderLight(size: number, dpr: number): LightArt { const font = `400 ${size}px ${FONT_SCR",
+      "value": "rgb(255,252,244)",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "raw-color",
+      "context": "function renderLight(size: number, dpr: number): LightArt { const font = `400 ${size}px ${FONT_SCR",
+      "value": "rgb(46,32,22)",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "raw-template-channels",
+      "context": "frame",
+      "value": "rgba(255,200,140,",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "raw-template-channels",
+      "context": "frame",
+      "value": "rgba(255,236,200,",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "raw-template-channels",
+      "context": "frame",
+      "value": "rgba(255,253,246,",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "raw-template-channels",
+      "context": "function glow(ctx: CanvasRenderingContext2D, letters: HTMLCanvasElement, dpr: number, size: number)",
+      "value": "rgba(226,150,52,",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "raw-template-channels",
+      "context": "function glow(ctx: CanvasRenderingContext2D, letters: HTMLCanvasElement, dpr: number, size: number)",
+      "value": "rgba(255,190,112,",
+      "count": 1
+    },
+    {
+      "file": "src/lightRibbons.ts",
+      "kind": "raw-color",
+      "context": "export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, o:",
+      "value": "rgba(255,200,150,0)",
+      "count": 1
+    },
+    {
+      "file": "src/lightRibbons.ts",
+      "kind": "raw-color",
+      "context": "export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, o:",
+      "value": "rgba(255,228,160,0.95)",
+      "count": 1
+    },
+    {
+      "file": "src/lightRibbons.ts",
+      "kind": "raw-color",
+      "context": "export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, o:",
+      "value": "rgba(255,250,242,0.95)",
+      "count": 1
+    },
+    {
+      "file": "src/lightRibbons.ts",
+      "kind": "raw-template-channels",
+      "context": "export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, o:",
+      "value": "rgba(255,200,150,",
+      "count": 1
+    },
+    {
+      "file": "src/lightRibbons.ts",
+      "kind": "raw-template-channels",
+      "context": "export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, o:",
+      "value": "rgba(255,226,186,",
+      "count": 1
+    },
+    {
+      "file": "src/lightRibbons.ts",
+      "kind": "raw-template-channels",
+      "context": "export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, o:",
+      "value": "rgba(255,236,190,",
+      "count": 1
+    },
+    {
+      "file": "src/lightRibbons.ts",
+      "kind": "raw-template-channels",
+      "context": "export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, o:",
+      "value": "rgba(255,250,242,",
+      "count": 2
+    },
+    {
+      "file": "src/main.ts",
+      "kind": "raw-color",
+      "context": "window.setInterval(()=>{ if(!syncEnabled() || !sharedState || !currentScore || !playerSession?.cloc",
+      "value": "#16151c",
+      "count": 1
+    },
+    {
+      "file": "src/main.ts",
+      "kind": "raw-color",
+      "context": "window.setInterval(()=>{ if(!syncEnabled() || !sharedState || !currentScore || !playerSession?.cloc",
+      "value": "#eee",
+      "count": 1
+    },
+    {
+      "file": "src/overview.ts",
+      "kind": "raw-color",
+      "context": "render",
+      "value": "rgba(19,18,30,0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/overview.ts",
+      "kind": "raw-color",
+      "context": "render",
+      "value": "rgba(232,216,182,0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "DUSK",
+      "value": "#6FD3BE",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "DUSK",
+      "value": "#72B7F2",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "DUSK",
+      "value": "#9A9CF5",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "DUSK",
+      "value": "#A9D38A",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "DUSK",
+      "value": "#C891EE",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "DUSK",
+      "value": "#EDC96B",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "DUSK",
+      "value": "#F4879B",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "DUSK",
+      "value": "#F6A77A",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "INKS",
+      "value": "#1E7F70",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "INKS",
+      "value": "#2D69AE",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "INKS",
+      "value": "#4E4EB4",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "INKS",
+      "value": "#5A8A2A",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "INKS",
+      "value": "#8445A6",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "INKS",
+      "value": "#9C7414",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "INKS",
+      "value": "#B8384F",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-color",
+      "context": "INKS",
+      "value": "#BF5A26",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-hsl-template",
+      "context": "export function colorForPart(index: number, count: number): string { const n = Math.max(1, count);",
+      "value": "`hsl(${hue}, 60%, 38%)`",
+      "count": 1
+    },
+    {
+      "file": "src/palette.ts",
+      "kind": "raw-hsl-template",
+      "context": "export function colorForPart(index: number, count: number): string { const n = Math.max(1, count);",
+      "value": "`hsl(${hue}, 70%, 72%)`",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[12, 12, 0.4]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[12, 12, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[12, 12, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[128, 128, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[16, 16, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[16, 16, 0.75]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[16, 32, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[16, 32, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[160, 160, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[192, 192, 0.7]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[192, 192, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[2, 2, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[238, 162, 66]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[24, 24, 0.2]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[24, 24, 0.22]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[24, 24, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[24, 24, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[255, 204, 150]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[255, 244, 228]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[255, 250, 236]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[3, 3, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[32, 32, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[32, 64, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[4, 4, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[4, 4, 0.75]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[4, 4, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[4, 8, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[48, 48, 0.3]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[6, 4, 10]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[6, 6, 0.65]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[6, 6, 0.7]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[6, 6, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[64, 128, 0.35]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[64, 64, 0.3]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[8, 16, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[8, 8, 0.4]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[8, 8, 0.45]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[8, 8, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[8, 8, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[96, 62, 28]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- dark",
+      "value": "[96, 96, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "'4,2,8'",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "'96,62,28'",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[12, 12, 0.4]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[12, 12, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[12, 12, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[128, 128, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[16, 16, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[16, 16, 0.75]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[16, 32, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[16, 32, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[160, 160, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[192, 192, 0.7]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[192, 192, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[2, 2, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[238, 162, 66]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[24, 24, 0.2]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[24, 24, 0.22]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[24, 24, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[24, 24, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[255, 204, 150]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[255, 244, 228]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[255, 250, 236]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[3, 3, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[32, 32, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[32, 64, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[4, 4, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[4, 4, 0.75]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[4, 4, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[4, 8, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[48, 48, 0.3]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[6, 4, 10]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[6, 6, 0.65]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[6, 6, 0.7]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[6, 6, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[64, 128, 0.35]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[64, 64, 0.3]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[8, 16, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[8, 8, 0.4]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[8, 8, 0.45]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[8, 8, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[8, 8, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[96, 62, 28]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- darkFibre",
+      "value": "[96, 96, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[12, 12, 0.4]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[12, 12, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[12, 12, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[128, 128, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[16, 16, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[16, 16, 0.75]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[16, 32, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[16, 32, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[160, 160, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[192, 192, 0.7]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[192, 192, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[2, 2, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[238, 162, 66]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[24, 24, 0.2]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[24, 24, 0.22]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[24, 24, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[24, 24, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[255, 204, 150]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[255, 244, 228]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[255, 250, 236]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[3, 3, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[32, 32, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[32, 64, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[4, 4, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[4, 4, 0.75]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[4, 4, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[4, 8, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[48, 48, 0.3]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[6, 4, 10]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[6, 6, 0.65]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[6, 6, 0.7]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[6, 6, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[64, 128, 0.35]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[64, 64, 0.3]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[8, 16, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[8, 8, 0.4]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[8, 8, 0.45]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[8, 8, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[8, 8, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[96, 62, 28]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "draw <- warm",
+      "value": "[96, 96, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "'4,2,8'",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "'96,62,28'",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[12, 12, 0.4]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[12, 12, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[12, 12, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[128, 128, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[16, 16, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[16, 16, 0.75]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[16, 32, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[16, 32, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[160, 160, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[192, 192, 0.7]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[192, 192, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[2, 2, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[238, 162, 66]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[24, 24, 0.2]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[24, 24, 0.22]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[24, 24, 0.25]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[24, 24, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[255, 204, 150]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[255, 244, 228]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[255, 250, 236]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[3, 3, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[32, 32, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[32, 64, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[4, 4, 0.6]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[4, 4, 0.75]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[4, 4, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[4, 8, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[48, 48, 0.3]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[6, 4, 10]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[6, 6, 0.65]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[6, 6, 0.7]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[6, 6, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[64, 128, 0.35]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[64, 64, 0.3]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[8, 16, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[8, 8, 0.4]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[8, 8, 0.45]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[8, 8, 0.5]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[8, 8, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[96, 62, 28]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio <- darkFibre",
+      "value": "[96, 96, 1]",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-color",
+      "context": "export function backlight(ctx: CanvasRenderingContext2D, x: number, top: number, height: number, fra",
+      "value": "rgba(0,0,0,0.18)",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-color",
+      "context": "export function backlight(ctx: CanvasRenderingContext2D, x: number, top: number, height: number, fra",
+      "value": "rgba(0,0,0,0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-color",
+      "context": "export function backlight(ctx: CanvasRenderingContext2D, x: number, top: number, height: number, fra",
+      "value": "rgba(0,0,0,0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-color",
+      "context": "export function backlight(ctx: CanvasRenderingContext2D, x: number, top: number, height: number, fra",
+      "value": "rgba(0,0,0,0)",
+      "count": 2
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-color",
+      "context": "export function backlight(ctx: CanvasRenderingContext2D, x: number, top: number, height: number, fra",
+      "value": "rgba(0,0,0,1)",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-color",
+      "context": "export function paintSwatch(canvas: HTMLCanvasElement, of: PaperKind, w: number, h: number) { cons",
+      "value": "rgba(239,231,218,0.72)",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-color",
+      "context": "export function paintSwatch(canvas: HTMLCanvasElement, of: PaperKind, w: number, h: number) { cons",
+      "value": "rgba(255,208,156,0.1)",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-color",
+      "context": "export function paintSwatch(canvas: HTMLCanvasElement, of: PaperKind, w: number, h: number) { cons",
+      "value": "rgba(255,208,156,0)",
+      "count": 2
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-color",
+      "context": "NIGHT_PAPER",
+      "value": "#1b1621",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-color",
+      "context": "NIGHT_PAPER",
+      "value": "#E8D8B6",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-template-channels",
+      "context": "draw",
+      "value": "rgba(255,244,228,",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-template-channels",
+      "context": "draw",
+      "value": "rgba(70,40,20,",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-template-channels",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio",
+      "value": "rgba(0,0,0,",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "raw-template-channels",
+      "context": "function make(k: PaperKind) { const r = RECIPES[k]; const rnd = random(r.seed); const formatio",
+      "value": "rgba(255,244,228,",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .badge.is-leading, :root[data-ground='pergament'] #app.sing-along .badge / background",
+      "value": "rgb(214 160 70 / 0.06)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .badge.is-leading, :root[data-ground='pergament'] #app.sing-along .badge / background",
+      "value": "rgb(214 160 70 / 0.16)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .badge.is-leading, :root[data-ground='pergament'] #app.sing-along .badge / border-color",
+      "value": "rgb(156 109 26 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .badge.is-leading, :root[data-ground='pergament'] #app.sing-along .badge / color",
+      "value": "#7a5414",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .btn.primary:hover / background",
+      "value": "#3d2e22",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chip / border-color",
+      "value": "rgb(70 46 20 / 0.12)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chip / box-shadow",
+      "value": "rgb(255 255 250 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chip / box-shadow",
+      "value": "rgb(90 60 25 / 0.25)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chip i / background",
+      "value": "#fff6dc",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chip i / box-shadow",
+      "value": "rgb(70 45 20 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chip.is-dimmed i / background",
+      "value": "#d6c29a",
+      "count": 2
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chip.is-dimmed i, :root[data-ground='pergament'] .chip.is-muted i / background",
+      "value": "#d6c29a",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chip.is-dimmed i, :root[data-ground='pergament'] .chip.is-muted i / box-shadow",
+      "value": "rgb(70 45 20 / 0.2)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chip.is-dimmed i, :root[data-ground='pergament'] .chip.is-muted i / box-shadow",
+      "value": "rgb(90 60 25 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chip.is-solo / background",
+      "value": "#eee2c6",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chips-mixer / background",
+      "value": "rgb(232 216 182 / 0.9)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .chips-mixer / background",
+      "value": "rgb(232 216 182 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .code-line / border-bottom-color",
+      "value": "rgb(140 100 40 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .code-line:focus / border-bottom-color",
+      "value": "#9c6d1a",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .code-line:focus / box-shadow",
+      "value": "rgb(180 120 40 / 0.4)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .conf-medium .scan-conf / background",
+      "value": "#b8862b",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .cover / background",
+      "value": "#e8d8b6",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .ded-name / background",
+      "value": "#6b4912",
+      "count": 2
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .ded-name / background",
+      "value": "#a67824",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .ded-name / filter",
+      "value": "rgb(255 255 250 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .drop-slot / background",
+      "value": "rgb(110 75 35 / 0.05)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .drop-veil / background",
+      "value": "rgb(232 216 182 / 0.9)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .fb-ask-icon / color",
+      "value": "#9c6d1a",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .fb-count / background",
+      "value": "#b8862b",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .fb-count / color",
+      "value": "#fff8ea",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .intro-card .btn / border-color",
+      "value": "rgb(243 233 211 / 0.3)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .intro-count, :root[data-ground='pergament'] .intro-card .link-btn, :root[data-ground='pergament'] .power-hint .link-btn / color",
+      "value": "rgb(243 233 211 / 0.62)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .intro-dots i / background",
+      "value": "rgb(243 233 211 / 0.22)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .intro-dots i.on / background",
+      "value": "#d1a548",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .intro-spot / background",
+      "value": "rgb(255 236 196 / 0.25)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .intro-spot / background",
+      "value": "rgb(255 236 196 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .intro-spot / box-shadow",
+      "value": "rgb(156 109 26 / 0.65)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .intro-spot / box-shadow",
+      "value": "rgb(214 150 60 / 0.3)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .intro-spot / box-shadow",
+      "value": "rgb(60 40 20 / 0.42)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .landing-name .ink / filter",
+      "value": "rgb(90 60 25 / 0.2)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .landing-name .ink / filter",
+      "value": "rgb(90 60 25 / 0.22)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .lib-top, :root[data-ground='pergament'] .p-top / box-shadow",
+      "value": "rgb(90 60 25 / 0.14)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .ls-l / color",
+      "value": "#2e2016",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .ls-l / text-shadow",
+      "value": "rgb(226 150 52 / 0.3)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .menu-item::before / background",
+      "value": "rgb(220 150 60 / 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .menu-item::before / background",
+      "value": "rgb(220 150 60 / 0.18)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .menu-item::before / background",
+      "value": "rgb(220 150 60 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .menu-item:hover, :root[data-ground='pergament'] .menu-item:focus-visible / color",
+      "value": "#1f160f",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .menu-item:hover, :root[data-ground='pergament'] .menu-item:focus-visible / text-shadow",
+      "value": "rgb(230 160 70 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .menu-item[aria-checked='true'] .menu-check / color",
+      "value": "#9c6d1a",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn .ic / filter",
+      "value": "rgb(255 255 250 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn / background",
+      "value": "#e9dbbb",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn / background",
+      "value": "#f2e8d0",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn / box-shadow",
+      "value": "rgb(90 60 25 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn / text-shadow",
+      "value": "rgb(255 255 250 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn:hover / background",
+      "value": "#ecdfc1",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn:hover / background",
+      "value": "#f5ecd6",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn:hover / box-shadow",
+      "value": "rgb(90 60 25 / 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn.last-used / box-shadow",
+      "value": "rgb(180 120 40 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn.last-used / box-shadow",
+      "value": "rgb(220 150 60 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .mode-btn.last-used / box-shadow",
+      "value": "rgb(90 60 25 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .play-btn .ic / filter",
+      "value": "rgb(255 255 250 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .play-btn, :root[data-ground='pergament'] .play-btn:hover / background",
+      "value": "#efe3c7",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .popover, :root[data-ground='pergament'] .sheet, :root[data-ground='pergament'] .dialog / box-shadow",
+      "value": "rgb(90 60 25 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-bar span / background",
+      "value": "#2d69ae",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-bar span / background",
+      "value": "#5a8a2a",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-bar span / background",
+      "value": "#8445a6",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-bar span / background",
+      "value": "#9c7414",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-bar span / background",
+      "value": "#b8384f",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-error / background",
+      "value": "rgb(168 48 58 / 0.1)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-num, :root[data-ground='pergament'] .scan-crop-toggle / background",
+      "value": "rgb(241 232 210 / 0.9)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-option:has(input:checked) / background",
+      "value": "rgb(46 138 85 / 0.1)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-page-tools / background",
+      "value": "rgb(232 216 182 / 0.92)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-remark / color",
+      "value": "#8a5e14",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .scan-steps .is-active .scan-dot / box-shadow",
+      "value": "rgb(110 75 35 / 0.14)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .sheet-root.open, :root[data-ground='pergament'] .dialog-root.open / background",
+      "value": "rgb(60 40 20 / 0.28)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-card / border-color",
+      "value": "rgb(70 46 20 / 0.12)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-card / box-shadow",
+      "value": "#e2d0aa",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-card / box-shadow",
+      "value": "rgb(255 255 250 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-card / box-shadow",
+      "value": "rgb(90 60 25 / 0.16)",
+      "count": 2
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-card / box-shadow",
+      "value": "rgb(90 60 25 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-card::after / background",
+      "value": "rgb(255 252 240 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-card:hover / border-color",
+      "value": "rgb(70 46 20 / 0.22)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-card.lifted / box-shadow",
+      "value": "rgb(90 60 25 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-card.skeleton / background",
+      "value": "rgb(226 210 176 / 0.8)",
+      "count": 2
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-card.skeleton / background",
+      "value": "rgb(238 226 200 / 0.8)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .song-more, :root[data-ground='pergament'] .song-card > .tag / background",
+      "value": "rgb(241 232 210 / 0.85)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .stage / background",
+      "value": "#e8d8b6",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .stepper / background",
+      "value": "rgb(110 75 35 / 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .stepper / box-shadow",
+      "value": "rgb(90 60 25 / 0.2)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .t-btn.toggle[aria-pressed='true'], :root[data-ground='pergament'] .zoom .follow-btn[aria-pressed='true'], :root[data-ground='pergament'] .seg button[aria-pressed='true'] / background",
+      "value": "rgb(110 75 35 / 0.1)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .voice-row:hover / background",
+      "value": "rgb(110 75 35 / 0.06)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .wordmark[aria-label='LightScore'] / background",
+      "value": "#6b4912",
+      "count": 2
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .wordmark[aria-label='LightScore'] / background",
+      "value": "#a67824",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .zoom / background",
+      "value": "rgb(241 232 210 / 0.92)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] #sound-prompt / box-shadow",
+      "value": "rgb(180 120 40 / 0.25)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] #sound-prompt / box-shadow",
+      "value": "rgb(90 60 25 / 0.3)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] #toast, :root[data-ground='pergament'] .power-hint, :root[data-ground='pergament'] .fb-ask, :root[data-ground='pergament'] .intro-card / box-shadow",
+      "value": "rgb(90 60 25 / 0.3)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] input[type='range']::-webkit-slider-thumb / box-shadow",
+      "value": "rgb(90 60 25 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'], :root[data-ground='pergament'] body / background",
+      "value": "#e8d8b6",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": "@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) / :root[data-ground='pergament'] .song-card.is-tilted / box-shadow",
+      "value": "#e2d0aa",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": "@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) / :root[data-ground='pergament'] .song-card.is-tilted / box-shadow",
+      "value": "rgb(255 255 250 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": "@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) / :root[data-ground='pergament'] .song-card.is-tilted / box-shadow",
+      "value": "rgb(90 60 25 / 0.16)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "raw-color",
+      "context": "@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) / :root[data-ground='pergament'] .song-card.is-tilted / box-shadow",
+      "value": "rgb(90 60 25 / 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/parchment.css",
+      "kind": "screen-control-selector",
+      "context": ":root[data-ground='pergament'] .t-btn.toggle[aria-pressed='true'], :root[data-ground='pergament'] .zoom .follow-btn[aria-pressed='true'], :root[data-ground='pergament'] .seg button[aria-pressed='true']",
+      "value": ":root[data-ground='pergament'] .t-btn.toggle[aria-pressed='true'], :root[data-ground='pergament'] .zoom .follow-btn[aria-pressed='true'], :root[data-ground='pergament'] .seg button[aria-pressed='true']",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "render <- PAST_RGB",
+      "value": "'13,12,22'",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "render <- PAST_RGB",
+      "value": "'232,216,182'",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "render <- PAST_SHADE",
+      "value": "'13,12,22'",
+      "count": 2
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "render <- PAST_SHADE",
+      "value": "'232,216,182'",
+      "count": 2
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "function cutHoles(ctx: CanvasRenderingContext2D, pills: [number, number, number][], h: number) { i",
+      "value": "#000",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "function cutHoles(ctx: CanvasRenderingContext2D, pills: [number, number, number][], h: number) { i",
+      "value": "rgba(6,4,10,0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "function cutHoles(ctx: CanvasRenderingContext2D, pills: [number, number, number][], h: number) { i",
+      "value": "rgba(70,45,20,0.4)",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "LANTERN_VOID",
+      "value": "#08060c",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "LANTERN_VOID",
+      "value": "#6b5236",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "paintContent",
+      "value": "rgba(0,0,0,0.13)",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "paintContent",
+      "value": "rgba(0,0,0,0.26)",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "paintContent",
+      "value": "rgba(90,60,25,0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "paintKeyboard",
+      "value": "#17151F",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "paintKeyboard",
+      "value": "#E8E0D2",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "paintKeyboard",
+      "value": "rgba(0,0,0,0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "paintKeyboard",
+      "value": "rgba(0,0,0,0)",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "paintKeyboard",
+      "value": "rgba(13,12,22,0.3)",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "raw-color",
+      "context": "paintKeyboard",
+      "value": "rgba(13,12,22,0.62)",
+      "count": 1
+    },
+    {
+      "file": "src/revivalType.css",
+      "kind": "raw-font",
+      "context": ":root[data-type='revival'] .rmark / font-family",
+      "value": "'Baltimore Bold 1832', var(--f-display)",
+      "count": 1
+    },
+    {
+      "file": "src/revivalType.css",
+      "kind": "raw-font",
+      "context": ":root[data-type='revival'] .wordmark / font-family",
+      "value": "'Baltimore Black Slope 1832', var(--f-display)",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "named-color",
+      "context": "drawNote",
+      "value": "black",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "named-color",
+      "context": "from",
+      "value": "black",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "drawMargin <- ground",
+      "value": "'19,18,30'",
+      "count": 3
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "drawMargin <- ground",
+      "value": "'232,216,182'",
+      "count": 3
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "drawMargin <- ground",
+      "value": "'27,22,33'",
+      "count": 3
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "renderLogical <- PAST_RGB",
+      "value": "'13,12,22'",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "renderLogical <- PAST_RGB",
+      "value": "'232,216,182'",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "renderLogical <- PAST_SHADE",
+      "value": "'13,12,22'",
+      "count": 2
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "raw-channels-at-sink",
+      "context": "renderLogical <- PAST_SHADE",
+      "value": "'232,216,182'",
+      "count": 2
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .chip / border-color",
+      "value": "rgb(255 244 228 / 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .chip / box-shadow",
+      "value": "rgb(0 0 0 / 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .chip / box-shadow",
+      "value": "rgb(255 244 228 / 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .chip i / background",
+      "value": "#fffaf2",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .chip i / box-shadow",
+      "value": "rgb(6 4 10 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .chip.is-dimmed i / background",
+      "value": "#07050b",
+      "count": 2
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .chip.is-dimmed i, :root[data-design='papier'] .chip.is-muted i / background",
+      "value": "#07050b",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .chip.is-dimmed i, :root[data-design='papier'] .chip.is-muted i / box-shadow",
+      "value": "rgb(0 0 0 / 0.8)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .chip.is-dimmed i, :root[data-design='papier'] .chip.is-muted i / box-shadow",
+      "value": "rgb(255 244 228 / 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .chip.is-solo / background",
+      "value": "#221c29",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .play-btn .ic / filter",
+      "value": "rgb(0 0 0 / 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .play-btn, :root[data-design='papier'] .play-btn:hover / background",
+      "value": "#2c2535",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .song-card / border-color",
+      "value": "rgb(255 244 228 / 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .song-card / box-shadow",
+      "value": "#19141f",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .song-card / box-shadow",
+      "value": "rgb(0 0 0 / 0.4)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .song-card / box-shadow",
+      "value": "rgb(0 0 0 / 0.95)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .song-card / box-shadow",
+      "value": "rgb(255 244 228 / 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .stage / background",
+      "value": "#1b1621",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'] .t-btn.toggle[aria-pressed='true'], :root[data-design='papier'] .zoom .follow-btn[aria-pressed='true'], :root[data-design='papier'] .seg button[aria-pressed='true'] / background",
+      "value": "rgb(0 0 0 / 0.2)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-design='papier'], :root[data-design='papier'] body / background",
+      "value": "#1b1621",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-ground='pergament'] .domain-gold / color",
+      "value": "#795315",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .landing-name .ink / -webkit-mask-image",
+      "value": "#000",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .landing-name .ink / filter",
+      "value": "rgb(0 0 0 / 0.28)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .landing-name .ink / filter",
+      "value": "rgb(0 0 0 / 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .landing-name .ink / mask-image",
+      "value": "#000",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn .ic / filter",
+      "value": "rgb(0 0 0 / 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn / background",
+      "value": "#231d2a",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn / background",
+      "value": "#2b2432",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn / box-shadow",
+      "value": "rgb(0 0 0 / 0.85)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn / color",
+      "value": "#efe6d8",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn / text-shadow",
+      "value": "rgb(0 0 0 / 0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn / text-shadow",
+      "value": "rgb(255 244 228 / 0.06)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn:hover / background",
+      "value": "#251f2c",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn:hover / background",
+      "value": "#2e2735",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn:hover / box-shadow",
+      "value": "rgb(0 0 0 / 0.9)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn.last-used / box-shadow",
+      "value": "rgb(0 0 0 / 0.85)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn.last-used / box-shadow",
+      "value": "rgb(255 200 140 / 0.25)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-start='neu'] .mode-btn.last-used / box-shadow",
+      "value": "rgb(255 210 158 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .landing-name .ls-name.lit .ls-score / filter",
+      "value": "rgb(0 0 0 / 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .landing-name .ls-name.lit .ls-score / filter",
+      "value": "rgb(255 200 120 / 0.16)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .landing-name .ls-score / filter",
+      "value": "rgb(0 0 0 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .mode-btn.last-used / background",
+      "value": "#b48a48",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .mode-btn.last-used / background",
+      "value": "#c9a05a",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .mode-btn.last-used / background",
+      "value": "#e6c98a",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .mode-btn.last-used / box-shadow",
+      "value": "rgb(0 0 0 / 0.9)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .mode-btn.last-used / box-shadow",
+      "value": "rgb(255 200 120 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .mode-btn.last-used / box-shadow",
+      "value": "rgb(255 246 222 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .mode-btn.last-used / box-shadow",
+      "value": "rgb(90 60 20 / 0.4)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .mode-btn.last-used / color",
+      "value": "#2a2016",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] .mode-btn.last-used / text-shadow",
+      "value": "rgb(255 240 210 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='buehne'] body:has(#app.mode-landing), :root[data-title='buehne'] #landing / background",
+      "value": "#0c0a0e",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='zeile'] .landing-name .ls-score / filter",
+      "value": "rgb(0 0 0 / 0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ":root[data-title='zeile'] .landing-name .ls-score / filter",
+      "value": "rgb(255 236 200 / 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".badge.is-leading / background",
+      "value": "rgb(255 214 150 / 0.05)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".badge.is-leading / background",
+      "value": "rgb(255 214 150 / 0.14)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".badge.is-leading / border-color",
+      "value": "rgb(255 214 150 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".badge.is-leading / box-shadow",
+      "value": "rgb(255 200 130 / 0.18)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".badge.is-leading / color",
+      "value": "#ffe4b8",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".btn.primary:hover / background",
+      "value": "#fff8ee",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".capability-switch input:checked + .switch-track / background",
+      "value": "#d4ad65",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".capability-switch input:checked + .switch-track / border-color",
+      "value": "#d4ad65",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".chip / background",
+      "value": "rgb(22 18 33 / 0.66)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".chip / background",
+      "value": "rgb(255 246 235 / 0.02)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".chip / background",
+      "value": "rgb(255 246 235 / 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".chip.is-solo / background",
+      "value": "rgb(22 18 33 / 0.7)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".chips-mixer / background",
+      "value": "rgb(12 10 20 / 0.85)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".chips-mixer / background",
+      "value": "rgb(12 10 20 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".chips-mixer / background",
+      "value": "rgba(13, 12, 22, 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".code-line / border-bottom",
+      "value": "rgb(196 158 84 / 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".code-line / color",
+      "value": "#efe6d8",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".code-line:focus / border-bottom-color",
+      "value": "#d2ad62",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".code-line:focus / box-shadow",
+      "value": "rgb(255 205 140 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".cover / background",
+      "value": "#15131f",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".ded-name / -webkit-mask-image",
+      "value": "#000",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".ded-name / background",
+      "value": "#8c6a2e",
+      "count": 2
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".ded-name / background",
+      "value": "#d2ad62",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".ded-name / filter",
+      "value": "rgb(0 0 0 / 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".ded-name / filter",
+      "value": "rgb(255 236 200 / 0.08)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".ded-name / mask-image",
+      "value": "#000",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".dialog / box-shadow",
+      "value": "rgba(0, 0, 0, 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".domain-gold / color",
+      "value": "#d4ad65",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".domain-sheet input[type=checkbox] / accent-color",
+      "value": "#d4ad65",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".drop-slot / background",
+      "value": "rgb(255 244 228 / 0.03)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".drop-veil / background",
+      "value": "rgba(13, 12, 22, 0.88)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".fps-probe / background",
+      "value": "rgb(0 0 0 / 0.75)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".fps-probe / color",
+      "value": "#fff",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-card .btn / border-color",
+      "value": "rgb(21 17 26 / 0.22)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-card .link-btn / color",
+      "value": "rgb(21 17 26 / 0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-card / box-shadow",
+      "value": "rgb(0 0 0 / 0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-count / color",
+      "value": "rgb(21 17 26 / 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-dots i / background",
+      "value": "rgb(21 17 26 / 0.18)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-dots i.on / background",
+      "value": "#a9823c",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-spot / background",
+      "value": "rgb(255 236 196 / 0.09)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-spot / background",
+      "value": "rgb(255 236 196 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-spot / box-shadow",
+      "value": "rgb(214 176 98 / 0.26)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-spot / box-shadow",
+      "value": "rgb(214 176 98 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".intro-spot / box-shadow",
+      "value": "rgb(9 7 13 / 0.76)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".lib-top, .p-top / box-shadow",
+      "value": "rgb(0 0 0 / 0.25)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".ls-l / color",
+      "value": "#fff6e6",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".ls-l / text-shadow",
+      "value": "rgb(255 190 120 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".ls-l / text-shadow",
+      "value": "rgb(255 200 130 / 0.7)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".menu-item::before / background",
+      "value": "rgb(255 208 156 / 0.08)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".menu-item::before / background",
+      "value": "rgb(255 208 156 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".menu-item::before / background",
+      "value": "rgb(255 212 160 / 0.2)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".menu-item:hover, .menu-item:focus-visible / color",
+      "value": "#fff3e2",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".menu-item:hover, .menu-item:focus-visible / text-shadow",
+      "value": "rgb(255 214 160 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".menu-item[aria-checked='true'] .menu-check / color",
+      "value": "#e2c48c",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".mixer-chip / background",
+      "value": "rgb(255 246 235 / 0.04)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".mixer-chip / background",
+      "value": "rgb(255 246 235 / 0.1)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".mixer-chip / background",
+      "value": "rgb(30 25 44 / 0.7)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".mode-btn / background",
+      "value": "rgba(19, 18, 30, 0.72)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".mute-btn[aria-pressed='true'] / box-shadow",
+      "value": "rgb(255 255 255 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".paper-option[aria-checked='true'] / background",
+      "value": "rgb(255 244 228 / 0.04)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".paper-swatch / background",
+      "value": "#1b1621",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / background",
+      "value": "#e3e8f5",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / background",
+      "value": "#e9f1e2",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / background",
+      "value": "#f3e8da",
+      "count": 2
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / background",
+      "value": "#f6e6d3",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / background",
+      "value": "#f7e1e8",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / background",
+      "value": "rgb(190 170 220 / 0.28)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / background",
+      "value": "rgb(190 170 220 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / background",
+      "value": "rgb(255 255 255 / 0.85)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / background",
+      "value": "rgb(255 255 255 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / box-shadow",
+      "value": "rgb(0 0 0 / 0.75)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / box-shadow",
+      "value": "rgb(110 80 110 / 0.28)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / box-shadow",
+      "value": "rgb(255 228 205 / 0.2)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / box-shadow",
+      "value": "rgb(255 255 255 / 0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / box-shadow",
+      "value": "rgba(239, 231, 218, 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn / color",
+      "value": "#231b2c",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn:hover / box-shadow",
+      "value": "rgb(0 0 0 / 0.75)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn:hover / box-shadow",
+      "value": "rgb(110 80 110 / 0.28)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn:hover / box-shadow",
+      "value": "rgb(255 228 205 / 0.3)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn:hover / box-shadow",
+      "value": "rgb(255 255 255 / 0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".play-btn:hover / box-shadow",
+      "value": "rgba(239, 231, 218, 0.1)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".popover / box-shadow",
+      "value": "rgba(0, 0, 0, 0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".popover, .sheet, .dialog / box-shadow",
+      "value": "rgb(0 0 0 / 0.8)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".power-hint .link-btn / color",
+      "value": "rgb(20 18 28 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".power-hint / box-shadow",
+      "value": "rgba(0, 0, 0, 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".row-menu .menu-list / box-shadow",
+      "value": "#0003",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".scan-mark-img / background",
+      "value": "#f4f1ea",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".seg button[aria-pressed='true'] / background",
+      "value": "rgb(255 246 235 / 0.07)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".seg button[aria-pressed='true'] / background",
+      "value": "rgb(255 246 235 / 0.17)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".seg button[aria-pressed='true'] / box-shadow",
+      "value": "rgb(0 0 0 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".seg button[aria-pressed='true'] / box-shadow",
+      "value": "rgb(255 255 255 / 0.18)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".sheet / box-shadow",
+      "value": "rgba(0, 0, 0, 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".sheet-root, .dialog-root / background",
+      "value": "rgba(8, 7, 14, 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".sheet-root.closing, .dialog-root.closing / background",
+      "value": "rgba(8, 7, 14, 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".sheet-root.open, .dialog-root.open / background",
+      "value": "rgb(8 6 14 / 0.45)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".sheet-root.open, .dialog-root.open / background",
+      "value": "rgba(8, 7, 14, 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".song-card / border-color",
+      "value": "rgb(255 244 230 / 0.1)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".song-card / box-shadow",
+      "value": "rgb(0 0 0 / 0.95)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".song-card > .tag / background",
+      "value": "rgba(13, 12, 22, 0.72)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".song-card:hover / border-color",
+      "value": "rgb(255 244 230 / 0.2)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".song-card.lifted / box-shadow",
+      "value": "rgb(0 0 0 / 0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".song-card.skeleton / background",
+      "value": "rgb(29 22 41 / 0.7)",
+      "count": 2
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".song-card.skeleton / background",
+      "value": "rgb(40 32 56 / 0.7)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".song-more / background",
+      "value": "rgba(13, 12, 22, 0.72)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".stepper / background",
+      "value": "rgb(8 6 14 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".stepper / box-shadow",
+      "value": "rgb(0 0 0 / 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".t-btn.toggle[aria-pressed='true'] .ic, .info-metro.on .ic / filter",
+      "value": "rgb(255 220 180 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".t-btn.toggle[aria-pressed='true'] / background",
+      "value": "rgb(255 236 214 / 0.09)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".t-btn.toggle[aria-pressed='true'] / border-color",
+      "value": "rgb(255 226 196 / 0.22)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".t-btn.toggle[aria-pressed='true'] / box-shadow",
+      "value": "rgb(255 214 170 / 0.18)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".t-btn.toggle[aria-pressed='true'] / box-shadow",
+      "value": "rgb(255 255 255 / 0.14)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".voice-row:hover / background",
+      "value": "rgb(255 246 235 / 0.05)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".wordmark[aria-label='LightScore'] / background",
+      "value": "#8c6a2e",
+      "count": 2
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".wordmark[aria-label='LightScore'] / background",
+      "value": "#c49e54",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".zoom .follow-btn[aria-pressed='true'] .ic / filter",
+      "value": "rgb(255 220 180 / 0.6)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".zoom .follow-btn[aria-pressed='true'] / background",
+      "value": "rgb(255 236 214 / 0.09)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".zoom .follow-btn[aria-pressed='true'] / box-shadow",
+      "value": "rgb(255 214 170 / 0.16)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".zoom .follow-btn[aria-pressed='true'] / box-shadow",
+      "value": "rgb(255 255 255 / 0.12)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": ".zoom / background",
+      "value": "rgba(19, 18, 30, 0.9)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "@keyframes ls-flare / 0% / filter",
+      "value": "rgb(255 210 150 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "@keyframes ls-flare / 100% / filter",
+      "value": "rgb(255 210 150 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "@keyframes ls-flare / 28% / filter",
+      "value": "rgb(255 210 150 / 0.75)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "@keyframes stage-ignite / 100% / filter",
+      "value": "rgb(255 210 150 / 0)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "@keyframes stage-ignite / 26% / filter",
+      "value": "rgb(255 210 150 / 0.8)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) / :root[data-design='papier'] .song-card.is-tilted / box-shadow",
+      "value": "#19141f",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) / :root[data-design='papier'] .song-card.is-tilted / box-shadow",
+      "value": "rgb(0 0 0 / 0.95)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) / :root[data-design='papier'] .song-card.is-tilted / box-shadow",
+      "value": "rgb(255 244 228 / 0.08)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) / .song-card::after / background",
+      "value": "rgb(255 250 240 / 0.13)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) / .song-card.is-tilted / box-shadow",
+      "value": "rgb(0 0 0 / 0.95)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "#app.sing-along .badge / border-color",
+      "value": "rgba(255, 214, 150, 0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "#app.sing-along .badge / color",
+      "value": "#ffe4b8",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "#sound-prompt / box-shadow",
+      "value": "rgba(0, 0, 0, 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "#sound-prompt / box-shadow",
+      "value": "rgba(200, 161, 90, 0.25)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "#toast / box-shadow",
+      "value": "rgba(0, 0, 0, 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "html, body / background",
+      "value": "#0c0a14",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-color",
+      "context": "input[type='range']::-webkit-slider-thumb / box-shadow",
+      "value": "rgba(0, 0, 0, 0.5)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-font",
+      "context": ".code-line::placeholder / font",
+      "value": "400 32px/1 'Italianno', cursive",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-font",
+      "context": ".fps-probe / font",
+      "value": "500 12px/1.3 ui-monospace, monospace",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-font",
+      "context": ".landing-dedication / font",
+      "value": "400 clamp(34px, 4.8vw, 46px)/1.05 'Italianno', cursive",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-font",
+      "context": ".ls-l / font",
+      "value": "400 1.62em/0 'Italianno', cursive",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "raw-font",
+      "context": ".menu-item .glyph / font-family",
+      "value": "'LightScore Engraving', 'Bravura'",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ":root[data-design='papier'] .t-btn.toggle[aria-pressed='true'], :root[data-design='papier'] .zoom .follow-btn[aria-pressed='true'], :root[data-design='papier'] .seg button[aria-pressed='true']",
+      "value": ":root[data-design='papier'] .t-btn.toggle[aria-pressed='true'], :root[data-design='papier'] .zoom .follow-btn[aria-pressed='true'], :root[data-design='papier'] .seg button[aria-pressed='true']",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".back-btn span, .seg button span, #song-meta, .badge span",
+      "value": ".back-btn span, .seg button span, #song-meta, .badge span",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".capability-switch input:checked + .switch-track::after",
+      "value": ".capability-switch input:checked + .switch-track::after",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".capability-switch input:checked + .switch-track",
+      "value": ".capability-switch input:checked + .switch-track",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".capability-switch input:focus-visible + .switch-track",
+      "value": ".capability-switch input:focus-visible + .switch-track",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".capability-switch input",
+      "value": ".capability-switch input",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".domain-sheet input:not([type=checkbox]), .domain-sheet select",
+      "value": ".domain-sheet input:not([type=checkbox]), .domain-sheet select",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".domain-sheet input:not([type=checkbox])",
+      "value": ".domain-sheet input:not([type=checkbox])",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".domain-sheet input[type=checkbox]",
+      "value": ".domain-sheet input[type=checkbox]",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".export-voice-list input[type='checkbox']",
+      "value": ".export-voice-list input[type='checkbox']",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".lib-top .seg button span",
+      "value": ".lib-top .seg button span",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".offset-row input",
+      "value": ".offset-row input",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".search input",
+      "value": ".search input",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".seg button .ic",
+      "value": ".seg button .ic",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".seg button",
+      "value": ".seg button",
+      "count": 2
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".seg button[aria-pressed='true']",
+      "value": ".seg button[aria-pressed='true']",
+      "count": 2
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".stepper > button .ic",
+      "value": ".stepper > button .ic",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".stepper > button:not(.stepper-value):hover",
+      "value": ".stepper > button:not(.stepper-value):hover",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": ".stepper > button:not(.stepper-value)",
+      "value": ".stepper > button:not(.stepper-value)",
+      "count": 1
+    },
+    {
+      "file": "src/style.css",
+      "kind": "screen-control-selector",
+      "context": "button.stepper-value:hover",
+      "value": "button.stepper-value:hover",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "export function gelPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, c",
+      "value": "rgba(255,255,255,0)",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "export function playheadBeam(ctx: CanvasRenderingContext2D, x: number, top: number, height: number)",
+      "value": "rgba(255,228,196,0.12)",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "export function playheadBeam(ctx: CanvasRenderingContext2D, x: number, top: number, height: number)",
+      "value": "rgba(255,228,196,0)",
+      "count": 2
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "export function stageFill(ctx: CanvasRenderingContext2D, height: number): CanvasGradient { if (sta",
+      "value": "#0e0c16",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "export function stageFill(ctx: CanvasRenderingContext2D, height: number): CanvasGradient { if (sta",
+      "value": "#110e19",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "export function stageFill(ctx: CanvasRenderingContext2D, height: number): CanvasGradient { if (sta",
+      "value": "#17121f",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "export function stageFill(ctx: CanvasRenderingContext2D, height: number): CanvasGradient { if (sta",
+      "value": "#E3D1AD",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "export function stageFill(ctx: CanvasRenderingContext2D, height: number): CanvasGradient { if (sta",
+      "value": "#E8D8B7",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "export function stageFill(ctx: CanvasRenderingContext2D, height: number): CanvasGradient { if (sta",
+      "value": "#EDE0C3",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "INK0",
+      "value": "#0D0C16",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "INK0",
+      "value": "#E6D6B4",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "INK1",
+      "value": "#13121E",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "INK1",
+      "value": "#DFCDA7",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "INK2",
+      "value": "#1B1929",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "INK2",
+      "value": "#EADCBD",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "INK3",
+      "value": "#252235",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "INK3",
+      "value": "#F0E5CC",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "PAPER",
+      "value": "#2E2219",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "PAPER",
+      "value": "#EFE7DA",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "QUERY",
+      "value": "#A46F18",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-color",
+      "context": "QUERY",
+      "value": "#EDC96B",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-font",
+      "context": "FONT_BRAND",
+      "value": "\"Baltimore Black Slope 1832\",",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-font",
+      "context": "FONT_DISPLAY",
+      "value": "\"Bodoni Moda Variable\", \"Bodoni Moda\", Didot, Georgia, serif",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-font",
+      "context": "FONT_MARK",
+      "value": "\"Baltimore Bold 1832\",",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-font",
+      "context": "FONT_MONO",
+      "value": "\"Atkinson Hyperlegible Mono Variable\", \"Atkinson Hyperlegible Mono\", ui-monospace, monospace",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-font",
+      "context": "FONT_MUSIC",
+      "value": "\"LightScore Engraving\", Bravura",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-font",
+      "context": "FONT_TEXT",
+      "value": "\"Atkinson Hyperlegible Next Variable\", \"Atkinson Hyperlegible Next\", system-ui, sans-serif",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-template-channels",
+      "context": "export function gelPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, c",
+      "value": "rgba(255,255,255,",
+      "count": 2
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-template-channels",
+      "context": "export function readingStrip(ctx: CanvasRenderingContext2D, x: number, top: number, height: number)",
+      "value": "rgba(236,160,64,",
+      "count": 1
+    },
+    {
+      "file": "src/theme.ts",
+      "kind": "raw-template-channels",
+      "context": "export function readingStrip(ctx: CanvasRenderingContext2D, x: number, top: number, height: number)",
+      "value": "rgba(255,208,156,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-color",
+      "context": "draw",
+      "value": "rgba(0,0,0,0)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-color",
+      "context": "draw",
+      "value": "rgba(0,0,0,1)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-color",
+      "context": "draw",
+      "value": "rgba(255,230,190,0)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-color",
+      "context": "draw",
+      "value": "rgba(255,246,230,0.9)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-color",
+      "context": "function readingLine(ctx: CanvasRenderingContext2D, x: number, cy: number, staffH: number, height: n",
+      "value": "rgba(255,200,150,0)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-color",
+      "context": "function readingLine(ctx: CanvasRenderingContext2D, x: number, cy: number, staffH: number, height: n",
+      "value": "rgba(255,240,214,0)",
+      "count": 2
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-color",
+      "context": "ink",
+      "value": "rgba(239,231,218,0.34)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-template-channels",
+      "context": "after",
+      "value": "rgba(255,232,200,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-template-channels",
+      "context": "draw",
+      "value": "rgba(255,244,224,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-template-channels",
+      "context": "function note(ctx: CanvasRenderingContext2D, x: number, end: number, y: number, h: number, color: st",
+      "value": "rgba(255,250,240,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-template-channels",
+      "context": "function readingLine(ctx: CanvasRenderingContext2D, x: number, cy: number, staffH: number, height: n",
+      "value": "rgba(255,200,150,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-template-channels",
+      "context": "function readingLine(ctx: CanvasRenderingContext2D, x: number, cy: number, staffH: number, height: n",
+      "value": "rgba(255,214,166,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-template-channels",
+      "context": "function readingLine(ctx: CanvasRenderingContext2D, x: number, cy: number, staffH: number, height: n",
+      "value": "rgba(255,240,214,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStaff.ts",
+      "kind": "raw-template-channels",
+      "context": "hot",
+      "value": "rgba(255,240,214,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(0,0,0,0)",
+      "count": 2
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(239,228,210,0)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(250,196,120,0.16)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(255,200,140,0.05)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(255,200,140,0)",
+      "count": 2
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(255,214,150,0.3)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(255,214,160,0.12)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(255,220,170,0)",
+      "count": 2
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(255,226,180,0.05)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(255,236,200,0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(255,240,214,0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "build",
+      "value": "rgba(255,244,222,0.1)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "function litNote(from: number, to: number, y: (x: number) => number, thick: number, color: string, d",
+      "value": "rgba(255,250,240,0.55)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "function moteSprite(): HTMLCanvasElement { const [c, x] = offscreen(32, 32, 1); const g = x.crea",
+      "value": "rgba(255,222,170,0.35)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "function moteSprite(): HTMLCanvasElement { const [c, x] = offscreen(32, 32, 1); const g = x.crea",
+      "value": "rgba(255,222,170,0)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-color",
+      "context": "function moteSprite(): HTMLCanvasElement { const [c, x] = offscreen(32, 32, 1); const g = x.crea",
+      "value": "rgba(255,246,228,1)",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-template-channels",
+      "context": "build",
+      "value": "rgba(0,0,0,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-template-channels",
+      "context": "build",
+      "value": "rgba(255,232,200,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-template-channels",
+      "context": "build",
+      "value": "rgba(255,236,210,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-template-channels",
+      "context": "draw",
+      "value": "rgba(255,248,232,",
+      "count": 1
+    },
+    {
+      "file": "src/titleStage.ts",
+      "kind": "raw-template-channels",
+      "context": "lit",
+      "value": "rgba(239,228,210,",
+      "count": 1
+    },
+    {
+      "file": "src/transcription.css",
+      "kind": "raw-color",
+      "context": ".transcription-dialog::backdrop / background",
+      "value": "#0009",
+      "count": 1
+    },
+    {
+      "file": "src/transcription.css",
+      "kind": "raw-color",
+      "context": ".tx-menu / box-shadow",
+      "value": "#0003",
+      "count": 1
+    },
+    {
+      "file": "src/transcription.css",
+      "kind": "raw-font",
+      "context": ".tx-close / font",
+      "value": "300 27px/1 sans-serif",
+      "count": 1
+    },
+    {
+      "file": "src/transcription.css",
+      "kind": "screen-control-selector",
+      "context": ".tx-field input:not([type=checkbox]):focus",
+      "value": ".tx-field input:not([type=checkbox]):focus",
+      "count": 1
+    },
+    {
+      "file": "src/transcription.css",
+      "kind": "screen-control-selector",
+      "context": ".tx-field input:not([type=checkbox])",
+      "value": ".tx-field input:not([type=checkbox])",
+      "count": 1
+    }
+  ]
+}

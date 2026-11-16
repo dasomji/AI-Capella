@@ -15,7 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run tests/dev-reload.test.ts tests/offline.test.ts tests/offline-library.test.ts tests/transcription-ui.test.ts tests/unit.test.ts tests/rehearsal.test.ts tests/rehearsal-server.test.ts tests/transcription-core.test.ts tests/reference-comparison.test.ts tests/evaluation.test.ts tests/usage.test.ts tests/design-system.test.ts",
+    "test": "vitest run tests/dev-reload.test.ts tests/offline.test.ts tests/offline-library.test.ts tests/transcription-ui.test.ts tests/unit.test.ts tests/rehearsal.test.ts tests/rehearsal-server.test.ts tests/transcription-core.test.ts tests/reference-comparison.test.ts tests/evaluation.test.ts tests/usage.test.ts tests/design-system.test.ts tests/design-token-guard.test.mjs",
     "test:integration": "node scripts/integration.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "accounts:cleanup": "node --env-file-if-exists=.env --import tsx scripts/cleanup-accounts.ts",
@@ -37,7 +37,8 @@
     "test:backup": "node --import tsx scripts/ops-backup-test.mjs",
     "ops:canary": "node --import tsx scripts/ops-canary.ts",
     "test:ops": "node --import tsx scripts/ops-shutdown-test.mjs",
-    "seed:dev": "node --env-file-if-exists=.env --import tsx scripts/seed-dev.ts"
+    "seed:dev": "node --env-file-if-exists=.env --import tsx scripts/seed-dev.ts",
+    "check:design-tokens": "node scripts/check-design-tokens.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.5",

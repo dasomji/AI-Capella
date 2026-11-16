@@ -18,9 +18,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: [typecheck, unit, build, secrets, eval, migration, backup, docker]
+        task: [typecheck, unit, build, secrets, eval, migration, backup, docker, design-tokens]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -52,6 +54,7 @@ jobs:
             unit) npm test && TZ=America/New_York npm test ;;
             build) npm run build ;;
             secrets) npm run check:secrets ;;
+            design-tokens) npm run check:design-tokens ;;
             eval) npm run eval:transcription -- --dry-run ;;
             migration) npm run build && npm run test:migration ;;
             backup) npm run test:backup ;;
