@@ -80,6 +80,7 @@ describe('review guard regressions M3–M6 / N1', () => {
   it('M5 covers CSS media and imports, allowing layered imports and system preferences', () => {
     expect(scanDesignFile('src/new.css', '@media (max-width: 800px){x{display:none}} @import "x.css";').map(row => row.kind)).toEqual(['raw-media-query','unlayered-css-import']);
     expect(scanDesignFile('src/new.css', '@import "x.css" layer(components);')).toEqual([]);
+    expect(scanDesignFile('src/design-system/tokens.css', '@import "x.css"; :root{--ds-ink:#123456}').map(row=>row.kind)).toEqual(['unlayered-css-import']);
     expect(scan("matchMedia('(prefers-color-scheme:light)'); matchBreakpoint('panel','below');")).toEqual([]);
   });
   it.each(['p-[13px]', 'z-[9999]', 'w-[420px]', 'gap-[7px]', 'max-w-[90vw]', 'inset-x-[3rem]', 'basis-[50%]', 'm-(--legacy-space)', 'w-[var(--legacy-width)]'])('M6 rejects arbitrary layout %s', value => {

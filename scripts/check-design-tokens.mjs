@@ -57,7 +57,7 @@ function files(dir = root) {
   });
 }
 export function scanDesignFile(file, source) {
-  if (allowed.has(file)) return [];
+  const tokenSource = allowed.has(file);
   const entries = [];
   const add = (kind, context, value) => entries.push({ file, kind, context: normalize(context), value: normalize(value) });
   function colors(text, context, names = false) {
@@ -77,6 +77,7 @@ export function scanDesignFile(file, source) {
   if (file.endsWith('.css')) {
     const tree = postcss.parse(source);
     tree.walkDecls(decl => {
+      if (tokenSource) return;
       const ancestry = []; let node = decl.parent;
       while (node && node.type !== 'root') { ancestry.unshift(node.selector ?? `@${node.name} ${node.params ?? ''}`); node = node.parent; }
       const context = ancestry.join(' / ') + ' / ' + decl.prop;
