@@ -43,8 +43,16 @@ v1.27 (extracted from compose's pinned image; installed on the host PATH, no rel
 Mailpit stores mail and its private SMTP socket outside Git in host state. New
 signups' verification mail appears in its browser UI. `SMTP_SOCKET_PATH` is a
 development alternative to SMTP_URL; `S3_PUBLIC_ENDPOINT` controls only signed
-browser downloads while `S3_ENDPOINT` stays internal. HMR covers client edits;
-restart with `down`/`up` after server/worker changes. Named Tailscale Services need
+browser downloads while `S3_ENDPOINT` stays internal. `npm run dev` owns a stable
+TCP listener and runs Vite/the backend in a child process. Server/config changes
+replace only that child; client edits still use Vite HMR. Requests arriving during
+restart wait up to 15 seconds for the child. Existing requests/WebSockets may
+disconnect and reconnect; Postgres, mail, storage, Caddy and the worker stay up.
+Worker or dev-runner changes still require `down`/`up`. The dev CLI accepts
+`--host`, `--port` and `--strictPort` and always refuses occupied ports. This also
+works outside Lizardtail; built `npm start` is unchanged. Lizardtail's own
+30-second HTTP-readiness failure policy still applies if the app cannot compile
+or boot for an extended period. Named Tailscale Services need
 host advertisement approval and client ACL grants; local checks cannot prove
 another device's access. See [preview verification](agents/preview.md).
 
