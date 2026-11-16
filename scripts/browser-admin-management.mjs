@@ -299,7 +299,7 @@ try {
   assert.deepEqual(await ids(members), membershipIds);
   await management
     .getByRole("status")
-    .filter({ hasText: "Change saved" })
+    .filter({ hasText: "Change saved. Refreshing the view failed." })
     .waitFor();
   assert.equal(
     await page.locator("dialog[open]").count(),

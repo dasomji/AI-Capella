@@ -449,8 +449,8 @@ export function AdminMembershipManagement({
             // The mutation has committed. A refresh error belongs to the open detail, not its closed dialog.
             try {
               await onChanged();
-            } catch (error) {
-              setStatus(d.success + " · " + managementError(error, language));
+            } catch {
+              setStatus(d.refreshFailed);
             }
           }}
         />
