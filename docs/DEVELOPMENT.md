@@ -105,7 +105,7 @@ services. Development alone may initialize a missing bucket; production never do
 Configured public browser origin must reach S3 for signed downloads. Preserve originals
 indefinitely; cleanup removes transient artifacts and explicitly deleted ensemble data.
 
-CI runs on PRs and main/production-v1 pushes, builds app/worker Docker images without pushing and
+CI runs only when a PR is opened, updated, reopened or marked ready (plus manual reruns), never after merge; see docs/DEPLOYMENT.md. It builds app/worker Docker images without pushing and
 has no deployment permissions. It runs typecheck, UTC/non-UTC unit suites, build,
 sentinel scanner, disposable integration + browser suites, fresh migrations/drift,
 eval replay, backup and graceful operations; Phase 6a migration tests are mandatory; missing scripts fail CI. CI installs the
