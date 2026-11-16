@@ -116,6 +116,7 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     assert.equal(events.length, 2);
     assert.doesNotMatch(JSON.stringify(events), /PRIVATE_SCORE_SENTINEL|private-admin-source/);
     assert.ok((await pool.query("select 1 from audit_events where actor_id=$1 and action='admin.piece.content' and ensemble_id=$2",[sys.id,e])).rowCount);
+    await changeAdminRole(process.env.DATABASE_URL!, manager.email, true);
     await changeAdminRole(process.env.DATABASE_URL!, sys.email, false);
     assert.equal((await req('/api/admin/users', sys.cookie)).status, 404);
     await changeAdminRole(process.env.DATABASE_URL!, sys.email, true);
@@ -171,4 +172,109 @@ test('ordinary handler statements time out and release the connection',{timeout:
  assert.equal((await pool.query("select count(*)::int n from pg_stat_activity where state='active' and query like 'select pg_sleep(40)%' ")).rows[0].n,0);
  const {adminQueries,workerQueries}=await import('../server/db/index.server');
  assert.equal((await pool.query('show statement_timeout')).rows[0].statement_timeout,'30s');assert.equal((await adminQueries(()=>pool.query('show statement_timeout'))).rows[0].statement_timeout,'2min');assert.equal((await workerQueries(()=>pool.query('show statement_timeout'))).rows[0].statement_timeout,'5s');
+});
+
+test('admin management: guarded transactions, permissions, invitations and live revocation', {timeout:90000}, async t=>{
+ const sys=await person('management-sys'),other=await person('management-other'),lead=await person('management-lead'),member=await person('management-member'),unverified=await person('management-unverified',false);
+ await changeAdminRole(process.env.DATABASE_URL!,sys.email,true);await changeAdminRole(process.env.DATABASE_URL!,other.email,true);
+ const e=(await (await req('/api/ensembles',lead.cookie,'POST',{name:'Management fixture'})).json()).id;
+ const leadMember=(await pool.query('select id from memberships where ensemble_id=$1 and user_id=$2',[e,lead.id])).rows[0].id;
+ const none={isLead:false,manageMembers:false,editPieces:false,transcribe:false},leadPermissions={...none,isLead:true};
+ const members='/api/admin/ensembles/'+e+'/members',role='/api/admin/users/'+member.id+'/sysadmin';
+ const reason='Local management verification';let id='';
+ const changes=()=>[
+   [members,'POST',{userId:member.id,permissions:none,reason}],
+   [members+'/'+(id||leadMember),'PATCH',{permissions:none,expected:leadPermissions,reason}],
+   [members+'/'+(id||leadMember),'DELETE',{expected:none,reason}],
+   [role,'PUT',{sysadmin:true,expected:false,reason}],
+   ['/api/admin/ensembles/'+e+'/invitations','POST',{email:'management-invite@example.test',language:'en',capabilities:{manageMembers:false,editPieces:true,transcribe:false},idempotencyKey:'management-invite',reason}],
+ ] as const;
+ await t.test('all new routes conceal themselves and reject invalid reason and Origin',async()=>{
+   for(const [path,method,body] of changes()){
+     await pool.query('delete from rate_limit where key=$1',['admin:mutation:'+sys.id]);
+     for(const cookie of ['',member.cookie,lead.cookie]){const r=await req(path,cookie,method,body);assert.equal(r.status,404,path);assert.equal(r.headers.get('cache-control'),'no-store');}
+     for(const bad of [undefined,'',' ', 'x'.repeat(1001),'\0','\ud800'])assert.equal((await req(path,sys.cookie,method,{...body,reason:bad})).status,422,path);
+     for(const origin of [undefined,'https://untrusted.example.test']){
+       const r=await fetch(base+path,{method,headers:{cookie:sys.cookie,'content-type':'application/json',...(origin?{origin}:{})},body:JSON.stringify(body)});assert.equal(r.status,403);assert.equal(r.headers.get('cache-control'),'no-store');
+     }
+   }
+   assert.equal(Number((await pool.query("select count(*) from audit_events where actor_id=$1 and outcome='invalid_input'",[sys.id])).rows[0].count),30);
+   assert.equal(Number((await pool.query("select count(*) from audit_events where actor_id=$1 and outcome='untrusted_origin'",[sys.id])).rows[0].count),10);
+   await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);
+ });
+ await t.test('add, inline capability changes and stale concurrent updates are audited',async()=>{
+   assert.equal((await req(members,sys.cookie,'POST',{userId:member.id,permissions:none,reason})).status,200);
+   id=(await pool.query('select id from memberships where ensemble_id=$1 and user_id=$2',[e,member.id])).rows[0].id;
+   assert.equal((await req('/api/ensembles/'+e+'/members',member.cookie)).status,403);
+   const edits=await Promise.all([sys,other].map((actor,i)=>req(members+'/'+id,actor.cookie,'PATCH',{expected:none,permissions:{...none,...(i?{transcribe:true}:{manageMembers:true})},reason})));
+   assert.deepEqual(edits.map(r=>r.status).sort(),[200,409]);
+   const row=(await pool.query('select * from memberships where id=$1',[id])).rows[0];assert.notEqual(row.manage_members,row.ai_transcription);
+   const events=(await pool.query("select action,outcome,metadata from audit_events where target_id=$1 and action like 'admin.membership.%' order by created_at",[id])).rows;
+   assert.equal(events.filter(r=>r.outcome==='ok').length,2);assert.equal(events.filter(r=>r.outcome==='stale_permissions').length,1);
+   assert.deepEqual(events.find(r=>r.action==='admin.membership.add').metadata.after,none);
+   assert.deepEqual(events.find(r=>r.action==='admin.membership.permissions'&&r.outcome==='ok').metadata.before,none);
+ });
+ await t.test('last lead survives removal, demotion and concurrent demotions',async()=>{
+   for(const [method,body] of [['DELETE',{expected:leadPermissions,reason}],['PATCH',{expected:leadPermissions,permissions:none,reason}]] as const){const r=await req(members+'/'+leadMember,sys.cookie,method,body);assert.equal(r.status,409);assert.equal((await r.json()).code,'last_lead');}
+   const row=(await pool.query('select * from memberships where id=$1',[id])).rows[0];const expected={isLead:row.is_lead,manageMembers:row.manage_members,editPieces:row.edit_music_pieces,transcribe:row.ai_transcription};
+   assert.equal((await req(members+'/'+id,sys.cookie,'PATCH',{expected,permissions:leadPermissions,reason})).status,200);
+   const edits=await Promise.all([[leadMember,sys],[id,other]].map(([target,actor]:any)=>req(members+'/'+target,actor.cookie,'PATCH',{expected:leadPermissions,permissions:none,reason})));
+   assert.deepEqual(edits.map(r=>r.status).sort(),[200,409]);
+   assert.equal((await pool.query('select count(*)::int n from memberships where ensemble_id=$1 and is_lead',[e])).rows[0].n,1);
+   // Restore the fixture lead before testing removal of the ordinary member.
+   await pool.query('update memberships set is_lead=true where id=$1',[leadMember]);
+   await pool.query('update memberships set is_lead=false,manage_members=false,edit_music_pieces=false,ai_transcription=false where id=$1',[id]);
+ });
+ await t.test('removal uses the lead revocation path for API, account rooms and rehearsal',async()=>{
+   const {io:connect}=await import('socket.io-client');
+   const sockets=['','/rehearsal'].map(ns=>connect(base+ns,{forceNew:true,extraHeaders:{cookie:member.cookie,origin:base},transports:['websocket'],reconnection:false}));
+   try{
+     for(const s of sockets)await new Promise<void>((resolve,reject)=>{s.once('connect',resolve);s.once('connect_error',reject);});
+     const emit=(event:string)=>new Promise<any>((resolve,reject)=>sockets[1].timeout(5000).emit(event,{ensembleId:e},(error:any,data:any)=>error?reject(error):resolve(data)));
+     assert.ok((await emit('rehearsal:join')).state);
+     const changed=new Promise<void>(resolve=>sockets[0].once('membership:changed',()=>resolve()));
+     assert.equal((await req('/api/ensembles/'+e+'/pieces',member.cookie)).status,200);
+     assert.equal((await req(members+'/'+id,sys.cookie,'DELETE',{expected:none,reason})).status,200);await changed;
+     assert.equal((await req('/api/ensembles/'+e+'/pieces',member.cookie)).status,404);
+     assert.ok(!(await json('memberships?user='+member.id+'&ensemble='+e,sys.cookie)).items.length);
+     assert.equal(io.of('/').sockets.get(sockets[0].id!)!.rooms.has('ensemble:'+e),false);
+     assert.equal(io.of('/rehearsal').sockets.get(sockets[1].id!)!.rooms.has('rehearsal:'+e),false);
+     assert.equal((await emit('rehearsal:snapshot')).code,'forbidden');
+     assert.deepEqual((await pool.query("select metadata from audit_events where target_id=$1 and action='admin.membership.remove' and outcome='ok'",[id])).rows[0].metadata.before,none);
+   }finally{sockets.forEach(s=>s.disconnect());}
+ });
+ await t.test('platform roles require verification, reject self revoke, recheck requests and preserve a final admin',async()=>{
+   assert.equal((await req(role,sys.cookie,'PUT',{sysadmin:true,expected:false,reason})).status,200);
+   assert.equal((await req('/api/admin/users',member.cookie)).status,200);
+   assert.equal((await req(role,sys.cookie,'PUT',{sysadmin:false,expected:true,reason})).status,200);
+   assert.equal((await req('/api/admin/users',member.cookie)).status,404);
+   let r=await req('/api/admin/users/'+sys.id+'/sysadmin',sys.cookie,'PUT',{sysadmin:false,expected:true,reason});assert.equal((await r.json()).code,'self_revoke');
+   r=await req('/api/admin/users/'+unverified.id+'/sysadmin',sys.cookie,'PUT',{sysadmin:true,expected:false,reason});assert.equal((await r.json()).code,'verified_email_required');
+   const saved=(await pool.query('select * from platform_roles where user_id<>$1',[sys.id])).rows;
+   try{await pool.query('delete from platform_roles where user_id<>$1',[sys.id]);await assert.rejects(changeAdminRole(process.env.DATABASE_URL!,sys.email,false),/last_sysadmin/);}
+   finally{for(const row of saved)await pool.query('insert into platform_roles(user_id,role,created_at) values($1,$2,$3) on conflict do nothing',[row.user_id,row.role,row.created_at]);}
+ });
+ await t.test('sysadmin invitations reuse delivery, hashes, expiry, acceptance and issuer revocation',async()=>{
+   await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);
+   const path='/api/admin/ensembles/'+e+'/invitations',email='management-invite-'+crypto.randomUUID()+'@example.test';
+   const input={email,language:'en',capabilities:{manageMembers:false,editPieces:true,transcribe:true},idempotencyKey:crypto.randomUUID(),reason};
+   const r=await req(path,sys.cookie,'POST',input);assert.equal(r.status,200,await r.clone().text());
+   const data=await r.json();assert.equal(data.deliveryState,'sent');assert.ok(!JSON.stringify(data).includes('token'));
+   const i=(await pool.query('select * from invitations where id=$1',[data.id])).rows[0];assert.equal(i.admin_issued,true);assert.match(i.token_hash,/^[a-f0-9]{64}$/);assert.ok(Math.abs((i.expires_at.getTime()-i.created_at.getTime())/86400000-14)<.01);
+   const {captureMail}=await import('../server/mail.server');const mail=captureMail.messages.find(m=>m.to===email)!;const token=mail.text.match(/\/invite\/([^\s]+)/)![1];
+   const password='Test-only-password-3456';assert.equal((await req('/api/auth/sign-up/email','','POST',{email,password,name:'Invited singer'})).status,200);
+   await pool.query('update "user" set email_verified=true where email=$1',[email]);
+   const sign=await req('/api/auth/sign-in/email','','POST',{email,password});const cookie=sign.headers.getSetCookie().map(s=>s.split(';')[0]).join('; ');
+   const accepted=await req('/api/invitations/'+token+'/accept',cookie,'POST',{});assert.equal(accepted.status,200,await accepted.clone().text());
+   assert.equal((await accepted.json()).capabilities.editPieces,true);
+   const second=await req(path,sys.cookie,'POST',{...input,email:'revoked-'+email,idempotencyKey:crypto.randomUUID()});assert.equal(second.status,200);
+   await changeAdminRole(process.env.DATABASE_URL!,sys.email,false);
+   assert.equal((await pool.query('select state from invitations where id=$1',[(await second.json()).id])).rows[0].state,'revoked');
+   await changeAdminRole(process.env.DATABASE_URL!,sys.email,true);
+ });
+ await t.test('a database-backed mutation cap rejects attempts and audits the cap outcome',async()=>{
+   await pool.query("insert into rate_limit(key,count,last_request) values($1,20,$2) on conflict(key) do update set count=20,last_request=$2",['admin:mutation:'+sys.id,Date.now()]);
+   assert.equal((await req(members,sys.cookie,'POST',{userId:member.id,permissions:none,reason})).status,429);
+   assert.ok((await pool.query("select 1 from audit_events where actor_id=$1 and outcome='rate_limited'",[sys.id])).rowCount);
+ });
 });

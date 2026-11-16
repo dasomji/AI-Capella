@@ -1,3 +1,4 @@
+import { lockPlatformRoles } from './platform-role.server';
 import { insertVersion } from "./migration-content.server";
 import { pieceTitle } from '../src/api/title';
 import { gzipSync } from 'node:zlib';
@@ -16,6 +17,7 @@ import {
   authorize,
   lockEnsemble,
   protectLead,
+  removeMembership,
   audit,
   membershipChanged,
   libraryChanged,
@@ -412,9 +414,7 @@ domain.delete("/ensembles/:ensemble/members/:member", async (c) => {
       await authorize(db, u.id, e, "manageMembers");
       if (m.is_lead && !actor.is_lead) throw new DomainError("forbidden", 403);
     }
-    await protectLead(db, e, m);
-    await revokeIssued(db, e, m.user_id);
-    await db.query("delete from memberships where id=$1", [id]);
+    await removeMembership(db, e, m);
     await audit(
       db,
       e,
@@ -578,25 +578,10 @@ async function sendInvite(
     [i.delivery_state, i.id, i.token_hash],
   );
 }
-domain.get("/ensembles/:ensemble/invitations", async (c) => {
-  const e = c.req.param("ensemble");
-  await authorize(pool, c.get("user").id, e, "manageMembers");
-  return c.json(
-    (
-      await pool.query(
-        "select * from invitations where ensemble_id=$1 order by created_at",
-        [e],
-      )
-    ).rows.map(inviteView),
-  );
-});
-domain.post("/ensembles/:ensemble/invitations", async (c) => {
-  const input = invitationInput.parse(await readBody(c.req)),
-    e = c.req.param("ensemble"),
-    u = c.get("user");
-  const delivery = await transaction(async (db) => {
+export async function createInvitation(db: PoolClient, e: string, u: {id:string}, input: z.infer<typeof invitationInput>, adminIssued = false) {
     await lockEnsemble(db, e);
-    const actor = await authorize(db, u.id, e, "manageMembers");
+    const actor = adminIssued ? { is_lead: true } : await authorize(db, u.id, e, "manageMembers");
+    if (!(await db.query("select 1 from ensembles where id=$1", [e])).rowCount) throw new DomainError("not_found",404);
     const cached = await replay(
       db,
       e,
@@ -651,7 +636,7 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
       expiry = new Date(clock.now().getTime() + 14 * 86400000);
     const i = (
       await db.query(
-        `insert into invitations(ensemble_id,email,inviter_id,token_hash,expires_at,manage_members,edit_music_pieces,ai_transcription,language,request_key,send_count,last_sent_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11) on conflict(ensemble_id,email) where state='pending' do update set token_hash=excluded.token_hash,expires_at=excluded.expires_at,inviter_id=excluded.inviter_id,manage_members=excluded.manage_members,edit_music_pieces=excluded.edit_music_pieces,ai_transcription=excluded.ai_transcription,language=excluded.language,request_key=excluded.request_key,delivery_state='not_sent',send_count=invitations.send_count+1,last_sent_at=excluded.last_sent_at returning *`,
+        `insert into invitations(ensemble_id,email,inviter_id,token_hash,expires_at,manage_members,edit_music_pieces,ai_transcription,language,request_key,send_count,last_sent_at,admin_issued) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,$12) on conflict(ensemble_id,email) where state='pending' do update set token_hash=excluded.token_hash,expires_at=excluded.expires_at,inviter_id=excluded.inviter_id,manage_members=excluded.manage_members,edit_music_pieces=excluded.edit_music_pieces,ai_transcription=excluded.ai_transcription,language=excluded.language,request_key=excluded.request_key,delivery_state='not_sent',send_count=invitations.send_count+1,last_sent_at=excluded.last_sent_at,admin_issued=excluded.admin_issued returning *`,
         [
           e,
           input.email,
@@ -664,6 +649,7 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
           input.language ?? recipient?.language ?? "en",
           JSON.stringify([input.idempotencyKey]),
           clock.now(),
+          adminIssued,
         ],
       )
     ).rows[0];
@@ -677,7 +663,26 @@ domain.post("/ensembles/:ensemble/invitations", async (c) => {
     );
     await remember(db, e, u.id, "invite", input.idempotencyKey, input, i);
     return { invitation: i, raw };
-  });
+
+}
+export { sendInvite, inviteView };
+domain.get("/ensembles/:ensemble/invitations", async (c) => {
+  const e = c.req.param("ensemble");
+  await authorize(pool, c.get("user").id, e, "manageMembers");
+  return c.json(
+    (
+      await pool.query(
+        "select * from invitations where ensemble_id=$1 order by created_at",
+        [e],
+      )
+    ).rows.map(inviteView),
+  );
+});
+domain.post("/ensembles/:ensemble/invitations", async (c) => {
+  const input = invitationInput.parse(await readBody(c.req)),
+    e = c.req.param("ensemble"),
+    u = c.get("user");
+  const delivery = await transaction(db => createInvitation(db,e,u,input));
   if (delivery.raw) await sendInvite(pool, delivery.invitation, delivery.raw);
   return c.json(inviteView(delivery.invitation), 201);
 });
@@ -771,6 +776,7 @@ domain.delete("/ensembles/:ensemble/invitations/:invitation", async (c) => {
 domain.post("/invitations/:token/accept", async (c) => {
   const u = c.get("user");
   const result = await transaction(async (db) => {
+      await lockPlatformRoles(db,false);
       await db.query("select pg_advisory_xact_lock(hashtextextended($1,0))", [
         u.id,
       ]);
@@ -822,9 +828,10 @@ domain.post("/invitations/:token/accept", async (c) => {
           [i.ensemble_id, i.inviter_id],
         )
       ).rows[0];
-      if (i.kind !== "lead" && (!issuer || (!issuer.is_lead && !issuer.manage_members)))
+      const adminIssuer = i.admin_issued && !!(await db.query('select 1 from platform_roles r join "user" u on u.id=r.user_id where r.user_id=$1 and u.email_verified', [i.inviter_id])).rowCount;
+      if (i.kind !== "lead" && (i.admin_issued ? !adminIssuer : (!issuer || (!issuer.is_lead && !issuer.manage_members))))
         throw new DomainError("revoked", 409);
-      if (i.kind !== "lead" && !issuer.is_lead) {
+      if (i.kind !== "lead" && !adminIssuer && !issuer.is_lead) {
         i.manage_members = false;
         i.edit_music_pieces = false;
         i.ai_transcription = false;

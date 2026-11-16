@@ -1,3 +1,4 @@
+import { rejectedAdminOrigin } from './admin-management.server';
 import { admin } from './admin.server';
 import { adminSession,isSysadmin } from './admin-auth.server';
 import { sandboxReady } from './sandbox.server';
@@ -53,8 +54,14 @@ api.use("*", async (c, next) => {
   if (
     !["GET", "HEAD", "OPTIONS"].includes(c.req.method) &&
     !env.TRUSTED_ORIGINS.includes(c.req.header("origin") ?? "")
-  )
+  ) {
+    if (/^\/api\/admin(?:\/|$)/.test(c.req.path)) {
+      c.header('Cache-Control','no-store');
+      const session=await adminSession(c.req.raw.headers);
+      if(session)await rejectedAdminOrigin(session.user.id,c.req.path);
+    }
     return c.json({ error: "Untrusted origin" }, 403);
+  }
   if (c.req.path.startsWith("/assets/"))
     c.header("Cache-Control", "public, max-age=31536000, immutable");
   else if (

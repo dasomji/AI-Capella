@@ -1,16 +1,9 @@
+import { DomainError } from './domain-error.server';
+export { DomainError } from './domain-error.server';
 import { logError } from "./logger.server";
 import { trackBackground } from "./background.server";
 import type { PoolClient } from "pg";
 import { pool } from "./db/index.server";
-export class DomainError extends Error {
-  constructor(
-    public code: string,
-    public status = 400,
-    public current?: unknown,
-  ) {
-    super(code);
-  }
-}
 export async function transaction<T>(
   run: (db: PoolClient) => Promise<T>,
 ): Promise<T> {
@@ -127,4 +120,14 @@ export async function libraryChanged(ensemble: string, changes: unknown[]) {
       )
       .catch((error) => logError("library.emit", error)),
   );
+}
+
+/** Caller holds the ensemble lock and performs its own actor authorization. */
+export async function removeMembership(db: PoolClient, ensemble: string, member: { id: string; user_id: string; is_lead: boolean }) {
+  await protectLead(db, ensemble, member);
+  await revokeMemberInvitations(db, ensemble, member.user_id);
+  await db.query("delete from memberships where id=$1 and ensemble_id=$2", [member.id, ensemble]);
+}
+export async function revokeMemberInvitations(db: PoolClient, ensemble: string, user: string) {
+  await db.query("update invitations set state='revoked',revoked_at=now() where ensemble_id=$1 and inviter_id=$2 and state='pending'", [ensemble, user]);
 }

@@ -1,3 +1,4 @@
+import { registerAdminManagement } from './admin-management.server';
 import { Hono,type Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {calendarRange,calendarInstant} from '../src/admin-time';
@@ -47,12 +48,12 @@ async function statsRange(c:Context){const q=adminQuery.parse(c.req.query()),day
 async function contentLimit(actor:string){await adminLimit(actor,'content',10);await adminLimit(actor,'content-hour',30,3600000);await adminLimit(actor,'content-day',200,86400000);}
 const memberFields = 'm.id,m.user_id,m.ensemble_id,e.name as ensemble_name,u.name,u.email,m.is_lead,m.manage_members,m.edit_music_pieces,m.ai_transcription,m.created_at';
 const sources = {
-    users: { table: '"user" t', fields: `t.id,t.name,t.email,t.email_verified,t.created_at,exists(select 1 from platform_roles r where r.user_id=t.id) as sysadmin`, search: 't.email || \' \' || t.name', name: 't.name', date: 't.created_at' },
+    users: { table: '"user" t', fields: `t.id,t.name,t.email,t.email_verified,t.created_at,(select count(*)::int from memberships m where m.user_id=t.id) as ensemble_count,(select max(updated_at) from session s where s.user_id=t.id and s.expires_at>now()) as last_active,exists(select 1 from platform_roles r where r.user_id=t.id) as sysadmin`, search: 't.email || \' \' || t.name', name: 't.name', date: 't.created_at' },
     ensembles: { table: 'ensembles t', fields: `t.id,t.name,t.kind,t.created_at,(select count(*)::int from memberships m where m.ensemble_id=t.id) as members,(select count(*)::int from memberships m where m.ensemble_id=t.id and m.is_lead) as leads,(select count(*)::int from music_pieces p where p.ensemble_id=t.id) as pieces,(select count(*)::int from invitations i where i.ensemble_id=t.id and i.state='pending' and i.expires_at>now()) as pending_invitations,(select coalesce(sum(size),0)::float8 from stored_objects o where o.ensemble_id=t.id and o.kind='original' and o.state='ready') as storage_bytes`, search: 't.name', name: 't.name', date: 't.created_at' },
     pieces: { table: 'music_pieces t', fields: `t.id,t.title,t.ensemble_id,t.format,t.created_at,t.updated_at,(select size::float8 from score_versions v where v.id=t.current_version_id) as size,(select count(*)::int from score_versions v where v.piece_id=t.id) as versions`, search: 't.title', name: 't.title', date: 't.created_at' },
     jobs: { table: 'transcription_jobs t', fields: 't.id,t.ensemble_id,t.user_id,t.state,t.failure_reason,t.attempts,t.model,t.prompt_version,t.imported_piece_id,t.created_at,t.updated_at', search: 't.id', name: 't.id', date: 't.created_at' },
     audit: { table: 'audit_events t', fields: 't.id,t.actor_id,(select name from "user" where id=t.actor_id) as actor_name,t.ensemble_id,t.action,t.target_id,t.outcome,t.created_at,case when t.action like \'admin.%\' then left(t.metadata->>\'reason\',160) end as reason_excerpt', search: 't.action', name: 't.action', date: 't.created_at' },
-    memberships: { table: 'memberships m join ensembles e on e.id=m.ensemble_id join "user" u on u.id=m.user_id', fields: memberFields, search: 'u.email', name: 'u.name', date: 'm.created_at' },
+    memberships: { table: 'memberships m join ensembles e on e.id=m.ensemble_id join "user" u on u.id=m.user_id', fields: memberFields, search: "u.email || ' ' || u.name || ' ' || e.name", name: 'u.name', date: 'm.created_at' },
     invitations: { table: 'invitations t', fields: "t.id,t.ensemble_id,t.email,t.inviter_id,case when t.state='pending' and t.expires_at<=now() then 'expired' else t.state end as state,t.expires_at,t.created_at,t.manage_members,t.edit_music_pieces,t.ai_transcription", search: 't.email', name: 't.email', date: 't.created_at' },
 } as const;
 for (const kind of Object.keys(sources) as (keyof typeof sources)[])
@@ -89,7 +90,7 @@ for (const kind of Object.keys(sources) as (keyof typeof sources)[])
             if (q.targetType)
                 where.push(`(t.metadata->>'targetType'=${bind(q.targetType)} or t.action like ${bind(q.targetType + '.%')})`);
         }
-        const order = q.sort === 'updated' && kind === 'pieces' ? 't.updated_at' : q.sort === 'created' ? s.date : q.sort === 'name' ? s.name : alias + '.id', dir = q.direction === 'asc' ? 'asc' : 'desc';
+        const order = q.sort==='email' && ['users','memberships','invitations'].includes(kind) ? (kind==='memberships'?'u.email':'t.email') : q.sort==='ensemble' && kind==='memberships' ? 'e.name' : q.sort === 'updated' && kind === 'pieces' ? 't.updated_at' : q.sort === 'created' ? s.date : q.sort === 'name' ? s.name : alias + '.id', dir = q.direction === 'asc' ? 'asc' : 'desc';
         if (q.cursor) {
             let cursor;
             try {
@@ -171,4 +172,5 @@ catch (e) {
 } });
 admin.get('/transcription/metrics',async c=>{const q=await statsRange(c);const rows=(await pool.query(`select c.model,c.prompt_version,c.outcome as state,count(*)::int as attempts,sum(extract(epoch from(c.finished_at-c.started_at))*1000) as latency,sum(c.estimated_cost::text::numeric) as estimated_cost,sum((c.usage->>'inputTokens')::numeric) as input_tokens,sum((c.usage->>'outputTokens')::numeric) as output_tokens from provider_calls c join transcription_jobs j on j.id=c.job_id where c.started_at >= $1 and c.started_at < $2 and ($3::text is null or j.ensemble_id=$3) group by c.model,c.prompt_version,c.outcome`,[q.from,q.to,q.ensemble??null])).rows;return adminJSON(c,rows.map(numericRow));});
 admin.get('/transcription/failures',async c=>{const q=await statsRange(c);return adminJSON(c,{items:(await pool.query("select coalesce(c.error_kind,'unknown') as reason,count(*)::int as calls from provider_calls c join transcription_jobs j on j.id=c.job_id where c.started_at >= $1 and c.started_at < $2 and ($3::text is null or j.ensemble_id=$3) and c.outcome='failed' group by c.error_kind order by calls desc limit 100",[q.from,q.to,q.ensemble??null])).rows});});
+registerAdminManagement(admin,adminLimit,adminJSON);
 admin.all('*', c => adminJSON(c, { code: 'not_found' }, 404));
