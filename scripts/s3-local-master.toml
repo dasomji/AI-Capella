@@ -1,0 +1,4 @@
+# Disposable fixtures need one writable volume per collection. SeaweedFS's
+# default grows seven at once, preallocating gigabytes for tiny test objects.
+[master.volume_growth]
+copy_1 = 1

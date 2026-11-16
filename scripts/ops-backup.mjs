@@ -167,6 +167,8 @@ export async function disposable() {
       store,
       "-p",
       "127.0.0.1::8333",
+      "-v",
+      `${resolve("scripts/s3-local-master.toml")}:/etc/seaweedfs/master.toml:ro`,
       "chrislusf/seaweedfs:4.06",
       "server",
       "-dir=/data",
