@@ -139,7 +139,15 @@ export function scanDesignFile(file, source) {
     if (ts.isIdentifier(node) && declarations.has(node.text) && !seen.has(node.text)) { seen.add(node.text); return fontFromTheme(declarations.get(node.text), seen); }
     if (ts.isStringLiteralLike(node)) return tokenFont(node.text);
     if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) return /\.fonts(?:\.|\[)/.test(node.getText(ast));
-    if (ts.isTemplateExpression(node)) return node.templateSpans.every(span => fontFromTheme(span.expression, new Set(seen)) || ts.isNumericLiteral(span.expression)) && node.templateSpans.some(span => /\.fonts(?:\.|\[)/.test(span.expression.getText(ast)) || (ts.isIdentifier(span.expression) && fontFromTheme(span.expression, new Set(seen))));
+    if (ts.isTemplateExpression(node)) {
+      let hasFont = false;
+      const skeleton = node.head.text + node.templateSpans.map(span => {
+        const font = fontFromTheme(span.expression, new Set(seen));
+        hasFont ||= font;
+        return (font ? 'var(--snapshot-font)' : '1') + span.literal.text;
+      }).join('');
+      return hasFont && tokenFont(skeleton);
+    }
     if (ts.isConditionalExpression(node)) return fontFromTheme(node.whenTrue, new Set(seen)) && fontFromTheme(node.whenFalse, new Set(seen));
     return false;
   }

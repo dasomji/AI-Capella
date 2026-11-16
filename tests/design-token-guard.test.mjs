@@ -42,7 +42,7 @@ describe('review guard regressions M3–M6 / N1', () => {
   it.each(['Georgia', '"Inter", Arial', '12px Helvetica'])('M3 rejects unknown CSS fonts: %s', value => {
     expect(scanDesignFile('src/new.css', `x { ${value.startsWith('12') ? 'font' : 'font-family'}: ${value} }`).some(row => row.kind === 'font-allowlist')).toBe(true);
   });
-  it.each(["ctx.font='12px Georgia'", "ctx.font='12px Inter, Arial'", "ctx.font=legacyFont", "el.style.fontFamily='Georgia'", "ctx['font']='12px Helvetica'"] )('M3 rejects font sinks: %s', source => {
+  it.each(["ctx.font='12px Georgia'", "ctx.font='12px Inter, Arial'", "ctx.font=legacyFont", "el.style.fontFamily='Georgia'", "ctx['font']='12px Helvetica'", "ctx.font=`12px Georgia ${theme.fonts.body}`"] )('M3 rejects font sinks: %s', source => {
     expect(scan(source).some(row => row.kind === 'font-allowlist')).toBe(true);
   });
   it('M3 permits snapshot fonts, variable shorthands and inheritance', () => {
