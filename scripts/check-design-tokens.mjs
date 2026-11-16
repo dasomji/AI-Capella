@@ -15,10 +15,33 @@ const colorAtom = /#[\da-f]{3,8}\b|(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)
 const namedColors = new Set(('aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen').split(' '));
 const fontStack = /(?:['"](?:Atkinson[^'";]+|Bodoni[^'";]+|Baltimore[^'";]+|Remington[^'";]+|Modern Antique[^'";]+|Italianno|LightScore Engraving|Bravura)['"][^;\n]*|(?:system-ui|ui-monospace|sans-serif|monospace|\bserif\b|\bcursive\b))/g;
 const paletteClass = /(?:^|\s)tw:(?:[\w-]+:)*(?:bg|text|border|outline|ring|fill|stroke|shadow|from|via|to|decoration|accent|caret)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(?:-\d+)?(?:\/\d+)?\b/g;
-const arbitraryAesthetic = /(?:^|\s)tw:(?:[\w-]+:)*(?:(?:bg|text|border|outline|ring|fill|stroke|font|rounded|shadow|tracking|leading|opacity|duration|ease|from|via|to)-\[[^\]]+\]|\[(?:color|background|font|border|box-shadow|border-radius)[^\]]*\])/g;
+const arbitraryAesthetic = /(?:^|\s)tw:(?:[\w-]+:)*-?(?:(?:bg|text|border|outline|ring|fill|stroke|font|rounded|shadow|tracking|leading|opacity|duration|ease|from|via|to|p[xysetblr]?|m[xysetblr]?|gap(?:-[xy])?|space-[xy]|inset(?:-[xy])?|top|right|bottom|left|start|end|w|h|size|min-[wh]|max-[wh]|z|basis)-(?:\[[^\]]+\]|\([^)]*\))|\[(?:color|background|font|border|box-shadow|border-radius|padding|margin|gap|width|height|inset|z-index)[^\]]*\])/g;
+// Increment only for strengthened rules. A migration is permitted once per version,
+// and each added exact entry/count must also exist at the immutable source ceiling.
+export const ruleVersions = { 'font-allowlist': 2, 'named-color': 2, 'recipe-boundary': 2, 'computed-style-token-read': 2, 'raw-media-query': 2, 'raw-breakpoint-compare': 2, 'unlayered-css-import': 2, 'legacy-theme-read': 2, 'arbitrary-aesthetic': 2 };
+function namedTokens(value) {
+  // Lex CSS identifiers, skipping balanced var()/url() arguments and quoted strings.
+  // In particular --ds-red and animation identifiers are not the color token red.
+  const words = []; let i = 0;
+  while (i < value.length) {
+    if (value[i] === '\"' || value[i] === "'") { const q = value[i++]; while (i < value.length) { if (value[i++] === '\\') i++; else if (value[i - 1] === q) break; } continue; }
+    const word = value.slice(i).match(/^[a-z_-][a-z0-9_-]*/i);
+    if (!word) { i++; continue; }
+    const name = word[0]; i += name.length;
+    if (/^(url|var)$/i.test(name) && value[i] === '(') {
+      let depth = 1; i++;
+      while (i < value.length && depth) { if (value[i] === '(') depth++; if (value[i] === ')') depth--; i++; }
+    } else if (namedColors.has(name.toLowerCase())) words.push(name);
+  }
+  return words;
+}
+function tokenFont(value) {
+  if (/^(?:inherit|initial)$/.test(value.trim())) return true;
+  const normalized = value.replace(/var\(\s*--[\w-]+(?:,\s*(?:inherit|initial))?\s*\)/g, 'TOKEN').replace(/(?:clamp|min|max|calc)\([^)]*\)/g, '1px').trim();
+  return /^(?:(?:normal|italic|oblique|bold|[\d.]+(?:px|rem|em|%|pt)?)(?:\/[\d.]+(?:px|rem|em|%|pt)?)?\s+)*TOKEN$/.test(normalized);
+}
 const defaultFont = /(?:^|\s)tw:(?:[\w-]+:)*font-(?:sans|serif|thin|extralight|light|normal|medium|semibold|bold|extrabold|black)\b/g;
-const designProp = /^(?:color|background(?:-color)?|border(?:-[\w-]+)?|outline(?:-[\w-]+)?|fill|stroke|box-shadow|text-shadow|accent-color|caret-color|stop-color|flood-color)$/;
-const sinkName = /(?:fillStyle|strokeStyle|shadowColor|color|background|backgroundColor|borderColor|outlineColor|font|innerHTML|outerHTML)$/;
+const sinkName = /(?:fillStyle|strokeStyle|shadowColor|color|background|backgroundColor|borderColor|outlineColor|font|fontFamily|cssText|boxShadow|innerHTML|outerHTML)$/;
 const assetFaces = new Set(['LightScore Engraving', 'Bravura', 'Baltimore Title 1832', 'Baltimore Bold 1832', 'Modern Antique 1889', 'Remington 1888', 'Baltimore Black Slope 1832']);
 const allowed = new Set(['src/design-system/tokens.css']);
 const normalize = text => text.replace(/\s+/g, ' ').trim();
@@ -43,13 +66,12 @@ export function scanDesignFile(file, source) {
     // are still pigments even though the alpha expression splits the string.
     for (const match of text.matchAll(/(?:rgba?|hsla?)\(\s*\d+(?:\.\d+)?%?\s*[, ]\s*\d+(?:\.\d+)?%?\s*[, ]\s*\d+(?:\.\d+)?%?[^)]*$/gi)) add('raw-template-channels', context, match[0]);
     if (names) {
-      const withoutVars = text.replace(/var\(\s*--[^,)]+(?:,\s*)?/g, '').replace(/url\([^)]*\)/g, '');
-      for (const word of withoutVars.match(/\b[a-z]+\b/gi) ?? []) if (namedColors.has(word.toLowerCase())) add('named-color', context, word);
+      for (const word of namedTokens(text)) add('named-color', context, word);
     }
   }
   function classes(text, context) {
     for (const match of text.matchAll(paletteClass)) add('palette-utility', context, match[0]);
-    for (const match of text.matchAll(arbitraryAesthetic)) add('arbitrary-aesthetic', context, match[0]);
+    for (const match of text.matchAll(arbitraryAesthetic)) if (!/-(?:\(--ds-[\w-]+\)|\[var\(--ds-[\w-]+\)\])$/.test(match[0])) add('arbitrary-aesthetic', context, match[0]);
     for (const match of text.matchAll(defaultFont)) add('default-font-utility', context, match[0]);
   }
   if (file.endsWith('.css')) {
@@ -59,10 +81,16 @@ export function scanDesignFile(file, source) {
       while (node && node.type !== 'root') { ancestry.unshift(node.selector ?? `@${node.name} ${node.params ?? ''}`); node = node.parent; }
       const context = ancestry.join(' / ') + ' / ' + decl.prop;
       if (decl.parent.type === 'atrule' && decl.parent.name === 'font-face' && decl.prop === 'font-family' && assetFaces.has(decl.value.replace(/^['"]|['"]$/g, ''))) return;
-      colors(decl.value, context, designProp.test(decl.prop) || decl.prop.startsWith('--'));
+      colors(decl.value, context, !/^(?:font|font-family|animation-name|content)$/.test(decl.prop));
+      if (/^(?:font|font-family)$/.test(decl.prop) && !tokenFont(decl.value) && !fontStack.test(decl.value)) add('font-allowlist', context, decl.value);
+      fontStack.lastIndex = 0;
       if (/^(?:font|font-family)$/.test(decl.prop) && fontStack.test(decl.value)) add('raw-font', context, decl.value);
       fontStack.lastIndex = 0;
       if (/--pigment-/.test(decl.value)) add('primitive-import', context, decl.value);
+    });
+    tree.walkAtRules(rule => {
+      if (rule.name === 'import' && file !== 'src/design-system/app.css' && !/\blayer(?:\s*\(|\s*;|$)/.test(rule.params)) add('unlayered-css-import', '@import', rule.params);
+      if (!file.startsWith('src/design-system/') && rule.name === 'media' && /\b(?:width|height)\s*[:<>=][^)]*\d+(?:px|rem|em)\b/.test(rule.params)) add('raw-media-query', '@media', rule.params);
     });
     tree.walkRules(rule => {
       if (file.startsWith('src/design-system/')) return;
@@ -106,6 +134,44 @@ export function scanDesignFile(file, source) {
     for (const raw of rawChannels(node)) add('raw-channels-at-sink', context(node), raw);
     for (const id of references(node)) for (const raw of sources.get(id) ?? []) add('raw-channels-at-sink', context(node) + ' <- ' + id, raw);
   }
+  const outsideSystem = !file.startsWith('src/design-system/');
+  function fontFromTheme(node, seen = new Set()) {
+    if (ts.isIdentifier(node) && declarations.has(node.text) && !seen.has(node.text)) { seen.add(node.text); return fontFromTheme(declarations.get(node.text), seen); }
+    if (ts.isStringLiteralLike(node)) return tokenFont(node.text);
+    if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) return /\.fonts(?:\.|\[)/.test(node.getText(ast));
+    if (ts.isTemplateExpression(node)) return node.templateSpans.every(span => fontFromTheme(span.expression, new Set(seen)) || ts.isNumericLiteral(span.expression)) && node.templateSpans.some(span => /\.fonts(?:\.|\[)/.test(span.expression.getText(ast)) || (ts.isIdentifier(span.expression) && fontFromTheme(span.expression, new Set(seen))));
+    if (ts.isConditionalExpression(node)) return fontFromTheme(node.whenTrue, new Set(seen)) && fontFromTheme(node.whenFalse, new Set(seen));
+    return false;
+  }
+  function literalValues(node, visit, seen = new Set()) {
+    if (ts.isIdentifier(node) && declarations.has(node.text) && !seen.has(node.text)) { seen.add(node.text); literalValues(declarations.get(node.text), visit, seen); return; }
+    if (ts.isStringLiteralLike(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) visit(node.text);
+    ts.forEachChild(node, n => literalValues(n, visit, seen));
+  }
+  function checkVisual(node, font = false, cssText = false) {
+    checkSink(node);
+    if (font && !fontFromTheme(node)) {
+      // Existing recognizable stacks retain their exact old raw-font entry.
+      let legacy = false; literalValues(node, text => { fontStack.lastIndex = 0; if (fontStack.test(text)) legacy = true; }); fontStack.lastIndex = 0;
+      if (!legacy) add('font-allowlist', context(node), node.getText(ast));
+    }
+    literalValues(node, text => {
+      // Existing whole-color/style-attribute recognition already reports these.
+      const alreadyNamed = namedColors.has(text.toLowerCase()) || /(?:fill|stroke|color|background(?:-color)?)\s*[:=]/i.test(text);
+      if (alreadyNamed && !cssText) return;
+      if (cssText) { try { postcss.parse(`x{${text}}`).walkDecls(d => { if (!alreadyNamed && !/^(?:font|font-family|animation-name|content)$/.test(d.prop)) for (const word of namedTokens(d.value)) add('named-color', context(node), word); if (/^(?:font|font-family)$/.test(d.prop) && !tokenFont(d.value)) add('font-allowlist', context(node), d.value); }); return; } catch { /* Template fragments still receive lexical checks. */ } }
+      if (!font && !alreadyNamed) for (const word of namedTokens(text)) add('named-color', context(node), word);
+    });
+  }
+  function dependency(node, specifier, typeOnly) {
+    if (!specifier || !ts.isStringLiteralLike(specifier)) { add('recipe-boundary', 'dependency', specifier?.getText(ast) ?? 'dynamic'); return; }
+    const path = specifier.text;
+    const resolved = pathModule(path);
+    const recipe = resolved.startsWith('src/design-system/recipes/') && (path.startsWith('./') || path.startsWith('../recipes/'));
+    const tokens = typeOnly && /^src\/design-system\/(?:tokens|theme)(?:\.[cm]?[jt]s)?$/.test(resolved);
+    if (!recipe && !tokens) add('recipe-boundary', 'dependency', path);
+  }
+  function pathModule(specifier) { return path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier)); }
   function visit(node) {
     if (ts.isTemplateExpression(node) && /hsla?\(/i.test(node.head.text) && /\d+(?:\.\d+)?%/.test(node.templateSpans.map(span => span.literal.text).join(''))) add('raw-hsl-template', context(node), node.getText(ast));
     if (ts.isStringLiteralLike(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) {
@@ -119,14 +185,36 @@ export function scanDesignFile(file, source) {
       classes(text, owner);
       if (/--pigment-/.test(text)) add('primitive-import', owner, text);
     }
-    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && sinkName.test(node.left.getText(ast).split('.').at(-1))) checkSink(node.right);
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      const left = node.left.getText(ast), prop = ts.isElementAccessExpression(node.left) ? node.left.argumentExpression.text : left.split('.').at(-1);
+      if (/\.style(?:\.|\[)/.test(left) || sinkName.test(prop ?? '')) checkVisual(node.right, /^(?:font|fontFamily)$/.test(prop ?? ''), prop === 'cssText');
+    }
+    if (outsideSystem && ts.isBinaryExpression(node) && [ts.SyntaxKind.LessThanToken, ts.SyntaxKind.LessThanEqualsToken, ts.SyntaxKind.GreaterThanToken, ts.SyntaxKind.GreaterThanEqualsToken].includes(node.operatorToken.kind) && [node.left, node.right].some(part => /^(?:(?:window|globalThis)\.)?inner(?:Width|Height)$/.test(part.getText(ast)))) add('raw-breakpoint-compare', context(node), node.getText(ast));
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const name = node.expression.name.text;
-      if (name === 'addColorStop' && node.arguments[1]) checkSink(node.arguments[1]);
-      if (['setAttribute', 'setProperty'].includes(name) && node.arguments[0] && /^(?:fill|stroke|style|color|font-family|--[\w-]+)$/.test(node.arguments[0].text ?? '') && node.arguments[1]) checkSink(node.arguments[1]);
+      if (name === 'addColorStop' && node.arguments[1]) checkVisual(node.arguments[1]);
+      if (['setAttribute', 'setProperty'].includes(name) && node.arguments[0] && node.arguments[1]) {
+        const prop = node.arguments[0].text ?? '';
+        if (name === 'setProperty' || /^(?:fill|stroke|style|color|font-family)$/.test(prop)) checkVisual(node.arguments[1], /^(?:font|font-family)$/.test(prop), prop === 'style');
+      }
+      if (outsideSystem && name === 'getPropertyValue' && /^--/.test(node.arguments[0]?.text ?? '')) add('computed-style-token-read', context(node), node.getText(ast));
     }
-    if (/^src\/design-system\/recipes(?:\/|\.ts)/.test(file) && ts.isImportDeclaration(node)) {
-      if (!/^\.\/?(?:recipes\/)?/.test(node.moduleSpecifier.text) || /(?:react|dom|design|theme|state)/i.test(node.moduleSpecifier.text)) add('recipe-boundary', 'import', node.moduleSpecifier.text);
+    if (outsideSystem && ts.isCallExpression(node) && /(?:^|\.)matchMedia$/.test(node.expression.getText(ast))) {
+      literalValues(node.arguments[0] ?? node, text => { if (/(?:width|height)\s*[:<>=]/.test(text)) add('raw-media-query', context(node), text); });
+    }
+    if (outsideSystem && ts.isPropertyAccessExpression(node) && /\.dataset\.(?:theme|design|ground)$/.test(node.getText(ast))) add('legacy-theme-read', context(node), node.getText(ast));
+    const importNode = ts.isImportDeclaration(node) || ts.isExportDeclaration(node);
+    const dynamicImport = ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword;
+    const specifier = importNode ? node.moduleSpecifier : dynamicImport ? node.arguments[0] : undefined;
+    if (specifier && /\.css(?:\?|$)/.test(specifier.text ?? '') && file !== 'src/design-system/app.css') {
+      // Root's ?url eager link is the sole TS boundary; side-effect CSS imports bypass layers.
+      if (!(file === 'src/routes/__root.tsx' && specifier.text === '../design-system/app.css?url')) add('unlayered-css-import', 'import', specifier.text);
+    }
+    if (/^src\/design-system\/recipes(?:\/|\.ts)/.test(file) && (importNode || dynamicImport)) {
+      const clause = ts.isImportDeclaration(node) ? node.importClause : undefined;
+      const bindings = clause?.namedBindings;
+      const typeOnly = ts.isExportDeclaration(node) ? (node.isTypeOnly || !!node.exportClause && ts.isNamedExports(node.exportClause) && node.exportClause.elements.every(e => e.isTypeOnly)) : !!clause && (clause.isTypeOnly || !!bindings && ts.isNamedImports(bindings) && !clause.name && bindings.elements.length > 0 && bindings.elements.every(e => e.isTypeOnly));
+      if (specifier || dynamicImport) dependency(node, specifier, typeOnly);
     }
     ts.forEachChild(node, visit);
   }
@@ -149,6 +237,22 @@ export function checkBaseline(actual, baseline, ceiling) {
   }
   return errors;
 }
+/** Only upgraded rule versions can gain entries, once, bounded by production. */
+export function mergeNewRules(actual, baseline, ceiling) {
+  const old = new Map(baseline.entries.map(row => [key(row), row]));
+  const original = new Map(ceiling.map(row => [key(row), row.count]));
+  for (const row of actual) {
+    if ((old.get(key(row))?.count ?? 0) >= row.count) continue;
+    if ((ruleVersions[row.kind] ?? 1) <= (baseline.ruleVersions?.[row.kind] ?? 1)) throw Error(`Rule is not new: ${key(row)}`);
+    if ((original.get(key(row)) ?? 0) < row.count) throw Error(`New rule exceeds production ceiling: ${key(row)}`);
+    old.set(key(row), row);
+  }
+  return { ...baseline, ruleVersions, entries: [...old.values()].sort((a, b) => key(a).localeCompare(key(b))) };
+}
+export function checkGrowth(baseline, previous) {
+  const cap = new Map(previous.entries.map(row => [key(row), row.count]));
+  return baseline.entries.filter(row => (cap.get(key(row)) ?? 0) < row.count && (baseline.ruleVersions?.[row.kind] ?? 1) <= (previous.ruleVersions?.[row.kind] ?? 1)).map(row => `BASELINE GREW since reference: ${key(row)}`);
+}
 function main() {
   const actual = observations(file => fs.readFileSync(path.join(root, file), 'utf8'), files());
   const originalPaths = execFileSync('git', ['ls-tree', '-r', '--name-only', legacyCommit], { cwd: root, encoding: 'utf8' }).trim().split('\n').filter(productFile);
@@ -158,16 +262,17 @@ function main() {
     const errors = checkBaseline(actual, actual, ceiling); if (errors.length) throw Error(errors.join('\n'));
     fs.writeFileSync(baselinePath, JSON.stringify({ legacyCommit, entries: actual }, null, 2) + '\n');
   }
-  const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+  let baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+  if (process.argv.includes('--merge-new-rules')) {
+    baseline = mergeNewRules(actual, baseline, ceiling);
+    fs.writeFileSync(baselinePath, JSON.stringify(baseline, null, 2) + '\n');
+  }
   if (baseline.legacyCommit !== legacyCommit) throw Error('Cannot change the legacy production ceiling');
   const errors = checkBaseline(actual, baseline.entries, ceiling);
   const reference = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'HEAD';
   let previous;
   try { previous = JSON.parse(execFileSync('git', ['show', `${reference}:scripts/design-token-baseline.json`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })); } catch { /* First foundation commit has no baseline yet. */ }
-  if (previous) {
-    const cap = new Map(previous.entries.map(row => [key(row), row.count]));
-    for (const row of baseline.entries) if ((cap.get(key(row)) ?? 0) < row.count) errors.push(`BASELINE GREW since ${reference}: ${key(row)}`);
-  }
+  if (previous) errors.push(...checkGrowth(baseline, previous));
   if (errors.length) { console.error(errors.join('\n')); process.exitCode = 1; }
   else console.log(`Design token guard passed: ${actual.length} exact legacy entries (${actual.reduce((sum, row) => sum + row.count, 0)} occurrences); zero new violations.`);
 }

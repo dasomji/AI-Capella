@@ -32,11 +32,17 @@ components. Renderer subscriptions/cache migration and component restyling are l
 
 An AST-based token guard rejects new raw colors/fonts, palette/arbitrary aesthetic utilities,
 scoped control selectors and forbidden recipe imports. It requires removing resolved baseline
-entries and checks the production-source ceiling, including when the baseline is edited.
+entries and checks the immutable `3c9d43c` source ceiling, including baseline edits. Newly
+versioned rules can merge pre-existing ceiling entries with `--merge-new-rules`; ordinary
+migration remains shrink-only. The guard is conservative local analysis, not a security
+boundary; its scan scope and data-flow limits are documented in the guide.
 
 ## Consequences and open decisions
 
-A theme changes through one mapping and one root `data-theme` attribute; the existing Revival
+Adding a theme requires one varying-role mapping block and one `themeRegistry` entry;
+shared roles are authored once on `:root`, and the registry derives types, aliases and switching.
+Until P6 removes the 110 legacy attribute selectors, new themes inherit the registry-selected
+compatibility look in those components. Switching uses root `data-theme`; the existing Revival
 preset remains orthogonal. Legacy aliases preserve hooks and appearance during staged
 migration. Main's reload/quiet-moment behavior remains until renderer caches migrate in P2.
 There is no new component runtime dependency or global reset.

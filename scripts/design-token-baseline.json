@@ -402,6 +402,13 @@
     },
     {
       "file": "src/inkWordmark.ts",
+      "kind": "font-allowlist",
+      "context": "export function renderInk(canvas: HTMLCanvasElement, text: string, size: number, weight = 500, tone:",
+      "value": "font",
+      "count": 2
+    },
+    {
+      "file": "src/inkWordmark.ts",
       "kind": "named-color",
       "context": "export function renderInk(canvas: HTMLCanvasElement, text: string, size: number, weight = 500, tone:",
       "value": "gold",
@@ -413,6 +420,13 @@
       "context": "export function renderInk(canvas: HTMLCanvasElement, text: string, size: number, weight = 500, tone:",
       "value": "#fff",
       "count": 2
+    },
+    {
+      "file": "src/intro.ts",
+      "kind": "raw-media-query",
+      "context": "narrow",
+      "value": "(max-width: 899px)",
+      "count": 1
     },
     {
       "file": "src/lantern.ts",
@@ -489,6 +503,34 @@
       "kind": "raw-template-channels",
       "context": "HOT_WHITE",
       "value": "rgba(255,249,240,",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "font-allowlist",
+      "context": "canvas",
+      "value": "font",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "font-allowlist",
+      "context": "function renderLight(size: number, dpr: number): LightArt { const font = `400 ${size}px ${FONT_SCR",
+      "value": "font",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "font-allowlist",
+      "context": "layout",
+      "value": "`${BRAND_WEIGHT} ${size}px ${FONT_BRAND}`",
+      "count": 1
+    },
+    {
+      "file": "src/lightName.ts",
+      "kind": "font-allowlist",
+      "context": "layout",
+      "value": "`400 ${base * LIGHT_SCALE}px ${FONT_SCRIPT}`",
       "count": 1
     },
     {
@@ -762,6 +804,13 @@
       "kind": "raw-hsl-template",
       "context": "export function colorForPart(index: number, count: number): string { const n = Math.max(1, count);",
       "value": "`hsl(${hue}, 70%, 72%)`",
+      "count": 1
+    },
+    {
+      "file": "src/paper.ts",
+      "kind": "legacy-theme-read",
+      "context": "function applyCss() { if (document.documentElement.dataset.design !== 'papier') return; const sm",
+      "value": "document.documentElement.dataset.design",
       "count": 1
     },
     {
@@ -2775,6 +2824,41 @@
     },
     {
       "file": "src/pianoRoll.ts",
+      "kind": "font-allowlist",
+      "context": "getLyricBitmap",
+      "value": "font",
+      "count": 2
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "font-allowlist",
+      "context": "paintKeyboard",
+      "value": "`600 9px ${FONT_MONO}`",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "font-allowlist",
+      "context": "paintRuler",
+      "value": "`${MARK_WEIGHT} 12px ${FONT_MARK}`",
+      "count": 2
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "font-allowlist",
+      "context": "paintRuler",
+      "value": "`600 11px ${FONT_MONO}`",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
+      "kind": "font-allowlist",
+      "context": "render",
+      "value": "`600 12px ${FONT_MONO}`",
+      "count": 1
+    },
+    {
+      "file": "src/pianoRoll.ts",
       "kind": "raw-channels-at-sink",
       "context": "render <- PAST_RGB",
       "value": "'13,12,22'",
@@ -2911,6 +2995,62 @@
       "kind": "raw-font",
       "context": ":root[data-type='revival'] .wordmark / font-family",
       "value": "'Baltimore Black Slope 1832', var(--f-display)",
+      "count": 1
+    },
+    {
+      "file": "src/signatures.ts",
+      "kind": "font-allowlist",
+      "context": "export function drawRulerSignature(ctx: CanvasRenderingContext2D, change: SignatureChange, fifths: n",
+      "value": "`21px ${FONT_MUSIC}`",
+      "count": 2
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "font-allowlist",
+      "context": "drawMargin",
+      "value": "`600 12px ${FONT_TEXT}`",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "font-allowlist",
+      "context": "drawMargin",
+      "value": "MUSIC_FONT",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "font-allowlist",
+      "context": "drawNote",
+      "value": "`500 12px ${FONT_TEXT}`",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "font-allowlist",
+      "context": "drawNote",
+      "value": "MUSIC_FONT",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "font-allowlist",
+      "context": "drawRestGap",
+      "value": "MUSIC_FONT",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "font-allowlist",
+      "context": "drawRuler",
+      "value": "`${MARK_WEIGHT} 12px ${FONT_MARK}`",
+      "count": 1
+    },
+    {
+      "file": "src/staffView.ts",
+      "kind": "font-allowlist",
+      "context": "drawRuler",
+      "value": "`600 11px ${FONT_MONO}`",
       "count": 1
     },
     {
@@ -4964,5 +5104,16 @@
       "value": ".tx-field input:not([type=checkbox])",
       "count": 1
     }
-  ]
+  ],
+  "ruleVersions": {
+    "font-allowlist": 2,
+    "named-color": 2,
+    "recipe-boundary": 2,
+    "computed-style-token-read": 2,
+    "raw-media-query": 2,
+    "raw-breakpoint-compare": 2,
+    "unlayered-css-import": 2,
+    "legacy-theme-read": 2,
+    "arbitrary-aesthetic": 2
+  }
 }
