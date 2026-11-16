@@ -268,6 +268,7 @@ export function AdminDataTable({
         <label>
           {m.pageSize}
           <select
+            aria-label={m.pageSize}
             value={pagination.pageSize}
             onChange={(e) => table.setPageSize(Number(e.target.value))}
           >

@@ -2952,3 +2952,40 @@ are under ignored `.review-evidence/ci-fixes/`. All local CI/browser checks pass
 cases, full backup/ops rehearsals, both Docker builds/canaries, all browser suites
 including foundation, and YAML parse/manual review. Owned fixtures were removed.
 No push or deployment.
+
+### AICAP-26 — sysadmin management (2026-11-16)
+
+Implemented on `production-v1` in the production fork. The existing `/admin`
+oversight surface now manages direct ensemble membership, lead/capability flags,
+existing-flow invitations and verified platform sysadmin roles. Reusable TanStack
+Table 9.3.1 tables provide server-side search, sorting and cursor pagination for
+users, ensembles and memberships, including a user's memberships. New controls
+use the existing parchment/gold styles and German/English messages.
+
+Mutations require a database-backed sysadmin decision, trusted Origin, bounded
+reason and audit event. Ensemble locks, expected-permission snapshots and the
+shared last-lead/removal operation protect concurrent changes and preserve live
+socket/rehearsal/offline revocation. Web/CLI role writes share a transaction lock,
+reject the last sysadmin's revocation, and web changes reject self-revocation.
+See `docs/SYSADMIN.md` and ADR 0002 for endpoints, request bodies and decisions.
+Migration 0018 adds the admin invitation source flag and is confirmed applied to
+the existing `main` preview database through Lizardtail.
+
+Verification includes the real HTTP/session management cases (Origin/reason,
+audit, last-lead, role guards, concurrent edits, invitation acceptance and both
+socket namespaces), 271 existing unit tests, and the new
+`scripts/browser-admin-management.mjs` journey with admin@test.com/user@test.com.
+Evidence, final command results and screenshots are outside git under
+`/tmp/aicap-admin/` (`report.md`, logs, `shots/`). No paid AI, real mail, prototype
+or Firebase operations occurred. The concurrent CI agent's commits/files were
+preserved; no push or PR was made.
+
+Open questions at handoff:
+
+- The pre-existing `main` preview reports an inactive service and `/healthz`
+  resets its connection. Migration is verified, but a healthy preview cannot be
+  confirmed. No preview service was stopped or restarted.
+- The repository has no `docs/agents/verify.md` or ladder script contract;
+  AICAP-27 tracks that gap. Requested explicit checks are recorded in the report.
+- Plane currently has no In Review state. AICAP-26 remains In Progress for the
+  owning agent's review rather than being marked Done before handoff review.

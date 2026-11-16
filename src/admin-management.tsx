@@ -386,7 +386,7 @@ export function AdminMembershipManagement({
               }}
             >
               <label>
-                {d.email}
+                {d.invitationEmail}
                 <input
                   type="email"
                   required

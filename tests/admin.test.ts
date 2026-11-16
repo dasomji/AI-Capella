@@ -229,7 +229,7 @@ test('admin management: guarded transactions, permissions, invitations and live 
    const {io:connect}=await import('socket.io-client');
    const sockets=['','/rehearsal'].map(ns=>connect(base+ns,{forceNew:true,extraHeaders:{cookie:member.cookie,origin:base},transports:['websocket'],reconnection:false}));
    try{
-     for(const s of sockets)await new Promise<void>((resolve,reject)=>{s.once('connect',resolve);s.once('connect_error',reject);});
+     await Promise.all(sockets.map(s=>new Promise<void>((resolve,reject)=>{const deadline=setTimeout(()=>reject(Error('Socket connection timed out')),5000);s.once('connect',()=>{clearTimeout(deadline);resolve();});s.once('connect_error',e=>{clearTimeout(deadline);reject(e);});})));
      const emit=(event:string)=>new Promise<any>((resolve,reject)=>sockets[1].timeout(5000).emit(event,{ensembleId:e},(error:any,data:any)=>error?reject(error):resolve(data)));
      assert.ok((await emit('rehearsal:join')).state);
      const changed=new Promise<void>(resolve=>sockets[0].once('membership:changed',()=>resolve()));
