@@ -232,6 +232,14 @@ export function AdminMembershipManagement({
     [draft, setDraft] = useState<Permissions>(empty),
     [email, setEmail] = useState(""),
     [status, setStatus] = useState("");
+  const heading = useRef<HTMLHeadingElement>(null),
+    focusAfterRemove = useRef(false);
+  useEffect(() => {
+    if (!pending && focusAfterRemove.current) {
+      focusAfterRemove.current = false;
+      heading.current?.focus();
+    }
+  }, [pending]);
   const queue = useCallback((p: Pending) => {
     setStatus("");
     setPending(p);
@@ -280,7 +288,7 @@ export function AdminMembershipManagement({
     user = entity === "users" ? profile.id : chosen?.id;
   return (
     <section className="admin-management">
-      <h3>{a.memberships}</h3>
+      <h3 ref={heading} tabIndex={-1}>{a.memberships}</h3>
       {status && <p role="status">{status}</p>}
       {entity === "users" && (
         <div className="admin-role">
@@ -443,6 +451,7 @@ export function AdminMembershipManagement({
                   : d.invitationCreated
                 : d.success,
             );
+            focusAfterRemove.current = pending.method === "DELETE";
             setPending(null);
             setAdding(false);
             setRevision((v) => v + 1);

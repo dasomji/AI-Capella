@@ -55,7 +55,11 @@ async function loaded(scope = page) {
       ),
   );
   await assertEventually(async () =>
-    assert.equal(await page.locator('[aria-busy="true"]').count(), 0),
+    assert.equal(
+      await scope.locator('[aria-busy="true"]').count() +
+        (scope === page ? 0 : await scope.evaluate((el) => Number(el.getAttribute("aria-busy") === "true"))),
+      0,
+    ),
   );
 }
 async function ids(scope) {
@@ -121,6 +125,35 @@ try {
     await page.getByRole("region", { name: "Users", exact: true }).count(),
     1,
   );
+  // The helper must ignore unrelated busy regions while observing its own root.
+  await page.evaluate(() => {
+    const unrelated = document.createElement("div");
+    unrelated.id = "unrelated-busy";
+    unrelated.setAttribute("aria-busy", "true");
+    document.body.append(unrelated);
+  });
+  await loaded(users);
+  await page.locator("#unrelated-busy").evaluate((el) => el.remove());
+  const pageOneIds = await ids(users);
+  await page.route("**/api/admin/users?*", (route) => route.fulfill({
+    status: 429, contentType: "application/json",
+    body: JSON.stringify({code: "rate_limited", max: 120, unit: "minute"}),
+  }), {times: 1});
+  await users.getByRole("button", {name: "Next", exact: true}).click();
+  await pageNumber(users, 2);
+  assert.deepEqual(await ids(users), [], "Failed navigation clears the previous page's rows");
+  await users.getByRole("alert").waitFor();
+  await users.getByRole("button", {name: "Retry", exact: true}).waitFor();
+  await page.getByRole("button", {name: "DE", exact: true}).click();
+  await page.locator("main > .admin-data-table").getByRole("button", {name: "Erneut versuchen", exact: true}).click();
+  await loaded(page.locator("main > .admin-data-table"));
+  await page.getByRole("button", {name: "EN", exact: true}).click();
+  await pageNumber(users, 2);
+  assert.deepEqual(await ids(users), (await db.query('select id from "user" order by id offset 10 limit 10')).rows.map((r) => r.id));
+  assert.equal(await users.getByRole("alert").count(), 0);
+  await users.getByRole("button", {name: "Previous", exact: true}).click();
+  await pageNumber(users, 1);
+  assert.deepEqual(await ids(users), pageOneIds);
   const expectedIds = (
     await db.query('select id from "user" order by id')
   ).rows.map((r) => r.id);
@@ -268,6 +301,25 @@ try {
     .getByRole("button")
     .click();
   await loaded(members);
+  // An in-place refresh failure retains both the current page and its Next cursor.
+  const refreshIds = await ids(members);
+  const refreshRow = members.locator("tbody tr").filter({hasText: "pagination-"}).first();
+  await page.route("**/api/admin/memberships?*", (route) => route.fulfill({
+    status: 429, contentType: "application/json",
+    body: JSON.stringify({code: "rate_limited", max: 120, unit: "minute"}),
+  }), {times: 2});
+  await refreshRow.getByLabel("Edit music pieces", {exact: true}).check();
+  await refreshRow.getByRole("button", {name: "Save permissions", exact: true}).click();
+  await confirmation("Browser: refresh failure retains rows and cursor");
+  for(let attempt = 0; attempt < 2; attempt++) {
+    await loaded(members);
+    assert.deepEqual(await ids(members), refreshIds);
+    assert.equal(await members.getByRole("button", {name: "Next", exact: true}).getAttribute("aria-disabled"), "false");
+    await members.getByRole("button", {name: "Retry", exact: true}).click();
+  }
+  await loaded(members);
+  assert.equal(await members.getByRole("alert").count(), 0);
+  assert.deepEqual(await ids(members), refreshIds);
   await members.getByRole("button", { name: "Next", exact: true }).click();
   await pageNumber(members, 2);
   const membershipIds = await ids(members);
@@ -320,6 +372,7 @@ try {
   );
   await shot("permission-updated");
   row = members.locator("tbody tr").filter({ hasText: "user@test.com" });
+  const removalRefresh = await holdDetailRefresh(ensemble.id);
   await row.getByRole("button", { name: "Remove member", exact: true }).click();
   await confirmation("Browser: remove the test account");
   await row.waitFor({ state: "hidden" });
@@ -333,7 +386,38 @@ try {
     ).rowCount,
     0,
   );
+  assert.equal(await management.getByRole("heading", {name: "Memberships", exact: true}).evaluate((el) => el === document.activeElement), true, "Removal moves focus to the membership heading");
   await shot("member-removed");
+  await removalRefresh.started;
+  await page.getByRole("button", {name: "Close", exact: true}).click();
+  await removalRefresh.release();
+  await loaded();
+  assert.equal(await detail.count(), 0, "A delayed refresh cannot reopen a closed detail");
+  await ensembles.getByRole("cell", {name: ensemble.name, exact: true}).click();
+  await loaded(members);
+  // Open another profile while an older mutation refresh is pending.
+  const alternateResponse = await context.request.post(base + "/api/ensembles", {
+    headers: {origin: base}, data: {name: "Admin management browser alternate", kind: "choir"},
+  });
+  assert.equal(alternateResponse.status(), 201);
+  const alternate = await alternateResponse.json();
+  const staleRefresh = await holdDetailRefresh(ensemble.id);
+  const anotherRow = members.locator("tbody tr").filter({hasText: "pagination-"}).first();
+  const edit = anotherRow.getByLabel("Transcribe", {exact: true});
+  await edit.setChecked(!(await edit.isChecked()));
+  await anotherRow.getByRole("button", {name: "Save permissions", exact: true}).click();
+  await confirmation("Browser: changing profiles invalidates detail refresh");
+  await staleRefresh.started;
+  await loaded(members);
+  await page.getByRole("button", {name: "Close", exact: true}).click();
+  await ensembles.getByRole("cell", {name: alternate.name, exact: true}).click();
+  await detail.getByRole("heading", {name: alternate.name, exact: true}).waitFor();
+  await staleRefresh.release();
+  await loaded();
+  assert.equal(await detail.getByRole("heading", {name: alternate.name, exact: true}).count(), 1, "A delayed refresh cannot overwrite another profile");
+  await page.getByRole("button", {name: "Close", exact: true}).click();
+  await ensembles.getByRole("cell", {name: ensemble.name, exact: true}).click();
+  await loaded(members);
   // A clear, translated failure case for the sole remaining lead.
   await members.getByRole("searchbox").fill("admin@test.com");
   await loaded(members);
@@ -446,7 +530,7 @@ try {
   assert.deepEqual(errors, []);
   await fs.writeFile(
     evidence + "/browser-report.md",
-    `Admin browser journey: PASS\n\nSign-in, user/ensemble search and sorting, user detail, direct add, inline permission change, removal, last-lead and self-revoke failures, complete pagination, exact ascending/descending row order, page resets for search/sort, keyboard sorting/detail activation, pager focus, in-place mutation refresh and refresh failure, German phone cards with reachable controls.\n\n${files.map((f) => "- " + f).join("\n")}\n`,
+    `Admin browser journey: PASS\n\nSign-in, user/ensemble search and sorting, user detail, direct add, inline permission change, removal, last-lead and self-revoke failures, complete pagination, exact ascending/descending row order, page resets for search/sort, keyboard sorting/detail activation, pager focus, failed navigation with translated retry, in-place refresh preserving rows/cursors across failed retries, removal focus, stale detail refresh after closing or changing profiles, German phone cards with reachable controls.\n\n${files.map((f) => "- " + f).join("\n")}\n`,
   );
   console.log("ADMIN_MANAGEMENT_BROWSER_PASS", files.length, "screenshots");
 } catch (e) {
@@ -469,4 +553,22 @@ async function assertEventually(check) {
     }
   }
   throw error;
+}
+
+async function holdDetailRefresh(id) {
+  let start, release;
+  const started = new Promise((resolve) => {start = resolve;});
+  const gate = new Promise((resolve) => {release = resolve;});
+  const path = "**/api/admin/ensembles/" + id;
+  await page.route(path, async (route) => {
+    const response = await route.fetch();
+    start();
+    await gate;
+    await route.fulfill({response});
+  }, {times: 1});
+  return {started, release: async () => {
+    const received = page.waitForResponse((r) => r.url() === base + "/api/admin/ensembles/" + id && r.request().method() === "GET");
+    release();
+    await received;
+  }};
 }

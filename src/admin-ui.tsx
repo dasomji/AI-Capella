@@ -16,7 +16,7 @@ export function AdminPage() {
         body?: Row;
         kind: string;
     }>(null), [reason, setReason] = useState(''), [content, setContent] = useState(''), [control, setControl] = useState<Row | null>(null), [usage, setUsage] = useState<Row | null>(null), [metrics, setMetrics] = useState<Row | null>(null), [busy, setBusy] = useState(false), [revision,setRevision]=useState(0);
-    const generation = useRef(0), d = adminMessages[language];
+    const generation = useRef(0), detailGeneration = useRef(0), d = adminMessages[language];
     const msg=(key:string)=>(adminPolishMessages[language] as Row)[key]??key;
     const errorText=(e:unknown)=>e instanceof AdminRequestError?(e.status===404?msg('Not found'):e.status===429?e.message:d.error):d.error;
     const number=(v:number)=>new Intl.NumberFormat(language,{maximumFractionDigits:6}).format(v);
@@ -49,15 +49,18 @@ export function AdminPage() {
         if (current === generation.current)
             setBusy(false);
     } }
-    useEffect(() => { setDetail(null); setItems([]); setContent(''); }, [tab]);
+    function closeDetail() { detailGeneration.current++; setDetail(null); }
+    useEffect(() => { closeDetail(); setItems([]); setContent(''); }, [tab]);
     useEffect(()=>{const timer=setTimeout(()=>void load(),300);return ()=>{clearTimeout(timer);generation.current++;};},[tab,query,filters,zone]);
     async function open(row: Row) { if (!['users', 'ensembles', 'pieces'].includes(tab))
-        return; setError(''); try {
-        setDetail(await request(tab + '/' + encodeURIComponent(row.id)));
+        return; const current = ++detailGeneration.current; setError(''); try {
+        const result = await request(tab + '/' + encodeURIComponent(row.id));
+        if (current !== detailGeneration.current) return;
+        setDetail(result);
         setContent('');
     }
     catch(e) {
-        setDetail({profile:{id:row.id,title:row.name??row.title??row.id},error:errorText(e)});
+        if (current === detailGeneration.current) setDetail({profile:{id:row.id,title:row.name??row.title??row.id},error:errorText(e)});
     } }
     const label = (key: string) => (adminManagementMessages[language] as Row)[key] ?? (adminPolishMessages[language] as Row)[key] ?? (adminFieldMessages[language] as Row)[key] ?? (d as Row)[key] ?? key.replaceAll('_', ' ');
     function value(key: string, v: any): any { if (v === null || v === undefined)
@@ -91,7 +94,7 @@ export function AdminPage() {
     } }}>{columns.map(k => <td data-label={label(k)} className={/id|email|hash/.test(k) ? 'mono' : ''} key={k}>{k==='actor_id'?actor(row.actor_name,row[k]):value(k, row[k])}</td>)}</tr>)}</tbody></table></div>{!busy && !items.length && <p>{d.empty}</p>}{next && <button disabled={busy} onClick={() => void load(next)}>{d.more}</button>}</>}
 
  {profile && <aside className="admin-detail" role="dialog" aria-modal="true" aria-label={profile.name ?? profile.title ?? profile.id} onKeyDown={e => { if (e.key === 'Escape')
-            setDetail(null); if (e.key === 'Tab') {
+            closeDetail(); if (e.key === 'Tab') {
             const nodes = e.currentTarget.querySelectorAll<HTMLElement>('button,input,a,select');
             const first = nodes[0], last = nodes[nodes.length - 1];
             if (e.shiftKey && document.activeElement === first) {
@@ -102,8 +105,8 @@ export function AdminPage() {
                 e.preventDefault();
                 first?.focus();
             }
-        } }}><button className="admin-close" aria-label={d.close} autoFocus onClick={() => setDetail(null)}>×</button><h2>{profile.name ?? profile.title}</h2><h3>{d.profile}</h3>{detail?.error?<p role="alert">{detail.error}</p>:fields(profile)}{Object.entries(detail).filter(([k]) => !['profile', 'timeZone','sections','error'].includes(k)).map(([key, v]) => <section key={key}><h3>{label(key)}</h3>{Array.isArray(v) ? v.map((row, i) => <div key={i}>{fields(row)}</div>) : fields(v)}</section>)}
- {['users','ensembles'].includes(tab)&&!detail?.error&&<AdminMembershipManagement key={tab+profile.id} entity={tab as 'users'|'ensembles'} profile={profile} sysadmin={!!detail.roles?.some((r:Row)=>r.role==='sysadmin')} language={language} onChanged={async()=>{setRevision(v=>v+1);setDetail(await request(tab+'/'+encodeURIComponent(profile.id)));}}/>}
+        } }}><button className="admin-close" aria-label={d.close} autoFocus onClick={closeDetail}>×</button><h2>{profile.name ?? profile.title}</h2><h3>{d.profile}</h3>{detail?.error?<p role="alert">{detail.error}</p>:fields(profile)}{Object.entries(detail).filter(([k]) => !['profile', 'timeZone','sections','error'].includes(k)).map(([key, v]) => <section key={key}><h3>{label(key)}</h3>{Array.isArray(v) ? v.map((row, i) => <div key={i}>{fields(row)}</div>) : fields(v)}</section>)}
+ {['users','ensembles'].includes(tab)&&!detail?.error&&<AdminMembershipManagement key={tab+profile.id} entity={tab as 'users'|'ensembles'} profile={profile} sysadmin={!!detail.roles?.some((r:Row)=>r.role==='sysadmin')} language={language} onChanged={async()=>{setRevision(v=>v+1);const current=++detailGeneration.current;const result=await request(tab+'/'+encodeURIComponent(profile.id));if(current===detailGeneration.current)setDetail(result);}}/>}
  {tab === 'ensembles' && ['invitations', 'pieces', 'jobs'].map(kind => <Section errorText={errorText} initial={detail?.sections?.[kind]} key={kind + profile.id+revision} title={label(kind)} path={(kind === 'jobs' ? 'transcription/jobs' : kind) + '?ensemble=' + profile.id} render={fields} more={d.more}/>)}
  {tab === 'pieces' && <><Section errorText={errorText} initial={detail?.sections?.versions} key={'v' + profile.id} title={d.versions} path={'pieces/' + profile.id + '/versions'} render={fields} more={d.more}/><Section errorText={errorText} initial={detail?.sections?.originals} key={'o' + profile.id} title={d.originals} path={'pieces/' + profile.id + '/originals'} more={d.more} render={row => <>{fields(row)}<button onClick={() => { setReason(''); setPending({ path: 'pieces/' + profile.id + '/originals/' + row.id + '/download', kind: 'original' }); }}>{d.original}</button></>}/><button onClick={() => { setReason(''); setPending({ path: 'pieces/' + profile.id + '/content', kind: 'content' }); }}>{d.content}</button>{content && <pre className="admin-content">{content}</pre>}</>}
  <Section errorText={errorText} initial={detail?.sections?.audit} key={'a' + profile.id} title={d.audit} path={'audit?' + new URLSearchParams({...auditParams,sort:'created',direction:'desc'})} render={fields} more={d.more}/></aside>}

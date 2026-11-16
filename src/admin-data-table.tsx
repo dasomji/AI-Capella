@@ -52,7 +52,8 @@ export function AdminDataTable({
     [cursors, setCursors] = useState<(string | undefined)[]>([undefined]),
     [next, setNext] = useState<string | null>(null),
     [busy, setBusy] = useState(true),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [retry, setRetry] = useState(0);
   const generation = useRef(0),
     filterKey = JSON.stringify(filters),
     searchValue = externalSearch ?? search;
@@ -92,13 +93,15 @@ export function AdminDataTable({
     sort?.desc,
     pagination.pageSize,
   ]);
-  const signatureRef = useRef(signature);
+  const signatureRef = useRef(signature),
+    loadedPage = useRef<string | null>(null);
   useEffect(() => {
     setBusy(true);
     setError("");
     const changed = signatureRef.current !== signature;
     signatureRef.current = signature;
     if (changed) {
+      loadedPage.current = null;
       setCursors([undefined]);
       setNext(null);
       setRows([]);
@@ -107,6 +110,9 @@ export function AdminDataTable({
         return;
       }
     }
+    const pageKey = JSON.stringify([signature, pagination.pageIndex]);
+    // Only retain data and its cursor when refreshing the page currently displayed.
+    const refresh = loadedPage.current === pageKey;
     const current = ++generation.current;
     const timer = setTimeout(async () => {
       try {
@@ -122,12 +128,17 @@ export function AdminDataTable({
         });
         const r = await adminRequest(path + "?" + params);
         if (current !== generation.current) return;
+        loadedPage.current = pageKey;
         setRows(r.items);
         setNext(r.nextCursor);
         onZone?.(r.timeZone);
       } catch (e) {
         if (current === generation.current) {
-          setNext(null);
+          if (!refresh) {
+            loadedPage.current = null;
+            setRows([]);
+            setNext(null);
+          }
           setError(managementError(e, language));
         }
       } finally {
@@ -138,7 +149,7 @@ export function AdminDataTable({
       clearTimeout(timer);
       generation.current++;
     };
-  }, [signature, pagination.pageIndex, revision]);
+  }, [signature, pagination.pageIndex, revision, retry]);
   return (
     <section className="admin-data-table" aria-label={caption} aria-busy={busy}>
       {externalSearch === undefined && (
@@ -151,7 +162,14 @@ export function AdminDataTable({
           />
         </label>
       )}
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <div>
+          <p role="alert">{error}</p>
+          <button type="button" onClick={() => setRetry((v) => v + 1)}>
+            {m.retry}
+          </button>
+        </div>
+      )}
       <div className="admin-table-wrap admin-data-wrap" tabIndex={0}>
         <table>
           <caption className="admin-sr-only">{caption}</caption>
