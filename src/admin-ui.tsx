@@ -5,7 +5,6 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { adminRateMessage, adminMessages, adminFieldMessages, adminPolishMessages, type Lang } from './i18n';
 import { LanguageToggle } from './account-stage';
 import { adminInstant, calendarInstant, calendarRange } from './admin-time';
-import './admin.css';
 type Row = Record<string, any>;
 class AdminRequestError extends Error {constructor(public status:number,message:string){super(message);}}
 async function request(path:string,method='GET',body?:unknown){const r=await fetch('/api/admin/'+path,{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new AdminRequestError(r.status,data.max&&data.unit?adminRateMessage(data.max,data.unit,localStorage.getItem('ai-capella-lang')==='de'?'de':'en'):data.message??String(r.status));return data;}

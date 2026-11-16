@@ -1,3 +1,4 @@
+import { matchBreakpoint } from './design-system/theme';
 import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
 import { isOffline } from './offline-state';
@@ -17,16 +18,7 @@ import { io as accountSocket } from "socket.io-client";
 import { api } from './domain-client';
 import { createEnsembleSheet, membersSheet, leaveEnsemble } from './ensemble-ui';
 import { pt, domainError } from './i18n';
-// Typefaces are bundled with the app rather than loaded from Google's servers: no visitor data goes
-// to a third party (German courts have fined sites for remotely loaded Google Fonts), and they keep
-// working on weak rehearsal-room Wi-Fi.
-import '@fontsource-variable/bodoni-moda/opsz.css';
-import '@fontsource-variable/atkinson-hyperlegible-next/wght.css';
-import '@fontsource-variable/atkinson-hyperlegible-mono/wght.css';
-import '@fontsource/italianno/latin-400.css';
-import './style.css';
-import './parchment.css';
-import './revivalType.css';
+// CSS and self-hosted fonts load eagerly through design-system/app.css in both shells.
 import { parseMusicXML, splitStaves } from './musicxml';
 import { parseMIDI } from './midi';
 import { AudioEngine, onAudioStateChange, startTonesLeadSec, unlockAudio, type PartMixState, type Sound } from './audioEngine';
@@ -563,7 +555,7 @@ function renderModeControls() {
 // Follow the music (piano roll rows zoom to what's being sung): on by default, remembered per
 // device; switchable in the player menu, and on a laptop also in the zoom control (key F). Setting
 // the height by hand -- Alt + wheel, or a vertical two-finger pinch on a phone -- switches it off.
-const narrowQuery = window.matchMedia('(max-width: 899px)');
+const narrowQuery = matchBreakpoint('panel-max');
 const FOLLOW_KEY = 'ai-capella-follow';
 let followPref = localStorage.getItem(FOLLOW_KEY) !== '0';
 document.querySelectorAll<HTMLElement>('[data-action="follow"]').forEach((b) => b.setAttribute('aria-pressed', String(followPref)));
@@ -1251,7 +1243,7 @@ function songCard(song: SongEntry): HTMLLIElement {
   open.append(cover, body);
   li.appendChild(open);
   if(song.imported && isPrepared(song.id)) {
-    const mark=document.createElement('span');mark.className='offline-mark';mark.style.color='var(--gold, #b49a5b)';mark.title=off('available');mark.setAttribute('aria-label',off('available'));
+    const mark=document.createElement('span');mark.className='offline-mark';mark.style.color='var(--ds-accent-offline)';mark.title=off('available');mark.setAttribute('aria-label',off('available'));
     mark.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25"><path d="M7 17H6a4 4 0 0 1-1-8 6 6 0 0 1 11-2 5 5 0 0 1 2 10h-1M9 16l2 2 4-5"/></svg>';li.append(mark);
   }
   if(song.imported && isOffline() && !isPrepared(song.id)){open.disabled=true;li.style.opacity='.45';open.title=off('unavailable');meta.textContent=off('unavailable');}

@@ -1,10 +1,8 @@
+import { initializeTheme } from './design-system/theme';
 import { lang } from './i18n';
 import { initializeEnsembles } from './ensembles';
 document.documentElement.lang=lang;
-const choice=localStorage.getItem('ai-capella-design')||'auto';
-const design=choice==='auto'?(matchMedia('(prefers-color-scheme: light)').matches?'pergament':'papier'):choice;
-document.documentElement.dataset.design=design==='pergament'?'papier':design;
-if(design==='pergament')document.documentElement.dataset.ground='pergament';
+initializeTheme();
 try {
   await initializeEnsembles();
   await import('./main');

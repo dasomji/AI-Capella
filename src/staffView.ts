@@ -1,3 +1,4 @@
+import { breakpoint } from './design-system/theme';
 import { backingSize } from './pixels';
 import type { MeasureInfo, NoteEvent, PartInfo, Score } from './score';
 import type { PartMixState } from './audioEngine';
@@ -17,7 +18,7 @@ export const STAFF_RULER_HEIGHT_PX = 28; // matches PianoRoll's ruler height, fo
 const PLAYHEAD_X_RATIO = 0.2;
 // On a narrow (phone-width) canvas the playhead sits a little further right of the pinned margin,
 // so the bar just played stays readable.
-const MOBILE_BREAKPOINT_PX = 720;
+const MOBILE_BREAKPOINT_PX = parseFloat(breakpoint('score'));
 const MOBILE_PLAYHEAD_X_RATIO = 0.24;
 const MAX_DPR = 2;
 const LINE_SPACING_PX = 9; // one staff space: distance between two adjacent staff lines

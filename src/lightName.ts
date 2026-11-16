@@ -1,3 +1,4 @@
+import { matchBreakpoint } from './design-system/theme';
 // The title screen's name, LightScore: "Light" moves, "Score" holds. "Score" appears in the middle,
 // in embossed gold; the voice lines of light come in with it, a loose swarm, and as their tips reach
 // its S they push it aside to its place (push(), called from main.ts). Meanwhile "Light" is written
@@ -302,7 +303,7 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
     probe.font = `400 ${base * LIGHT_SCALE}px ${FONT_SCRIPT}`;
     const lightW = probe.measureText('Light').width;
     // On a phone's staff the name starts the line and leaves its end to the voices (titleStaff.ts).
-    const narrowStaff = mode === 'staff' && window.innerWidth < 700;
+    const narrowStaff = mode === 'staff' && matchBreakpoint('wordmark', 'below').matches;
     const fit = Math.min(1, (window.innerWidth * (narrowStaff ? 0.62 : 0.9)) / (lightW + base * (GAP + 2.95)));
     wrap.style.marginLeft = narrowStaff ? '6px' : '';
     host.style.alignSelf = narrowStaff ? 'stretch' : '';

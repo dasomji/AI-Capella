@@ -1,3 +1,4 @@
+import { matchBreakpoint } from './design-system/theme';
 import { icon, type IconName } from './icons';
 import { t } from './i18n';
 
@@ -12,7 +13,7 @@ export function closeOverlay() {
 }
 
 export function isNarrow(): boolean {
-  return window.matchMedia('(max-width: 899px)').matches;
+  return matchBreakpoint('panel-max').matches;
 }
 
 function mount(root: HTMLElement, opener: Element | null, onClose?: () => void): () => void {

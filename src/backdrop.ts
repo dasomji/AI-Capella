@@ -1,3 +1,4 @@
+import { matchBreakpoint } from './design-system/theme';
 import { VOICE_SPECTRUM } from './palette';
 import { PAPER_DESIGN } from './design';
 
@@ -19,7 +20,7 @@ export class WaveBackdrop {
   private playing = false;
   private shown = true;
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  private readonly narrow = window.matchMedia('(max-width: 899px)');
+  private readonly narrow = matchBreakpoint('panel-max');
 
   constructor() {
     this.canvas = document.createElement('canvas');

@@ -15,7 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env --import tsx scripts/migrate.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run tests/dev-reload.test.ts tests/offline.test.ts tests/offline-library.test.ts tests/transcription-ui.test.ts tests/unit.test.ts tests/rehearsal.test.ts tests/rehearsal-server.test.ts tests/transcription-core.test.ts tests/reference-comparison.test.ts tests/evaluation.test.ts tests/usage.test.ts",
+    "test": "vitest run tests/dev-reload.test.ts tests/offline.test.ts tests/offline-library.test.ts tests/transcription-ui.test.ts tests/unit.test.ts tests/rehearsal.test.ts tests/rehearsal-server.test.ts tests/transcription-core.test.ts tests/reference-comparison.test.ts tests/evaluation.test.ts tests/usage.test.ts tests/design-system.test.ts",
     "test:integration": "node scripts/integration.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "accounts:cleanup": "node --env-file-if-exists=.env --import tsx scripts/cleanup-accounts.ts",
@@ -40,6 +40,7 @@
     "seed:dev": "node --env-file-if-exists=.env --import tsx scripts/seed-dev.ts"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "4.3.5",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^22.20.5",
     "@types/nodemailer": "^8.0.2",
@@ -50,6 +51,8 @@
     "drizzle-kit": "^0.31.11",
     "firebase-admin": "^14.5.0",
     "playwright": "^1.64.1",
+    "postcss": "8.5.31",
+    "tailwindcss": "4.3.5",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
     "vitest": "^5.1.0"

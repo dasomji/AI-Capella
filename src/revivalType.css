@@ -6,39 +6,6 @@
    bold text is set by the browser, like a key struck twice. Scoped to :root[data-type='revival'],
    so a device with the earlier faces never fetches these. */
 
-@font-face {
-  font-family: 'Baltimore Title 1832';
-  src: url('./assets/fonts/revival/BaltimoreTitle1832.woff2') format('woff2');
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Baltimore Bold 1832';
-  src: url('./assets/fonts/revival/BaltimoreBold1832.woff2') format('woff2');
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Modern Antique 1889';
-  src: url('./assets/fonts/revival/ModernAntique1889.woff2') format('woff2');
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Remington 1888';
-  src: url('./assets/fonts/revival/Remington1888.woff2') format('woff2');
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Baltimore Black Slope 1832';
-  src: url('./assets/fonts/revival/BaltimoreBlackSlope1832.woff2') format('woff2');
-  font-display: swap;
-}
-
-:root[data-type='revival'] {
-  --f-text: 'Remington 1888', 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
-  --f-mono: 'Remington 1888', 'Atkinson Hyperlegible Mono Variable', ui-monospace, monospace;
-  --f-head: 'Baltimore Title 1832', var(--f-display);
-  --f-title: 'Modern Antique 1889', var(--f-display);
-}
-
 :root[data-type='revival'] .wordmark {
   font-family: 'Baltimore Black Slope 1832', var(--f-display);
   font-weight: 400;

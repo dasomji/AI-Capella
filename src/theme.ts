@@ -1,3 +1,4 @@
+import { normalizeColor } from './design-system/theme/color';
 // Canvas-side mirror of the CSS tokens in style.css -- the piano roll, sheet view, covers and
 // ribbons draw with these so canvas and DOM share one palette and one set of typefaces.
 import { PARCHMENT, REVIVAL_TYPE } from './design';
@@ -31,26 +32,21 @@ export function paper(alpha: number): string {
   return `rgba(${PRINT_RGB[0]},${PRINT_RGB[1]},${PRINT_RGB[2]},${alpha})`;
 }
 
-export function withAlpha(hex: string, alpha: number): string {
-  if (!hex.startsWith('#')) return hex;
-  const v = parseInt(hex.slice(1), 16);
-  return `rgba(${(v >> 16) & 255},${(v >> 8) & 255},${v & 255},${alpha})`;
+export function withAlpha(color: string, alpha: number): string {
+  const { r, g, b } = normalizeColor(color);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
-/** Mixes a hex colour toward the print colour by `k` (0..1) -- a voice's syllables and slurs as printed, the "lit" state of a gel note. */
-export function towardPaper(hex: string, k: number): string {
-  if (!hex.startsWith('#')) return hex;
-  const v = parseInt(hex.slice(1), 16);
+/** Mix in sRGB, preserving the historical hex path and supporting generated HSL voices. */
+export function towardPaper(color: string, k: number): string {
+  const { r, g, b } = normalizeColor(color);
   const mix = (c: number, p: number) => Math.round(c + (p - c) * k);
-  return `rgb(${mix((v >> 16) & 255, PRINT_RGB[0])},${mix((v >> 8) & 255, PRINT_RGB[1])},${mix(v & 255, PRINT_RGB[2])})`;
+  return `rgb(${mix(r, PRINT_RGB[0])},${mix(g, PRINT_RGB[1])},${mix(b, PRINT_RGB[2])})`;
 }
-
-/** Mixes a hex colour toward deep ink by `k` (0..1) -- the shaded underside of a gel note. */
-export function towardInk(hex: string, k: number): string {
-  if (!hex.startsWith('#')) return hex;
-  const v = parseInt(hex.slice(1), 16);
+export function towardInk(color: string, k: number): string {
+  const { r, g, b } = normalizeColor(color);
   const mix = (c: number, p: number) => Math.round(c + (p - c) * k);
-  return `rgb(${mix((v >> 16) & 255, 20)},${mix((v >> 8) & 255, 12)},${mix(v & 255, 30)})`;
+  return `rgb(${mix(r, 20)},${mix(g, 12)},${mix(b, 30)})`;
 }
 
 // Gel notes ("Licht"): lit from above, a glossy highlight along the top, a fine rim -- strength as

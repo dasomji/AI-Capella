@@ -1,3 +1,4 @@
+import { matchBreakpoint } from './design-system/theme';
 import { isOffline } from './offline-state';
 import { photoThumbnail } from './photo-thumbnail';
 import type { Socket } from 'socket.io-client';
@@ -8,7 +9,6 @@ import { lang, tr } from './i18n';
 import { safeSvg } from './safe-svg';
 import { jobPresentation, reorderPhotos, reviewItems, type TranscriptionJob, type ReviewItem } from './transcription-model';
 import type { MeasureSource, ValidationReport } from './score-validation';
-import './transcription.css';
 const canTranscribe=(id:string)=>{const e=ensembleById(id);return !isOffline()&&!!e&&(e.isLead||e.capabilities.transcribe);};
 function el<K extends keyof HTMLElementTagNameMap>(tag:K,text?:string,cls?:string){const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e;}
 function button(text:string,run:()=>void,cls='btn'){const b=el('button',text,cls);b.type='button';b.onclick=run;return b;}
@@ -56,7 +56,7 @@ export function installTranscription(options:{beforeListen:()=>boolean;reviewCle
    const actions=el('div',undefined,'tx-review-actions');importButton=button(tr('import'),()=>void importResult(),'btn primary');importButton.dataset.valid=String(!!report.validation?.structurallyValid);permissionNote=el('p',tr('needEditor'),'tx-pencil');permissionNote.hidden=canEditPieces(destination);importButton.disabled=!canEditPieces(destination)||!report.validation?.structurallyValid;
    async function importResult(){if(!importButton||importButton.disabled)return;const b=importButton;b.disabled=true;b.dataset.pending='true';try{const piece=await api<{id:string}>(path+'/import','POST');d.close();await refresh();await options.open(xml,title,piece.id);}catch(e){error.textContent=errorText(e);b.dataset.pending='false';b.disabled=!canEditPieces(destination);}}
    const secondary=el('div',undefined,'tx-secondary');secondary.append(button(tr('report'),()=>download(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}),'transcription-report.json')),button(tr('xml'),()=>download(new Blob([xml],{type:'application/vnd.recordare.musicxml+xml'}),'transcription.musicxml')),button(tr('listen'),()=>{if(!options.beforeListen())return;d.close();void options.open(xml,title).catch(e=>{error.textContent=errorText(e);});}));secondary.querySelectorAll('button').forEach(b=>b.className='tx-link');actions.append(importButton,secondary,permissionNote);panel.append(actions);layout.append(main,panel);d.append(layout);
-   const [{default:create},{VerovioToolkit}]=await Promise.all([import('verovio/wasm'),import('verovio/esm')]);if(!d.isConnected)return;const toolkit=new VerovioToolkit(await create());toolkit.setOptions({scale:45,pageWidth:window.innerWidth<720?900:1800,pageHeight:window.innerWidth<720?1200:2400,adjustPageHeight:true,svgViewBox:true,footer:'none',breaks:'auto'});
+   const [{default:create},{VerovioToolkit}]=await Promise.all([import('verovio/wasm'),import('verovio/esm')]);if(!d.isConnected)return;const toolkit=new VerovioToolkit(await create());toolkit.setOptions({scale:45,pageWidth:matchBreakpoint('score', 'below').matches?900:1800,pageHeight:matchBreakpoint('score', 'below').matches?1200:2400,adjustPageHeight:true,svgViewBox:true,footer:'none',breaks:'auto'});
    const doc=new DOMParser().parseFromString(xml,'application/xml');doc.querySelectorAll('part').item(0)?.querySelectorAll('measure').forEach((m,i)=>m.setAttribute('id',`review-measure-${i+1}`));doc.querySelectorAll('multiple-rest').forEach(rest=>rest.remove());if(!toolkit.loadData(new XMLSerializer().serializeToString(doc)))throw new Error('engrave');
    for(let page=1;page<=toolkit.getPageCount();page++){const container=el('div',undefined,'tx-score-page');container.append(safeSvg(toolkit.renderToSVG(page)));score.append(container);}
    // MusicXML ids survive Verovio layout; never renumber rendered systems.

@@ -4,6 +4,9 @@ import { createHash } from 'node:crypto';
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+// Same raw resolver as the SSR head; config loading must not re-serialize functions.
+const themeBootstrapScript = `(${readFileSync('src/design-system/theme/resolver.js', 'utf8').replace('export default ', '')})();`;
 const previewOrigin = process.env.LIZARDTAIL_ORIGIN ? new URL(process.env.LIZARDTAIL_ORIGIN) : undefined;
 export default defineConfig({
   build: { outDir: process.env.LIGHTSCORE_BUILD_ROOT ?? 'dist' },
@@ -24,7 +27,7 @@ export default defineConfig({
         if (!entry) throw Error('Missing offline entry');
         const paths = Object.keys(bundle).filter(p => /^assets\/[^?]+\.(?:js|css|woff2?|ttf|zip|wasm|svg|png|mp3)$/.test(p)).map(p => '/' + p);
         const css = paths.filter(p => p.endsWith('.css')).map(p => `<link rel="stylesheet" href="${p}">`).join('');
-        const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LightScore</title>${css}</head><body><div id="app"></div><script type="module" src="/${entry.fileName}"></script></body></html>`;
+        const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LightScore</title>${css}<script>${themeBootstrapScript}</script></head><body><div id="app"></div><script type="module" src="/${entry.fileName}"></script></body></html>`;
         this.emitFile({type:'asset',fileName:'offline.html',source:html});
 
       },
@@ -42,6 +45,7 @@ export default defineConfig({
     },
     tanstackStart(),
     react(),
+    tailwindcss(),
     {
       name: "lightscore-node-host",
       async configureServer(server) {

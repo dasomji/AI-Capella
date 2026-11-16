@@ -1,0 +1,18 @@
+/* All author styles enter this boundary. No global Tailwind Preflight.
+   Preserve base → parchment order: lazy base used to override the panel grounds. */
+@layer theme, legacy, tokens, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw);
+@import '@fontsource-variable/bodoni-moda/opsz.css' layer(legacy);
+@import '@fontsource-variable/atkinson-hyperlegible-next/wght.css' layer(legacy);
+@import '@fontsource-variable/atkinson-hyperlegible-mono/wght.css' layer(legacy);
+@import '@fontsource/italianno/index.css' layer(legacy);
+@import './fonts.css' layer(legacy);
+@import '../revivalType.css' layer(legacy);
+@import '../style.css' layer(legacy);
+@import '../parchment.css' layer(legacy);
+@import '../auth.css' layer(legacy);
+@import '../admin.css' layer(legacy);
+@import '../transcription.css' layer(legacy);
+@import './tokens.css' layer(tokens);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tw) source(none);
+@source '../';

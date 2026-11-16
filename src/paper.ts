@@ -386,7 +386,7 @@ function applyCss() {
   const ctx = small.getContext('2d')!;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(tilesOf().surface, 0, 0, small.width, small.height);
-  document.documentElement.style.setProperty('--fibre', `url(${small.toDataURL('image/png')})`);
+  document.documentElement.style.setProperty('--ds-material-fibre', `url(${small.toDataURL('image/png')})`);
 }
 
 /** Puts the paper's texture onto the CSS surfaces; called once at start (paper design only). */

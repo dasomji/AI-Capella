@@ -1,3 +1,5 @@
+import { bootstrapTheme } from './design-system/theme/bootstrap';
+import { initializeTheme, setThemePreference, systemTheme, onSystemThemeChange } from './design-system/theme';
 // Which look this device shows. The default is what the whole choir sees; a device can switch to
 // another by opening the app with ?design=samt (or ?logo=1, ?roll=gel), and keeps it until opened
 // with the default again. The look (design) follows the device's light or dark mode unless chosen
@@ -31,41 +33,19 @@ export function deviceChoice<T extends string>(param: string, key: string, value
 export type Design = 'samt' | 'papier' | 'pergament';
 /** What a device chose for its look: 'auto' (everyone's) is night paper in dark mode, parchment in light mode. */
 export type DesignChoice = 'auto' | Design;
-const DESIGN_KEY = 'ai-capella-design';
-const LIGHT_MODE = '(prefers-color-scheme: light)';
-export const DESIGN_CHOICE: DesignChoice = deviceChoice('design', DESIGN_KEY, ['auto', 'samt', 'papier', 'pergament'] as const, 'auto');
-
-/** The look 'auto' shows right now: the device's light mode is parchment, its dark mode night paper. */
-export function systemDesign(): Design {
-  try {
-    return matchMedia(LIGHT_MODE).matches ? 'pergament' : 'papier';
-  } catch {
-    return 'papier';
-  }
-}
-
-export const DESIGN: Design = DESIGN_CHOICE === 'auto' ? systemDesign() : DESIGN_CHOICE;
-
-/** Remembers the look chosen in the menu (the page has to be loaded again to show it -- see main.ts). */
+const appearance = typeof document === 'undefined' ? undefined : bootstrapTheme();
+initializeTheme();
+const legacyDesign = (id: string): Design => id === 'parchment' ? 'pergament' : id === 'velvet' ? 'samt' : 'papier';
+export const DESIGN_CHOICE: DesignChoice = !appearance || appearance.preference === 'system' ? 'auto' : legacyDesign(appearance.preference);
+export function systemDesign(): Design { return legacyDesign(systemTheme()); }
+export const DESIGN: Design = appearance ? legacyDesign(appearance.id) : 'papier';
+/** Main retains its existing quiet-moment reload policy until P2 migrates renderer caches. */
 export function setDesignChoice(next: DesignChoice) {
-  try {
-    if (next === 'auto') localStorage.removeItem(DESIGN_KEY);
-    else localStorage.setItem(DESIGN_KEY, next);
-  } catch {
-    /* for this visit only */
-  }
+  setThemePreference(next === 'auto' ? 'system' : next === 'pergament' ? 'parchment' : next === 'samt' ? 'velvet' : 'night-paper');
 }
-
-/** Calls `changed` when the device turns to light or dark mode and 'auto' would show another look. */
 export function onSystemDesignChange(changed: () => void) {
   if (DESIGN_CHOICE !== 'auto') return;
-  try {
-    matchMedia(LIGHT_MODE).addEventListener('change', () => {
-      if (systemDesign() !== DESIGN) changed();
-    });
-  } catch {
-    /* no light or dark mode to follow */
-  }
+  return onSystemThemeChange(() => { if (systemDesign() !== DESIGN) changed(); });
 }
 /** Parchment: the paper design on a light ground (everything of the paper design holds, in light). */
 export const PARCHMENT = DESIGN === 'pergament';
@@ -80,7 +60,7 @@ export const LOGO_DRAFT: LogoDraft = deviceChoice('logo', 'ai-capella-logo', ['1
  * voice lines as figures of light drawn toward a click, the name written in ink floating over the
  * paper, the choices embossed paper tabs.
  */
-const START_CHOICE = PAPER_DESIGN ? deviceChoice('start', 'ai-capella-start', ['neu', 'heute', 'zeile', 'buehne'] as const, 'neu') : 'heute';
+const START_CHOICE = appearance?.start ?? 'neu';
 export const START_DRAFT = START_CHOICE !== 'heute';
 /**
  * Draft (?start=zeile): "Die erste Zeile" -- instead of the swaying voice lines, a staff ruled across
@@ -102,16 +82,4 @@ export const START_STAGE = START_CHOICE === 'buehne';
  * ?schrift=bodoni brings back the earlier ones (Bodoni Moda, Atkinson Hyperlegible) on a device
  * ('heute' as it was called while the new ones were a test), ?schrift=neu the new ones.
  */
-const TYPE_CHOICE = deviceChoice('schrift', 'ai-capella-schrift', ['neu', 'bodoni', 'heute', 'test'] as const, 'neu');
-export const REVIVAL_TYPE = TYPE_CHOICE !== 'bodoni' && TYPE_CHOICE !== 'heute';
-
-document.documentElement.dataset.design = PAPER_DESIGN ? 'papier' : DESIGN;
-delete document.documentElement.dataset.ground;
-if (PARCHMENT) {
-  document.documentElement.dataset.ground = 'pergament';
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#E8D9B8');
-}
-if (REVIVAL_TYPE) document.documentElement.dataset.type = 'revival';
-if (START_DRAFT) document.documentElement.dataset.start = 'neu';
-if (START_STAFF) document.documentElement.dataset.title = 'zeile';
-if (START_STAGE) document.documentElement.dataset.title = 'buehne';
+export const REVIVAL_TYPE = appearance?.revival ?? true;
