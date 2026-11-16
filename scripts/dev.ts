@@ -14,12 +14,14 @@ export async function startDevelopment({
   port: number; host?: string; childPath?: string; readinessTimeoutMs?: number;
 }) {
   let child: ChildProcess | undefined;
-  let target: { port: number } | undefined;
+  let target: { port: number; child: ChildProcess } | undefined;
   let stopping = false;
   let retry: ReturnType<typeof setTimeout> | undefined;
   let deadline: ReturnType<typeof setTimeout> | undefined;
   const sockets = new Set<Socket>();
   const pending = new Map<Socket, { timeout: ReturnType<typeof setTimeout>; upstream?: Socket }>();
+  let nextConnection = 0;
+  const acknowledgements = new Map<number, { child: ChildProcess; accepted: () => void }>();
   const relay = (socket: Socket) => {
     const waiting = pending.get(socket);
     if (!target || !waiting || waiting.upstream || socket.destroyed) return;
@@ -27,10 +29,15 @@ export async function startDevelopment({
     const upstream = connect(destination.port, '127.0.0.1');
     waiting.upstream = upstream;
     let relaying = false;
+    let connectionId: number | undefined;
     const closeUpstream = () => upstream.destroy();
     upstream.on('error', () => { if (relaying) socket.destroy(); });
     upstream.once('close', () => {
       socket.removeListener('close', closeUpstream);
+      if (connectionId !== undefined) {
+        acknowledgements.delete(connectionId);
+        if (destination.child.connected) destination.child.send({ type: 'cancel-accept', id: connectionId }, () => {});
+      }
       if (relaying || pending.get(socket) !== waiting) return;
       waiting.upstream = undefined;
       // A child can close its listener before its exit/IPC reaches the parent.
@@ -38,8 +45,10 @@ export async function startDevelopment({
       if (target === destination) restart();
       relay(socket);
     });
-    upstream.once('connect', () => {
-      if (target !== destination || stopping || socket.destroyed || pending.get(socket) !== waiting) {
+    const accepted = () => {
+      if (connectionId !== undefined) acknowledgements.delete(connectionId);
+      connectionId = undefined;
+      if (target !== destination || stopping || socket.destroyed || upstream.destroyed || upstream.readableEnded || pending.get(socket) !== waiting) {
         upstream.destroy();
         return;
       }
@@ -48,6 +57,19 @@ export async function startDevelopment({
       pending.delete(socket);
       socket.once('close', closeUpstream);
       socket.pipe(upstream).pipe(socket);
+    };
+    upstream.once('connect', () => {
+      if (target !== destination || stopping || socket.destroyed || pending.get(socket) !== waiting) {
+        upstream.destroy();
+        return;
+      }
+      // TCP may connect to a dying child's kernel backlog. Keep bytes paused
+      // until its event loop confirms accepting this particular connection.
+      connectionId = ++nextConnection;
+      acknowledgements.set(connectionId, { child: destination.child, accepted });
+      destination.child.send({ type: 'accept', id: connectionId, port: upstream.localPort }, error => {
+        if (error) upstream.destroy();
+      });
     });
   };
   const server = createServer(socket => {
@@ -84,17 +106,22 @@ export async function startDevelopment({
   };
   const launch = () => {
     if (stopping) return;
-    child = fork(childPath, [], {
+    const launched = fork(childPath, [], {
       execArgv: ['--import', 'tsx'],
       stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
       env: { ...process.env, LIGHTSCORE_DEV_PORT: String(port) },
     });
-    child.on('message', (message: unknown) => {
+    child = launched;
+    launched.on('message', (message: unknown) => {
       if (!message || typeof message !== 'object') return;
+      if ('type' in message && message.type === 'accepted' && 'id' in message && typeof message.id === 'number') {
+        const acknowledgement = acknowledgements.get(message.id);
+        if (acknowledgement?.child === launched) acknowledgement.accepted();
+      }
       if ('type' in message && message.type === 'restart') restart();
       if ('type' in message && message.type === 'ready' && 'port' in message &&
           typeof message.port === 'number' && !deadline && !stopping) {
-        target = { port: message.port };
+        target = { port: message.port, child: launched };
         console.log(`[dev] ready child=${child?.pid} at ${new Date().toISOString()}`);
         for (const socket of pending.keys()) relay(socket);
       }

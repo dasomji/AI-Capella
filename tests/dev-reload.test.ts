@@ -6,10 +6,12 @@ import { join } from 'node:path';
 import { connect } from 'node:net';
 import { startDevelopment } from '../scripts/dev';
 
+const acceptanceImport = `import {acknowledgeDevelopmentConnections} from ${JSON.stringify(new URL('../scripts/dev-connections.ts', import.meta.url).href)};`;
+
 test('dev listener survives child reload/crash, waits for readiness and relays upgrades', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'lightscore-dev-'));
   const childPath = join(dir, 'child.mjs');
-  await writeFile(childPath, `
+  await writeFile(childPath, `${acceptanceImport}
     import {createServer} from 'node:http';
     const server=createServer((req,res)=>{
       if(req.url==='/restart') {process.send({type:'restart'});return;}
@@ -20,6 +22,7 @@ test('dev listener survives child reload/crash, waits for readiness and relays u
       socket.write('HTTP/1.1 101 Switching Protocols\\r\\nConnection: Upgrade\\r\\nUpgrade: test\\r\\n\\r\\n');
       socket.on('data',data=>socket.write(data));
     });
+    acknowledgeDevelopmentConnections(server);
     setTimeout(()=>server.listen(0,'127.0.0.1',()=>process.send({type:'ready',port:server.address().port})),150);
   `);
   const dev = await startDevelopment({ port: 0, childPath });
@@ -71,7 +74,7 @@ test('dev listener survives child reload/crash, waits for readiness and relays u
 async function fixture(source: string, readinessTimeoutMs = 15000) {
   const dir = await mkdtemp(join(tmpdir(), 'lightscore-dev-'));
   const childPath = join(dir, 'child.mjs');
-  await writeFile(childPath, source);
+  await writeFile(childPath, acceptanceImport + '\n' + source);
   const dev = await startDevelopment({ port: 0, childPath, readinessTimeoutMs });
   onTestFinished(async () => {
     await dev.close();
@@ -98,6 +101,7 @@ test('holds concurrent requests when a ready child loses its listener before exi
       req.on('data',chunk=>body+=chunk);
       req.on('end',()=>res.end(JSON.stringify({pid:process.pid,body})));
     });
+    acknowledgeDevelopmentConnections(server);
     server.listen(0,'127.0.0.1',()=>process.send({type:'ready',port:server.address().port}));
   `);
   const request = (path = '', body?: string) => fetch(origin + path, {
@@ -129,3 +133,32 @@ test('returns a clean HTTP 503 when no child becomes ready before the deadline',
   expect(response.headers.get('retry-after')).toBe('1');
   expect(await response.text()).toBe('Development server is restarting. Try again shortly.\n');
 });
+
+test('waits for child acceptance when a TCP handshake succeeds against an exiting child', async () => {
+  const origin = await fixture(`
+    import {createServer} from 'node:http';
+    import {existsSync,writeFileSync,readFileSync} from 'node:fs';
+    const marker=new URL('first-pid',import.meta.url);
+    const first=!existsSync(marker);
+    if(first) writeFileSync(marker,String(process.pid));
+    const server=createServer((req,res)=>res.end(JSON.stringify({
+      pid:process.pid,firstPid:Number(readFileSync(marker,'utf8')),
+    })));
+    acknowledgeDevelopmentConnections(server);
+    server.listen(0,'127.0.0.1',()=>{
+      process.send({type:'ready',port:server.address().port},()=>{
+        if(first) {
+          // The OS can complete TCP handshakes, but JS cannot accept/serve them.
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,1000);
+          process.exit(1);
+        }
+      });
+    });
+  `);
+  const response = await fetch(origin, {
+    headers: { Connection: 'close' }, signal: AbortSignal.timeout(10000),
+  });
+  expect(response.status).toBe(200);
+  const { pid, firstPid } = await response.json();
+  expect(pid).not.toBe(firstPid);
+}, 20000);

@@ -22,6 +22,12 @@ seconds, including the upstream TCP handshake. The last ready child can stop
 accepting connections before its exit notification reaches the parent. A failed
 handshake therefore retires that child and holds the client for its replacement;
 client bytes stay paused until a connection to the current ready child succeeds.
+TCP success alone is insufficient: the kernel can finish a handshake while its
+process is exiting. Before forwarding bytes, the parent also requires an IPC
+acknowledgement from the child's connection handler for that specific socket.
+Connections not yet accepted by the child's event loop remain in the queue if
+that child exits. Acknowledgements are scoped to the child and cancelled when
+their upstream socket closes.
 The original deadline spans all attempts and returns an HTTP 503 with
 `Retry-After: 1` on timeout. Once bytes have been forwarded, streams are not
 replayed: doing so could duplicate a write or corrupt an upgrade. Shutdown allows
