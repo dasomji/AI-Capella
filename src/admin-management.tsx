@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import {
   AdminDataTable,
   type AdminRow,
@@ -232,25 +232,50 @@ export function AdminMembershipManagement({
     [draft, setDraft] = useState<Permissions>(empty),
     [email, setEmail] = useState(""),
     [status, setStatus] = useState("");
-  const queue = (p: Pending) => {
+  const queue = useCallback((p: Pending) => {
     setStatus("");
     setPending(p);
-  };
-  const columns: AdminColumn[] = [
-    {
-      id: entity === "users" ? "ensemble_name" : "name",
-      label: entity === "users" ? a.ensembles : f.name,
-      sort: entity === "ensembles" ? "name" : "ensemble",
-    },
-    { id: "email", label: f.email, sort: "email" },
-    {
-      id: "permissions",
-      label: d.actions,
-      cell: (row) => (
-        <MemberEditor row={row} language={language} onPending={queue} />
-      ),
-    },
-  ];
+  }, []);
+  const columns = useMemo<AdminColumn[]>(
+    () => [
+      {
+        id: entity === "users" ? "ensemble_name" : "name",
+        label: entity === "users" ? a.ensembles : a.name,
+        sort: entity === "ensembles" ? "name" : "ensemble",
+      },
+      { id: "email", label: f.email, sort: "email" },
+      {
+        id: "permissions",
+        label: d.actions,
+        cell: (row) => (
+          <MemberEditor row={row} language={language} onPending={queue} />
+        ),
+      },
+    ],
+    [entity, language, queue],
+  );
+  const pickerColumns = useMemo<AdminColumn[]>(
+    () => [
+      { id: "name", label: a.name, sort: "name" },
+      ...(entity === "ensembles"
+        ? [{ id: "email", label: f.email, sort: "email" }]
+        : []),
+      {
+        id: "choose",
+        label: d.actions,
+        cell: (r) => (
+          <button
+            type="button"
+            aria-pressed={chosen?.id === r.id}
+            onClick={() => setChosen(r)}
+          >
+            {entity === "ensembles" ? d.chooseUser : d.chooseEnsemble}
+          </button>
+        ),
+      },
+    ],
+    [entity, language, chosen?.id],
+  );
   const ensemble = entity === "ensembles" ? profile.id : chosen?.id,
     user = entity === "users" ? profile.id : chosen?.id;
   return (
@@ -306,25 +331,7 @@ export function AdminMembershipManagement({
           <AdminDataTable
             path={entity === "ensembles" ? "users" : "ensembles"}
             caption={entity === "ensembles" ? d.chooseUser : a.ensembles}
-            columns={[
-              { id: "name", label: f.name, sort: "name" },
-              ...(entity === "ensembles"
-                ? [{ id: "email", label: f.email, sort: "email" }]
-                : []),
-              {
-                id: "choose",
-                label: d.actions,
-                cell: (r) => (
-                  <button
-                    type="button"
-                    aria-pressed={chosen?.id === r.id}
-                    onClick={() => setChosen(r)}
-                  >
-                    {entity === "ensembles" ? d.chooseUser : d.chooseEnsemble}
-                  </button>
-                ),
-              },
-            ]}
+            columns={pickerColumns}
             language={language}
           />
           {chosen && (
@@ -414,27 +421,36 @@ export function AdminMembershipManagement({
           language={language}
           onCancel={() => setPending(null)}
           onConfirm={async (reason) => {
+            let r;
             try {
-              const r = await adminRequest(pending.path, pending.method, {
+              r = await adminRequest(pending.path, pending.method, {
                 ...pending.body,
                 reason,
               });
-              setStatus(
-                pending.path.endsWith("/invitations")
-                  ? r.deliveryState === "not_sent"
-                    ? d.invitationNotSent
-                    : d.invitationCreated
-                  : d.success,
-              );
-              setPending(null);
-              setAdding(false);
+            } catch (error) {
               setRevision((v) => v + 1);
-              await onChanged();
-            } catch (e) {
-              if (e instanceof Error) {
-                setRevision((v) => v + 1);
+              try {
+                await onChanged();
+              } catch {
+                /* Preserve the mutation error. */
               }
-              throw e;
+              throw error;
+            }
+            setStatus(
+              pending.path.endsWith("/invitations")
+                ? r.deliveryState === "not_sent"
+                  ? d.invitationNotSent
+                  : d.invitationCreated
+                : d.success,
+            );
+            setPending(null);
+            setAdding(false);
+            setRevision((v) => v + 1);
+            // The mutation has committed. A refresh error belongs to the open detail, not its closed dialog.
+            try {
+              await onChanged();
+            } catch (error) {
+              setStatus(d.success + " · " + managementError(error, language));
             }
           }}
         />

@@ -4,8 +4,6 @@ import {
   tableFeatures,
   rowSortingFeature,
   rowPaginationFeature,
-  globalFilteringFeature,
-  columnFilteringFeature,
   flexRender,
   type ColumnDef,
   type SortingState,
@@ -22,8 +20,6 @@ export type AdminColumn = {
 const features = tableFeatures({
   rowSortingFeature,
   rowPaginationFeature,
-  columnFilteringFeature,
-  globalFilteringFeature,
 });
 /** One server page at a time; cursors are scoped to the complete filter/sort/limit query. */
 export function AdminDataTable({
@@ -78,11 +74,11 @@ export function AdminDataTable({
     columns: defs,
     getRowId: (r) => r.id,
     manualSorting: true,
-    manualFiltering: true,
     manualPagination: true,
     pageCount: -1,
     enableSortingRemoval: false,
-    state: { sorting, pagination, globalFilter: searchValue },
+    enableMultiSort: false,
+    state: { sorting, pagination },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
   });
@@ -95,10 +91,11 @@ export function AdminDataTable({
     sortKey,
     sort?.desc,
     pagination.pageSize,
-    revision,
   ]);
   const signatureRef = useRef(signature);
   useEffect(() => {
+    setBusy(true);
+    setError("");
     const changed = signatureRef.current !== signature;
     signatureRef.current = signature;
     if (changed) {
@@ -111,8 +108,6 @@ export function AdminDataTable({
       }
     }
     const current = ++generation.current;
-    setBusy(true);
-    setError("");
     const timer = setTimeout(async () => {
       try {
         const params = new URLSearchParams({
@@ -132,7 +127,6 @@ export function AdminDataTable({
         onZone?.(r.timeZone);
       } catch (e) {
         if (current === generation.current) {
-          setRows([]);
           setNext(null);
           setError(managementError(e, language));
         }
@@ -144,9 +138,9 @@ export function AdminDataTable({
       clearTimeout(timer);
       generation.current++;
     };
-  }, [signature, pagination.pageIndex]);
+  }, [signature, pagination.pageIndex, revision]);
   return (
-    <section className="admin-data-table" aria-label={caption}>
+    <section className="admin-data-table" aria-label={caption} aria-busy={busy}>
       {externalSearch === undefined && (
         <label>
           {d.search}
@@ -158,13 +152,7 @@ export function AdminDataTable({
         </label>
       )}
       {error && <p role="alert">{error}</p>}
-      <div
-        className="admin-table-wrap"
-        tabIndex={0}
-        role="region"
-        aria-label={caption}
-        aria-busy={busy}
-      >
+      <div className="admin-table-wrap admin-data-wrap" tabIndex={0}>
         <table>
           <caption className="admin-sr-only">{caption}</caption>
           <thead>
@@ -177,18 +165,22 @@ export function AdminDataTable({
                       key={header.id}
                       scope="col"
                       aria-sort={
-                        sorted === "asc"
-                          ? "ascending"
-                          : sorted === "desc"
-                            ? "descending"
-                            : "none"
+                        !header.column.getCanSort()
+                          ? undefined
+                          : sorted === "asc"
+                            ? "ascending"
+                            : sorted === "desc"
+                              ? "descending"
+                              : "none"
                       }
                     >
                       {header.column.getCanSort() ? (
                         <button
                           type="button"
-                          disabled={busy}
-                          onClick={() => header.column.toggleSorting()}
+                          aria-disabled={busy}
+                          onClick={() => {
+                            if (!busy) header.column.toggleSorting();
+                          }}
                         >
                           {flexRender(
                             header.column.columnDef.header,
@@ -216,6 +208,7 @@ export function AdminDataTable({
             {table.getRowModel().rows.map((row) => (
               <tr
                 key={row.id}
+                data-row-id={row.id}
                 tabIndex={onOpen ? 0 : undefined}
                 onClick={onOpen ? () => onOpen(row.original) : undefined}
                 onKeyDown={(e) => {
@@ -230,7 +223,12 @@ export function AdminDataTable({
                 }}
               >
                 {row.getAllCells().map((cell) => (
-                  <td key={cell.id}>
+                  <td
+                    key={cell.id}
+                    data-label={
+                      columns.find((c) => c.id === cell.column.id)?.label
+                    }
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -243,8 +241,10 @@ export function AdminDataTable({
       <div className="admin-pagination">
         <button
           type="button"
-          disabled={busy || !pagination.pageIndex}
-          onClick={() => table.previousPage()}
+          aria-disabled={busy || !pagination.pageIndex}
+          onClick={() => {
+            if (!busy && pagination.pageIndex) table.previousPage();
+          }}
         >
           {m.previous}
         </button>
@@ -254,8 +254,9 @@ export function AdminDataTable({
         </span>
         <button
           type="button"
-          disabled={busy || !next}
+          aria-disabled={busy || !next}
           onClick={() => {
+            if (busy || !next) return;
             setCursors((old) => [
               ...old.slice(0, pagination.pageIndex + 1),
               next!,

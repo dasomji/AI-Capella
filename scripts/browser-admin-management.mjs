@@ -42,10 +42,41 @@ const page = await context.newPage(),
   files = [];
 page.on("pageerror", (e) => errors.push(e.message));
 const shot = async (name) => {
+  await loaded();
   await page.evaluate(() => document.fonts.ready);
   files.push(shots + "/" + name + ".png");
   await page.screenshot({ path: files.at(-1), fullPage: true });
 };
+async function loaded(scope = page) {
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  await assertEventually(async () =>
+    assert.equal(await page.locator('[aria-busy="true"]').count(), 0),
+  );
+}
+async function ids(scope) {
+  return scope
+    .locator("tbody tr")
+    .evaluateAll((rows) => rows.map((row) => row.dataset.rowId));
+}
+async function pageNumber(scope, number) {
+  await loaded(scope);
+  assert.match(
+    await scope.locator(".admin-pagination").innerText(),
+    new RegExp("Page " + number + "(?:\\D|$)"),
+  );
+}
+async function tabTo(locator) {
+  for (let n = 0; n < 80; n++) {
+    if (await locator.evaluate((el) => el === document.activeElement)) return;
+    await page.keyboard.press("Tab");
+  }
+  throw Error("Tab did not reach requested control");
+}
 async function confirmation(reason) {
   const dialog = page.locator("dialog[open]");
   await dialog.waitFor();
@@ -68,10 +99,13 @@ try {
   });
   assert.equal(r.status(), 201);
   const ensemble = await r.json();
-  for (let i = 0; i < 12; i++)
+  for (let i = 0; i < 24; i++)
     await db.query(
       'insert into "user"(name,email,email_verified) values($1,$2,true)',
-      ["Pagination singer " + i, "pagination-" + i + "@example.test"],
+      [
+        "Pagination singer " + String(i).padStart(2, "0"),
+        "pagination-" + i + "@example.test",
+      ],
     );
   await page.goto(base + "/admin/users");
   const users = page.getByRole("region", { name: "Users", exact: true });
@@ -82,38 +116,95 @@ try {
   await assertEventually(async () =>
     assert.equal(await users.locator("tbody tr").count(), 10),
   );
-  const firstName = await users.locator("tbody tr td").first().textContent();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await assertEventually(async () =>
-    assert.notEqual(
-      await users.locator("tbody tr td").first().textContent(),
-      firstName,
-    ),
+  await loaded(users);
+  assert.equal(
+    await page.getByRole("region", { name: "Users", exact: true }).count(),
+    1,
   );
-  await page.getByRole("button", { name: "Previous", exact: true }).click();
-  await assertEventually(async () =>
+  const expectedIds = (
+    await db.query('select id from "user" order by id')
+  ).rows.map((r) => r.id);
+  const visited = [];
+  for (let number = 1; ; number++) {
+    await pageNumber(users, number);
+    visited.push(...(await ids(users)));
+    const pager = users.getByRole("button", { name: "Next", exact: true });
+    if ((await pager.getAttribute("aria-disabled")) === "true") break;
+    await pager.click();
+    await loaded(users);
     assert.equal(
-      await users.locator("tbody tr td").first().textContent(),
-      firstName,
-    ),
-  );
+      await pager.evaluate((el) => el === document.activeElement),
+      true,
+      "Next retains keyboard focus",
+    );
+  }
+  assert.deepEqual(visited, expectedIds);
+  assert.equal(new Set(visited).size, visited.length);
+  // Sort from page 2 with the keyboard, then verify server order in both directions.
+  await users.getByRole("button", { name: "Previous", exact: true }).click();
+  await pageNumber(users, 2);
   const name = users.getByRole("columnheader", { name: /Name/ });
-  await name.getByRole("button").click();
-  await assertEventually(async () =>
-    assert.notEqual(await name.getAttribute("aria-sort"), "none"),
+  await tabTo(name.getByRole("button"));
+  await page.keyboard.press("Enter");
+  await pageNumber(users, 1);
+  assert.equal(await name.getAttribute("aria-sort"), "ascending");
+  assert.deepEqual(
+    await ids(users),
+    (
+      await db.query('select id from "user" order by name asc,id asc limit 10')
+    ).rows.map((r) => r.id),
   );
+  await page.keyboard.press("Enter");
+  await pageNumber(users, 1);
+  assert.equal(await name.getAttribute("aria-sort"), "descending");
+  assert.deepEqual(
+    await ids(users),
+    (
+      await db.query(
+        'select id from "user" order by name desc,id desc limit 10',
+      )
+    ).rows.map((r) => r.id),
+  );
+  await users
+    .getByRole("columnheader", { name: /Email$/ })
+    .getByRole("button")
+    .click({ modifiers: ["Shift"] });
+  await loaded(users);
+  assert.equal(await name.getAttribute("aria-sort"), "none");
+  assert.equal(
+    await users
+      .locator('th[aria-sort="ascending"],th[aria-sort="descending"]')
+      .count(),
+    1,
+  );
+  assert.deepEqual(
+    await ids(users),
+    (
+      await db.query('select id from "user" order by email asc,id asc limit 10')
+    ).rows.map((r) => r.id),
+  );
+  await users.getByRole("button", { name: "Next", exact: true }).click();
+  await pageNumber(users, 2);
   await page.getByRole("searchbox").fill("user@test.com");
   await users
     .getByRole("cell", { name: "user@test.com", exact: true })
     .waitFor();
+  await pageNumber(users, 1);
   assert.equal(await users.locator("tbody tr").count(), 1);
   await shot("users-search-sort");
-  await users.getByRole("cell", { name: "user@test.com", exact: true }).click();
+  await users.locator("tbody tr").first().focus();
+  await page.keyboard.press("Enter");
   await page
     .getByRole("dialog")
     .getByRole("heading", { name: "Test User", exact: true })
     .waitFor();
+  await loaded();
   await shot("user-memberships");
+  // More than one membership page makes mutation refresh behavior observable.
+  await db.query(
+    "insert into memberships(ensemble_id,user_id) select $1,id from \"user\" where email like 'pagination-%' order by id limit 12",
+    [ensemble.id],
+  );
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("link", { name: "Ensembles", exact: true }).click();
   const ensembles = page.getByRole("region", {
@@ -163,11 +254,59 @@ try {
   });
   let row = members.locator("tbody tr").filter({ hasText: "user@test.com" });
   await row.waitFor();
+  await loaded(members);
+  assert.equal(
+    await members
+      .getByRole("columnheader", { name: "Actions", exact: true })
+      .getAttribute("aria-sort"),
+    null,
+  );
+  await members.getByLabel("Rows per page", { exact: true }).selectOption("10");
+  await loaded(members);
+  await members
+    .getByRole("columnheader", { name: /Name/ })
+    .getByRole("button")
+    .click();
+  await loaded(members);
+  await members.getByRole("button", { name: "Next", exact: true }).click();
+  await pageNumber(members, 2);
+  const membershipIds = await ids(members);
+  await page.route("**/api/admin/memberships?*", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await route.continue();
+  });
+  await page.route(
+    "**/api/admin/ensembles/" + ensemble.id,
+    (route) =>
+      route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ code: "service_unavailable" }),
+      }),
+    { times: 1 },
+  );
   await row.getByLabel("Edit music pieces", { exact: true }).check();
   await row
     .getByRole("button", { name: "Save permissions", exact: true })
     .click();
   await confirmation("Browser: grant editing");
+  assert.deepEqual(
+    await ids(members),
+    membershipIds,
+    "Rows remain visible during mutation refetch",
+  );
+  await pageNumber(members, 2);
+  assert.deepEqual(await ids(members), membershipIds);
+  await management
+    .getByRole("status")
+    .filter({ hasText: "Change saved" })
+    .waitFor();
+  assert.equal(
+    await page.locator("dialog[open]").count(),
+    0,
+    "Refresh failure does not reopen mutation dialog",
+  );
+  await page.unroute("**/api/admin/memberships?*");
   await assertEventually(async () =>
     assert.equal(
       (
@@ -184,6 +323,7 @@ try {
   await row.getByRole("button", { name: "Remove member", exact: true }).click();
   await confirmation("Browser: remove the test account");
   await row.waitFor({ state: "hidden" });
+  await pageNumber(members, 2);
   assert.equal(
     (
       await db.query(
@@ -195,7 +335,11 @@ try {
   );
   await shot("member-removed");
   // A clear, translated failure case for the sole remaining lead.
+  await members.getByRole("searchbox").fill("admin@test.com");
+  await loaded(members);
   await members
+    .locator("tbody tr")
+    .filter({ hasText: "admin@test.com" })
     .getByRole("button", { name: "Remove member", exact: true })
     .click();
   const dialog = page.locator("dialog[open]");
@@ -214,14 +358,15 @@ try {
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "DE", exact: true }).click();
-  await ensembles
-    .getByRole("cell", { name: ensemble.name, exact: true })
+  await page
+    .locator("main > .admin-data-table tbody tr")
+    .filter({ hasText: ensemble.name })
     .click();
   await management
     .getByRole("button", { name: "Mitglied hinzufügen", exact: true })
     .waitFor();
   await management.locator("tbody tr").first().waitFor();
-  await shot("phone-de");
+  await loaded();
   assert.equal(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -229,19 +374,37 @@ try {
     true,
   );
   const wrap = management.locator(".admin-table-wrap").first();
-  assert.ok(await wrap.evaluate((el) => el.scrollWidth > el.clientWidth));
   assert.equal(
-    await wrap.locator("table").evaluate((el) => getComputedStyle(el).display),
-    "table",
+    await wrap.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    true,
   );
+  for (const control of [
+    wrap.getByRole("checkbox").first(),
+    wrap
+      .getByRole("button", { name: "Berechtigungen speichern", exact: true })
+      .first(),
+    wrap
+      .getByRole("button", { name: "Mitglied entfernen", exact: true })
+      .first(),
+  ]) {
+    await control.scrollIntoViewIfNeeded();
+    const box = await control.boundingBox();
+    assert.ok(box && box.x >= 0 && box.x + box.width <= 390);
+  }
+  await shot("phone-de");
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "EN", exact: true }).click();
   await page.getByRole("link", { name: "Users", exact: true }).click();
   await page.getByRole("searchbox").fill("admin@test.com");
   await page
-    .getByRole("cell", { name: "admin@test.com", exact: true })
+    .locator("main > .admin-data-table tbody tr")
+    .filter({ hasText: "admin@test.com" })
     .waitFor();
-  await page.getByRole("cell", { name: "admin@test.com", exact: true }).click();
+  await loaded();
+  await page
+    .locator("main > .admin-data-table tbody tr")
+    .filter({ hasText: "admin@test.com" })
+    .click();
   await page
     .getByRole("button", { name: "Revoke sysadmin", exact: true })
     .click();
@@ -259,10 +422,31 @@ try {
     .filter({ hasText: "cannot revoke your own" })
     .waitFor();
   await shot("self-revoke-error");
+  await page
+    .locator("dialog[open]")
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  // Legacy audit tables share the phone card rule; their labels and data remain readable.
+  await page.getByRole("link", { name: "Audit log", exact: true }).click();
+  await page.locator(".admin-table-wrap tbody tr").first().waitFor();
+  assert.equal(
+    await page
+      .locator(".admin-table-wrap tbody tr")
+      .first()
+      .evaluate((el) => getComputedStyle(el).display),
+    "block",
+  );
+  assert.equal(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+    true,
+  );
   assert.deepEqual(errors, []);
   await fs.writeFile(
     evidence + "/browser-report.md",
-    `Admin browser journey: PASS\n\nSign-in, user/ensemble search and sorting, user detail, direct add, inline permission change, removal, last-lead and self-revoke failures, German phone layout with table-only scrolling.\n\n${files.map((f) => "- " + f).join("\n")}\n`,
+    `Admin browser journey: PASS\n\nSign-in, user/ensemble search and sorting, user detail, direct add, inline permission change, removal, last-lead and self-revoke failures, complete pagination, exact ascending/descending row order, page resets for search/sort, keyboard sorting/detail activation, pager focus, in-place mutation refresh and refresh failure, German phone cards with reachable controls.\n\n${files.map((f) => "- " + f).join("\n")}\n`,
   );
   console.log("ADMIN_MANAGEMENT_BROWSER_PASS", files.length, "screenshots");
 } catch (e) {
