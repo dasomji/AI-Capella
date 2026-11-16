@@ -2980,6 +2980,28 @@ Evidence, final command results and screenshots are outside git under
 or Firebase operations occurred. The concurrent CI agent's commits/files were
 preserved; no push or PR was made.
 
+Review fixes (2026-11-16): membership audit metadata now retains `userId` and
+`ensembleId`, including stale/last-lead failures and known removed IDs; invitation
+audit records include the invited email. Input validation and rate limiting run
+before mutation locks. Membership changes preserve sysadmin-issued invitations
+and use the shared injected clock. Final-admin protection counts verified holders,
+permission snapshots compare fields, and CLI/web role events both use
+`admin.user.sysadmin`. Migration 0018 is renamed to
+`0018_admin_issued_invitations`; its SQL hash, journal timestamp and numbered
+snapshot are unchanged, with an isolated migration idempotence regression.
+
+Management tables preserve focus while busy, expose one named region and only
+sortable `aria-sort` headers, disable multi-sort, memoize columns, and refresh the
+current cursor/page without blanking rows. Refresh failures after a committed
+change remain outside the closed confirmation dialog. Phone cards restore legacy
+tables and keep membership permissions, Save and Remove within 390 px. The
+browser journey verifies full pagination, exact sort order, page resets, keyboard
+activation, page-2 refreshes and completed screenshots. Backend regressions also
+cover IDOR, stale DELETE/role writes, unchanged rejected state, unverified admins
+and stored audit metadata. Origin-rejection audit writes are rate limited. ADR 0002
+is unchanged. Final same-commit check results and per-finding commit/test mapping
+are in `/tmp/aicap-admin/report.md` under “Review fixes”.
+
 Open questions at handoff:
 
 - The pre-existing `main` preview reports an inactive service and `/healthz`
