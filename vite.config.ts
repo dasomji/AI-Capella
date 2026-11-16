@@ -59,7 +59,9 @@ export default defineConfig({
         if (!server.httpServer)
           throw new Error("A persistent HTTP server is required");
         const io = attachSockets(server.httpServer);
-        server.httpServer.on("close", () => {
+        // io.close() closes the HTTP server too. A recurring close listener
+        // recursively re-runs subscription cleanup and pg.Client.end().
+        server.httpServer.once("close", () => {
           void io.close();
         });
         const listener = getRequestListener((request, bindings) => {
