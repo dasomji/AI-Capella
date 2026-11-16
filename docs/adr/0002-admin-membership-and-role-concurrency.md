@@ -27,3 +27,7 @@ also invalidates pending admin-issued invitations. Ordinary invitations retain
 ensemble-scoped issuer checks. Invitations grant the existing capabilities;
 leadership can be granted explicitly after joining, preserving the migration-only
 lead invitation invariant. Raw invitation tokens remain exclusively in mail.
+
+When an ordinary member manager resends an existing invitation, both its issuer
+and its admin/ensemble authority source are preserved alongside the original
+grants. A manager cannot convert the invitation's source or elevate its grants.

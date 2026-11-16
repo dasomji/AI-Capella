@@ -649,7 +649,7 @@ export async function createInvitation(db: PoolClient, e: string, u: {id:string}
           input.language ?? recipient?.language ?? "en",
           JSON.stringify([input.idempotencyKey]),
           clock.now(),
-          adminIssued,
+          old && !actor.is_lead ? old.admin_issued : adminIssued,
         ],
       )
     ).rows[0];

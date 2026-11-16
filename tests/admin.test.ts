@@ -260,8 +260,12 @@ test('admin management: guarded transactions, permissions, invitations and live 
    const input={email,language:'en',capabilities:{manageMembers:false,editPieces:true,transcribe:true},idempotencyKey:crypto.randomUUID(),reason};
    const r=await req(path,sys.cookie,'POST',input);assert.equal(r.status,200,await r.clone().text());
    const data=await r.json();assert.equal(data.deliveryState,'sent');assert.ok(!JSON.stringify(data).includes('token'));
-   const i=(await pool.query('select * from invitations where id=$1',[data.id])).rows[0];assert.equal(i.admin_issued,true);assert.match(i.token_hash,/^[a-f0-9]{64}$/);assert.ok(Math.abs((i.expires_at.getTime()-i.created_at.getTime())/86400000-14)<.01);
-   const {captureMail}=await import('../server/mail.server');const mail=captureMail.messages.find(m=>m.to===email)!;const token=mail.text.match(/\/invite\/([^\s]+)/)![1];
+   // A member manager can resend an admin-issued invite without changing its authority source or grants.
+   await pool.query('insert into memberships(ensemble_id,user_id,manage_members) values($1,$2,true)',[e,member.id]);
+   await pool.query("update invitation_sends set created_at=now()-interval '65 seconds' where ensemble_id=$1 and email=$2",[e,email]);
+   const resent=await req('/api/ensembles/'+e+'/invitations',member.cookie,'POST',{email,idempotencyKey:crypto.randomUUID()});assert.equal(resent.status,201,await resent.clone().text());
+   const i=(await pool.query('select * from invitations where id=$1',[data.id])).rows[0];assert.equal(i.inviter_id,sys.id);assert.equal(i.admin_issued,true);assert.match(i.token_hash,/^[a-f0-9]{64}$/);assert.ok(Math.abs((i.expires_at.getTime()-i.created_at.getTime())/86400000-14)<.01);
+   const {captureMail}=await import('../server/mail.server');const mail=captureMail.messages.findLast(m=>m.to===email)!;const token=mail.text.match(/\/invite\/([^\s]+)/)![1];
    const password='Test-only-password-3456';assert.equal((await req('/api/auth/sign-up/email','','POST',{email,password,name:'Invited singer'})).status,200);
    await pool.query('update "user" set email_verified=true where email=$1',[email]);
    const sign=await req('/api/auth/sign-in/email','','POST',{email,password});const cookie=sign.headers.getSetCookie().map(s=>s.split(';')[0]).join('; ');
