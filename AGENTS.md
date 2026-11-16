@@ -19,9 +19,9 @@ phase plan and progress log live in `docs/PLAN.md`.
 - Secrets: never commit `.env` files, keys or tokens; only `.env.example` with placeholders.
 - Preserve musical behavior: `audioEngine.ts`, MusicXML/MIDI parsing, score timeline, piano roll,
   staff view and PDF export must keep working. Move them, do not rewrite them.
-- Design: new screens use the existing visual language (parchment, gold ink, Bodoni/Atkinson
-  fonts, `design.ts`, `parchment.css`, `palette.ts`) and German/English strings via `i18n.ts`.
-  Do not introduce a new UI kit or CSS framework.
+- Design: use the shared Tailwind/CSS-variable system; preserve existing appearance and DE/EN strings.
+  See `docs/agents/design-system.md` for tokens, themes, recipes, compatibility boundaries and the guard.
+  Do not add a parallel palette, font stack or screen-specific component system.
 - Domain words: *ensemble*, *ensemble lead*, *music piece*, *member*, *sysadmin* (platform role).
 - Time: instants are `timestamptz` (`timestamp(..., { withTimezone: true })`), business/display
   zone is configured centrally (UTC initially), logs use UTC.
