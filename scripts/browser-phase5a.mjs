@@ -212,7 +212,10 @@ try {
   assert.deepEqual(errors,[]);
   await a.setOffline(false);await p.goto(base);await signin(p,emailA);await p.waitForURL('**/app');
   await p.waitForFunction(()=>!!localStorage.getItem('lightscore-offline-account'));
-  await a.clearCookies();await p.goto(base+'/app');await p.waitForURL('**/?state=expired');
+  // Leave the old app's session listeners before testing cookie loss on entry.
+  // Keep the origin for storage init scripts; the new app redirects before load.
+  await p.goto(base+'/favicon.svg');await a.clearCookies();await p.goto(base+'/app',{waitUntil:'commit'});
+  await p.waitForFunction(()=>location.pathname==='/' && new URLSearchParams(location.search).get('state')==='expired');
   await p.waitForFunction(async()=>!(await indexedDB.databases()).some(db=>db.name?.startsWith('lightscore-private:')));
   console.log('online cookie-loss app entry purges all private stores');
   console.log('PASS Phase 5a: preparation, offline reload/solo, public cache boundary and logout purge', {ensemble,pieceId});
