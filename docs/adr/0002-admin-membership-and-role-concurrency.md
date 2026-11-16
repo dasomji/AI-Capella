@@ -28,6 +28,10 @@ ensemble-scoped issuer checks. Invitations grant the existing capabilities;
 leadership can be granted explicitly after joining, preserving the migration-only
 lead invitation invariant. Raw invitation tokens remain exclusively in mail.
 
+This is a deliberate exception to AICAP-6 ("grants must be authorized within this
+ensemble"). The product owner accepted it on 2026-11-16: sysadmins administer the
+whole of LightScore and may grant rights in any ensemble, as a member or not.
+
 When an ordinary member manager resends an existing invitation, both its issuer
 and its admin/ensemble authority source are preserved alongside the original
 grants. A manager cannot convert the invitation's source or elevate its grants.
