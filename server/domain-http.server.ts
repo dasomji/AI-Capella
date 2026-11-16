@@ -39,7 +39,8 @@ export const domain = new Hono<{
   Variables: { user: { id: string; email: string; name: string } };
 }>();
 // Injectable application clock; tests change it in-process, never through HTTP or environment bypasses.
-export const clock = { now: () => new Date() };
+import { clock } from "./clock.server";
+export { clock } from "./clock.server";
 function canonicalJSON(value: unknown, depth = 0): string {
   if (depth > 64) throw new DomainError("nesting_limit", 422);
   if (Array.isArray(value))

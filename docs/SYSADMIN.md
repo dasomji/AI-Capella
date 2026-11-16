@@ -184,3 +184,6 @@ It covers table search/sort, user memberships, add/edit/remove, last-lead and
 self-revoke errors, German at phone width and table-contained horizontal scrolling.
 The integration harness requires its configured local S3 service; set
 `S3_ENDPOINT` to an isolated SeaweedFS instance. No preview database is used.
+
+Web and CLI platform-role changes use `admin.user.sysadmin`, with `before.sysadmin` and
+`after.sysadmin` in audit metadata. CLI events also identify their operator and host.

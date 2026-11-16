@@ -31,8 +31,13 @@ export function permissionValues(m: Record<string, any>) {
     transcribe: !!m.ai_transcription,
   };
 }
-function expectPermissions(m: Record<string, any>, expected: unknown) {
-  if (JSON.stringify(permissionValues(m)) !== JSON.stringify(expected))
+export function expectPermissions(m: Record<string, any>, expected: unknown) {
+  const actual = permissionValues(m);
+  if (
+    Object.entries(actual).some(
+      ([key, value]) => value !== (expected as Record<string, unknown>)[key],
+    )
+  )
     throw new DomainError("stale_permissions", 409);
 }
 async function member(db: PoolClient, ensemble: string, id: string) {
@@ -56,6 +61,7 @@ async function event(
   reason: string,
   before: unknown = null,
   after: unknown = null,
+  identity: Record<string, unknown> = {},
 ) {
   await db.query(
     "insert into audit_events(actor_id,target_id,ensemble_id,action,outcome,metadata) values($1,$2,$3,$4,$5,$6)",
@@ -65,7 +71,7 @@ async function event(
       ensemble,
       "admin." + type + "." + action,
       outcome,
-      { targetType: type, reason, before, after },
+      { targetType: type, reason, before, after, ...identity },
     ],
   );
 }
@@ -75,7 +81,18 @@ export async function rejectedAdminOrigin(actor: string, path: string) {
     /^\/api\/admin\/(?:ensembles\/([^/]+)\/(members|invitations)(?:\/([^/]+))?|users\/([^/]+)\/sysadmin)$/,
   );
   if (!match) return;
+  const { adminLimit } = await import("./admin.server");
+  try {
+    await adminLimit(actor, "origin-audit", 20);
+  } catch (error) {
+    if (error instanceof DomainError && error.code === "rate_limited") return;
+    throw error;
+  }
   const [, ensemble, kind, id, user] = match;
+  const identity =
+    kind === "members"
+      ? await membershipIdentity(pool as unknown as PoolClient, ensemble, id)
+      : {};
   await event(
     pool as unknown as PoolClient,
     actor,
@@ -85,7 +102,26 @@ export async function rejectedAdminOrigin(actor: string, path: string) {
     "rejected",
     "untrusted_origin",
     "",
+    null,
+    null,
+    identity,
   );
+}
+/** Scope the lookup to the URL ensemble, including historical removals. Unknown IDs stay explicit. */
+async function membershipIdentity(
+  db: PoolClient,
+  ensemble: string,
+  id?: string,
+) {
+  const row = id
+    ? (
+        await db.query(
+          "select user_id from memberships where ensemble_id=$1 and id=$2 union all select metadata->>'userId' as user_id from audit_events where ensemble_id=$1 and target_id=$2 and action='admin.membership.remove' and outcome='ok' limit 1",
+          [ensemble, id],
+        )
+      ).rows[0]
+    : null;
+  return { userId: row?.user_id ?? null, ensembleId: ensemble };
 }
 export function registerAdminManagement(
   admin: typeof AdminRouter,
@@ -103,6 +139,7 @@ export function registerAdminManagement(
     (
       type: string,
       action: string,
+      schema: z.ZodType,
       work: (db: PoolClient, c: Context, input: unknown) => Promise<Result>,
     ) =>
     async (c: Context) => {
@@ -111,6 +148,52 @@ export function registerAdminManagement(
       let target = c.req.param("member") ?? c.req.param("id") ?? ensemble ?? "",
         reason = "";
       let notification: Result["notify"];
+      let input: unknown;
+      let raw: unknown;
+      // Do not hold transaction connections or advisory locks while waiting for the body/pool.
+      try {
+        await limit(actor, "mutation", 20);
+        raw = await c.req.json();
+        input = schema.parse(raw);
+        reason = (input as { reason: string }).reason;
+      } catch (error) {
+        await transaction(async (db) => {
+          const scope =
+            ensemble &&
+            (await db.query("select 1 from ensembles where id=$1", [ensemble]))
+              .rowCount
+              ? ensemble
+              : null;
+          const identity =
+            type === "membership" && ensemble
+              ? c.req.param("member")
+                ? await membershipIdentity(db, ensemble, c.req.param("member"))
+                : {
+                    userId:
+                      safeAdminText
+                        .min(1)
+                        .max(200)
+                        .safeParse((raw as { userId?: unknown } | null)?.userId)
+                        .data ?? null,
+                    ensembleId: ensemble,
+                  }
+              : {};
+          await event(
+            db,
+            actor,
+            type,
+            target,
+            scope,
+            action,
+            error instanceof DomainError ? error.code : "invalid_input",
+            reason,
+            null,
+            null,
+            identity,
+          );
+        });
+        throw error;
+      }
       const result = await transaction(async (db) => {
         // Exclusive for role changes; shared for membership changes. Recheck under this lock.
         await lockPlatformRoles(db, type === "user");
@@ -123,16 +206,22 @@ export function registerAdminManagement(
           ).rowCount
         )
           throw new DomainError("not_found", 404);
+        let identity: Record<string, unknown> =
+          type === "membership" && ensemble
+            ? c.req.param("member")
+              ? await membershipIdentity(db, ensemble, c.req.param("member"))
+              : {
+                  userId: (input as { userId: string }).userId,
+                  ensembleId: ensemble,
+                }
+            : type === "invitation"
+              ? {
+                  email: (input as { email: string }).email,
+                  ensembleId: ensemble,
+                }
+              : {};
         await db.query("savepoint management");
         try {
-          await limit(actor, "mutation", 20);
-          const input = await c.req.json();
-          const parsedReason = safeAdminText
-            .trim()
-            .min(1)
-            .max(1000)
-            .safeParse(input?.reason);
-          if (parsedReason.success) reason = parsedReason.data;
           if (ensemble) {
             await lockEnsemble(db, ensemble);
             if (
@@ -144,6 +233,12 @@ export function registerAdminManagement(
             )
               throw new DomainError("not_found", 404);
           }
+          if (type === "membership" && c.req.param("member"))
+            identity = await membershipIdentity(
+              db,
+              ensemble!,
+              c.req.param("member"),
+            );
           const r = await work(db, c, input);
           target = r.target ?? target;
           notification = r.notify;
@@ -158,6 +253,7 @@ export function registerAdminManagement(
             reason,
             r.before ?? null,
             r.after ?? null,
+            identity,
           );
           return { data: r.data };
         } catch (error) {
@@ -175,7 +271,19 @@ export function registerAdminManagement(
               .rowCount
               ? ensemble
               : null;
-          await event(db, actor, type, target, scope, action, outcome, reason);
+          await event(
+            db,
+            actor,
+            type,
+            target,
+            scope,
+            action,
+            outcome,
+            reason,
+            null,
+            null,
+            identity,
+          );
           return { error };
         }
       });
@@ -185,7 +293,7 @@ export function registerAdminManagement(
     };
   admin.post(
     "/ensembles/:ensemble/members",
-    mutate("membership", "add", async (db, c, raw) => {
+    mutate("membership", "add", adminMemberAdd, async (db, c, raw) => {
       const input = adminMemberAdd.parse(raw),
         e = c.req.param("ensemble")!;
       if (
@@ -218,7 +326,7 @@ export function registerAdminManagement(
   );
   admin.patch(
     "/ensembles/:ensemble/members/:member",
-    mutate("membership", "permissions", async (db, c, raw) => {
+    mutate("membership", "permissions", adminMemberEdit, async (db, c, raw) => {
       const input = adminMemberEdit.parse(raw),
         e = c.req.param("ensemble")!,
         m = await member(db, e, c.req.param("member")!);
@@ -241,7 +349,7 @@ export function registerAdminManagement(
   );
   admin.delete(
     "/ensembles/:ensemble/members/:member",
-    mutate("membership", "remove", async (db, c, raw) => {
+    mutate("membership", "remove", adminMemberRemove, async (db, c, raw) => {
       const input = adminMemberRemove.parse(raw),
         e = c.req.param("ensemble")!,
         m = await member(db, e, c.req.param("member")!);
@@ -256,7 +364,7 @@ export function registerAdminManagement(
   );
   admin.put(
     "/users/:id/sysadmin",
-    mutate("user", "sysadmin", async (db, c, raw) => {
+    mutate("user", "sysadmin", adminRoleEdit, async (db, c, raw) => {
       const input = adminRoleEdit.parse(raw),
         id = c.req.param("id")!;
       const before = await changePlatformRole(db, id, input.sysadmin, {
@@ -272,7 +380,7 @@ export function registerAdminManagement(
   );
   admin.post(
     "/ensembles/:ensemble/invitations",
-    mutate("invitation", "create", async (db, c, raw) => {
+    mutate("invitation", "create", adminInvitation, async (db, c, raw) => {
       const { reason, ...input } = adminInvitation.parse(raw);
       // Invitations are offered only for emails without an account; existing users use direct membership.
       if (

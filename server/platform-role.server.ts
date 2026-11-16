@@ -31,7 +31,11 @@ export async function changePlatformRole(
   if (
     !grant &&
     before &&
-    (await db.query("select 1 from platform_roles")).rowCount! <= 1
+    (
+      await db.query(
+        'select 1 from platform_roles r join "user" u on u.id=r.user_id where u.email_verified',
+      )
+    ).rowCount! <= 1
   )
     throw new DomainError("last_sysadmin", 409);
   if (options.expected !== undefined && options.expected !== before)

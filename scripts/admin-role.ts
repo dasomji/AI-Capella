@@ -12,7 +12,7 @@ export async function changeAdminRole(connectionString: string, email: string, g
         if (!u || !u.email_verified)
             throw Error('A verified account is required');
         const before=await changePlatformRole(db as any,u.id,grant);
-        await db.query("insert into audit_events(action,target_id,outcome,metadata) values($1,$2,'ok',$3)", ['admin.user.' + (grant ? 'grant' : 'revoke'), u.id, { targetType: 'user', source: 'server-cli', operator: userInfo().username, sudoUser: process.env.SUDO_USER ?? null, hostname: hostname(), changed: before!==grant }]);
+        await db.query("insert into audit_events(action,target_id,outcome,metadata) values($1,$2,'ok',$3)", ['admin.user.sysadmin', u.id, { targetType: 'user', source: 'server-cli', operator: userInfo().username, sudoUser: process.env.SUDO_USER ?? null, hostname: hostname(), changed: before!==grant, before: { sysadmin: before }, after: { sysadmin: grant } }]);
         await db.query('commit');
     }
     catch (e) {

@@ -1,3 +1,4 @@
+import { clock } from "./clock.server";
 import { DomainError } from './domain-error.server';
 export { DomainError } from './domain-error.server';
 import { logError } from "./logger.server";
@@ -129,5 +130,5 @@ export async function removeMembership(db: PoolClient, ensemble: string, member:
   await db.query("delete from memberships where id=$1 and ensemble_id=$2", [member.id, ensemble]);
 }
 export async function revokeMemberInvitations(db: PoolClient, ensemble: string, user: string) {
-  await db.query("update invitations set state='revoked',revoked_at=now() where ensemble_id=$1 and inviter_id=$2 and state='pending'", [ensemble, user]);
+  await db.query("update invitations set state='revoked',revoked_at=$3 where ensemble_id=$1 and inviter_id=$2 and state='pending' and not admin_issued", [ensemble, user, clock.now()]);
 }
