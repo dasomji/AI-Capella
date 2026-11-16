@@ -183,10 +183,15 @@ describe('client theme lifecycle API', () => {
       api.matchBreakpoint('panel','below');expect(query).toHaveBeenCalledWith('(width < 900px)');
       const quietA=vi.fn(),quietB=vi.fn();const unsubscribeA=api.onSystemThemeChange(quietA),unsubscribeB=api.onSystemThemeChange(quietB);
       const current=dom.window.document.documentElement.dataset.theme;
+      dom.window.history.replaceState(null,'','/?design=papier&schrift=bodoni');
       dom.window.dispatchEvent(new dom.window.StorageEvent('storage',{key:'ai-capella-design',newValue:'pergament'}));
       expect(quietA).toHaveBeenCalledTimes(1);expect(quietB).toHaveBeenCalledTimes(1);
+      expect(new URL(dom.window.location.href).searchParams.has('design')).toBe(false);
+      expect(new URL(dom.window.location.href).searchParams.get('schrift')).toBe('bodoni');
       expect(dom.window.document.documentElement.dataset.theme).toBe(current);
+      dom.window.history.replaceState(null,'','/?design=papier');
       api.setThemePreference('parchment');
+      expect(new URL(dom.window.location.href).searchParams.has('design')).toBe(false);
       expect(quietA).toHaveBeenCalledTimes(2);expect(quietB).toHaveBeenCalledTimes(2);
       expect(dom.window.localStorage.getItem('ai-capella-design')).toBe('pergament');
       expect(dom.window.document.documentElement.dataset.theme).toBe(current);

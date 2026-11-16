@@ -75,7 +75,8 @@ P2/P3 API:
   and initial hydration, then the cached client snapshot through `useSyncExternalStore`.
 - `onSystemThemeChange(fn)` maintains a set of disposably registered quiet-moment handlers.
   While main registers its handler (unconditionally), OS, storage and explicit choices defer
-  the entire DOM/canvas change to its existing quiet-moment reload. The showcase without main
+  the entire DOM/canvas change to its existing quiet-moment reload. Storage/menu choices consume
+  the initial `?design=` override so it cannot overwrite a newer preference on reload. The showcase without main
   applies changes live. P2 still must migrate renderer caches before removing that reload.
 - Runtime material writers update their distinct live input, then call
   `notifyThemeMaterialChange()` to invalidate the snapshot/revision and notify subscribers.

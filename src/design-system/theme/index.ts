@@ -47,6 +47,14 @@ export function onSystemThemeChange(fn: () => void) {
   quietChanges.add(fn);
   return () => { quietChanges.delete(fn); };
 }
+// A visit's URL override has already been consumed. A new choice must survive reload
+// rather than re-storing the old query (and bouncing choices between open tabs).
+function forgetInitialThemeQuery() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('design')) return;
+  url.searchParams.delete('design');
+  window.history.replaceState(window.history.state, '', url);
+}
 export function initializeTheme() {
   if (typeof document === 'undefined') return;
   if (initialized) return;
@@ -61,6 +69,7 @@ export function initializeTheme() {
   });
   window.addEventListener('storage', event => {
     if (event.key !== 'ai-capella-design' && event.key !== null) return;
+    forgetInitialThemeQuery();
     if (quietChanges.size) { for (const change of quietChanges) change(); return; }
     // Cross-tab choices use stored values, not this tab's initial URL override.
     bootstrapTheme(themePreference(event.newValue)); updateChrome(); refresh();
@@ -82,6 +91,7 @@ export function setThemePreference(preference: ThemePreference) {
     if (preference === 'system') localStorage.removeItem('ai-capella-design');
     else localStorage.setItem('ai-capella-design', themeRegistry.find(theme => theme.id === preference)!.storage);
   } catch { /* This visit can still choose a theme. */ }
+  forgetInitialThemeQuery();
   if (quietChanges.size) { for (const change of quietChanges) change(); return; }
   bootstrapTheme(preference); updateChrome(); refresh();
 }
