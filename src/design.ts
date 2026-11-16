@@ -30,12 +30,15 @@ export function deviceChoice<T extends string>(param: string, key: string, value
   }
 }
 
-export type Design = typeof themeRegistry[number]['storage'];
+export type Design = typeof themeRegistry[number]['compat']['design'] | Exclude<typeof themeRegistry[number]['compat']['ground'], null>;
 /** What a device chose for its look: 'auto' (everyone's) is night paper in dark mode, parchment in light mode. */
 export type DesignChoice = 'auto' | Design;
 const appearance = typeof document === 'undefined' ? undefined : bootstrapTheme();
 initializeTheme();
-const legacyDesign = (id: string): Design => (themeRegistry.find(theme => theme.id === id) ?? themeRegistry[0]).storage;
+export function legacyDesign(id: string): Design {
+  const theme = themeRegistry.find(theme => theme.id === id) ?? themeRegistry[0];
+  return theme.compat.ground ?? theme.compat.design;
+}
 export const DESIGN_CHOICE: DesignChoice = !appearance || appearance.preference === 'system' ? 'auto' : legacyDesign(appearance.preference);
 export function systemDesign(): Design { return legacyDesign(systemTheme()); }
 export const DESIGN: Design = appearance ? legacyDesign(appearance.id) : 'papier';

@@ -133,6 +133,14 @@ describe('theme source contracts M1/M2/M6/M7 and m1/m3/m4/m6/N2', () => {
     expect(css).toContain('@media (width < 900px)');
     expect(css).not.toContain('--breakpoint-panel-max');
   });
+  it('M2 keeps compatibility appearance independent of a theme storage identifier', async () => {
+    const { legacyDesign } = await import('../src/design');
+    const entry = themeRegistry[0], storage = entry.storage;
+    try {
+      Object.assign(entry, { storage: 'future-theme-storage' });
+      expect(legacyDesign(entry.id)).toBe(entry.compat.ground ?? entry.compat.design);
+    } finally { Object.assign(entry, { storage }); }
+  });
   it('m5 imports staffView without a DOM or loaded stylesheet', async () => {
     const staff = await import('../src/staffView');
     expect(staff.BASE_PIXELS_PER_BEAT).toBe(120);
