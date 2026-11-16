@@ -238,11 +238,43 @@ try {
   assert.equal((await request(q,`/ensembles/${e}/pieces/${piece}`,'PATCH',{op:'title',value:'Forbidden rename'})).status,403);
   assert.equal((await request(p,`/ensembles/${e}/pieces/${piece}`)).body.title,'Sync Acceptance');
   results.b='passed: pause, seek, tempo; rename 403';
-  const concurrentRevision=(await hook(p)).revision,counts=[frames.get(p).commands,frames.get(q).commands];
-  const sent=await Promise.all([p.evaluate(()=>{document.querySelector('.transport [data-action="bpm-up"]').click();return performance.timeOrigin+performance.now();}),q.evaluate(()=>{document.querySelector('.transport [data-action="transpose-up"]').click();return performance.timeOrigin+performance.now();})]);
-  assert.ok(Math.abs(sent[0]-sent[1])<=20,`Concurrent dispatch exceeded 20 ms: ${sent}`);
-  await Promise.all(pages.map(page=>page.waitForFunction(r=>window.__lightscoreSync.revision>r,concurrentRevision)));
-  await converge();assert.equal(frames.get(p).commands,counts[0]+1);assert.equal(frames.get(q).commands,counts[1]+1);results.c={passed:true,dispatchSpanMs:Math.abs(sent[0]-sent[1])};
+  const concurrentState=await converge(),concurrentRevision=(await hook(p)).revision,counts=[frames.get(p).commands,frames.get(q).commands];
+  // Hold the real outbound commands until both clients have produced them from
+  // the same revision. Promise.all(evaluate(...)) does not synchronize renderer
+  // dispatch: tracing/CI load can delay one CDP call beyond an arbitrary 20 ms.
+  for (const page of [p,q]) await page.evaluate(()=>{
+    const send=WebSocket.prototype.send, pending=[];
+    window.fixtureConcurrentCommands={pending,release(){
+      WebSocket.prototype.send=send;
+      for(const {socket,data} of pending)send.call(socket,data);
+      delete window.fixtureConcurrentCommands;
+      return performance.timeOrigin+performance.now();
+    }};
+    WebSocket.prototype.send=function(data){
+      if(typeof data==='string' && data.includes('"rehearsal:command"'))pending.push({socket:this,data});
+      else send.call(this,data);
+    };
+  });
+  let sent;
+  try {
+    await Promise.all([p.evaluate(()=>document.querySelector('.transport [data-action="bpm-up"]').click()),q.evaluate(()=>document.querySelector('.transport [data-action="transpose-up"]').click())]);
+    await Promise.all([p,q].map(page=>page.waitForFunction(()=>window.fixtureConcurrentCommands.pending.length===1)));
+    const commands=await Promise.all([p,q].map(page=>page.evaluate(()=>{
+      const data=window.fixtureConcurrentCommands.pending[0].data;
+      return JSON.parse(data.slice(data.indexOf('[')))[1];
+    })));
+    assert.deepEqual(commands.map(command=>command.baseRevision),[concurrentRevision,concurrentRevision]);
+    assert.deepEqual(commands.map(command=>command.command.type),['setTempo','setTransposition']);
+    assert.equal(frames.get(p).commands,counts[0]);assert.equal(frames.get(q).commands,counts[1]);
+  } finally {
+    sent=await Promise.all([p,q].map(page=>page.evaluate(()=>window.fixtureConcurrentCommands.release())));
+  }
+  await Promise.all(pages.map(page=>page.waitForFunction(r=>window.__lightscoreSync.revision===r+2,concurrentRevision)));
+  const concurrentResult=await converge();
+  assert.equal(concurrentResult.bpm,concurrentState.bpm+(concurrentState.bpm>=60?5:2));
+  assert.equal(concurrentResult.transposition,concurrentState.transposition+1);
+  assert.equal(frames.get(p).commands,counts[0]+1);assert.equal(frames.get(q).commands,counts[1]+1);
+  results.c={passed:true,baseRevision:concurrentRevision,revision:concurrentRevision+2,dispatchSpanMs:Math.abs(sent[0]-sent[1])};
   // Exercise an actually expired count-in/tones window before the late join.
   await p.setViewportSize({width:650,height:1000});await p.locator('[data-action="open-controls"]').click();
   await next(p,()=>p.locator('[data-bind="count-in"]').click());await p.keyboard.press('Escape');await p.setViewportSize({width:1440,height:1000});
