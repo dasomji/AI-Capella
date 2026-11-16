@@ -5,7 +5,16 @@ trust, sandbox behavior, backup scheduling and cutover require operator executio
 Start with [DEPLOYMENT.md](DEPLOYMENT.md), [DEVELOPMENT.md](DEVELOPMENT.md), and
 [SYSADMIN.md](SYSADMIN.md). No live prototype operation is authorized here.
 
-First deploy:
+First deploy (operator gates; no resources/settings are configured by this document):
+
+Complete the [PR checks and production release gates](DEPLOYMENT.md#pr-checks-and-production-release)
+before release: staging-based Railway PR environments with per-PR Postgres/bucket
+and no production data/secrets; all nine CI checks plus the observed Railway PR
+deployment status required on protected `main`, with branches up to date before
+merge. Production tracks `main` with Wait for CI disabled. Rehearse PR open/update
+→ CI + staging build/deploy green → merge → production deploy. GitHub CI has no
+push trigger and does not re-run after merge; manual dispatch remains available.
+Verify the unconfirmed Railway settings/status names in the linked gates.
 
 1. Create isolated Railway web/worker/Postgres/private bucket resources only with
    release authorization; select committed configs and populate the env matrix.
@@ -21,10 +30,14 @@ First deploy:
 6. Run the backup/download/isolated restore drill below. Install alerts and schedule
    cleanup/backup tasks with an operator-owned scheduler; no scheduler is created here.
 7. Confirm acceptance/reconciliation via [MIGRATION.md](MIGRATION.md), then authorize
-   final synchronization and cutover. AICAP-18 exposure assessment remains urgent
+   final synchronization and cutover once the PR/release gates above are complete.
+   AICAP-18 exposure assessment remains urgent
    and independent. Do not retire legacy services as an implicit part of cutover.
 
-Routine deploy: record commit/image IDs and migration delta; take/download/verify
+Routine deploy: require green GitHub CI and Railway PR staging build/deploy for
+the latest PR revision against current `main` before merging. Railway production
+deploys from `main`; GitHub CI does not re-run after merge. Before merging to
+trigger production deployment, record commit/image IDs and migration delta; take/download/verify
 backup; ensure capacity for overlap; deploy web migration first, then web and worker.
 Wait for terminal success and /readyz, then /readyz/rehearsal ownership. SIGTERM stops
 web admission, emits server:restarting with a 2s reconnect hint (consumed by client

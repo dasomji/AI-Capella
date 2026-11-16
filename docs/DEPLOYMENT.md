@@ -8,6 +8,55 @@ file. These files configure existing services; they do not create databases/buck
 See [Railway config reference](https://docs.railway.com/config-as-code/reference)
 and [pre-deploy commands](https://docs.railway.com/deployments/pre-deploy-command).
 
+## PR checks and production release
+
+Opening or updating a PR runs GitHub's **Production CI (no deployment)** and a
+Railway PR-environment (staging) build/deploy. Merge only when both are green for
+the latest revision against current `main`. Railway then deploys production from
+`main`; merging does **not** run GitHub CI again. There is no push trigger on any
+branch, including `main` and `production-v1`, and closing/merging a PR is not a CI
+event. CI runs on `opened`, `synchronize` (PR branch pushes), `reopened` and
+`ready_for_review`; `workflow_dispatch` is available for deliberate manual runs.
+Superseded runs of the same PR are cancelled; manual runs are grouped by ref.
+
+These are **operator first-deploy gates**, in addition to the runtime, proxy and
+bucket gates below. Repository files do not configure Railway or GitHub settings:
+
+1. Enable Railway PR environments for the project. Use the staging environment's
+   service topology and variable configuration as the PR base, with the same
+   Dockerfiles, start commands, migrations and healthchecks as production. The
+   exact dashboard control for selecting a PR base environment has not been
+   verified: confirm Railway's supported way to base PR environments on staging
+   before enabling automatic PR deployments; do not assume a selector exists or
+   accept production as a fallback.
+2. Give every PR environment its own Postgres and private bucket, with credentials
+   scoped to those resources. Confirm DB/S3 references resolve inside that PR
+   environment, not to staging's shared data or production. Use synthetic data,
+   separate auth secrets and PR-specific HTTPS origins; never copy production
+   data or secrets. Keep real mail/paid AI disabled unless separately authorized.
+   Verify isolation before allowing a PR's code or migrations to execute.
+3. Rehearse opening a PR and pushing a new revision: both web and worker must
+   build/deploy successfully for that revision in Railway, web migrations and
+   `/readyz` must pass, and the deployment status must appear on the PR. This is
+   the production-equivalent staging build check, alongside GitHub's test/build
+   checks. Confirm failed or superseded deployments cannot satisfy the gate.
+4. Protect GitHub `main`: require the nine CI checks, `checks (typecheck)`,
+   `checks (unit)`, `checks (build)`, `checks (secrets)`, `checks (eval)`,
+   `checks (migration)`, `checks (backup)`, `checks (docker)` and
+   `integration-browser`, plus the Railway PR deployment status covering both
+   services. Select the actual status name(s) emitted by the connected Railway
+   integration after the rehearsal; the names and whether it aggregates services
+   are unverified. Also enable **Require branches to be up to date before
+   merging**, so checks reflect the current base. Update the PR branch and wait
+   for both gates again when `main` changes; do not bypass them with direct pushes.
+5. Configure Railway production web/worker sources to track `main`. Leave
+   production **Wait for CI** disabled for this flow: no push-triggered checks run
+   on `main`, and a merge commit need not have the PR's SHA. Do not depend on that
+   setting to reuse PR results; its behavior with absent checks is unverified.
+   Branch protection supplies the pre-merge gate; Railway still builds/deploys
+   production and must pass its own deployment/readiness checks. Rehearse this
+   path and record settings/status evidence before the first release.
+
 | Service | Image/start | Exposure and dependencies |
 |---|---|---|
 | web | Dockerfile; node --import tsx server/entry.ts | public HTTPS + Socket.IO on Railway PORT; one replica; Postgres + S3 + Resend |

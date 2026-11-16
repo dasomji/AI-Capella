@@ -4,6 +4,12 @@ Production checkout, branch `production-v1`, starting at `23c9924`. No push,
 deployment, paid AI call, or real email. Owned Docker fixtures use dynamically
 allocated loopback ports. Existing containers and services were left alone.
 
+Current trigger policy: PR `opened`, `synchronize`, `reopened`, `ready_for_review`,
+plus deliberate `workflow_dispatch`; no push or post-merge run. Merge requires green
+GitHub CI and the Railway PR staging build/deploy; Railway production tracks `main`.
+Operator setup gates are in [DEPLOYMENT.md](DEPLOYMENT.md#pr-checks-and-production-release).
+The local results below are historical evidence, not verification of Railway setup.
+
 ## Foundation diagnosis
 
 The original report recorded five generic HTTP 401 console errors without URLs;

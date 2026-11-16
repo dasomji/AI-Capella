@@ -2760,7 +2760,8 @@ AICAP-10 received the implementation/evidence update.
 - Migration CI now installs rules-test dependencies, Temurin 21 and emulator cache,
   builds first and requires the migration suite. Every job has a deadline; actions
   use verified full release SHAs, service images use digests, production-v1 pushes
-  run CI, unused Mailpit is removed and failures upload logs/screenshots/traces.
+  ran CI at that time (superseded by [PR-only CI](DEPLOYMENT.md#pr-checks-and-production-release)),
+  unused Mailpit is removed and failures upload logs/screenshots/traces.
 - Railway admission uses /readyz; ownership monitoring stays /readyz/rehearsal.
   Contended ownership polls every second; real errors retain exponential backoff.
   A fake-clock regression releases the lock after 60 seconds and accepts within 1s.
