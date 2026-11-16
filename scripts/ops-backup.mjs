@@ -12,6 +12,7 @@ import {
   GetObjectCommand,
   PutObjectCommand,
   CreateBucketCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 export function command(args, options = {}) {
   const r = spawnSync("docker", args, {
@@ -199,9 +200,22 @@ export async function disposable() {
       S3_SECRET_ACCESS_KEY: "fixture",
     };
     const client = s3(env);
+    const probe = { Bucket: "restore", Key: `readiness/${randomUUID()}` };
+    const body = "LightScore disposable storage readiness";
+    let bucketCreated = false;
     for (let i = 0; ; i++) {
       try {
-        await client.send(new CreateBucketCommand({ Bucket: "restore" }));
+        if (!bucketCreated) {
+          await client.send(new CreateBucketCommand({ Bucket: "restore" }));
+          bucketCreated = true;
+        }
+        // Bucket creation only exercises filer metadata. A fresh SeaweedFS
+        // gateway can accept it while volume assignment still returns HTTP 500.
+        await client.send(new PutObjectCommand({ ...probe, Body: body }));
+        const response = await client.send(new GetObjectCommand(probe));
+        if ((await response.Body.transformToString()) !== body)
+          throw Error("Disposable storage readiness bytes differ");
+        await client.send(new DeleteObjectCommand(probe));
         break;
       } catch (e) {
         if (i === 99) throw e;
