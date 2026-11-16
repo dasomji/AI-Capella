@@ -20,7 +20,7 @@ export class WaveBackdrop {
   private playing = false;
   private shown = true;
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  private readonly narrow = matchBreakpoint('panel-max');
+  private readonly narrow = matchBreakpoint('panel', 'below');
 
   constructor() {
     this.canvas = document.createElement('canvas');

@@ -1,3 +1,5 @@
+import { inlineThemeSource } from './scripts/theme-source.mjs';
+import { writeRoleManifest } from './scripts/design-token-manifest.mjs';
 import { join } from 'node:path';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -5,8 +7,10 @@ import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+writeRoleManifest();
+
 // Same raw resolver as the SSR head; config loading must not re-serialize functions.
-const themeBootstrapScript = `(${readFileSync('src/design-system/theme/resolver.js', 'utf8').replace('export default ', '')})();`;
+const themeBootstrapScript = inlineThemeSource(readFileSync('src/design-system/theme/resolver.js', 'utf8'));
 const previewOrigin = process.env.LIZARDTAIL_ORIGIN ? new URL(process.env.LIZARDTAIL_ORIGIN) : undefined;
 export default defineConfig({
   build: { outDir: process.env.LIGHTSCORE_BUILD_ROOT ?? 'dist' },
@@ -18,7 +22,7 @@ export default defineConfig({
       hmr: { protocol: 'wss', host: previewOrigin.hostname, clientPort: Number(previewOrigin.port || 443) },
     } : {}),
   },
-  plugins: [
+  plugins: [{ name: 'theme-role-manifest', buildStart() { writeRoleManifest(); }, watchChange(id) { if (id.endsWith('/design-system/tokens.css')) writeRoleManifest(); } },
     {
       name: 'lightscore-offline-shell',
       generateBundle(_, bundle) {

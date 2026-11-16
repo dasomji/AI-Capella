@@ -1,4 +1,4 @@
-export type Color = Readonly<{ r: number; g: number; b: number; a: number; css: string }>;
+export type Color = Readonly<{ r: number; g: number; b: number; a: number; css: string; rgba: (alpha?: number) => string; withAlpha: (alpha: number) => Color }>;
 const clamp = (value: number, max = 255) => Math.min(max, Math.max(0, value));
 
 /** Concrete sRGB for the authored hex/RGB primitives and generated voice HSL.
@@ -30,5 +30,8 @@ export function normalizeColor(input: string): Color {
   if (!channels.every(Number.isFinite)) throw Error(`Invalid theme color: ${input}`);
   const [r, g, b] = channels.slice(0, 3).map(v => Math.round(clamp(v)));
   const a = clamp(channels[3] ?? 1, 1);
-  return Object.freeze({ r, g, b, a, css: a === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${a})` });
+  return Object.freeze({ r, g, b, a,
+    rgba: (alpha = 1) => `rgba(${r}, ${g}, ${b}, ${clamp(alpha, 1) * a})`,
+    withAlpha: (alpha: number) => normalizeColor(`rgba(${r}, ${g}, ${b}, ${clamp(alpha, 1) * a})`),
+    css: a === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${a})` });
 }

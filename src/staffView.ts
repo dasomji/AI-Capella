@@ -18,7 +18,7 @@ export const STAFF_RULER_HEIGHT_PX = 28; // matches PianoRoll's ruler height, fo
 const PLAYHEAD_X_RATIO = 0.2;
 // On a narrow (phone-width) canvas the playhead sits a little further right of the pinned margin,
 // so the bar just played stays readable.
-const MOBILE_BREAKPOINT_PX = parseFloat(breakpoint('score'));
+const mobileBreakpointPx = () => parseFloat(breakpoint('score'));
 const MOBILE_PLAYHEAD_X_RATIO = 0.24;
 const MAX_DPR = 2;
 const LINE_SPACING_PX = 9; // one staff space: distance between two adjacent staff lines
@@ -661,7 +661,7 @@ export class StaffView {
       return;
     }
     const natural = STAFF_RULER_HEIGHT_PX + FIRST_STAFF_TOP_PX + shown.reduce((sum, l) => sum + staffSpan(l), 0) + FILL_BOTTOM_PX;
-    const maxFill = this.cssWidth < MOBILE_BREAKPOINT_PX ? MAX_FILL_SCALE_NARROW : MAX_FILL_SCALE;
+    const maxFill = this.cssWidth < mobileBreakpointPx() ? MAX_FILL_SCALE_NARROW : MAX_FILL_SCALE;
     this.fill = clamp(this.cssHeight / natural, 1, maxFill);
     this.extraGap = Math.max(0, (this.cssHeight / this.fill - natural) / count);
   }
@@ -695,7 +695,7 @@ export class StaffView {
 
   setZoom(factor: number) {
     this.zoom = factor;
-    const base = this.cssWidth > 0 && this.cssWidth < MOBILE_BREAKPOINT_PX ? BASE_PIXELS_PER_BEAT_NARROW : BASE_PIXELS_PER_BEAT;
+    const base = this.cssWidth > 0 && this.cssWidth < mobileBreakpointPx() ? BASE_PIXELS_PER_BEAT_NARROW : BASE_PIXELS_PER_BEAT;
     this.pixelsPerBeat = base * factor;
   }
 
@@ -780,7 +780,7 @@ export class StaffView {
   }
 
   private playheadX(): number {
-    const ratio = this.cssWidth < MOBILE_BREAKPOINT_PX ? MOBILE_PLAYHEAD_X_RATIO : PLAYHEAD_X_RATIO;
+    const ratio = this.cssWidth < mobileBreakpointPx() ? MOBILE_PLAYHEAD_X_RATIO : PLAYHEAD_X_RATIO;
     return this.gutterPx + (this.cssWidth - this.gutterPx) * ratio;
   }
 

@@ -1,7 +1,8 @@
 import source from './resolver.js?raw';
-export { default as bootstrapTheme } from './resolver.js';
-export type ThemeId = 'night-paper' | 'parchment' | 'velvet';
+import { inlineThemeSource } from '../../../scripts/theme-source.mjs';
+import { themeRegistry } from './resolver.js';
+export { default as bootstrapTheme, themeRegistry, themePreference } from './resolver.js';
+export type ThemeId = typeof themeRegistry[number]['id'];
 export type ThemePreference = 'system' | ThemeId;
-/** Raw JavaScript is identical in SSR, hydration and the offline shell, independent of
- * minification or tsx's keepNames helpers. Runtime imports use the same resolver. */
-export const themeBootstrapScript = `(${source.replace('export default ', '')})();`;
+/** Identical raw resolver source in SSR, hydration and offline startup. */
+export const themeBootstrapScript = inlineThemeSource(source);

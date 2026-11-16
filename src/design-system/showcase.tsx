@@ -1,15 +1,14 @@
-import { useEffect, useState } from 'react';
-import { colorRoles, readTheme, setThemePreference, subscribeTheme } from './theme';
-import type { ThemePreference, ThemeSnapshot } from './theme';
+import { useTheme } from './theme/react';
+import { colorRoles, setThemePreference, themeRegistry } from './theme';
+import type { ThemePreference } from './theme';
 
 /** Development-only foundation. P3 adds recipes and both component adapters here. */
 export function DesignSystemShowcase() {
-  const [theme, setTheme] = useState<ThemeSnapshot>();
-  useEffect(() => { setTheme(readTheme()); return subscribeTheme(setTheme); }, []);
+  const theme = useTheme();
   return <main className="tw:bg-surface tw:text-ink tw:font-body tw:p-content">
     <h1 className="tw:font-heading">LightScore design tokens</h1>
     <label>Theme <select aria-label="Theme" value={theme?.preference ?? 'system'} onChange={event => setThemePreference(event.target.value as ThemePreference)}>
-      <option value="system">System</option><option value="night-paper">Night paper</option><option value="parchment">Parchment</option><option value="velvet">Velvet</option>
+      <option value="system">System</option>{themeRegistry.map(theme => <option key={theme.id} value={theme.id}>{theme.label}</option>)}
     </select></label>
     <p>{theme?.id} · {theme?.type} · revision {theme?.revision}</p>
     <h2 className="tw:font-display">Semantic color roles</h2>

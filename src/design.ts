@@ -1,4 +1,4 @@
-import { bootstrapTheme } from './design-system/theme/bootstrap';
+import { themeRegistry, themePreference, bootstrapTheme } from './design-system/theme/bootstrap';
 import { initializeTheme, setThemePreference, systemTheme, onSystemThemeChange } from './design-system/theme';
 // Which look this device shows. The default is what the whole choir sees; a device can switch to
 // another by opening the app with ?design=samt (or ?logo=1, ?roll=gel), and keeps it until opened
@@ -30,22 +30,21 @@ export function deviceChoice<T extends string>(param: string, key: string, value
   }
 }
 
-export type Design = 'samt' | 'papier' | 'pergament';
+export type Design = typeof themeRegistry[number]['storage'];
 /** What a device chose for its look: 'auto' (everyone's) is night paper in dark mode, parchment in light mode. */
 export type DesignChoice = 'auto' | Design;
 const appearance = typeof document === 'undefined' ? undefined : bootstrapTheme();
 initializeTheme();
-const legacyDesign = (id: string): Design => id === 'parchment' ? 'pergament' : id === 'velvet' ? 'samt' : 'papier';
+const legacyDesign = (id: string): Design => (themeRegistry.find(theme => theme.id === id) ?? themeRegistry[0]).storage;
 export const DESIGN_CHOICE: DesignChoice = !appearance || appearance.preference === 'system' ? 'auto' : legacyDesign(appearance.preference);
 export function systemDesign(): Design { return legacyDesign(systemTheme()); }
 export const DESIGN: Design = appearance ? legacyDesign(appearance.id) : 'papier';
 /** Main retains its existing quiet-moment reload policy until P2 migrates renderer caches. */
 export function setDesignChoice(next: DesignChoice) {
-  setThemePreference(next === 'auto' ? 'system' : next === 'pergament' ? 'parchment' : next === 'samt' ? 'velvet' : 'night-paper');
+  setThemePreference(themePreference(next));
 }
 export function onSystemDesignChange(changed: () => void) {
-  if (DESIGN_CHOICE !== 'auto') return;
-  return onSystemThemeChange(() => { if (systemDesign() !== DESIGN) changed(); });
+  return onSystemThemeChange(changed);
 }
 /** Parchment: the paper design on a light ground (everything of the paper design holds, in light). */
 export const PARCHMENT = DESIGN === 'pergament';

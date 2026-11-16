@@ -13,7 +13,7 @@ export function closeOverlay() {
 }
 
 export function isNarrow(): boolean {
-  return matchBreakpoint('panel-max').matches;
+  return matchBreakpoint('panel', 'below').matches;
 }
 
 function mount(root: HTMLElement, opener: Element | null, onClose?: () => void): () => void {

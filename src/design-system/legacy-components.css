@@ -1,0 +1,16 @@
+/* Legacy component token bindings; migrate with their recipes in P3–P6. */
+.fb-item.kind-wish { --fb-kind: var(--ds-feedback-wish); }
+.fb-item.kind-idea { --fb-kind: var(--ds-feedback-idea); }
+.fb-item.kind-note { --fb-kind: var(--ds-feedback-note); }
+.fb-item.kind-survey { --fb-kind: var(--ds-feedback-survey); }
+.landing-dedication { --ded-wait: var(--ds-duration-dedication); }
+:root[data-title='zeile'] .landing-dedication { --ded-wait: var(--ds-duration-dedication-staff); }
+:root[data-title='zeile'] .landing-code { --ded-wait: var(--ds-duration-dedication-stage); }
+:root[data-title='buehne'] .landing-dedication { --ded-wait: var(--ds-duration-dedication-night); }
+:root[data-title='buehne'] .landing-code { --ded-wait: var(--ds-duration-dedication-parchment); }
+
+/* Account/admin overlays keep the shell's historical stack, including body-mounted toast. */
+.admin-detail, .admin-confirm,
+body:has(.admin-shell) #toast, body:has(.account-stage) #toast {
+  font-family:var(--ds-font-auth-body);
+}

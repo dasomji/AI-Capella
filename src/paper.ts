@@ -1,3 +1,4 @@
+import { notifyThemeMaterialChange } from './design-system/theme';
 // The paper of the paper design (design.ts). One texture, made on the device when the app starts
 // (seeded, so the same everywhere), and used by every paper surface: the CSS ones -- the ground,
 // the song cards, the bars, the sheets -- as a background image (--fibre), the canvases -- the
@@ -386,7 +387,8 @@ function applyCss() {
   const ctx = small.getContext('2d')!;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(tilesOf().surface, 0, 0, small.width, small.height);
-  document.documentElement.style.setProperty('--ds-material-fibre', `url(${small.toDataURL('image/png')})`);
+  document.documentElement.style.setProperty('--ds-material-fibre-live', `url(${small.toDataURL('image/png')})`);
+  notifyThemeMaterialChange();
 }
 
 /** Puts the paper's texture onto the CSS surfaces; called once at start (paper design only). */

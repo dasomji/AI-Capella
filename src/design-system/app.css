@@ -14,5 +14,6 @@
 @import '../admin.css' layer(legacy);
 @import '../transcription.css' layer(legacy);
 @import './tokens.css' layer(tokens);
+@import './legacy-components.css' layer(components);
 @import 'tailwindcss/utilities.css' layer(utilities) prefix(tw) source(none);
 @source '../';

@@ -555,7 +555,7 @@ function renderModeControls() {
 // Follow the music (piano roll rows zoom to what's being sung): on by default, remembered per
 // device; switchable in the player menu, and on a laptop also in the zoom control (key F). Setting
 // the height by hand -- Alt + wheel, or a vertical two-finger pinch on a phone -- switches it off.
-const narrowQuery = matchBreakpoint('panel-max');
+const narrowQuery = matchBreakpoint('panel', 'below');
 const FOLLOW_KEY = 'ai-capella-follow';
 let followPref = localStorage.getItem(FOLLOW_KEY) !== '0';
 document.querySelectorAll<HTMLElement>('[data-action="follow"]').forEach((b) => b.setAttribute('aria-pressed', String(followPref)));
@@ -967,7 +967,6 @@ function appearanceItems() {
   const choose = (next: DesignChoice) => () => {
     if (next === DESIGN_CHOICE) return;
     setDesignChoice(next);
-    void reloadForDesign();
   };
   const options = [
     { label: t('designAuto'), checked: DESIGN_CHOICE === 'auto', onSelect: choose('auto') },

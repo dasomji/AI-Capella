@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { JSDOM } from 'jsdom';
-import { themeBootstrapScript } from '../src/design-system/theme/bootstrap';
+import { themeRegistry, themeBootstrapScript } from '../src/design-system/theme/bootstrap';
 import { normalizeColor } from '../src/design-system/theme/color';
 import { withAlpha, towardPaper, towardInk } from '../src/theme';
 
@@ -15,16 +15,19 @@ function boot(query = '', stored: string | null = null, light = false, denied = 
 }
 
 describe('one early appearance resolver', () => {
-  it.each([
-    ['', null, false, 'night-paper'], ['', null, true, 'parchment'],
-    ['', 'papier', true, 'night-paper'], ['', 'pergament', false, 'parchment'],
-    ['?design=samt', null, true, 'velvet'], ['?design=parchment', 'papier', false, 'parchment'],
-    ['?design=auto', 'pergament', false, 'night-paper'],
-  ] as const)('resolves %s / %s / light %s to %s', (query, stored, light, expected) => {
-    const dom = boot(query, stored, light);
-    expect(dom.window.document.documentElement.dataset.theme).toBe(expected);
-    expect(dom.window.document.documentElement.dataset.ground).toBe(expected === 'parchment' ? 'pergament' : undefined);
+  it.each([false,true])('resolves system preference for light %s', light => {
+    const dom = boot('',null,light);
+    expect(dom.window.document.documentElement.dataset.theme).toBe(themeRegistry.find(theme => theme.system === (light ? 'light' : 'dark'))?.id);
     dom.window.close();
+  });
+  it.each(themeRegistry)('preserves explicit $id over system appearance', theme => {
+    const dom=boot('',theme.storage,theme.colorScheme !== 'light');
+    expect(dom.window.document.documentElement.dataset.theme).toBe(theme.id);
+    expect(dom.window.document.documentElement.style.colorScheme).toBe(theme.colorScheme);
+    dom.window.close();
+    const reset=boot('?design=auto',theme.storage,false);
+    expect(reset.window.document.documentElement.dataset.theme).toBe(themeRegistry.find(theme=>theme.system==='dark')?.id);
+    reset.window.close();
   });
   it('supports URL choices and safe defaults when storage is unavailable', () => {
     const forced = boot('?design=papier', null, true, true);
@@ -65,5 +68,147 @@ describe('concrete theme colors and >8 voice helpers', () => {
     expect(withAlpha(color, .3)).toMatch(/^rgba\(.+,0.3\)$/);
     expect(towardPaper(color, 1)).toBe('rgb(239,231,218)');
     expect(towardInk(color, 1)).toBe('rgb(20,12,30)');
+  });
+});
+
+// Review regressions: authored structure is independent of the rendering engine.
+describe('theme source contracts M1/M2/M6/M7 and m1/m3/m4/m6/N2', () => {
+  it('hoists shared roles, keeps identical theme key sets and generates the exact manifest', async () => {
+    const fs = await import('node:fs');
+    const { default: postcss } = await import('postcss');
+    const { roleManifest } = await import('../scripts/design-token-manifest.mjs');
+    const { themeRoleNames } = await import('../src/design-system/theme/roles.generated');
+    const { themeRegistry } = await import('../src/design-system/theme/bootstrap');
+    const source = fs.readFileSync('src/design-system/tokens.css', 'utf8');
+    const css = postcss.parse(source);
+    const blocks = css.nodes.filter(n => n.type === 'rule' && n.selector.includes('data-theme='));
+    const keys = blocks.map(block => block.type === 'rule' ? block.nodes.filter(n => n.type === 'decl').map(n => n.type === 'decl' ? n.prop : '').sort() : []);
+    expect(keys).toHaveLength(themeRegistry.length);
+    for (const key of keys) expect(key).toEqual(keys[0]);
+    expect(keys[0]).toHaveLength(75);
+    const shared = new Set<string>();
+    css.walkRules(rule => { if (rule.selector === ':root') rule.walkDecls(d => { if (d.prop.startsWith('--ds-')) shared.add(d.prop); }); });
+    for (const key of keys[0]) expect(shared.has(key)).toBe(false);
+    expect(shared.has('--ds-radius-control')).toBe(true);
+    expect([...themeRoleNames]).toEqual(roleManifest(source));
+    expect(source).not.toMatch(/--pigment-\d+\b/);
+    expect(source).not.toMatch(/\.fb-item|\.landing-dedication|--breakpoint-(?:panel-max|short-landscape)/);
+    const adapter = css.nodes.find(n => n.type === 'atrule' && n.name === 'theme' && n.params === 'inline');
+    const mappings = new Map<string, string>();
+    if (adapter?.type === 'atrule') adapter.walkDecls(d => { mappings.set(d.prop, d.value); });
+    css.walkDecls(d => {
+      const name = d.prop.replace(/^--ds-space-/, '--spacing-').replace(/^--ds-layer-/, '--z-index-').replace(/^--ds-size-/, '--text-').replace(/^--ds-shadow-/, '--shadow-');
+      if (name !== d.prop) expect(mappings.get(name)).toBe(`var(${d.prop})`);
+    });
+    for (const block of blocks) if (block.type === 'rule') block.walkDecls('--ds-material-fibre', d => {
+      expect(d.value === 'none' || d.value.startsWith('var(--ds-material-fibre-live,')).toBe(true);
+    });
+    const paper = fs.readFileSync('src/paper.ts','utf8');
+    expect(paper).toContain("setProperty('--ds-material-fibre-live'");
+    expect(paper).toContain('notifyThemeMaterialChange();');
+    const components = fs.readFileSync('src/design-system/legacy-components.css','utf8');
+    expect(components).toContain('.fb-item.kind-wish');
+    expect(components).toMatch(/\.admin-detail[\s\S]*font-family:var\(--ds-font-auth-body\)/);
+  });
+  it('M2 derives every alias/storage/compatibility mapping from the registry', async () => {
+    const { themeRegistry } = await import('../src/design-system/theme/bootstrap');
+    for (const theme of themeRegistry) for (const alias of [theme.id, ...theme.aliases]) {
+      const dom = boot('?design='+alias);
+      const data = dom.window.document.documentElement.dataset;
+      expect(data.theme).toBe(theme.id);
+      expect(data.design).toBe(theme.compat.design);
+      expect(data.ground ?? null).toBe(theme.compat.ground);
+      if (theme.compat.start) expect(data.start).toBeUndefined();
+      dom.window.close();
+    }
+  });
+  it('M6 compiles named spacing/layer scales and strict panel variants', async () => {
+    const fs = await import('node:fs');
+    const { compile } = await import('tailwindcss');
+    const source = fs.readFileSync('src/design-system/tokens.css','utf8').replace('@theme static {','@theme static prefix(tw) {');
+    const compiler = await compile(source+'\n@tailwind utilities;');
+    const css = compiler.build(['tw:p-2','tw:z-dialog','tw:max-panel:w-24']);
+    expect(css).toContain('padding: var(--ds-space-2)');
+    expect(css).toContain('z-index: var(--ds-layer-dialog)');
+    expect(css).toContain('@media (width < 900px)');
+    expect(css).not.toContain('--breakpoint-panel-max');
+  });
+  it('m5 imports staffView without a DOM or loaded stylesheet', async () => {
+    const staff = await import('../src/staffView');
+    expect(staff.BASE_PIXELS_PER_BEAT).toBe(120);
+  });
+});
+
+describe('client theme lifecycle API', () => {
+  it('reads non-enumerable styles, revisions, immediate subscriptions, alpha and memoized resources', async () => {
+    const { vi } = await import('vitest');
+    vi.resetModules();
+    const dom = new JSDOM('<html data-theme="night-paper" data-theme-preference="night-paper"><head><meta name="theme-color"></head><body></body></html>', {url:'http://localhost/'});
+    const mediaListeners = new Set<() => void>();
+    const media = { matches:false, addEventListener: (_: string, fn: () => void) => mediaListeners.add(fn) };
+    for (const [key, value] of Object.entries({window:dom.window,document:dom.window.document,localStorage:dom.window.localStorage,location:dom.window.location,MutationObserver:dom.window.MutationObserver,Event:dom.window.Event,matchMedia:()=>media})) vi.stubGlobal(key,value);
+    const api = await import('../src/design-system/theme');
+    const { themeRoleNames } = await import('../src/design-system/theme/roles.generated');
+    const values: Record<string,string> = Object.fromEntries(themeRoleNames.map(role=>['--ds-'+role,'1']));
+    for (const role of api.colorRoles) values['--ds-'+role]='#123456';
+    for (const role of api.fontRoles) values['--ds-font-'+role]='Snapshot Font';
+    for (let i=1;i<=8;i++) values['--ds-voice-'+i]='#123456';
+    Object.assign(values, {'--ds-print-paper':'#ffffff','--ds-print-ink':'#000000','--ds-print-font-text':'Print Font','--ds-print-font-music':'Music Font','--tw-breakpoint-panel':'56.25rem'});
+    // Deliberately not iterable: Safari's custom-property enumeration is not a contract.
+    const computed = vi.fn(()=>({getPropertyValue:(key:string)=>values[key]??'',fontSize:'16px'}));
+    vi.stubGlobal('getComputedStyle',computed);
+    try {
+      const initialRevision=api.getThemeRevision();
+      expect(computed).toHaveBeenCalledTimes(1); // browser chrome only; revision allocates no snapshot
+      const a=api.readTheme();
+      expect(a.revision).toBe(initialRevision);
+      expect(a.roles).toHaveProperty('font-body','Snapshot Font');
+      expect(api.readTheme()).toBe(a);
+      expect(Object.isFrozen(a.roles)).toBe(true);
+      expect(a.color('accent').rgba(.5)).toBe('rgba(18, 52, 86, 0.5)');
+      expect(a.color('accent').withAlpha(.5).a).toBe(.5);
+      const derive=vi.fn(theme=>theme.color('accent').css);
+      const resource=api.memoizeByTheme(derive);
+      resource();resource();expect(derive).toHaveBeenCalledTimes(1);
+      const listener=vi.fn(); const stop=api.subscribeTheme(listener,{immediate:true});
+      expect(listener).toHaveBeenCalledTimes(1);expect(listener).toHaveBeenLastCalledWith(a);
+      values['--ds-material-fibre']='runtime texture';api.notifyThemeMaterialChange();
+      expect(api.getThemeRevision()).toBe(initialRevision+1);
+      expect(listener).toHaveBeenCalledTimes(2);
+      expect(api.readTheme().roles['material-fibre']).toBe('runtime texture');
+      resource();expect(derive).toHaveBeenCalledTimes(2);
+      stop();api.notifyThemeMaterialChange();expect(listener).toHaveBeenCalledTimes(2);
+      expect(api.breakpoint('panel')).toBe('900px');
+      const query=vi.fn(()=>media);vi.stubGlobal('matchMedia',query);Object.defineProperty(dom.window,'matchMedia',{value:query,configurable:true});
+      api.matchBreakpoint('panel','below');expect(query).toHaveBeenCalledWith('(width < 900px)');
+      const quietA=vi.fn(),quietB=vi.fn();const unsubscribeA=api.onSystemThemeChange(quietA),unsubscribeB=api.onSystemThemeChange(quietB);
+      const current=dom.window.document.documentElement.dataset.theme;
+      dom.window.dispatchEvent(new dom.window.StorageEvent('storage',{key:'ai-capella-design',newValue:'pergament'}));
+      expect(quietA).toHaveBeenCalledTimes(1);expect(quietB).toHaveBeenCalledTimes(1);
+      expect(dom.window.document.documentElement.dataset.theme).toBe(current);
+      api.setThemePreference('parchment');
+      expect(quietA).toHaveBeenCalledTimes(2);expect(quietB).toHaveBeenCalledTimes(2);
+      expect(dom.window.localStorage.getItem('ai-capella-design')).toBe('pergament');
+      expect(dom.window.document.documentElement.dataset.theme).toBe(current);
+      unsubscribeA();unsubscribeB();
+      dom.window.document.documentElement.dataset.themePreference='system';
+      for(const notify of mediaListeners)notify();
+      expect(api.readTheme().id).toBe('night-paper');
+      dom.window.dispatchEvent(new dom.window.StorageEvent('storage',{key:'ai-capella-design',newValue:'pergament'}));
+      expect(api.readTheme().id).toBe('parchment');
+      const revision=api.getThemeRevision();
+      await new Promise(resolve=>setTimeout(resolve,0));
+      expect(api.getThemeRevision()).toBe(revision); // observer must not double-notify
+    } finally {dom.window.close();vi.unstubAllGlobals();vi.resetModules();}
+  });
+  it('SSR hook returns an empty snapshot without reading a document', async () => {
+    const { createElement }=await import('react');
+    const { renderToString }=await import('react-dom/server');
+    const { useTheme }=await import('../src/design-system/theme/react');
+    const { getThemeRevision, subscribeTheme }=await import('../src/design-system/theme');
+    const Component=()=>createElement('span',null,useTheme()?.id??'server');
+    expect(renderToString(createElement(Component))).toBe('<span>server</span>');
+    expect(getThemeRevision()).toBe(0);
+    expect(()=>subscribeTheme(()=>{}, {immediate:true})()).not.toThrow();
   });
 });

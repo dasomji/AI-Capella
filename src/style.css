@@ -1428,7 +1428,7 @@ button.stepper-value:hover {
 
 /* Phones and narrow tablets: voice chips on top, score in the middle, everything else in a dock
    within thumb reach at the bottom. */
-@media (max-width: theme(--breakpoint-panel-max)) {
+@media (width < theme(--breakpoint-panel)) {
   #player {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: calc(54px + var(--safe-t)) 48px minmax(0, 1fr) 36px 42px auto;
@@ -1515,7 +1515,7 @@ button.stepper-value:hover {
 }
 
 /* Phones held sideways: the score gets the height; voices live behind the mixer button. */
-@media (max-width: theme(--breakpoint-panel-max)) and (max-height: theme(--breakpoint-short-landscape)) and (orientation: landscape) {
+@media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) {
   #player {
     grid-template-rows: calc(46px + var(--safe-t)) minmax(0, 1fr) 28px 36px auto;
     grid-template-areas: 'top' 'stage' 'ov' 'info' 'tr';
@@ -2097,7 +2097,7 @@ button.stepper-value:hover {
   background: var(--danger);
 }
 
-@media (max-width: theme(--breakpoint-panel-max)) {
+@media (width < theme(--breakpoint-panel)) {
   #toast {
     bottom: calc(150px + var(--safe-b));
   }
@@ -2161,7 +2161,7 @@ button.stepper-value:hover {
   }
 }
 
-@media (max-width: theme(--breakpoint-panel-max)) {
+@media (width < theme(--breakpoint-panel)) {
   #app.sing-along #player {
     grid-template-rows: calc(54px + var(--safe-t)) minmax(0, 1fr) auto;
     grid-template-areas: 'top' 'stage' 'chips';
@@ -2185,7 +2185,7 @@ button.stepper-value:hover {
   }
 }
 
-@media (max-width: theme(--breakpoint-panel-max)) and (max-height: theme(--breakpoint-short-landscape)) and (orientation: landscape) {
+@media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) {
   #app.sing-along #player {
     grid-template-rows: calc(46px + var(--safe-t)) minmax(0, 1fr);
     grid-template-areas: 'top' 'stage';
@@ -3237,7 +3237,7 @@ body:has(#app.mode-landing)::after {
 .power-hint .link-btn:hover {
   color: var(--ink-0);
 }
-@media (max-width: theme(--breakpoint-panel-max)) {
+@media (width < theme(--breakpoint-panel)) {
   .power-hint {
     bottom: calc(150px + var(--safe-b));
   }
