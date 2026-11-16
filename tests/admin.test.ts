@@ -177,9 +177,10 @@ test('ordinary handler statements time out and release the connection',{timeout:
 test('descriptively renamed migration keeps its applied identity and does not run again',async()=>{
  const {drizzle}=await import('drizzle-orm/node-postgres');const {migrate}=await import('drizzle-orm/node-postgres/migrator');
  const before=(await pool.query('select * from drizzle.__drizzle_migrations order by id')).rows;
- assert.equal(Number(before.at(-1).created_at),1794833412673);
+ const applied=(await pool.query('select * from drizzle.__drizzle_migrations where created_at=$1',[1794833412673])).rows;
+ assert.equal(applied.length,1);
  const {createHash}=await import('node:crypto');const {readFile}=await import('node:fs/promises');
- assert.equal(before.at(-1).hash,createHash('sha256').update(await readFile('drizzle/0018_admin_issued_invitations.sql')).digest('hex'));
+ assert.equal(applied[0].hash,createHash('sha256').update(await readFile('drizzle/0018_admin_issued_invitations.sql')).digest('hex'));
  const client=await pool.connect();try{await migrate(drizzle(client),{migrationsFolder:'./drizzle'});}finally{client.release();}
  assert.deepEqual((await pool.query('select * from drizzle.__drizzle_migrations order by id')).rows,before);
 });
@@ -232,6 +233,28 @@ test('admin management: guarded transactions, permissions, invitations and live 
    assert.deepEqual(await state(),unchanged);
    assert.equal(Number((await pool.query("select count(*) from audit_events where actor_id=$1 and outcome='invalid_input'",[sys.id])).rows[0].count),30);
    assert.equal(Number((await pool.query("select count(*) from audit_events where actor_id=$1 and outcome='untrusted_origin'",[sys.id])).rows[0].count),10);
+   await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);
+ });
+ await t.test('invalid bodies retain only valid trimmed audit reasons and invitation identities',async()=>{
+   await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);
+   for(const [path,method,body] of changes()) {
+     const invalid = path.endsWith('/invitations') ? {language:'invalid'} : method==='POST' ? {permissions:{}} : {expected:'invalid'};
+     const auditReason='Invalid fields '+crypto.randomUUID();
+     assert.equal((await req(path,sys.cookie,method,{...body,...invalid,reason:'  '+auditReason+'  '})).status,422);
+     const events=(await pool.query("select metadata from audit_events where actor_id=$1 and outcome='invalid_input' and metadata->>'reason'=$2",[sys.id,auditReason])).rows;
+     assert.equal(events.length,1);assert.equal(events[0].metadata.reason,auditReason);
+     if(path.endsWith('/invitations')) {assert.equal(events[0].metadata.ensembleId,e);assert.equal(events[0].metadata.email,'email' in body ? body.email : undefined);}
+   }
+   const path='/api/admin/ensembles/'+e+'/invitations';
+   for(const email of ['  NORMALIZED@EXAMPLE.TEST  ','invalid-email']) {
+     const auditReason='Invalid invitation '+crypto.randomUUID();
+     const body=changes().at(-1)![2];
+     assert.equal((await req(path,sys.cookie,'POST',{...body,email,capabilities:{},reason:auditReason})).status,422);
+     const metadata=(await pool.query("select metadata from audit_events where actor_id=$1 and metadata->>'reason'=$2",[sys.id,auditReason])).rows[0].metadata;
+     assert.equal(metadata.email,email==='invalid-email'?null:'normalized@example.test');assert.equal(metadata.ensembleId,e);
+   }
+   const invalidReasons=(await pool.query("select metadata from audit_events where actor_id=$1 and outcome='invalid_input' and metadata->>'reason'=''",[sys.id])).rows;
+   assert.equal(invalidReasons.length,30);assert.ok(invalidReasons.every(r=>r.metadata.reason===''));
    await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);
  });
  await t.test('add, inline capability changes and stale concurrent updates are audited',async()=>{
@@ -326,10 +349,18 @@ test('admin management: guarded transactions, permissions, invitations and live 
    const sign=await req('/api/auth/sign-in/email','','POST',{email,password});const cookie=sign.headers.getSetCookie().map(s=>s.split(';')[0]).join('; ');
    const accepted=await req('/api/invitations/'+token+'/accept',cookie,'POST',{});assert.equal(accepted.status,200,await accepted.clone().text());
    assert.equal((await accepted.json()).capabilities.editPieces,true);
-   const second=await req(path,sys.cookie,'POST',{...input,email:'revoked-'+email,idempotencyKey:crypto.randomUUID()});assert.equal(second.status,200);
-   await changeAdminRole(process.env.DATABASE_URL!,sys.email,false);
-   assert.equal((await pool.query('select state from invitations where id=$1',[(await second.json()).id])).rows[0].state,'revoked');
-   await changeAdminRole(process.env.DATABASE_URL!,sys.email,true);
+   const {clock}=await import('../server/clock.server');const original=clock.now;
+   const instant=new Date('2026-11-16T12:34:56Z');clock.now=()=>instant;
+   try {
+     for(const source of ['cli','web']) {
+       const second=await req(path,sys.cookie,'POST',{...input,email:source+'-revoked-'+email,idempotencyKey:crypto.randomUUID()});assert.equal(second.status,200);
+       if(source==='cli') await changeAdminRole(process.env.DATABASE_URL!,sys.email,false);
+       else assert.equal((await req('/api/admin/users/'+sys.id+'/sysadmin',other.cookie,'PUT',{sysadmin:false,expected:true,reason})).status,200);
+       const stored=(await pool.query('select state,revoked_at from invitations where id=$1',[(await second.json()).id])).rows[0];
+       assert.equal(stored.state,'revoked');assert.deepEqual(stored.revoked_at,instant);
+       await changeAdminRole(process.env.DATABASE_URL!,sys.email,true);
+     }
+   } finally {clock.now=original;}
  });
  await t.test('membership demotion and removal preserve admin invitations and use the application clock',async()=>{
    await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);

@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { clock } from "./clock.server";
 import { DomainError } from "./domain-error.server";
 /** CLI and web role changes share a single transaction lock and zero-admin guard. */
 export async function lockPlatformRoles(
@@ -48,8 +49,8 @@ export async function changePlatformRole(
   else {
     await db.query("delete from platform_roles where user_id=$1", [user]);
     await db.query(
-      "update invitations set state='revoked',revoked_at=now() where inviter_id=$1 and admin_issued and state='pending'",
-      [user],
+      "update invitations set state='revoked',revoked_at=$2 where inviter_id=$1 and admin_issued and state='pending'",
+      [user, clock.now()],
     );
   }
   return before;

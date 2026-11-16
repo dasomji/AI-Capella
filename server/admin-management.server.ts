@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import type { PoolClient } from "pg";
 import { z } from "zod";
 import {
+  adminAccess,
   adminMemberAdd,
   adminMemberEdit,
   adminMemberRemove,
@@ -157,6 +158,9 @@ export function registerAdminManagement(
         input = schema.parse(raw);
         reason = (input as { reason: string }).reason;
       } catch (error) {
+        reason = adminAccess.shape.reason.safeParse(
+          (raw as { reason?: unknown } | null)?.reason,
+        ).data ?? "";
         await transaction(async (db) => {
           const scope =
             ensemble &&
@@ -177,7 +181,14 @@ export function registerAdminManagement(
                         .data ?? null,
                     ensembleId: ensemble,
                   }
-              : {};
+              : type === "invitation"
+                ? {
+                    ensembleId: ensemble,
+                    email: adminInvitation.shape.email.safeParse(
+                      (raw as { email?: unknown } | null)?.email,
+                    ).data ?? null,
+                  }
+                : {};
           await event(
             db,
             actor,
