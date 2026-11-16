@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { test, expect } from 'vitest';
+import { test, expect, onTestFinished } from 'vitest';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -65,3 +65,67 @@ test('dev listener survives child reload/crash, waits for readiness and relays u
     await rm(dir, { recursive: true, force: true });
   }
 }, 20000);
+
+// Use real child processes and ephemeral ports: the public TCP listener must
+// retain requests even when its last ready child's port has stopped accepting.
+async function fixture(source: string, readinessTimeoutMs = 15000) {
+  const dir = await mkdtemp(join(tmpdir(), 'lightscore-dev-'));
+  const childPath = join(dir, 'child.mjs');
+  await writeFile(childPath, source);
+  const dev = await startDevelopment({ port: 0, childPath, readinessTimeoutMs });
+  onTestFinished(async () => {
+    await dev.close();
+    await rm(dir, { recursive: true, force: true });
+  });
+  const address = dev.server.address();
+  if (!address || typeof address === 'string') throw Error('No listener');
+  return `http://127.0.0.1:${address.port}`;
+}
+
+test('holds concurrent requests when a ready child loses its listener before exiting', async () => {
+  const origin = await fixture(`
+    import {createServer} from 'node:http';
+    // Model the interval between Vite closing its listener and process exit.
+    // Keep the process alive so recovery cannot depend on a lucky exit event.
+    setInterval(()=>{},1000);
+    const server=createServer((req,res)=>{
+      if(req.url==='/retire') {
+        server.close();
+        res.end('retired');
+        return;
+      }
+      let body='';
+      req.on('data',chunk=>body+=chunk);
+      req.on('end',()=>res.end(JSON.stringify({pid:process.pid,body})));
+    });
+    server.listen(0,'127.0.0.1',()=>process.send({type:'ready',port:server.address().port}));
+  `);
+  const request = (path = '', body?: string) => fetch(origin + path, {
+    method: body === undefined ? 'GET' : 'POST', body,
+    headers: { Connection: 'close' }, signal: AbortSignal.timeout(10000),
+  });
+  const previous = await (await request()).json();
+  expect(await (await request('/retire')).text()).toBe('retired');
+  const bodies = Array.from({ length: 8 }, (_, i) => `${i}:${'x'.repeat(128 * 1024)}`);
+  const responses = await Promise.all(bodies.map(async body => {
+    const response = await request('', body);
+    expect(response.status).toBe(200);
+    return response.json();
+  }));
+  expect(new Set(responses.map(response => response.pid)).size).toBe(1);
+  for (const [i, response] of responses.entries()) {
+    expect(response.pid).not.toBe(previous.pid);
+    expect(response.body).toBe(bodies[i]);
+  }
+}, 20000);
+
+test('returns a clean HTTP 503 when no child becomes ready before the deadline', async () => {
+  const origin = await fixture('setInterval(()=>{},1000);', 100);
+  const response = await fetch(origin, {
+    headers: { Connection: 'close' }, signal: AbortSignal.timeout(2000),
+  });
+  expect(response.status).toBe(503);
+  expect(response.headers.get('connection')).toBe('close');
+  expect(response.headers.get('retry-after')).toBe('1');
+  expect(await response.text()).toBe('Development server is restarting. Try again shortly.\n');
+});

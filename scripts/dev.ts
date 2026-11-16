@@ -6,37 +6,75 @@ import { parseArgs } from 'node:util';
 
 // Keep the externally supervised listener alive across Vite/backend restarts.
 // A TCP relay preserves HTTP streaming, headers and WebSocket upgrades unchanged.
-export async function startDevelopment({ port, host = '127.0.0.1', childPath = fileURLToPath(new URL('./dev-vite.ts', import.meta.url)) }: {
-  port: number; host?: string; childPath?: string;
+export async function startDevelopment({
+  port, host = '127.0.0.1',
+  childPath = fileURLToPath(new URL('./dev-vite.ts', import.meta.url)),
+  readinessTimeoutMs = 15000,
+}: {
+  port: number; host?: string; childPath?: string; readinessTimeoutMs?: number;
 }) {
   let child: ChildProcess | undefined;
-  let target: number | undefined;
+  let target: { port: number } | undefined;
   let stopping = false;
   let retry: ReturnType<typeof setTimeout> | undefined;
   let deadline: ReturnType<typeof setTimeout> | undefined;
   const sockets = new Set<Socket>();
-  const pending = new Map<Socket, ReturnType<typeof setTimeout>>();
+  const pending = new Map<Socket, { timeout: ReturnType<typeof setTimeout>; upstream?: Socket }>();
   const relay = (socket: Socket) => {
-    if (!target || socket.destroyed) return;
-    clearTimeout(pending.get(socket));
-    pending.delete(socket);
-    const upstream = connect(target, '127.0.0.1');
-    socket.once('close', () => upstream.destroy());
-    upstream.on('error', () => socket.destroy());
-    upstream.once('close', () => socket.destroy());
-    socket.pipe(upstream).pipe(socket);
+    const waiting = pending.get(socket);
+    if (!target || !waiting || waiting.upstream || socket.destroyed) return;
+    const destination = target;
+    const upstream = connect(destination.port, '127.0.0.1');
+    waiting.upstream = upstream;
+    let relaying = false;
+    const closeUpstream = () => upstream.destroy();
+    upstream.on('error', () => { if (relaying) socket.destroy(); });
+    upstream.once('close', () => {
+      socket.removeListener('close', closeUpstream);
+      if (relaying || pending.get(socket) !== waiting) return;
+      waiting.upstream = undefined;
+      // A child can close its listener before its exit/IPC reaches the parent.
+      // No client bytes have been forwarded: hold them for a fresh ready child.
+      if (target === destination) restart();
+      relay(socket);
+    });
+    upstream.once('connect', () => {
+      if (target !== destination || stopping || socket.destroyed || pending.get(socket) !== waiting) {
+        upstream.destroy();
+        return;
+      }
+      relaying = true;
+      clearTimeout(waiting.timeout);
+      pending.delete(socket);
+      socket.once('close', closeUpstream);
+      socket.pipe(upstream).pipe(socket);
+    });
   };
   const server = createServer(socket => {
     sockets.add(socket);
     socket.on('error', () => socket.destroy());
     socket.once('close', () => {
       sockets.delete(socket);
-      clearTimeout(pending.get(socket));
+      const waiting = pending.get(socket);
       pending.delete(socket);
+      clearTimeout(waiting?.timeout);
+      waiting?.upstream?.destroy();
     });
-    // Bound connections waiting for a compile/restart, including failed startups.
-    if (target) relay(socket);
-    else pending.set(socket, setTimeout(() => socket.destroy(), 15000));
+    // Keep one deadline from acceptance through upstream connection, even if
+    // multiple children fail. Only connected streams leave the waiting queue.
+    const timeout = setTimeout(() => {
+      const waiting = pending.get(socket);
+      pending.delete(socket);
+      waiting?.upstream?.destroy();
+      const body = 'Development server is restarting. Try again shortly.\n';
+      socket.resume();
+      socket.end('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n' +
+        'Content-Type: text/plain; charset=utf-8\r\nRetry-After: 1\r\n' +
+        `Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`);
+      socket.setTimeout(1000, () => socket.destroy());
+    }, readinessTimeoutMs);
+    pending.set(socket, { timeout });
+    relay(socket);
   });
   const restart = () => {
     if (!child || deadline) return;
@@ -56,7 +94,7 @@ export async function startDevelopment({ port, host = '127.0.0.1', childPath = f
       if ('type' in message && message.type === 'restart') restart();
       if ('type' in message && message.type === 'ready' && 'port' in message &&
           typeof message.port === 'number' && !deadline && !stopping) {
-        target = message.port;
+        target = { port: message.port };
         console.log(`[dev] ready child=${child?.pid} at ${new Date().toISOString()}`);
         for (const socket of pending.keys()) relay(socket);
       }

@@ -18,7 +18,14 @@ A fresh process clears module globals, database pools and subscriptions together
 In-place module replacement would need disposal contracts across those modules.
 The trade-off is a brief compile/startup delay and loss of existing child
 connections; HMR/Socket.IO clients reconnect. New connections wait at most 15
-seconds. Shutdown allows three seconds for the child before killing it. Compile
+seconds, including the upstream TCP handshake. The last ready child can stop
+accepting connections before its exit notification reaches the parent. A failed
+handshake therefore retires that child and holds the client for its replacement;
+client bytes stay paused until a connection to the current ready child succeeds.
+The original deadline spans all attempts and returns an HTTP 503 with
+`Retry-After: 1` on timeout. Once bytes have been forwarded, streams are not
+replayed: doing so could duplicate a write or corrupt an upgrade. Shutdown allows
+three seconds for the child before killing it. Compile
 failures lasting beyond Lizardtail's fixed 30-second readiness grace can still
 stop the preview: supervisor retry/grace policy belongs upstream.
 
