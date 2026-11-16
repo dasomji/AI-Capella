@@ -3284,12 +3284,13 @@ body:has(#app.mode-landing)::after {
 }
 
 /* The hint when an energy saver caps the frames at 30 a second (powerHint.ts): a note on paper,
-   where the toasts appear, that stays until it's answered. */
+   where the toasts appear, that stays until it's answered. Keep it below overlays (900) so it
+   cannot cover account actions or other modal controls. */
 .power-hint {
   position: fixed;
   left: 50%;
   bottom: calc(96px + var(--safe-b));
-  z-index: 1100;
+  z-index: 800;
   width: min(440px, calc(100vw - 32px));
   padding: 14px 16px 10px;
   border-radius: 12px;

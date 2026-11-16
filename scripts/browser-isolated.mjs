@@ -116,6 +116,7 @@ try {
     env.PLAYWRIGHT_BROWSERS_PATH = `${process.cwd()}/.review-evidence/browsers`;
     await run(["node_modules/playwright/cli.js", "install", "chromium"], env);
   }
+  if (!process.env.BROWSER_SCRIPT) await run(["scripts/browser-power-hint.mjs"], env);
   await run([process.env.BROWSER_SCRIPT || "scripts/browser-phase2b.mjs"], env);
   if(!process.env.BROWSER_SCRIPT) {await run(["scripts/browser-phase5a.mjs"],env);await run(["scripts/browser-sync.mjs"],env);await run(["scripts/browser-sync-acceptance.mjs"],env);}
 } finally {
