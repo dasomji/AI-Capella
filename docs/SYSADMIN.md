@@ -1,4 +1,4 @@
-# Sysadmin oversight (Phase 5b / AICAP-20)
+# Sysadmin oversight and management (AICAP-20 / AICAP-26)
 
 Run provisioning only in the trusted server environment, with `DATABASE_URL` set:
 
@@ -7,7 +7,7 @@ npm run admin:grant -- verified-person@example.org
 npm run admin:revoke -- verified-person@example.org
 ```
 
-Both commands require an existing verified email and write an audit event. The
+Both commands require an existing verified email and write an audit event. The CLI and web controls share a transaction lock and cannot revoke the final sysadmin. The
 operator is identified by server CLI source and OS user; there is no web-session
 actor for a CLI operation. Repeating a command is safe and still audited. No
 signup, ensemble leadership or capability grant provisions a platform role.
@@ -28,6 +28,11 @@ All paths below start with `/api/admin`.
 | --- | --- | --- |
 | GET | `/users`, `/users/:id` | Users and safe account/session detail |
 | GET | `/ensembles`, `/ensembles/:id` | Ensembles, counts, original storage |
+| POST | `/ensembles/:ensemble/members` | Directly add an existing user with explicit permissions |
+| PATCH | `/ensembles/:ensemble/members/:member` | Change lead/capabilities with an expected permission snapshot |
+| DELETE | `/ensembles/:ensemble/members/:member` | Remove a member through the shared lead-removal operation |
+| POST | `/ensembles/:ensemble/invitations` | Invite an email without an account through the shared invitation flow |
+| PUT | `/users/:id/sysadmin` | Grant/revoke a verified account's platform role |
 | GET | `/memberships`, `/invitations` | Paginated relationships / invitation states |
 | GET | `/pieces`, `/pieces/:id` | Piece metadata and transcription job link |
 | GET | `/pieces/:id/versions`, `/pieces/:id/originals` | Versions / original metadata |
@@ -41,7 +46,7 @@ All paths below start with `/api/admin`.
 | GET, PUT | `/transcription/control` | Stop status / reasoned, audited toggle |
 
 Lists accept `limit` (1–100, default 30), `cursor`, `search`, `sort`
-(`id`, `created`, `updated` for pieces, `name`), `direction` (`asc`, `desc`). Cursor order has an ID
+(`id`, `created`, `updated` for pieces, `name`, `email` for users/memberships/invitations, `ensemble` for memberships), `direction` (`asc`, `desc`). Cursor order has an ID
 tie-breaker and preserves PostgreSQL timestamp precision. Versions use `(version_no DESC, id ASC)` keysets; originals use an opaque ID cursor in ascending ID order. Filters are in
 `src/api/admin.ts`: verified/sysadmin for users; ensemble/format for pieces;
 actor/target/targetType/action/outcome for audit; state/ensemble for jobs.
@@ -55,12 +60,49 @@ active-session count, last active, coarse device groups and the latest sign-in
 among still-active sessions. It cannot reconstruct sign-ins after session
 retirement; no durable historical sign-in ledger existed in earlier phases.
 
-There are no global delete, impersonation, role-edit or export controls. Private
+User and ensemble tables use TanStack Table 9.3.1 with server-side filtering,
+sorting and cursor pagination. User rows include ensemble count and last activity
+among active sessions. Detail membership tables support direct additions, inline
+lead/capability edits and removals. Every change opens a reason confirmation.
+The sysadmin toggle is in user detail: the target must have a verified email;
+you cannot revoke your own role or remove the final sysadmin.
+
+There are no global delete, impersonation or export controls. Private
 detail access is audited. Content and originals require an explicit confirmation;
 POST bodies require a nonempty `reason` (maximum 1000 characters). Stop toggles
 require `{ paused: boolean, reason: string }` with a nonempty reason. The server emergency-stop environment flag also applies;
 the UI cannot override that flag. Audit events
 contain actor, target, action, outcome and timestamptz, never score bodies.
+
+Management requests require `reason` (trimmed, 1–1000 characters). Membership
+additions require `{ userId, permissions }`; permissions are four explicit booleans:
+`isLead`, `manageMembers`, `editPieces`, `transcribe`. PATCH sends `permissions`
+and `expected` (the previous four booleans); DELETE sends `expected`. Role PUT
+sends `{ sysadmin, expected }` (booleans). Stale snapshots return 409
+`stale_permissions`; refresh before retrying. All bodies also include `reason`.
+
+Ensemble-row locks serialize admin and ordinary lead operations. Last-lead
+protection remains in the shared domain operation and deferred database trigger.
+Removal commits before the existing membership notification runs, invalidating
+account rooms, rehearsal authorization and the client's existing offline/cache
+membership checks. It does not log the member out of unrelated ensembles.
+Platform role writes (including CLI) take an exclusive advisory transaction lock;
+other management writes take its shared counterpart and recheck the actor's
+verified database role while holding it. The membership snapshot check prevents
+silent lost updates; each successful change and its audit row commit together.
+Rejected authenticated attempts record a safe failure outcome; untrusted Origins
+are recorded after concealment/authorization. Audit payloads contain reason and
+before/after permission booleans, never invitation tokens or credentials.
+
+Invitations reuse the existing SHA-256 token, 14-day expiry, budgets, idempotency,
+mail transport and acceptance. They grant capabilities, with lead promotion
+available after acceptance. Migration 0018 adds `admin_issued` so acceptance checks
+the issuing sysadmin's current verified platform role rather than requiring an
+ensemble membership. Role revocation revokes their pending admin-issued invites.
+Development/test mail uses capture or Mailpit; tests never use real mail.
+
+Management actions share an additional database-backed 20 requests/minute/actor
+limit (including invalid attempts), alongside the existing limits below.
 
 All authorized admin APIs share a PostgreSQL-backed limit of 120 requests per
 minute per actor. Each primary list and version/original list additionally allows 30 requests/minute. Content/download actions additionally share 10 per minute, 30 per hour and 200 per day per actor, persisted in PostgreSQL. A rejected request returns 429 with the specific cap and waiting instruction.
@@ -131,3 +173,14 @@ including today, ending at tomorrow's midnight; the All preset explicitly reques
 all retained calls. Ensemble filters apply to usage, failures and job summaries.
 The CLI records actual OS username, SUDO_USER, hostname and changed:boolean;
 rollback errors are logged while the original operation error remains primary.
+
+AICAP-26 browser journey (isolated PostgreSQL/Mailpit, with dev/test seed accounts):
+
+```sh
+BROWSER_SCRIPT=scripts/browser-admin-management.mjs BROWSER_EVIDENCE=/tmp/aicap-admin npm run test:browser
+```
+
+It covers table search/sort, user memberships, add/edit/remove, last-lead and
+self-revoke errors, German at phone width and table-contained horizontal scrolling.
+The integration harness requires its configured local S3 service; set
+`S3_ENDPOINT` to an isolated SeaweedFS instance. No preview database is used.

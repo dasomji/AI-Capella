@@ -11,7 +11,20 @@
 .admin-filters fieldset{border:0;padding:0;margin:0;max-width:100%;color:var(--admin-secondary)}.admin-filters legend{font-size:13px}.admin-presets small{display:block;color:var(--admin-secondary);font-size:12px}.admin-shell .admin-close{position:absolute;right:16px;top:12px;border:0;font:28px sans-serif;padding:4px 12px}.admin-detail h2{padding-right:40px}.admin-no{color:var(--admin-secondary)}.admin-yes{color:var(--admin-ink)}.admin-id{display:inline-flex;align-items:center;gap:4px}.admin-shell .admin-id button{border:0;padding:4px;min-height:32px}.admin-shell .admin-danger{color:#f2a49a;border-color:#f2a49a}.admin-shell .switch{width:48px;height:26px;min-height:26px;border-radius:20px;padding:0;position:relative;background:transparent;border:1px solid var(--admin-secondary)}.admin-shell .switch::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:var(--admin-ink);left:3px;top:3px;transition:transform .15s}.admin-shell .switch[aria-checked=true]{background:var(--admin-gold)}.admin-shell .switch[aria-checked=true]::after{transform:translateX(21px);background:var(--admin-bg)}
 @media(prefers-color-scheme:light){:root:not([data-ground=pergament]) .admin-shell{--admin-bg:#f6f2eb;--admin-ink:#30251e;--admin-secondary:#605043;--admin-rule:#8d7d68;--admin-gold:#755018}}
 @media(prefers-color-scheme:light){.admin-shell .admin-danger{color:#a33d32;border-color:#a33d32}}:root[data-ground=pergament] .admin-danger{color:#a33d32;border-color:#a33d32}
-@media(max-width:600px){.admin-shell header::after{left:-16px;right:-16px}.admin-shell .admin-table-wrap{overflow:visible;max-height:none}.admin-table-wrap table,.admin-table-wrap tbody,.admin-table-wrap tr,.admin-table-wrap td{display:block;min-width:0!important;max-width:none!important;width:100%}.admin-table-wrap thead{display:none}.admin-table-wrap tr{border:1px solid var(--admin-rule);padding:12px;margin:12px 0}.admin-table-wrap td{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;padding:6px!important;border:0!important;white-space:normal!important;overflow-wrap:anywhere!important}.admin-table-wrap td::before{content:attr(data-label);font:12px 'Atkinson Hyperlegible Next Variable',sans-serif;color:var(--admin-secondary)}.admin-shell table:not(.admin-table-wrap table){min-width:0}.admin-filters fieldset{flex:1 1 100%}}
+@media(max-width:600px){.admin-shell header::after{left:-16px;right:-16px}.admin-filters fieldset{flex:1 1 100%}}
+
 .admin-shell{color-scheme:dark}.admin-shell .admin-filters fieldset button,.admin-shell .admin-presets button{font-family:inherit}.admin-shell button[aria-pressed=true]{font-weight:600}.admin-detail .admin-section-row h3{font-size:12px}
 @media(prefers-color-scheme:light){.admin-shell{color-scheme:light}}:root[data-ground=pergament] .admin-shell{color-scheme:light}
 @media(prefers-reduced-motion:reduce){.admin-shell .switch::after{transition:none}}
+
+.admin-shell,.admin-detail,.admin-data-table{min-width:0;max-width:100%}
+.admin-shell .admin-table-wrap{overflow:auto;max-width:100%;max-height:65vh;overscroll-behavior:contain}
+.admin-shell th button{border:0;padding:0;text-align:left;color:var(--admin-gold)}
+.admin-pagination{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0 24px}
+.admin-pagination label{margin-left:auto}.admin-permissions{display:grid;gap:8px;margin:10px 0}
+.admin-shell .admin-permissions label{display:flex;flex-direction:row;align-items:center;gap:8px;color:var(--admin-ink)}
+.admin-shell input[type=checkbox]{width:20px;height:20px;accent-color:var(--admin-gold)}
+.admin-management button{margin:4px}.admin-role,.admin-add{border:1px solid var(--admin-rule);padding:16px;margin:16px 0}
+.admin-management-confirm{margin:0;color:var(--admin-ink);max-height:90dvh;overflow:auto}
+.admin-management-confirm::backdrop{background:#0009}.admin-shell textarea{font:inherit;color:var(--admin-ink);background:var(--admin-bg);border:1px solid var(--admin-rule);padding:10px;resize:vertical;min-height:90px;width:100%}
+.admin-sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
