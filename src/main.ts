@@ -76,9 +76,6 @@ function openLibrarySheet(
     behavior: { opener, onClose, ...(closeVariant === "player" ? { initialFocus: (): HTMLElement => sheet.element } : {}) },
   });
   const head = sheet.element.querySelector("header")!;
-  const grab = createLibraryPart("span","sheet-grab");
-  grab.setAttribute("aria-hidden", "true");
-  head.prepend(grab);
   head.append(
     createIconButton({
       variant: closeVariant,
@@ -117,42 +114,14 @@ function openLibraryMenu(
     items: convert(items),
     onEscape: () => overlay.requestClose(),
   });
-  const behavior = {
-    opener: anchor,
-    initialFocus: () =>
-      menu.element.querySelector<HTMLElement>('[role^="menuitem"]'),
-    onClose: () => menu.dispose(),
-  };
-  if (isNarrow()) {
-    overlay = openLibrarySheet(title, menu.element, anchor, () =>
-      menu.dispose(),
-    );
-    menu.element
-      .querySelector<HTMLElement>('[role^="menuitem"]')
-      ?.focus({ preventScroll: true });
-  } else {
-    overlay = createDialog({
-      variant: "library-popover",
-      title,
-      attrs: { "aria-label": label },
-      content: menu.element,
-      behavior,
-    });
-    overlay.open();
-    const place = () => {
-      const a = anchor.getBoundingClientRect(),
-        p = overlay.element.getBoundingClientRect();
-      overlay.element.style.left = `${Math.max(8, Math.min(window.innerWidth - p.width - 8, a.right - p.width))}px`;
-      overlay.element.style.top = `${Math.max(8, a.bottom + 8 + p.height > window.innerHeight - 8 ? a.top - p.height - 8 : a.bottom + 8)}px`;
-    };
-    place();
-    requestAnimationFrame(place);
-  }
+  // D12/D24: choose presentation once; the same centered dialog survives rotation.
+  overlay = openLibrarySheet(label, menu.element, anchor, () => menu.dispose());
+  menu.element.querySelector<HTMLElement>('[role^="menuitem"]')?.focus({ preventScroll: true });
 }
-function openPlayerPopover(anchor:HTMLElement,content:HTMLElement,align:'start'|'center', label:string) {
- const panel=createDialog({variant:'library-popover',title:'',attrs:{'aria-label':label},content,behavior:{opener:anchor,initialFocus:()=>panel.element}});panel.open();
- const place=()=>{const a=anchor.getBoundingClientRect(),p=panel.element.getBoundingClientRect();let left=align==='start'?a.left:a.left+(a.width-p.width)/2;left=Math.max(8,Math.min(window.innerWidth-p.width-8,left));const below=a.bottom+8;panel.element.style.left=`${left}px`;panel.element.style.top=`${Math.max(8,below+p.height>window.innerHeight-8?a.top-p.height-8:below)}px`;};place();requestAnimationFrame(place);return panel;
+function openPlayerPopover(anchor:HTMLElement,content:HTMLElement,_align:'start'|'center', label:string) {
+  return openLibrarySheet(label, content, anchor, undefined, "player");
 }
+
 function libraryPrompt(options: {
   title: string;
   body?: string;
