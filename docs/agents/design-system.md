@@ -264,3 +264,10 @@ against fresh instances. The repository currently has no ladder `docs/agents/ver
 
 Primitives, parity decisions, adapter examples and browser-check APIs:
 [design-primitives.md](design-primitives.md).
+
+### Administration link
+
+`account-link` preserves Chromium’s former dark native link color (`rgb(158,158,255)`)
+for Night paper and Velvet. Parchment deliberately uses its accent link color instead of
+the native blue (`rgb(0,0,238)`); this is the sole visible P6d cleanup change.
+The color is a complete theme role, so added themes can choose their own link paint.

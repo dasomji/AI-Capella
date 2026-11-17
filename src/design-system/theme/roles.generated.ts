@@ -20,6 +20,7 @@ export const themeRoleNames = [
   "account-input-border-bottom",
   "account-input-font",
   "account-input-padding",
+  "account-link",
   "account-links-line-height",
   "account-navigation-other-transition",
   "account-navigation-switch-transform",
