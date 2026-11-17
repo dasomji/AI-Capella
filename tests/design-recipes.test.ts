@@ -58,8 +58,8 @@ describe("pure recipes", () => {
           continue;
         }
         if (variant.startsWith("player-")) {
-          const slot=classes.find(c=>c.startsWith("ds-player-")&&c!=="ds-player-button")!;
-          expect(readFileSync("src/design-system/player.css","utf8")).toContain("."+slot);
+          expect(classes.some(c => c.startsWith("tw:"))).toBe(true);
+          expect(classes).toContain("ds-player-button");
           expect(new Set(classes).size).toBe(classes.length);
           continue;
         }
@@ -95,6 +95,23 @@ describe("pure recipes", () => {
     expect(r.buttonRecipe({ variant: "dense" })).toContain(
       "tw:rounded-admin-control",
     );
+  });
+  it("defines player appearances in token-backed utilities and reserves CSS for native parts", () => {
+    for (const part of ["header", "voice-row", "light", "chips", "transport", "view-group", "mixer-body", "switch-block"] as const) {
+      expect(r.playerPartRecipe(part)).toMatch(/(?:^|\s)tw:/);
+    }
+    for (const variant of ["player", "player-landscape", "player-zoom", "player-follow", "voice-more"] as const) {
+      expect(r.iconButtonRecipe({ variant })).toMatch(/(?:^|\s)tw:/);
+    }
+    expect(r.fieldRecipe({ variant: "player-volume" }).control).toMatch(/(?:^|\s)tw:/);
+    expect(r.switchRecipe({ variant: "player-preference" }).root).toMatch(/(?:^|\s)tw:/);
+    const css = readFileSync("src/design-system/player.css", "utf8");
+    expect(css).not.toMatch(/(?<![\w-])\d+(?:px|ms)\b|#[a-f\d]{3,8}\b/i);
+    const selectors = [...css.matchAll(/(?:^|})\s*(?:\/\*[\s\S]*?\*\/\s*)?([^{}]+)\{/g)]
+      .map(match => match[1].trim()).filter(selector => !selector.startsWith("@"));
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const selector of selectors) expect(selector).toContain("::");
+    expect(r.playerGlyphRecipe("treble")).toContain("tw:font-font-music");
   });
   it("makes ruled and boxed properties exclusive and exposes stable slots", () => {
     for (const variant of r.fieldVariants) {
