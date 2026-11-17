@@ -178,7 +178,7 @@ function fieldRecipeStyles(
       invalid && variant !== "ruled-account"
         ? "tw:border-danger"
         : admin
-          ? "tw:border-admin-rule tw:focus:border-focus"
+          ? "tw:border-admin-rule"
           : domain && kind === "select"
             ? "tw:border-rule-strong tw:focus:border-focus"
             : ruled
