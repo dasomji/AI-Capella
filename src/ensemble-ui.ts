@@ -18,6 +18,7 @@ import {
   createSheet,
   createIconButton,
   createMenu,
+  createToggleGroup,
   createConfirmDialog,
   closeOverlay,
   toast,
@@ -398,9 +399,9 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
     const form = element("form");
     const email = field(form, pt("email"), "email");
     email.required = true;
-    const label = element("div");
-    label.setAttribute("role", "group");
-    label.setAttribute("aria-label", pt("emailLanguage"));
+    const label = createToggleGroup({
+      variant: "language", separator: " · ", label: pt("emailLanguage"), items: [], value: lang,
+    });
     let language = lang;
     for (const l of ["de", "en"] as const) {
       if (label.childNodes.length) label.append(document.createTextNode(" · "));
