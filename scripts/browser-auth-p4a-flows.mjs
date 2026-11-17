@@ -110,9 +110,15 @@ try {
   await page.locator('#lib-menu-btn').click();
   await page.getByText('Account and devices', { exact: true }).click();
   const shared = page.getByLabel('This device is shared (24 h offline)', { exact: true });
-  await shared.check();
+  assert.equal(await shared.getAttribute('role'), 'switch');
+  assert.equal(await shared.isChecked(), false);
+  await shared.focus();
+  await shared.press('Space');
+  assert.equal(await shared.isChecked(), true);
   assert.equal(await page.evaluate(() => localStorage.getItem('lightscore-shared-device')), '1');
-  await shared.uncheck();
+  await shared.press('Space');
+  assert.equal(await shared.isChecked(), false);
+  assert.equal(await page.evaluate(() => localStorage.getItem('lightscore-shared-device')), '0');
   const dialog = page.locator('dialog[open]');
   const focusable = dialog.locator('button:not([disabled]), input:not([disabled]), a[href]');
   await focusable.last().focus();
