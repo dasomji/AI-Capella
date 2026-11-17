@@ -484,6 +484,7 @@ export function createDialog(options: DialogOptions) {
   const slots = r.dialogRecipe(options),
     dialog = element("dialog", slots.panel, undefined, options);
   dialog.dataset.ds = "dialog";
+  dialog.dataset.dialogLayout = options.variant === "transcription-review" ? "fullscreen" : "centered";
   const titleId = `ds-dialog-${++fieldId}-title`,
     bodyId = titleId + "-body";
   if (options.title && !dialog.hasAttribute("aria-label") && !dialog.hasAttribute("aria-labelledby"))
@@ -525,15 +526,7 @@ export function createDialog(options: DialogOptions) {
     open: () =>
       (controller = openDialog(dialog, {
         ...options.behavior,
-        motion:
-          options.variant === "sheet" ||
-          options.variant === "domain-sheet" ||
-          options.variant === "library-sheet"
-            ? "sheet"
-            : options.variant === "library-popover" ||
-                options.variant === "library-prompt"
-              ? "panel"
-              : undefined,
+        motion: "panel",
         onClose: () => {
           options.behavior?.onClose?.();
           dialog.remove();
@@ -552,11 +545,21 @@ export const createSheet = ({
 }) => createDialog({ ...options, variant });
 export const createDrawer = (options: Omit<DialogOptions, "variant">) =>
   createDialog({ ...options, variant: "drawer" });
-export const createConfirmDialog = (
-  options: Omit<DialogOptions, "variant"> & {
-    variant?: "confirm" | "admin-confirm" | "admin-reason";
-  },
-) => createDialog({ ...options, variant: options.variant ?? "confirm" });
+export interface ConfirmDialogOptions extends Omit<DialogOptions, "variant"> {
+  variant?: "confirm" | "admin-confirm" | "admin-reason";
+  /** Prefer this generated action for irreversible confirmations; custom actions must set intent themselves. */
+  confirmAction?: { label: string; onConfirm: () => void };
+}
+export const createConfirmDialog = ({ confirmAction, ...options }: ConfirmDialogOptions) => {
+  const actions = document.createDocumentFragment();
+  if (options.actions) actions.append(options.actions);
+  if (confirmAction) actions.append(createButton({
+    text: confirmAction.label,
+    intent: options.destructive ? "danger" : "primary",
+    onClick: confirmAction.onConfirm,
+  }));
+  return createDialog({ ...options, actions, attrs: { ...options.attrs, role: "alertdialog" }, variant: options.variant ?? "confirm" });
+};
 export interface MenuItem {
   label: string;
   icon?: Node;
