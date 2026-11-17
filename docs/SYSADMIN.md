@@ -60,12 +60,31 @@ active-session count, last active, coarse device groups and the latest sign-in
 among still-active sessions. It cannot reconstruct sign-ins after session
 retirement; no durable historical sign-in ledger existed in earlier phases.
 
-User and ensemble tables use TanStack Table 9.3.1 with server-side filtering,
-sorting and cursor pagination. User rows include ensemble count and last activity
-among active sessions. Detail membership tables support direct additions, inline
-lead/capability edits and removals. Every change opens a reason confirmation.
-The sysadmin toggle is in user detail: the target must have a verified email;
-you cannot revoke your own role or remove the final sysadmin.
+## Interface (AICAP-28 redesign, D06 A / D16 A / D12 B)
+
+The administration uses the shared LightScore design in a compact layout: one top bar
+(brand → rehearsal, DE · EN), one section navigation (Users · Ensembles · Pieces ·
+Transcription · Audit log) and routed detail pages `/admin/users/:id`,
+`/admin/ensembles/:id` and `/admin/pieces/:id` (no side drawer). The active section and
+id come from the router splat on server and client alike, so direct loads hydrate
+cleanly; `<html lang>` follows the selected language.
+
+Every list (users, ensembles, pieces, audit, transcription jobs, memberships) is one
+TanStack Table 9.3.1 component with server-side search/filtering, header sorting and
+cursor pagination (`src/admin-data-table.tsx`). List filters live in the URL, so Back
+and the detail breadcrumb return to the same filtered list. Below 600 px, record tables
+become labelled records; metric tables keep their columns in a contained scroller.
+
+Membership management lives on user and ensemble detail pages: rows show role and
+permissions with always-visible **Edit** and **Remove** actions. Edit opens a centered
+dialog with staged checkboxes, a before → after summary and the required reason; Add
+member / Invite by email are dialogs with the reason in the same form. Removing a member,
+revoking sysadmin and stopping transcription are destructive confirmations with their
+consequence stated and a required reason. A 409 `stale_permissions` keeps the edit
+dialog open, reloads the row and resets the draft for review. The platform-role panel is
+on the user page: the target must have a verified email; you cannot revoke your own role
+or remove the final sysadmin. Content view and original download are reasoned, audited
+confirmations on the piece page.
 
 There are no global delete, impersonation or export controls. Private
 detail access is audited. Content and originals require an explicit confirmation;
@@ -180,8 +199,12 @@ AICAP-26 browser journey (isolated PostgreSQL/Mailpit, with dev/test seed accoun
 BROWSER_SCRIPT=scripts/browser-admin-management.mjs BROWSER_EVIDENCE=/tmp/aicap-admin npm run test:browser
 ```
 
-It covers table search/sort, user memberships, add/edit/remove, last-lead and
-self-revoke errors, German at phone width and table-contained horizontal scrolling.
+It covers table search/sort/paging, routed detail pages and Back, add/edit/remove dialogs
+with reasons and audit rows, stale snapshots, last-lead and self-revoke errors, German at
+phone width with touch-size actions, `<html lang>`, the 599/600/601 record breakpoint and
+error-free direct loads of every admin page. `scripts/browser-admin.mjs` additionally
+checks stop/resume consequence text and their audit rows, and that populated metrics never
+widen the page at 768/600/390 px.
 The integration harness requires its configured local S3 service; set
 `S3_ENDPOINT` to an isolated SeaweedFS instance. No preview database is used.
 
