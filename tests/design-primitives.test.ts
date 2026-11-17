@@ -700,3 +700,63 @@ describe("shared sheet motion", () => {
     }
   });
 });
+
+describe('final review adapter and keyboard regressions', () => {
+  it('compares normalized React and DOM specimen markup, including roles, aria, data and classes', async () => {
+    const { specimens } = await import('../src/design-system/catalog');
+    function normalized(root: ParentNode) {
+      const elements = [...root.querySelectorAll('*')];
+      const ids = new Map(elements.filter(el => el.id).map(el => [el.id, `part-${elements.indexOf(el)}`]));
+      return elements.map(el => ({
+        tag: el.tagName,
+        attrs: Object.fromEntries([...el.attributes]
+          .filter(a => (a.name === 'class' && a.value.trim()) || a.name === 'role' || a.name === 'id' || a.name === 'for' || /^(aria-|data-)/.test(a.name))
+          .map(a => [a.name, a.name === 'class' ? a.value.split(/\s+/).filter(Boolean).sort().join(' ') : a.value.split(' ').map(value => ids.get(value) ?? value).join(' ')])
+          .sort(([a], [b]) => a.localeCompare(b))),
+      }));
+    }
+    for (const specimen of specimens()) {
+      const react = document.createElement('template');
+      react.innerHTML = renderToString(specimen.react);
+      const dom = document.createDocumentFragment();
+      dom.append(specimen.dom());
+      expect(normalized(dom), specimen.name).toEqual(normalized(react.content));
+    }
+  });
+  it('wraps Tab in both directions, traps an empty dialog and closes on Escape with focus return', () => {
+    vi.spyOn(HTMLElement.prototype, 'getClientRects').mockImplementation(function () {
+      return [new DOMRect(0, 0, 10, 10)] as unknown as DOMRectList;
+    });
+    const cancelled = vi.fn();
+    const { dialog, opener, api } = modal({ onCancel: cancelled });
+    const [first, last] = [...dialog.querySelectorAll('button')];
+    const key = (key: string, shiftKey = false) => {
+      const event = new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true });
+      dialog.dispatchEvent(event);
+      return event;
+    };
+    last.focus();
+    expect(key('Tab').defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(first);
+    expect(key('Tab', true).defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(last);
+    dialog.replaceChildren();
+    expect(key('Tab').defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(dialog);
+    expect(key('Escape').defaultPrevented).toBe(true);
+    expect(dialog.open).toBe(false);
+    expect(cancelled).toHaveBeenCalledWith('escape');
+    expect(document.activeElement).toBe(opener);
+    api.dispose();
+  });
+  it('omits untitled headings/associations and preserves explicit popover names in both adapters', () => {
+    const dom = D.createDialog({ title: '', attrs: { 'aria-label': 'Tempo' } }).element;
+    const react = document.createElement('div');
+    react.innerHTML = renderToString(createElement(R.Dialog, { open: true, specimen: true, title: '', 'aria-label': 'Tempo' }));
+    for (const dialog of [dom, react.querySelector('dialog')!]) {
+      expect(dialog.querySelector('h2,header')).toBeNull();
+      expect(dialog.hasAttribute('aria-labelledby')).toBe(false);
+      expect(dialog.getAttribute('aria-label')).toBe('Tempo');
+    }
+  });
+});
