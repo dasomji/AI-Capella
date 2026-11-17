@@ -45,7 +45,7 @@ try {
   await page.locator('dialog[open]').waitFor({state:'detached'});
   await page.evaluate(async()=>{await(await import('/src/ensembles.ts')).initializeEnsembles();await C.membersSheet('fixture');});
   const panel=page.locator('dialog[open]');
-  await panel.locator('[role=switch]').first().locator('..').click();
+  await Promise.all([page.waitForResponse(r=>r.url().endsWith('/members/member')&&r.request().method()==='PATCH'),panel.locator('[role=switch]').first().locator('..').click()]);
   await page.waitForFunction(()=>document.querySelector('dialog[open] [role=switch]')?.getAttribute('aria-checked')==='true');
   assert.equal(patches,1,'Member permission applies immediately');
   const draft=panel.locator('form input[type=checkbox]');
