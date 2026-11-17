@@ -515,12 +515,12 @@ export async function verifyP3ReviewFixes() {
   const sheet = D.createSheet({ title: "Exit regression", content, behavior: { opener } });
   sheet.open();
   const close = sheet.close;
-  await until(() => sheet.element.dataset.sheetState === "open", "Sheet enters open state");
+  await until(() => sheet.element.dataset.panelState === "open", "Sheet enters open state");
   const nativeSheet = sheet.element;
   B.toast("Sheet toast then close");
   close();
   assert(
-    nativeSheet.open && nativeSheet.isConnected && nativeSheet.dataset.sheetState === "closing",
+    nativeSheet.open && nativeSheet.isConnected && nativeSheet.dataset.panelState === "closing",
     "M2 sheet remains in top layer during exit",
   );
   assert(
@@ -562,12 +562,12 @@ export async function verifyP3ReviewFixes() {
   touch("touchend", 240);
   await wait(25);
   assert(
-    swipeDialog.open && swipeDialog.dataset.sheetState === "closing",
-    "M2 swipe starts exit transition",
+    swipeDialog.open && swipeDialog.dataset.panelState === "open",
+    "D12 centered dialog ignores swipe gestures",
   );
-  await until(() => !swipeDialog.isConnected, "Swipe exit completes via transition or duration fallback");
-  assert(!swipeDialog.isConnected, "M2 swipe completes dismissal");
   swipeClose();
+  await until(() => !swipeDialog.isConnected, "Centered dialog closes through native lifecycle");
+  assert(!swipeDialog.isConnected, "D12 explicit dismissal completes");
   B.dismissToast();
   assert(
     document.getElementById("toast").textContent === "Sheet toast then close",
