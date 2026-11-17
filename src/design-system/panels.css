@@ -319,7 +319,8 @@ button.ds-panel-stepper-value:hover {
   line-height: 39px;
 }
 
-.ds-panel-section-marks .ds-panel-rmark.word {
+/* The legacy ID selector outranked Revival; retain that priority for overview words. */
+:root .ds-panel-section-marks .ds-panel-rmark.word {
   font-size: var(--ds-panel-section-marks-rmark-word-font-size-44);
   font-weight: var(--ds-panel-section-marks-rmark-word-font-weight-45);
 }
