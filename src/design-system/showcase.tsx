@@ -1,8 +1,16 @@
+import { useEffect, useRef } from 'react';
+import { specimens } from './catalog';
 import { useTheme } from './theme/react';
 import { colorRoles, setThemePreference, themeRegistry } from './theme';
 import type { ThemePreference } from './theme';
 
-/** Development-only foundation. P3 adds recipes and both component adapters here. */
+function DomSpecimen({build}:{build:()=>HTMLElement}) {
+  const ref=useRef<HTMLDivElement>(null);
+  useEffect(()=>{ const node=build();ref.current?.replaceChildren(node);return()=>node.remove(); },[build]);
+  return <div data-renderer="dom" ref={ref}/>;
+}
+const examples=specimens();
+/** Development-only comparisons; production routing eliminates this entire graph. */
 export function DesignSystemShowcase() {
   const theme = useTheme();
   return <main className="tw:bg-surface tw:text-ink tw:font-body tw:p-content">
@@ -11,6 +19,10 @@ export function DesignSystemShowcase() {
       <option value="system">System</option>{themeRegistry.map(theme => <option key={theme.id} value={theme.id}>{theme.label}</option>)}
     </select></label>
     <p>{theme?.id} · {theme?.type} · revision {theme?.revision}</p>
+    <h2>Shared primitives · React / DOM</h2>
+    <p>Every named variant, state and slot uses the same typed recipe. Dialog specimens are nonmodal; open a modal with the behavior controls.</p>
+    <button type="button" onClick={async()=>{const {createDialog,createButton}=await import('./dom');const close=createButton({text:'Close',onClick:()=>modal.close()});const modal=createDialog({title:'Keyboard and focus',body:'Escape and outside click close this modal.',actions:close});modal.open();}}>Open lifecycle example</button>
+    <div className="ds-specimens">{examples.map(example=><section key={example.name} data-specimen={example.name}><h3>{example.name}</h3><div className="ds-specimen-pair"><div data-renderer="react">{example.react}</div><DomSpecimen build={example.dom}/></div></section>)}</div>
     <h2 className="tw:font-display">Semantic color roles</h2>
     <div className="tw:flex tw:flex-wrap tw:gap-content">
       {theme && colorRoles.map(role => <article key={role} className="tw:border tw:border-solid tw:border-rule tw:rounded-card tw:p-control">

@@ -192,3 +192,6 @@ complement that matrix. The repository currently has no ladder `docs/agents/veri
 `check:fast`/`check:full`/`verify:app` contract; do not label these commands as those rungs.
 
 P1 review-fix evidence and per-finding receipts: `/tmp/aicap-design/evidence/p1-fix/report.md`.
+
+P3 primitives, parity decisions, adapter examples and browser-check APIs:
+[design-primitives.md](design-primitives.md).
