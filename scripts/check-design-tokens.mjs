@@ -78,7 +78,8 @@ function files(dir = root) {
     return productFile(rel) ? [rel] : [];
   });
 }
-export function scanDesignFile(file, source) {
+export function scanDesignFile(file, source, options = {}) {
+  const enforceNames = options.semanticNames ?? enforceSemanticNames;
   const tokenSource = allowed.has(file);
   const entries = [];
   const add = (kind, context, value) => entries.push({ file, kind, context: normalize(context), value: normalize(value) });
@@ -105,15 +106,21 @@ export function scanDesignFile(file, source) {
       const utility = word.slice(lastColon + 1).replace(/!$/, '');
       if ((/-\[[^]*\]$|^-?\[[^]*\]$|^-?[\w-]+-\([^]*\)$/.test(utility)) && !/-(?:\(--ds-[\w-]+\)|\[var\(--ds-[\w-]+\)\])$/.test(utility) && utility !== 'content-[attr(data-label)]') add('arbitrary-aesthetic', context, word);
       if (!mappedScale(utility)) add('unmapped-scale-utility', context, word);
-      if (enforceSemanticNames && checkSemanticName(word)) add('value-encoding-name', context, word);
+      if (enforceNames && checkSemanticName(word)) add('value-encoding-name', context, word);
     }
     for (const match of text.matchAll(defaultFont)) add('default-font-utility', context, match[0]);
   }
   if (file.endsWith('.css')) {
     const tree = postcss.parse(source);
     tree.walkDecls(decl => {
-      if (enforceSemanticNames && checkSemanticName(decl.prop)) add('value-encoding-name', decl.prop, decl.prop);
-      if (tokenSource) return;
+      if (enforceNames && checkSemanticName(decl.prop)) add('value-encoding-name', decl.prop, decl.prop);
+      if (tokenSource) {
+        const themed = decl.parent.type === 'rule' && /data-theme\s*=/.test(decl.parent.selector);
+        // Print is intentionally independent of the device appearance (D18).
+        const fixedPrint = ['--ds-print-paper','--ds-print-ink'].includes(decl.prop);
+        if (decl.prop.startsWith('--ds-') && !themed && !fixedPrint && (/(?:#[\da-f]{3,8}\b|(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)\(|var\(\s*--pigment-)/i.test(decl.value) || namedColors.has(decl.value.trim()))) add('shared-screen-color', decl.prop, decl.value);
+        return;
+      }
       const ancestry = []; let node = decl.parent;
       while (node && node.type !== 'root') { ancestry.unshift(node.selector ?? `@${node.name} ${node.params ?? ''}`); node = node.parent; }
       const context = ancestry.join(' / ') + ' / ' + decl.prop;
@@ -130,7 +137,7 @@ export function scanDesignFile(file, source) {
     tree.walkAtRules(rule => {
       if (rule.name === 'import' && !/\blayer(?:\s*\(|\s*;|$)/.test(rule.params)) add('unlayered-css-import', '@import', rule.params);
       if (['media', 'custom-variant'].includes(rule.name) && /\b(?:width|height)\s*[:<>=][^)]*\d+(?:px|rem|em)\b/.test(rule.params)) add('raw-media-query', '@' + rule.name, rule.params);
-      if (enforceSemanticNames && ['utility', 'custom-variant'].includes(rule.name) && checkSemanticName(rule.params.split(/[\s({]/)[0])) add('value-encoding-name', '@' + rule.name, rule.params);
+      if (enforceNames && ['utility', 'custom-variant'].includes(rule.name) && checkSemanticName(rule.params.split(/[\s({]/)[0])) add('value-encoding-name', '@' + rule.name, rule.params);
     });
     tree.walkRules(rule => {
       if (!tokenSource && /data-(?:theme|type|design|ground)\s*[=\]]/.test(rule.selector)) add('legacy-theme-selector', rule.selector, rule.selector);
