@@ -45,6 +45,11 @@ export function specimens(): Specimen[] {
           icon: document.createTextNode("×"),
         }),
     });
+  rows.push({
+    name: "field-group/transcription",
+    react: <R.FieldGroup variant="transcription" label="Language"><R.Button variant="transcription-language">EN</R.Button></R.FieldGroup>,
+    dom: () => { const content = document.createElement("div"); content.append(D.createButton({variant:"transcription-language",text:"EN"})); return D.createFieldGroup({variant:"transcription",label:"Language",content}); },
+  });
   for (const variant of r.fieldVariants)
     for (const invalid of [false, true])
       for (const control of ["input", "select", "textarea"] as const) {

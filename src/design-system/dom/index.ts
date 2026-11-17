@@ -246,6 +246,20 @@ export function updateField(
   if (ids) control.setAttribute("aria-describedby", ids);
   else control.removeAttribute("aria-describedby");
 }
+/** A caption for a composite field, without pretending the group is one native input. */
+export function createFieldGroup(options: r.FieldOptions & ElementOptions & {
+  label: string;
+  content: HTMLElement;
+}) {
+  const slots = r.fieldRecipe(options);
+  const root = element("div", slots.root, undefined, options);
+  const caption = element("span", slots.label, options.label);
+  caption.id = `ds-field-group-${++fieldId}`;
+  options.content.setAttribute("role", "group");
+  options.content.setAttribute("aria-labelledby", caption.id);
+  root.append(caption, options.content);
+  return root;
+}
 export interface CheckboxOptions extends r.CheckboxOptions, ElementOptions {
   label: string;
   checked?: boolean;

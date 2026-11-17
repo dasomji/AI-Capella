@@ -249,6 +249,16 @@ export function Field({
     </div>
   );
 }
+/** Composite-field caption shares the native Field appearance. */
+export function FieldGroup({ variant, invalid, label, children, layout, ...props }:
+  Native<HTMLAttributes<HTMLDivElement>> & r.FieldOptions & {label: ReactNode}) {
+  const slots = r.fieldRecipe({variant, invalid});
+  const labelId = useId();
+  return <div {...props} className={r.withLayout(slots.root, layout)}>
+    <span id={labelId} className={slots.label}>{label}</span>
+    <div role="group" aria-labelledby={labelId}>{children}</div>
+  </div>;
+}
 export type CheckboxProps = Native<
   Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "size">
 > &
