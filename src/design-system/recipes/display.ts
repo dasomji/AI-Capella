@@ -25,7 +25,7 @@ function cardRecipeStyles({ variant = "surface" }: CardOptions = {}) {
   return (
     "tw:box-border tw:m-0 " +
     "tw:p-18" +
-    " tw:border tw:border-solid " + (variant==="admin"?"tw:font-auth-body tw:text-body tw:leading-body ":"tw:font-body tw:leading-body ") +
+    " tw:border tw:border-solid " + (variant==="admin"?"tw:font-auth-body tw:text-body tw:leading-body tw:tabular-nums ":"tw:font-body tw:leading-body ") +
     appearances[variant]
   );
 }
@@ -75,7 +75,7 @@ function toggleGroupRecipeStyles({
   separator,
 }: ToggleGroupOptions = {}) {
   const item = (pressed = false) => {
-    if(variant==='admin'||variant==='presets'||variant==='admin-language')return "tw:inline-block tw:box-border tw:m-0 tw:min-h-44 tw:px-2 tw:py-4 tw:border-0 tw:rounded-field tw:bg-transparent tw:text-body-small tw:leading-admin tw:cursor-pointer tw:tabular-nums tw:focus-visible:outline-2 tw:focus-visible:outline-admin-accent tw:focus-visible:outline-offset-3 " + (variant==='admin-language'?'tw:min-w-28 tw:font-auth-mono ':'tw:font-auth-body ') + (pressed?'tw:text-admin-ink tw:font-label tw:underline tw:underline-offset-5':'tw:text-admin-secondary tw:font-regular');
+    if(variant==='admin'||variant==='presets'||variant==='admin-language')return "tw:inline-block tw:box-border tw:m-0 tw:min-h-44 tw:px-2 tw:py-4 tw:border-0 tw:rounded-field tw:bg-transparent tw:text-body-small tw:leading-admin tw:cursor-pointer tw:text-center tw:focus-visible:outline-2 tw:focus-visible:outline-admin-accent tw:focus-visible:outline-offset-3 " + (variant==='admin-language'?'tw:min-w-28 tw:font-auth-mono ':'tw:font-auth-body ') + (pressed?'tw:text-admin-ink tw:font-label tw:underline tw:underline-offset-5':'tw:text-admin-secondary tw:font-regular');
     if (variant === "language" && separator !== undefined)
       return "tw:inline-block tw:box-border tw:m-0 tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4 tw:border-0 tw:rounded-field tw:bg-transparent tw:font-auth-mono tw:text-small tw:font-regular tw:leading-admin tw:cursor-pointer tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-focus tw:focus-visible:outline-offset-4 " + (pressed ? "tw:text-ink" : "tw:text-ink-secondary");
     if (variant === "segmented")

@@ -93,8 +93,8 @@ function buttonRecipeStyles({
   return [
     variant.startsWith("dense") ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : controlBase,
     variant.startsWith("dense") ? denseDisabled : disabledRecipe,
-    variant.startsWith("dense") ? "tw:leading-admin tw:tabular-nums" : "tw:leading-body",
-    "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 tw:border-solid tw:whitespace-nowrap tw:cursor-pointer " + (variant === "dense-sort" ? "tw:border-0" : "tw:border"),
+    variant.startsWith("dense") ? "tw:leading-admin" : "tw:leading-body",
+    (variant.startsWith("dense") ? (variant==="dense-sort"?"tw:inline-block ":"tw:inline-block tw:text-center ") : "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 ") + "tw:border-solid tw:whitespace-nowrap tw:cursor-pointer " + (variant === "dense-sort" ? "tw:border-0 tw:text-left" : "tw:border"),
     buttonShapes[variant as keyof typeof buttonShapes],
     color,
     pressed ? "tw:shadow-emboss-pressed" : "",
@@ -127,8 +127,8 @@ function iconButtonRecipeStyles({
   };
   return [
     controlBase,
-    variant.startsWith("admin") ? "tw:tabular-nums " + denseDisabled : disabledRecipe,
-    "tw:inline-grid tw:place-items-center tw:flex-none tw:border-0 tw:bg-transparent tw:cursor-pointer",
+    variant.startsWith("admin") ? denseDisabled : disabledRecipe,
+    (variant.startsWith("admin") ? "tw:inline-block tw:text-center " : "tw:inline-grid tw:place-items-center tw:flex-none ") + "tw:border-0 tw:bg-transparent tw:cursor-pointer",
     shapes[variant],
   ].join(" ");
 }
@@ -212,7 +212,7 @@ function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
       disabledRecipe +
       " tw:appearance-auto tw:p-0 tw:shrink-0 " +
       (variant === "permission"
-        ? "tw:size-20 tw:accent-admin-accent"
+        ? "tw:size-20 tw:accent-admin-accent tw:mt-3 tw:mr-3 tw:mb-3 tw:ml-4"
         : "tw:size-18 tw:accent-accent"),
   };
 }
@@ -227,7 +227,7 @@ function switchRecipeStyles({
 }: SwitchOptions = {}) {
   const sizes = {
     player: "tw:w-52 tw:h-32 tw:p-4",
-    admin: "tw:w-48 tw:h-26 tw:p-3",
+    admin: "tw:w-48 tw:h-26 tw:p-0",
     capability: "tw:w-28 tw:h-16 tw:p-2",
   };
   const thumbs = {
@@ -242,8 +242,9 @@ function switchRecipeStyles({
     root:
       controlBase +
       " " +
-      disabledRecipe +
-      " tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-2 tw:peer-focus-visible:outline-focus tw:peer-focus-visible:outline-offset-4 tw:peer-disabled:opacity-(--ds-opacity-disabled) tw:min-h-0 tw:leading-body tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:rounded-chip tw:border-solid tw:cursor-pointer " +
+      (variant === "admin" ? denseDisabled : disabledRecipe) +
+      (variant === "admin" ? " tw:min-h-26 tw:font-auth-mono tw:text-body-small tw:leading-admin tw:relative tw:inline-block tw:shrink-0 tw:rounded-chip tw:border-solid tw:cursor-pointer " :
+      " tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-2 tw:peer-focus-visible:outline-focus tw:peer-focus-visible:outline-offset-4 tw:peer-disabled:opacity-(--ds-opacity-disabled) tw:min-h-0 tw:leading-body tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:rounded-chip tw:border-solid tw:cursor-pointer ") +
       sizes[variant] +
       " " +
       (variant === "player"
@@ -255,7 +256,7 @@ function switchRecipeStyles({
               : "tw:bg-accent tw:border-accent"
             : "tw:bg-transparent tw:border-ink-secondary")),
     thumb:
-      "tw:block tw:rounded-round tw:shrink-0 tw:transition-transform tw:duration-switch tw:motion-reduce:transition-none " +
+      (variant === "admin" ? "tw:absolute tw:left-3 tw:top-3 " : "") + "tw:block tw:rounded-round tw:shrink-0 tw:transition-transform tw:duration-switch tw:motion-reduce:transition-none " +
       thumbs[variant] +
       " " +
       (checked

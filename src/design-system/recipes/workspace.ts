@@ -51,7 +51,7 @@ export function workspaceRecipe(part: WorkspacePart) {
   const classes=parts[part];
   const type=(/tw:font-(auth-body|auth-display|auth-mono)/.test(classes)?'':'tw:font-auth-body ')+(/tw:text-(body|body-small|label|small|section|admin|metric|workspace-heading|workspace-wordmark)( |$)/.test(classes)?'':'tw:text-body ')+(/tw:leading-/.test(classes)?'':'tw:leading-body ')+(/tw:text-admin-(ink|secondary)/.test(classes)?'':'tw:text-admin-ink ');
   const typography=['page','header','wordmark','title','heading','subheading','note','legend','term','value','mono','content'];
-  return typography.includes(part) ? normalizeRecipe('tw:box-border tw:tabular-nums '+type+classes) : classes;
+  return typography.includes(part) ? normalizeRecipe('tw:box-border '+(part==='subheading'?'':'tw:tabular-nums ')+type+classes) : classes;
 }
 export interface NavigationOptions { variant?: 'admin' }
 export function navigationRecipe(_options: NavigationOptions={}) {
