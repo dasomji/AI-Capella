@@ -91,9 +91,9 @@ async function capture(side,base,theme,width,height) {
  await page.evaluate(()=>parityMain.player());await shot('player-roll');
  await page.evaluate(()=>parityMain.mixer());await shot('player-mixer');await close();
  await page.evaluate(()=>parityMain.controls());await shot('player-controls');await close();
- await page.locator('[data-action=open-tempo]').click();await shot('tempo');await close();
+ await page.locator('[data-action=open-tempo]').evaluate(button=>button.click());await shot('tempo');await close();
  await page.evaluate(()=>parityMain.export());await shot('export');await close();
- await page.locator('[data-view=staff]').click();await shot('player-staff');
+ await page.evaluate(()=>parityMain.player('staff'));await shot('player-staff');
  assert.deepEqual(errors,[],`${side} page errors`);await context.close();return result;
 }
 try {
