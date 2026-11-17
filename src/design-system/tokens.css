@@ -558,6 +558,9 @@
   --ds-voice-7: var(--pigment-voice-7);
   --ds-voice-8: var(--pigment-feedback-survey);
   --ds-component-action-hover: var(--ds-action-hover);
+  --ds-note-secondary: rgb(21 17 26 / 0.55);
+  --ds-hint-secondary: rgb(20 18 28 / 0.6);
+  --ds-note-shadow: 0 18px 50px rgb(0 0 0 / 0.55);
   --ds-component-tour-rule: rgb(21 17 26 / 0.22);
   --ds-component-menu-glow: radial-gradient(closest-side, rgb(255 212 160 / 0.2), rgb(255 208 156 / 0.08) 60%, rgb(255 208 156 / 0));
   --ds-component-menu-hover: #fff3e2;
@@ -669,6 +672,9 @@
   --ds-voice-7: var(--pigment-voice-7-2);
   --ds-voice-8: var(--pigment-feedback-survey-2);
   --ds-component-action-hover: var(--ds-surface-hover);
+  --ds-note-secondary: rgb(243 233 211 / 0.62);
+  --ds-hint-secondary: rgb(243 233 211 / 0.62);
+  --ds-note-shadow: var(--ds-component-toast-shadow);
   --ds-component-tour-rule: rgb(243 233 211 / 0.3);
   --ds-component-menu-glow: radial-gradient(closest-side, rgb(220 150 60 / 0.18), rgb(220 150 60 / 0.07) 60%, rgb(220 150 60 / 0));
   --ds-component-menu-hover: #1f160f;
@@ -780,6 +786,9 @@
   --ds-voice-7: var(--pigment-voice-7);
   --ds-voice-8: var(--pigment-feedback-survey);
   --ds-component-action-hover: var(--ds-action-hover);
+  --ds-note-secondary: rgb(21 17 26 / 0.55);
+  --ds-hint-secondary: rgb(20 18 28 / 0.6);
+  --ds-note-shadow: 0 18px 50px rgb(0 0 0 / 0.55);
   --ds-component-tour-rule: rgb(21 17 26 / 0.22);
   --ds-component-menu-glow: radial-gradient(closest-side, rgb(255 212 160 / 0.2), rgb(255 208 156 / 0.08) 60%, rgb(255 208 156 / 0));
   --ds-component-menu-hover: #fff3e2;
@@ -1182,4 +1191,35 @@
   --leading-account: var(--ds-leading-account);
   --leading-account-links: var(--ds-leading-account-links);
   --spacing-76: var(--ds-space-76);
+}
+
+/* Isolated domain-control parity geometry (D09/D12/D13/D17). */
+:root {
+  --ds-dialog-transcription-max-width: calc(100vw - 24px);
+  --ds-review-columns: minmax(0,1fr) 320px;
+  --ds-upload-tile-height: 140px;
+  --ds-upload-tile-phone-height: 130px;
+  --ds-input-field-margin: 24px 0;
+  --ds-layer-note: 800;
+  --ds-layer-tour: 1200;
+  --ds-menu-member-width: 200px;
+  --ds-menu-job-width: 180px;
+  --ds-sheet-padding: 8px 20px calc(20px + env(safe-area-inset-bottom,0px));
+  --ds-transcription-backdrop: #0009;
+  --ds-transcription-focus: 0 1px var(--ds-transcription-accent);
+  --ds-transcription-selected: inset 0 0 0 1px var(--ds-transcription-accent);
+  --ds-domain-label-gap: .7rem;
+  --ds-domain-label-tracking: .08em;
+}
+@theme inline {
+  --color-note-secondary: var(--ds-note-secondary);
+  --color-hint-secondary: var(--ds-hint-secondary);
+  --color-transcription-backdrop: var(--ds-transcription-backdrop);
+  --shadow-note: var(--ds-note-shadow);
+  --shadow-transcription-focus: var(--ds-transcription-focus);
+  --shadow-transcription-selected: var(--ds-transcription-selected);
+  --spacing-upload-tile: var(--ds-upload-tile-height);
+  --spacing-upload-tile-phone: var(--ds-upload-tile-phone-height);
+  --spacing-menu-member: var(--ds-menu-member-width);
+  --spacing-menu-job: var(--ds-menu-job-width);
 }
