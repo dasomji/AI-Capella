@@ -13,7 +13,7 @@ serialize sRGB tokens as named colors; the accessor resolves valid names through
 on the snapshot cold path and still rejects invalid/contextual values. The traced
 Light word is paired with the bundled Italianno face; another script requires another trace.
 
-`main.ts` subscribes without registering a quiet-moment preference handler. It reassigns DOM
+`main.ts` holds appearance requests throughout the player under D05 B, then releases them on repertoire entry. Pausing/stopping inside the player does not release the hold. Explicit, OS and cross-tab theme/type/title requests use the controller; paper choices use the same category queue. Renderer subscriptions still follow applied snapshot revisions. It reassigns DOM
 voice colors and repaints covers, marks, overview and the open score view without changing audio
 or rehearsal state. Fonts already loaded cause one repaint pass; a pending font completion rebuilds metrics only
 if its captured revision is still current. Neither color, material nor type swaps
@@ -34,13 +34,12 @@ A4, margins and engraving defaults remain in `exportPdf.ts`.
 
 ## Exact renderer roles
 
-The original appearance is retained by distinct inputs in `tokens.css`: gel deep
+Unchanged material behavior retains distinct inputs in `tokens.css`: gel deep
 shading, lantern cavity/occlusion/glow, paper strand/light/fleck/transmission, wordmark rim,
 individual name/ribbon/stage/staff temperatures, wave shades/grounds, cover ground, keyboard
 separator/shadow, row/hole-edge shadows and brand tile. Theme-independent inputs live in
 `:root`; only varying inputs appear in every theme block. The concrete registry and generated
-manifest include them; `renderer-theme.test.ts` pins their historical values. Never replace
-these with nearby pigments or merge their purposes without an owner decision.
+manifest include them; `renderer-theme.test.ts` pins unchanged historical values and the decided D02 paper grounds. D01/D02/D07 now unify accent, paper elevations and gold-ink families; material/wordmark gold aliases share the ink family, with a brighter branding stop and quieter mark endpoints. Gel, lantern and ink rendering algorithms remain unchanged. Other material purposes still require an owner decision before merging.
 
 Visible shadows use opaque roles with the renderer's authored alpha. The DOM `backdrop` role
 already contains alpha; using it here would multiply opacity and change the image. Paper's
@@ -93,7 +92,7 @@ Each theme authors `--ds-material-strategy: light | ink`, independent of its bro
 `color-scheme`. The typed snapshot maps `light` to device-selected paper, source-over
 lanterns and additive ribbons; `ink` to pergament, multiplied lanterns/glows and
 source-over ribbon lines. Night paper/Velvet select `light`; Parchment selects `ink`.
-These roles preserve the previous pixels without using browser scheme as a material policy.
+These roles preserve the rendering strategies without using browser scheme as a material policy; D02/D07 deliberately change their paper/gold inputs.
 
 ### Canvas reset constants
 
