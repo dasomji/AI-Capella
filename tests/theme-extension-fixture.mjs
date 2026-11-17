@@ -16,7 +16,8 @@ export function loudThemeBlock(source) {
   }
   const shifted = (r,g,b,a) => `rgba(${(g+121)%256}, ${(b+177)%256}, ${(r+63)%256}, ${a ?? 1})`;
   block.walkDecls(d => {
-    d.value = resolve(d.value).replace(/#[\da-f]{3,8}\b|(?:rgba?|hsla?)\([^)]*\)/gi, color => {
+    const fallbackPaint = { '--ds-voice-fallback-saturation': '92', '--ds-voice-fallback-lightness': '50' };
+    d.value = (fallbackPaint[d.prop] ?? resolve(d.value)).replace(/#[\da-f]{3,8}\b|(?:rgba?|hsla?)\([^)]*\)/gi, color => {
       if (color.startsWith('#')) {
         let hex = color.slice(1); if (hex.length < 5) hex = [...hex].map(c=>c+c).join('');
         return shifted(...[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)), hex.length===8?parseInt(hex.slice(6),16)/255:1);
