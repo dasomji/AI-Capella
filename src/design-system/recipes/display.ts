@@ -1,4 +1,5 @@
-import { libraryAccountUtilityRecipe } from "./library";
+import { libraryCardRecipe, libraryBadgeRecipe } from "./library";
+import { accountErrorRecipe } from "./account";
 import { normalizeRecipe } from "./normalize";
 import { buttonRecipe, type ButtonOptions } from "./controls";
 export const cardVariants = [
@@ -14,21 +15,21 @@ export interface CardOptions {
   variant?: (typeof cardVariants)[number];
 }
 function cardRecipeStyles({ variant = "surface" }: CardOptions = {}) {
-  if (variant === "library") return libraryAccountUtilityRecipe("ds-library-song-card song-card");
-  if (variant === "tour" || variant === "power-hint") return "tw:box-border tw:m-0 tw:border-0 tw:bg-ink tw:text-surface-sunken tw:font-body tw:leading-body " + (variant === "tour" ? "ds-tour-note tw:absolute tw:left-0 tw:top-0 tw:w-panel-tour tw:opacity-0 tw:panel-tour-transition tw:[&.shown]:opacity-100 tw:[&.shown]:duration-panel-note-in tw:px-18 tw:pt-14 tw:pb-12 tw:rounded-transcription-tile tw:shadow-note" : "ds-power-note tw:fixed tw:left-1/2 tw:bottom-panel-toast-bottom tw:z-note tw:w-panel-power tw:panel-note-enter tw:opacity-0 tw:panel-toast-transition tw:[&.show]:opacity-100 tw:[&.show]:panel-toast-shown tw:max-panel:bottom-panel-toast-bottom-phone tw:px-16 tw:pt-14 tw:pb-10 tw:rounded-card tw:shadow-component-toast");
+  if (variant === "library") return libraryCardRecipe();
+  if (variant === "tour" || variant === "power-hint") return "tw:box-border tw:m-none tw:border-0 tw:bg-ink tw:text-surface-sunken tw:font-body tw:leading-leading-body " + (variant === "tour" ? "ds-tour-note tw:absolute tw:left-none tw:top-none tw:w-tour-note-width tw:opacity-hidden tw:motion-panel-tour-transition tw:[&.shown]:opacity-visible tw:[&.shown]:duration-note-in tw:px-action tw:pt-row tw:pb-control tw:rounded-tile tw:shadow-note-shadow" : "ds-power-note tw:fixed tw:left-1/2 tw:bottom-toast-bottom tw:z-note tw:w-power-note-width tw:[transform:var(--ds-panel-note-enter-transform)] tw:opacity-hidden tw:motion-panel-toast-transition tw:[&.show]:opacity-visible tw:[&.show]:[transform:var(--ds-panel-toast-shown-transform)] tw:max-panel:bottom-toast-bottom-phone tw:px-content tw:pt-row tw:pb-inline tw:rounded-card tw:shadow-component-toast-shadow");
   const appearances = {
     surface: "tw:bg-surface tw:text-ink tw:border-rule-strong tw:rounded-card",
     raised:
       "tw:bg-surface-raised tw:text-ink tw:border-rule-strong tw:rounded-card",
     material:
-      "tw:bg-material-card tw:text-ink tw:border-rule-strong tw:rounded-card tw:shadow-material-lift",
+      "tw:surface-material-card tw:text-ink tw:border-rule-strong tw:rounded-card tw:shadow-material-lift",
     admin:
       "tw:bg-admin-surface tw:text-admin-ink tw:border-admin-rule tw:rounded-field",
   };
   return (
-    "tw:box-border tw:m-0 " +
-    "tw:p-18" +
-    " tw:border tw:border-solid " + (variant==="admin"?"tw:font-auth-body tw:text-body tw:leading-body tw:tabular-nums ":"tw:font-body tw:leading-body ") +
+    "tw:box-border tw:m-none " +
+    "tw:p-action" +
+    " tw:border-(length:--ds-stroke-thin) tw:border-solid " + (variant==="admin"?"tw:font-auth-body tw:text-body tw:leading-leading-body tw:tabular-nums ":"tw:font-body tw:leading-leading-body ") +
     appearances[variant]
   );
 }
@@ -53,11 +54,11 @@ const feedback: Record<FeedbackIntent, string> = {
   accent: "tw:text-accent tw:border-accent",
 };
 function badgeRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
-  if (variant === "offline-prepared") return libraryAccountUtilityRecipe("ds-offline-mark offline-mark");
-  if (variant === "library") return libraryAccountUtilityRecipe("ds-library-tag tag");
-  if(variant === "admin")return "tw:inline-block tw:box-border tw:px-7 tw:py-2 tw:rounded-chip tw:border tw:border-solid tw:bg-transparent tw:font-auth-body tw:text-body-small tw:leading-body " + (intent === "accent" ? "tw:text-admin-accent tw:border-admin-accent" : "tw:text-admin-ink tw:border-admin-rule");
+  if (variant === "offline-prepared") return libraryBadgeRecipe("prepared");
+  if (variant === "library") return libraryBadgeRecipe("tag");
+  if(variant === "admin")return "tw:inline-block tw:box-border tw:px-segment tw:py-micro tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent tw:font-auth-body tw:text-body-small tw:leading-leading-body " + (intent === "accent" ? "tw:text-admin-accent tw:border-admin-accent" : "tw:text-admin-ink tw:border-admin-rule");
   return (
-    "tw:inline-block tw:box-border tw:px-7 tw:py-2 tw:rounded-chip tw:border tw:border-solid tw:bg-transparent tw:font-body tw:text-small tw:leading-body " +
+    "tw:inline-block tw:box-border tw:px-segment tw:py-micro tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent tw:font-body tw:text-small tw:leading-leading-body " +
     feedback[intent]
   );
 }
@@ -80,52 +81,52 @@ function toggleGroupRecipeStyles({
   separator,
 }: ToggleGroupOptions = {}) {
   const item = (pressed = false) => {
-    if(variant==='admin'||variant==='presets'||variant==='admin-language')return "tw:inline-block tw:box-border tw:m-0 tw:min-h-44 tw:px-2 tw:py-4 tw:border-0 tw:rounded-field tw:bg-transparent tw:text-body-small tw:leading-admin tw:cursor-pointer tw:text-center tw:focus-visible:outline-2 tw:focus-visible:outline-admin-accent tw:focus-visible:outline-offset-3 " + (variant==='admin-language'?'tw:min-w-28 tw:font-auth-mono ':'tw:font-auth-body ') + (pressed?'tw:text-admin-ink tw:font-label tw:underline tw:underline-offset-5':'tw:text-admin-secondary tw:font-regular');
+    if(variant==='admin'||variant==='presets'||variant==='admin-language')return "tw:inline-block tw:box-border tw:m-none tw:min-h-touch tw:px-micro tw:py-compact tw:border-0 tw:rounded-field tw:bg-transparent tw:text-body-small tw:leading-leading-admin tw:cursor-pointer tw:text-center tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:[outline-color:var(--ds-admin-accent)] tw:focus-visible:outline-offset-tight " + (variant==='admin-language'?"tw:min-w-heading tw:font-auth-mono ":'tw:font-auth-body ') + (pressed?"tw:text-admin-ink tw:font-weight-label tw:underline tw:underline-offset-(--ds-space-control-dense)":"tw:text-admin-secondary tw:font-weight-body");
     if (variant === "language" && separator !== undefined)
-      return "tw:inline-block tw:box-border tw:m-0 tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4 tw:border-0 tw:rounded-field tw:bg-transparent tw:font-auth-mono tw:text-small tw:font-regular tw:leading-admin tw:text-center tw:cursor-pointer tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-focus tw:focus-visible:outline-offset-4 " + (pressed ? "tw:text-ink" : "tw:text-ink-secondary");
+      return "tw:inline-block tw:box-border tw:m-none tw:min-h-panel tw:min-w-heading tw:px-none tw:py-compact tw:border-0 tw:rounded-field tw:bg-transparent tw:font-auth-mono tw:text-small tw:font-weight-body tw:leading-leading-admin tw:text-center tw:cursor-pointer tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:[outline-color:var(--ds-focus)] tw:focus-visible:outline-offset-compact " + (pressed ? "tw:text-ink" : "tw:text-ink-secondary");
     if (variant === "segmented")
       return (
-        "tw:box-border tw:m-0 tw:inline-flex tw:items-center tw:gap-7 tw:h-32 tw:px-12 tw:py-0 tw:rounded-menu tw:border-0 tw:font-control tw:font-label tw:text-body-small tw:whitespace-nowrap tw:cursor-pointer " +
+        "tw:box-border tw:m-none tw:inline-flex tw:items-center tw:gap-segment tw:h-panel tw:px-control tw:py-none tw:rounded-menu tw:border-0 tw:font-control tw:font-weight-label tw:text-body-small tw:whitespace-nowrap tw:cursor-pointer " +
         (pressed
           ? "tw:bg-surface-hover tw:text-ink"
           : "tw:bg-transparent tw:text-ink-secondary")
       );
     const metric =
       variant === "language"
-        ? "tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4"
+        ? "tw:min-h-panel tw:min-w-heading tw:px-none tw:py-compact"
         : variant === "transcription"
-          ? "tw:min-h-36 tw:px-0 tw:py-4"
-          : "tw:min-h-44 tw:px-2 tw:py-4";
+          ? "tw:min-h-toolbar-dense tw:px-none tw:py-compact"
+          : "tw:min-h-touch tw:px-micro tw:py-compact";
     return (
-      "tw:box-border tw:m-0 tw:inline-flex tw:items-center tw:justify-center tw:border-0 tw:rounded-field tw:bg-transparent " +
-      "tw:font-auth-mono tw:text-small tw:leading-field" +
-      " tw:font-regular" + " tw:cursor-pointer tw:disabled:opacity-(--ds-opacity-disabled) tw:focus-visible:outline-2 tw:focus-visible:outline-focus " +
+      "tw:box-border tw:m-none tw:inline-flex tw:items-center tw:justify-center tw:border-0 tw:rounded-field tw:bg-transparent " +
+      "tw:font-auth-mono tw:text-small tw:leading-leading-field" +
+      " tw:font-weight-body" + " tw:cursor-pointer tw:disabled:opacity-(--ds-opacity-disabled) tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:[outline-color:var(--ds-focus)] " +
       metric +
       " " +
       (pressed ? "tw:text-ink" : "tw:text-ink-secondary")
     );
   };
   return {
-    root: variant==="admin-language" ? "tw:block tw:font-auth-mono tw:text-small tw:leading-admin tw:text-ink-secondary tw:tabular-nums" : (variant==="admin"||variant==="presets") && separator!==undefined ? "tw:block tw:font-auth-body tw:text-body tw:leading-body tw:tabular-nums " + (variant === "presets" ? "tw:text-admin-ink" : "tw:text-admin-secondary") : variant === "language" && separator !== undefined
-      ? "tw:block tw:font-auth-mono tw:text-small tw:leading-admin tw:text-ink-secondary"
+    root: variant==="admin-language" ? "tw:block tw:font-auth-mono tw:text-small tw:leading-leading-admin tw:text-ink-secondary tw:tabular-nums" : (variant==="admin"||variant==="presets") && separator!==undefined ? "tw:block tw:font-auth-body tw:text-body tw:leading-leading-body tw:tabular-nums " + (variant === "presets" ? "tw:text-admin-ink" : "tw:text-admin-secondary") : variant === "language" && separator !== undefined
+      ? "tw:block tw:font-auth-mono tw:text-small tw:leading-leading-admin tw:text-ink-secondary"
       : "tw:inline-flex tw:items-center tw:flex-wrap " +
       (variant === "segmented"
-        ? "tw:p-3 tw:rounded-segment tw:bg-surface tw:border tw:border-solid tw:border-rule"
+        ? "tw:p-tight tw:rounded-segment tw:bg-surface tw:border-(length:--ds-stroke-thin) tw:border-solid tw:border-rule"
         : variant === "transcription"
-          ? "tw:gap-10"
-          : "tw:gap-4"),
+          ? "tw:gap-inline"
+          : "tw:gap-compact"),
     item,
   };
 }
 function toolbarRecipeStyles() {
-  return "tw:flex tw:items-center tw:flex-wrap tw:gap-12 tw:font-body tw:text-ink";
+  return "tw:flex tw:items-center tw:flex-wrap tw:gap-control tw:font-body tw:text-ink";
 }
 function statusRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
-  if (variant === "account-delete") return libraryAccountUtilityRecipe("ds-account-error account-error");
-  if (variant === "account") return "tw:block tw:my-16 tw:font-auth-body tw:text-body tw:leading-account tw:text-center " + feedback[intent];
-  if(variant === "admin")return "tw:block tw:my-16 tw:font-auth-body tw:text-body tw:leading-body tw:text-admin-ink";
+  if (variant === "account-delete") return accountErrorRecipe();
+  if (variant === "account") return "tw:block tw:my-content tw:font-auth-body tw:text-body tw:leading-leading-account tw:text-center " + feedback[intent];
+  if(variant === "admin")return "tw:block tw:my-content tw:font-auth-body tw:text-body tw:leading-leading-body tw:text-admin-ink";
   return (
-    "tw:m-0 tw:font-body tw:text-body-small tw:leading-field " +
+    "tw:m-none tw:font-body tw:text-body-small tw:leading-leading-field " +
     feedback[intent]
   );
 }
@@ -143,21 +144,21 @@ function emptyStateRecipeStyles({
 }: EmptyStateOptions = {}) {
   return {
     root:
-      (variant === "admin-text" ? "tw:block tw:my-16 tw:font-auth-body tw:text-body tw:text-admin-ink tw:leading-body" : variant === "jobs-hidden"
-        ? "tw:m-0 tw:font-body tw:leading-body tw:hidden"
+      (variant === "admin-text" ? "tw:block tw:my-content tw:font-auth-body tw:text-body tw:text-admin-ink tw:leading-leading-body" : variant === "jobs-hidden"
+        ? "tw:m-none tw:font-body tw:leading-leading-body tw:hidden"
         : variant === "landing-actions"
-          ? "tw:m-0 tw:font-body tw:leading-body tw:grid tw:gap-18 tw:text-center tw:max-w-empty tw:mx-auto tw:py-24"
-          : "tw:m-0 tw:font-body tw:leading-body tw:py-24 tw:text-ink-secondary"),
+          ? "tw:m-none tw:font-body tw:leading-leading-body tw:grid tw:gap-action tw:text-center tw:max-w-width-empty tw:mx-auto tw:py-section"
+          : "tw:m-none tw:font-body tw:leading-leading-body tw:py-section tw:text-ink-secondary"),
     title:
-      variant === "admin-text" ? "tw:m-0 tw:font-auth-body tw:text-body tw:leading-body tw:text-admin-ink" : variant === "landing-actions"
-        ? "tw:m-0 tw:font-auth-display tw:text-auth-title"
-        : "tw:m-0 tw:text-body",
-    body: "tw:m-0 tw:text-body-small",
-    actions: "tw:flex tw:flex-wrap tw:justify-center tw:gap-12",
+      variant === "admin-text" ? "tw:m-none tw:font-auth-body tw:text-body tw:leading-leading-body tw:text-admin-ink" : variant === "landing-actions"
+        ? "tw:m-none tw:font-auth-display tw:text-auth-title"
+        : "tw:m-none tw:text-body",
+    body: "tw:m-none tw:text-body-small",
+    actions: "tw:flex tw:flex-wrap tw:justify-center tw:gap-control",
   };
 }
 function loadingRecipeStyles() {
-  return statusRecipe() + " tw:animate-loading tw:motion-reduce:animate-none";
+  return statusRecipe() + " tw:animate-animation-loading tw:motion-reduce:animate-none";
 }
 /** scroll/metrics intentionally alias until D16; records owns the responsive layout. */
 export const tableVariants = ["records", "scroll", "metrics"] as const;
@@ -170,25 +171,25 @@ function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }
   return {
     root:
       (variant === "records"
-        ? "ds-table-records tw:max-account:min-w-0 tw:panel-record-phone:table-fixed tw:panel-record-phone:[&_thead]:flex tw:panel-record-phone:[&_thead_tr]:flex tw:panel-record-phone:[&_thead]:flex-wrap tw:panel-record-phone:[&_thead_tr]:flex-wrap tw:panel-record-phone:[&_thead]:gap-8 tw:panel-record-phone:[&_thead_tr]:gap-8 tw:panel-record-phone:[&_th:not(:has(button))]:hidden tw:max-account:[&_th]:static tw:max-account:[&_th]:border-0 tw:max-account:[&_th]:whitespace-normal tw:panel-record-phone:[&_tbody]:block tw:panel-record-phone:[&_tbody_tr]:block tw:panel-record-phone:[&_tbody]:w-full tw:panel-record-phone:[&_tbody_tr]:w-full tw:panel-record-phone:[&_tbody_tr]:border-0 tw:panel-record-phone:[&_tbody_tr]:panel-stroke-bottom tw:panel-record-phone:[&_tbody_tr]:border-solid tw:panel-record-phone:[&_tbody_tr]:border-admin-rule tw:panel-record-phone:[&_tbody_tr]:py-10 tw:panel-record-phone:[&_tbody_tr]:px-0 tw:panel-record-phone:[&_td]:block tw:max-account:[&_td]:min-w-0 tw:max-account:[&_td]:max-w-none tw:panel-record-phone:[&_td]:w-full tw:max-account:[&_td]:border-0 tw:max-account:[&_td]:whitespace-normal tw:panel-record-phone:[&_td]:wrap-anywhere tw:max-account:[&_td]:py-6 tw:max-account:[&_td]:px-10 tw:panel-record-phone:[&_td]:before:content-[attr(data-label)] tw:panel-record-phone:[&_td]:before:block tw:panel-record-phone:[&_td]:before:font-inherit tw:panel-record-phone:[&_td]:before:normal-nums tw:panel-record-phone:[&_td]:before:text-small tw:panel-record-phone:[&_td]:before:leading-inherit tw:panel-record-phone:[&_td]:before:text-admin-secondary "
+        ? "ds-table-records tw:max-account:min-w-none tw:[@media_(max-width:_theme(--breakpoint-account))]:table-fixed tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead]:flex tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead_tr]:flex tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead]:flex-wrap tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead_tr]:flex-wrap tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead]:gap-small tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead_tr]:gap-small tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_th:not(:has(button))]:hidden tw:max-account:[&_th]:static tw:max-account:[&_th]:border-0 tw:max-account:[&_th]:whitespace-normal tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody]:block tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:block tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody]:w-full tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:w-full tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:border-0 tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:[border-bottom-width:var(--ds-stroke-thin)] tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:border-solid tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:border-admin-rule tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:py-inline tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:px-none tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:block tw:max-account:[&_td]:min-w-none tw:max-account:[&_td]:max-w-none tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:w-full tw:max-account:[&_td]:border-0 tw:max-account:[&_td]:whitespace-normal tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:wrap-anywhere tw:max-account:[&_td]:py-snug tw:max-account:[&_td]:px-inline tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:content-[attr(data-label)] tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:block tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:font-inherit tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:font-family-inherit tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:normal-nums tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:text-small tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:[line-height:inherit] tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:text-admin-secondary "
         : "") +
-      "tw:w-full tw:min-w-table tw:border-collapse tw:font-auth-body tw:text-body-small tw:leading-body tw:text-admin-ink tw:tabular-nums",
+      "tw:w-full tw:min-w-width-table tw:border-collapse tw:font-auth-body tw:text-body-small tw:leading-leading-body tw:text-admin-ink tw:tabular-nums",
     wrap: "tw:max-w-full tw:overflow-auto tw:overscroll-contain" + (bounded ? " tw:max-h-(--ds-table-height)" : "") + (variant === "records" ? " tw:max-account:overflow-visible tw:max-account:max-h-none" : ""),
     header:
       (variant === "records"
         ? "tw:max-account:static tw:max-account:border-0 tw:max-account:whitespace-normal "
         : "") +
-      "tw:font-auth-body tw:text-body-small tw:leading-body tw:text-admin-ink tw:tabular-nums tw:align-middle tw:max-account:px-10 tw:max-account:py-10 tw:sticky tw:top-0 tw:bg-admin-surface tw:text-left tw:font-emphasis tw:whitespace-nowrap tw:px-14 tw:py-12 tw:border-0 tw:border-b tw:border-solid tw:border-admin-rule",
+      "tw:font-auth-body tw:text-body-small tw:leading-leading-body tw:text-admin-ink tw:tabular-nums tw:align-middle tw:max-account:px-inline tw:max-account:py-inline tw:sticky tw:top-none tw:bg-admin-surface tw:text-left tw:font-weight-medium tw:whitespace-nowrap tw:px-row tw:py-control tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid tw:border-admin-rule",
     cell:
       (variant === "records"
-        ? "tw:max-account:block tw:max-account:w-full tw:max-account:min-w-0 tw:max-account:max-w-none tw:max-account:border-0 tw:max-account:whitespace-normal tw:max-account:py-6 tw:max-account:px-10 "
+        ? "tw:max-account:block tw:max-account:w-full tw:max-account:min-w-none tw:max-account:max-w-none tw:max-account:border-0 tw:max-account:whitespace-normal tw:max-account:py-snug tw:max-account:px-inline "
         : "") +
-      (mono ? "tw:min-w-(--ds-table-cell-mono-min) tw:font-auth-mono tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:max-account:overflow-visible tw:max-account:wrap-anywhere" : "tw:min-w-(--ds-table-cell-min) tw:font-auth-body") + " tw:text-body-small tw:leading-body tw:tabular-nums tw:max-w-(--ds-table-cell-max) tw:px-14 tw:py-12 " + (variant === "records" ? "" : "tw:max-account:p-10 ") + "tw:text-admin-secondary tw:first:text-admin-ink tw:align-top tw:border-0 tw:border-b tw:border-solid tw:border-admin-rule",
+      (mono ? "tw:min-w-(--ds-table-cell-mono-min) tw:font-auth-mono tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:max-account:overflow-visible tw:max-account:wrap-anywhere" : "tw:min-w-(--ds-table-cell-min) tw:font-auth-body") + " tw:text-body-small tw:leading-leading-body tw:tabular-nums tw:max-w-(--ds-table-cell-max) tw:px-row tw:py-control " + (variant === "records" ? "" : "tw:max-account:p-inline ") + "tw:text-admin-secondary tw:first:text-admin-ink tw:align-top tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid tw:border-admin-rule",
     row:
       variant === "records" ? "tw:[&[tabindex]]:hover:bg-table-row-hover tw:[&[tabindex]]:cursor-pointer" : "tw:bg-transparent",
-    empty: "tw:p-24 tw:text-admin-secondary tw:text-left",
+    empty: "tw:p-section tw:text-admin-secondary tw:text-left",
     pagination:
-      "tw:flex tw:items-center tw:flex-wrap tw:gap-12 tw:mt-12 tw:mb-24 tw:font-auth-body tw:text-body tw:leading-body tw:text-admin-ink tw:tabular-nums",
+      "tw:flex tw:items-center tw:flex-wrap tw:gap-control tw:mt-control tw:mb-section tw:font-auth-body tw:text-body tw:leading-leading-body tw:text-admin-ink tw:tabular-nums",
   };
 }
 /** Shared appearances; screen-owned data/selection/sorting stay outside recipes. */

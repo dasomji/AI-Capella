@@ -1,4 +1,4 @@
-import { shellRecipe } from "./design-system/recipes/shell";
+import { accountStageRecipe } from "./design-system/recipes/shell";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { AccountStage } from "./account-stage";
 import { Button, ControlGroup, Field, Input, Status } from "./design-system/react";
@@ -140,12 +140,12 @@ export function AuthPage() {
     <h2>{checking ? m.checkTitle : result ? m.resultTitle : verification ? m.confirmPassword : m[mode]}</h2>
     {checking || result ? <>
       <Status variant="account">{m[status as keyof typeof m]}</Status>
-      {checking && <p className={shellRecipe("account-email")}>{email}</p>}
-      <nav className={shellRecipe("account-links")}>
+      {checking && <p className={accountStageRecipe().email}>{email}</p>}
+      <nav className={accountStageRecipe().links}>
         {checking ? <><Button variant="account-link" busy={busy} disabled={clock < resendAt} onClick={() => void resend()}>{m.resend}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)} s)` : ""}</Button><span aria-hidden="true"> · </span><Button variant="account-link" onClick={() => setStatus("")}>{m.otherEmail}</Button></> : <Button variant="account-link" onClick={() => changeMode(status === "invalid" ? "forgot" : "signin")}>{status === "invalid" ? m.forgot : m.signin}</Button>}
       </nav>
     </> : <>
-      {mode === "signup" && maskedEmail && <p className={shellRecipe("account-hint")}>{m.inviteHint.replace('{email}', maskedEmail)}</p>}
+      {mode === "signup" && maskedEmail && <p className={accountStageRecipe().hint}>{m.inviteHint.replace('{email}', maskedEmail)}</p>}
       <form onSubmit={submit}>
         {mode === "signup" && <Field label={m.name} variant="ruled-account">
           {association => <Input {...association} name="name" autoComplete="name" required />}
@@ -155,7 +155,7 @@ export function AuthPage() {
         </Field>}
         {mode !== "forgot" && <Field label={m.password} variant="ruled-account" describedBy={status === "error" ? statusId : undefined}>
           {association => <ControlGroup>
-            <Input {...association} aria-label={m.password} name="password" type={showPassword ? "text" : "password"} minLength={8} maxLength={128} autoComplete={mode === "signin" || verification ? "current-password" : "new-password"} layout="tw:pr-76" required />
+            <Input {...association} aria-label={m.password} name="password" type={showPassword ? "text" : "password"} minLength={8} maxLength={128} autoComplete={mode === "signin" || verification ? "current-password" : "new-password"} layout="tw:pr-action-reserve" required />
             <Button variant="password-toggle" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? m.hide : m.show}</Button>
           </ControlGroup>}
         </Field>}
@@ -163,10 +163,10 @@ export function AuthPage() {
           {association => <Input {...association} name="confirm" type="password" autoComplete="current-password" onChange={() => setConfirmationError(false)} required />}
         </Field></>}
         <Status id={statusId} variant="account" intent={status && !['signedout', 'expired'].includes(status) ? 'error' : 'neutral'}>{m[status as keyof typeof m] ?? ""}</Status>
-        <Button variant="cta" intent="primary" layout="tw:mt-10" type="submit" busy={busy}>{verification ? m.verifyEmail : m[mode]}</Button>
+        <Button variant="cta" intent="primary" layout="tw:mt-inline" type="submit" busy={busy}>{verification ? m.verifyEmail : m[mode]}</Button>
       </form>
-      {status === "unverified" && <nav className={shellRecipe("account-links")}><Button variant="account-link" busy={busy} disabled={clock < resendAt} onClick={() => void resend()}>{m.resend}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)} s)` : ""}</Button></nav>}
-      <nav className={shellRecipe("account-links")}>
+      {status === "unverified" && <nav className={accountStageRecipe().links}><Button variant="account-link" busy={busy} disabled={clock < resendAt} onClick={() => void resend()}>{m.resend}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)} s)` : ""}</Button></nav>}
+      <nav className={accountStageRecipe().links}>
         {verification && <><Button variant="account-link" onClick={() => changeMode('forgot')}>{m.forgot}</Button><span aria-hidden="true"> · </span></>}
         {mode === "signin" ? <><Button variant="account-link" onClick={() => changeMode('signup')}>{m.signup}</Button><span aria-hidden="true"> · </span><Button variant="account-link" onClick={() => changeMode('forgot')}>{m.forgot}</Button></> : <Button variant="account-link" onClick={() => changeMode('signin')}>{mode === "signup" ? m.haveAccount + ' ' : ''}{m.signin}</Button>}
       </nav>

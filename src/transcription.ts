@@ -1,4 +1,4 @@
-import { shellRecipe } from "./design-system/recipes/shell";
+import { transcriptionJobRecipe } from "./design-system/recipes/shell";
 import {
   createButton,
   updateButton as updatePrimitiveButton,
@@ -40,7 +40,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
 ) {
   const e = document.createElement(tag);
   if (text) e.textContent = text;
-  if (cls) e.className = shellRecipe(cls);
+  if (cls) e.className = cls;
   return e;
 }
 function button(
@@ -52,10 +52,15 @@ function button(
 }
 // Keep the existing class hooks used by browser journeys and screen layout.
 // Appearance and state still come exclusively from the shared builder.
+const transcriptionControlRecipes = new WeakMap<HTMLButtonElement, string>();
+function attachTranscriptionControl(button: HTMLButtonElement, recipe: string) {
+  transcriptionControlRecipes.set(button, recipe);
+  button.classList.add(...recipe.split(" "));
+}
 function updateButton(button: HTMLButtonElement, options: Parameters<typeof updatePrimitiveButton>[1]) {
-  const hooks = [...button.classList].filter(name => name.startsWith("tx-"));
+  const recipe = transcriptionControlRecipes.get(button);
   updatePrimitiveButton(button, options);
-  if (hooks.length) button.classList.add(...shellRecipe(hooks.join(" ")).split(" "));
+  if (recipe) button.classList.add(...recipe.split(" "));
 }
 function errorText(e: unknown) {
   return tr(e instanceof ApiError ? e.code : "error");
@@ -87,7 +92,7 @@ function modal(title: string, wide = false) {
       },
     }),
     d = modal.element;
-  d.classList.add(...shellRecipe("transcription-dialog").split(" "));
+  d.classList.add(...transcriptionJobRecipe().dialog.split(" "));
   if (wide) d.classList.add("transcription-review");
   const close = createIconButton({
     variant: "transcription",
@@ -126,7 +131,7 @@ export function installTranscription(options: {
     permissionNote: HTMLElement | undefined;
   const entry = options.entry,
     host = options.jobs;
-  host.classList.add(...shellRecipe("", "transcription-jobs").split(" "));
+  host.classList.add(...transcriptionJobRecipe().list.split(" "));
   const socket = options.socket;
   const jobMenus: (() => void)[] = [];
   const base = () => `/ensembles/${scope}`;
@@ -145,7 +150,7 @@ export function installTranscription(options: {
       }
     } catch (e) {
       if (g === generation) {
-        host.replaceChildren(el("p", errorText(e), "tx-error"));
+        host.replaceChildren(el("p", errorText(e), transcriptionJobRecipe().error));
       }
     }
   }
@@ -189,23 +194,23 @@ export function installTranscription(options: {
     host.append(el("h2", tr("work")));
     for (const j of visible) {
       const p = jobPresentation(j),
-        card = el("article", undefined, "tx-job");
+        card = el("article", undefined, transcriptionJobRecipe().root);
       card.dataset.job = j.id;
       const title =
         j.options?.title || j.pages[0]?.original_filename || tr("startTitle");
       card.append(el("h3", title));
-      const status = el("p", p.text, "tx-pencil");
+      const status = el("p", p.text, transcriptionJobRecipe().pencil);
       status.setAttribute("role", "status");
       card.append(status);
-      const segments = el("div", undefined, "tx-segments");
+      const segments = el("div", undefined, transcriptionJobRecipe().segments);
       segments.setAttribute("aria-label", p.text);
       p.segments.forEach((s, i) => {
-        const bar = el("span", undefined, `tx-segment ${s}`);
+        const bar = el("span", undefined, transcriptionJobRecipe().segment + " " + s);
         bar.title = tr("page", { n: i + 1 });
         segments.append(bar);
       });
       card.append(segments);
-      const actions = el("div", undefined, "tx-actions");
+      const actions = el("div", undefined, transcriptionJobRecipe().actions);
       if (j.state === "completed")
         actions.append(
           button(tr("review"), () => void review(j, title), {
@@ -304,13 +309,13 @@ export function installTranscription(options: {
       `${tr("startTitle")} ${lang === "de" ? "für" : "for"} ${ensembleById(destination)?.name ?? ""}`,
     );
     dialog = d;
-    const choices = el("div", undefined, "tx-choices"),
-      strip = el("div", undefined, "tx-photos"),
+    const choices = el("div", undefined, transcriptionJobRecipe().choices),
+      strip = el("div", undefined, transcriptionJobRecipe().photos),
       title = createInput({ variant: "transcription" }),
-      language = el("div", undefined, "tx-language"),
-      total = el("p", undefined, "tx-pencil"),
-      notice = el("p", tr("private"), "tx-pencil"),
-      errors = el("p", undefined, "tx-error");
+      language = el("div", undefined, transcriptionJobRecipe().language),
+      total = el("p", undefined, transcriptionJobRecipe().pencil),
+      notice = el("p", tr("private"), transcriptionJobRecipe().pencil),
+      errors = el("p", undefined, transcriptionJobRecipe().error);
     errors.setAttribute("role", "alert");
     title.maxLength = 200;
     title.autocomplete = "off";
@@ -320,16 +325,16 @@ export function installTranscription(options: {
         d.append(
           createField({
             variant: "transcription",
-            layout: "tw:my-24",
+            layout: "tw:my-section",
             label: tr(label),
             control: node,
           }),
         );
-        node.parentElement!.classList.add("tx-field");
+        node.parentElement!.classList.add(...transcriptionJobRecipe().field.split(" "));
         node.previousElementSibling!.classList.add("tx-label");
       } else {
-        const wrap = createFieldGroup({ variant: "transcription", labelId: `${node.id}-label`, layout: "tw:my-24", label: tr(label), content: node });
-        wrap.classList.add(...shellRecipe("tx-field").split(" "));
+        const wrap = createFieldGroup({ variant: "transcription", labelId: `${node.id}-label`, layout: "tw:my-section", label: tr(label), content: node });
+        wrap.classList.add(...transcriptionJobRecipe().field.split(" "));
         wrap.firstElementChild!.classList.add("tx-label");
         d.append(wrap);
       }
@@ -351,9 +356,9 @@ export function installTranscription(options: {
     ) {
       const b = button("", () => input.click(), { variant: "tile" });
       b.innerHTML = icon(name);
-      b.append(el("span", tr(label)), el("span", tr(sub), "tx-pencil"));
+      b.append(el("span", tr(label)), el("span", tr(sub), transcriptionJobRecipe().pencil));
       updateButton(b, { pressed: false });
-      b.classList.add(...shellRecipe("tx-tile").split(" "));
+      attachTranscriptionControl(b, transcriptionJobRecipe().tile);
       choices.append(b);
       input.hidden = true;
       d.append(input);
@@ -418,7 +423,7 @@ export function installTranscription(options: {
       });
       strip.replaceChildren();
       files.forEach((f, i) => {
-        const tile = el("div", undefined, "tx-photo");
+        const tile = el("div", undefined, transcriptionJobRecipe().photo);
         tile.draggable = !busy;
         tile.ondragstart = (e) => {
           drag = i;
@@ -439,7 +444,7 @@ export function installTranscription(options: {
           tile.append(img);
         }
         tile.append(el("span", `${i + 1}. ${f.file.name}`));
-        const controls = el("div", undefined, "tx-actions");
+        const controls = el("div", undefined, transcriptionJobRecipe().actions);
         for (const [label, delta] of [
           ["left", -1],
           ["right", 1],
@@ -475,7 +480,7 @@ export function installTranscription(options: {
         progress.value = f.progress;
         progress.setAttribute("aria-label", f.file.name);
         tile.append(progress);
-        if (f.error) tile.append(el("p", f.error, "tx-error"));
+        if (f.error) tile.append(el("p", f.error, transcriptionJobRecipe().error));
         strip.append(tile);
       });
       total.textContent = tr("pages", {
@@ -506,7 +511,7 @@ export function installTranscription(options: {
     language.setAttribute("role", "group");
     for (const value of ["de", "en", "la", "other", ""]) {
       if (language.childElementCount)
-        language.append(el("span", "·", "tx-pencil"));
+        language.append(el("span", "·", transcriptionJobRecipe().pencil));
       const chip = button(
         value ? tr(value) : "—",
         () => {
@@ -527,7 +532,7 @@ export function installTranscription(options: {
     const submit = button(tr("start"), () => void upload(), {
       variant: "pill",
       intent: "primary",
-      layout: ["tw:w-full", "tw:mt-10"],
+      layout: ["tw:w-full", "tw:mt-inline"],
     });
     async function upload() {
       if (busy || !canTranscribe(destination)) return;
@@ -605,7 +610,7 @@ export function installTranscription(options: {
         if (d.isConnected) renderFiles();
       }
     }
-    submit.classList.add(...shellRecipe("tx-start").split(" "));
+    attachTranscriptionControl(submit, transcriptionJobRecipe().start);
     d.append(choices, strip);
     field("title", title);
     field("language", language);
@@ -622,7 +627,7 @@ export function installTranscription(options: {
       path = `/ensembles/${destination}/transcriptions/${job.id}`,
       d = modal(title, true);
     dialog = d;
-    const error = el("p", undefined, "tx-error");
+    const error = el("p", undefined, transcriptionJobRecipe().error);
     error.setAttribute("role", "alert");
     d.append(error);
     try {
@@ -634,11 +639,11 @@ export function installTranscription(options: {
       ]);
       if (!d.isConnected) return;
       const items = reviewItems(report),
-        layout = el("div", undefined, "tx-review-layout"),
-        main = el("div", undefined, "tx-score-wrap"),
-        score = el("div", undefined, "tx-score"),
-        panel = el("aside", undefined, "tx-review-panel"),
-        original = el("figure", undefined, "tx-original");
+        layout = el("div", undefined, transcriptionJobRecipe().reviewLayout),
+        main = el("div", undefined, transcriptionJobRecipe().scoreWrap),
+        score = el("div", undefined, transcriptionJobRecipe().score),
+        panel = el("aside", undefined, transcriptionJobRecipe().reviewPanel),
+        original = el("figure", undefined, transcriptionJobRecipe().original);
       main.append(score, original);
       original.hidden = true;
       const imageUrls = new Map<number, string>();
@@ -676,7 +681,7 @@ export function installTranscription(options: {
           );
         } catch (e) {
           if (request === imageGeneration)
-            original.replaceChildren(el("p", errorText(e), "tx-error"));
+            original.replaceChildren(el("p", errorText(e), transcriptionJobRecipe().error));
         }
       }
       d.addEventListener("close", () => {
@@ -723,7 +728,7 @@ export function installTranscription(options: {
         }),
         toggle = comparison.querySelector<HTMLInputElement>("input")!;
       panel.append(comparison);
-      const list = el("ul", undefined, "tx-review-items");
+      const list = el("ul", undefined, transcriptionJobRecipe().reviewItems);
       function focusItem(item: ReviewItem) {
         const target = score.querySelector<SVGGraphicsElement>(
           `[id="review-measure-${item.measure}"]`,
@@ -733,8 +738,8 @@ export function installTranscription(options: {
           block: "center",
           inline: "center",
         });
-        target?.classList.remove("tx-flash");
-        requestAnimationFrame(() => target?.classList.add(...shellRecipe("tx-flash").split(" ")));
+        target?.classList.remove(transcriptionJobRecipe().flash);
+        requestAnimationFrame(() => target?.classList.add(...transcriptionJobRecipe().flash.split(" ")));
         if (item.page) {
           updateSwitch(comparison, {
             variant: "comparison",
@@ -768,9 +773,9 @@ export function installTranscription(options: {
       for (const p of job.pages)
         if (p.state === "skipped")
           panel.append(
-            el("p", tr("skipped", { n: p.page_number + 1 }), "tx-pencil"),
+            el("p", tr("skipped", { n: p.page_number + 1 }), transcriptionJobRecipe().pencil),
           );
-      const actions = el("div", undefined, "tx-review-actions");
+      const actions = el("div", undefined, transcriptionJobRecipe().reviewActions);
       importButton = button(tr("import"), () => void importResult(), {
         variant: "pill",
         intent: "primary",
@@ -778,7 +783,7 @@ export function installTranscription(options: {
       importButton.dataset.valid = String(
         !!report.validation?.structurallyValid,
       );
-      permissionNote = el("p", tr("needEditor"), "tx-pencil");
+      permissionNote = el("p", tr("needEditor"), transcriptionJobRecipe().pencil);
       permissionNote.hidden = canEditPieces(destination);
       updateButton(importButton, {
         disabled:
@@ -808,7 +813,7 @@ export function installTranscription(options: {
           });
         }
       }
-      const secondary = el("div", undefined, "tx-secondary");
+      const secondary = el("div", undefined, transcriptionJobRecipe().secondary);
       secondary.append(
         button(tr("report"), () =>
           download(
@@ -865,7 +870,7 @@ export function installTranscription(options: {
       if (!toolkit.loadData(new XMLSerializer().serializeToString(doc)))
         throw new Error("engrave");
       for (let page = 1; page <= toolkit.getPageCount(); page++) {
-        const container = el("div", undefined, "tx-score-page");
+        const container = el("div", undefined, transcriptionJobRecipe().scorePage);
         container.append(safeSvg(toolkit.renderToSVG(page)));
         score.append(container);
       }
@@ -890,7 +895,7 @@ export function installTranscription(options: {
         rect.setAttribute("y", String(bounds.y - 100));
         rect.setAttribute("width", String(bounds.width));
         rect.setAttribute("height", String(bounds.height + 100));
-        rect.classList.add(...shellRecipe("tx-wash").split(" "));
+        rect.classList.add(...transcriptionJobRecipe().wash.split(" "));
         mark.setAttribute("x", String(bounds.x));
         mark.setAttribute("y", String(bounds.y - 20));
         mark.setAttribute("font-size", "320");
@@ -898,7 +903,7 @@ export function installTranscription(options: {
           "x",
           String(bounds.x + (target.querySelector(".tx-mark") ? 380 : 0)),
         );
-        mark.classList.add(...shellRecipe("tx-mark " + item.kind).split(" "));
+        mark.classList.add(...(transcriptionJobRecipe().mark + " " + item.kind).split(" "));
         mark.textContent = item.kind === "warning" ? "!" : "?";
         if (item.kind === "warning") {
           const circle = document.createElementNS(ns, "circle");
@@ -910,7 +915,7 @@ export function installTranscription(options: {
           );
           circle.setAttribute("cy", String(bounds.y - 125));
           circle.setAttribute("r", "155");
-          circle.classList.add(...shellRecipe("tx-mark-ring").split(" "));
+          circle.classList.add(...transcriptionJobRecipe().markRing.split(" "));
           target.append(circle);
         }
         if (!target.querySelector(".tx-wash")) target.prepend(rect);
@@ -946,7 +951,7 @@ export function installTranscription(options: {
   }
   entry.onclick = () =>
     void start().catch((e) => {
-      host.replaceChildren(el("p", errorText(e), "tx-error"));
+      host.replaceChildren(el("p", errorText(e), transcriptionJobRecipe().error));
     });
   socket.on("connect", sync);
   const onProgress = (event: { ensembleId: string; jobId: string }) => {

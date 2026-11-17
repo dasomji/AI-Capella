@@ -1,4 +1,4 @@
-import { shellRecipe } from "./design-system/recipes/shell";
+import { powerHintRecipe } from "./design-system/recipes/shell";
 // A hint when the device shows the music at only 30 frames per second.
 //
 // Energy savers -- an iPhone's Low Power Mode, a browser's energy saver on battery -- cap pages at
@@ -42,14 +42,14 @@ const isIos = () =>
 export function showPowerHint() {
   if (document.querySelector(".power-hint")) return;
   const el = createCard({ as: "div", variant: "power-hint" });
-  el.classList.add(...shellRecipe("power-hint").split(" "));
+  el.classList.add(...powerHintRecipe().root.split(" "));
   el.setAttribute("role", "status");
   const title = document.createElement("b");
   title.textContent = t("powerHintTitle");
   const body = document.createElement("p");
   body.textContent = t(isIos() ? "powerHintIos" : "powerHintOther");
   const actions = document.createElement("div");
-  actions.className = shellRecipe("power-hint-actions");
+  actions.className = powerHintRecipe().actions;
   const close = () => {
     el.classList.remove("show");
     window.setTimeout(() => el.remove(), 400);

@@ -119,7 +119,7 @@ export function createMixerVolume(options: { id: string; label: string }) {
   return duck;
 }
 /** SMuFL is trusted text, never interpreted markup. */
-export function createPlayerGlyph(text: string, kind: string) {
+export function createPlayerGlyph(text: string, kind: Parameters<typeof playerGlyphRecipe>[0]) {
   const glyph = document.createElement("span");
   glyph.className = playerGlyphRecipe(kind);
   glyph.textContent = text;

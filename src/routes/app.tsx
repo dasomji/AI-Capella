@@ -1,4 +1,4 @@
-import { shellRecipe } from "../design-system/recipes/shell";
+import { accountStageRecipe, appShellRecipe } from "../design-system/recipes/shell";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 export const Route = createFileRoute("/app")({ component: Rehearsal });
@@ -28,8 +28,8 @@ function Rehearsal() {
   }, []);
   return (
     <>
-      <div id="app" className={shellRecipe("", "app")} />
-      {!ready && <p className={shellRecipe("auth-shell")}>LightScore…</p>}
+      <div id="app" className={appShellRecipe().root} />
+      {!ready && <p className={accountStageRecipe().form}>LightScore…</p>}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { shellRecipe } from "./design-system/recipes/shell";
+import { ensemblePanelRecipe } from "./design-system/recipes/shell";
 // Putting the repertoire in order by hand: a long press on a card (on a laptop, the mouse button
 // held) lifts it; it follows the pointer, the others make room around an empty slot, and letting
 // go puts it there. Moving the finger before the card lifts is scrolling, as always; a lifted card
@@ -48,7 +48,7 @@ export function attachReorder(
     pending = null;
     const r = card.getBoundingClientRect();
     const slot = document.createElement('li');
-    slot.className = shellRecipe("drop-slot");
+    slot.className = ensemblePanelRecipe().dropSlot;
     slot.setAttribute('aria-hidden', 'true');
     slot.style.height = `${r.height}px`;
     grid.insertBefore(slot, card);

@@ -86,7 +86,7 @@ function MemberEditor({
   return (
     <>
       <PermissionFields value={draft} onChange={setDraft} language={language} />
-      <Button variant="dense" layout="tw:m-4"
+      <Button variant="dense" layout="tw:m-compact"
         type="button"
         disabled={JSON.stringify(draft) === JSON.stringify(permissions(row))}
         onClick={() =>
@@ -102,7 +102,7 @@ function MemberEditor({
       >
         {d.save}
       </Button>
-      <Button variant="dense" layout="tw:m-4"
+      <Button variant="dense" layout="tw:m-compact"
         type="button"
         onClick={() =>
           onPending({
@@ -179,10 +179,10 @@ function Confirmation({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />}</Field>
-        <Button variant="dense" layout="tw:m-4" type="submit" busy={busy} disabled={!reason.trim()}>
+        <Button variant="dense" layout="tw:m-compact" type="submit" busy={busy} disabled={!reason.trim()}>
           {d.confirm}
         </Button>
-        <Button variant="dense" layout="tw:m-4" type="button" disabled={busy} onClick={onCancel}>
+        <Button variant="dense" layout="tw:m-compact" type="button" disabled={busy} onClick={onCancel}>
           {d.cancel}
         </Button>
       </form>
@@ -254,7 +254,7 @@ export function AdminMembershipManagement({
         id: "choose",
         label: d.actions,
         cell: (r) => (
-          <Button variant="dense" layout="tw:m-4"
+          <Button variant="dense" layout="tw:m-compact"
             type="button"
             aria-pressed={chosen?.id === r.id}
             onClick={() => setChosen(r)}
@@ -278,7 +278,7 @@ export function AdminMembershipManagement({
             {d.sysadmin}: {sysadmin ? a.yes : a.no}
           </Workspace>
           <Workspace as="p" part="paragraph">{d.verifiedNote}</Workspace>
-          <Button variant="dense" layout="tw:m-4"
+          <Button variant="dense" layout="tw:m-compact"
             type="button"
             disabled={!profile.email_verified}
             onClick={() =>
@@ -295,7 +295,7 @@ export function AdminMembershipManagement({
         </Workspace>
       )}
       <AdminDataTable
-        actionLayout="tw:m-4"
+        actionLayout="tw:m-compact"
         path="memberships"
         caption={a.memberships}
         columns={columns}
@@ -305,7 +305,7 @@ export function AdminMembershipManagement({
         }
         revision={revision}
       />
-      <Button variant="dense" layout="tw:m-4"
+      <Button variant="dense" layout="tw:m-compact"
         type="button"
         onClick={() => {
           setAdding(!adding);
@@ -320,7 +320,7 @@ export function AdminMembershipManagement({
         <Workspace part="inset" data-admin="add">
           <Workspace as="h3" part="subheading">{entity === "ensembles" ? d.findUser : a.ensembles}</Workspace>
           <AdminDataTable
-            actionLayout="tw:m-4"
+            actionLayout="tw:m-compact"
             path={entity === "ensembles" ? "users" : "ensembles"}
             caption={entity === "ensembles" ? d.chooseUser : a.ensembles}
             columns={pickerColumns}
@@ -337,7 +337,7 @@ export function AdminMembershipManagement({
                 onChange={setDraft}
                 language={language}
               />
-              <Button variant="dense" layout="tw:m-4"
+              <Button variant="dense" layout="tw:m-compact"
                 type="button"
                 onClick={() =>
                   queue({
@@ -397,7 +397,7 @@ export function AdminMembershipManagement({
                 language={language}
                 invitation
               />
-              <Button variant="dense" layout="tw:m-4" type="submit" disabled={!email.trim()}>
+              <Button variant="dense" layout="tw:m-compact" type="submit" disabled={!email.trim()}>
                 {d.invite}
               </Button>
             </form>

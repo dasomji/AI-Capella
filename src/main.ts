@@ -1,5 +1,5 @@
 import { themeRegistry } from './design-system/theme';
-import { shellRecipe } from "./design-system/recipes/shell";
+import { appShellRecipe, landingRecipe } from "./design-system/recipes/shell";
 import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
 import { matchBreakpoint } from './design-system/theme';
 import { localLibrary } from './local-library';
@@ -133,6 +133,7 @@ function openLibraryMenu(
     overlay = createDialog({
       variant: "library-popover",
       title,
+      attrs: { "aria-label": title || anchor.getAttribute("aria-label") || t("menu") },
       content: menu.element,
       behavior,
     });
@@ -148,7 +149,7 @@ function openLibraryMenu(
   }
 }
 function openPlayerPopover(anchor:HTMLElement,content:HTMLElement,align:'start'|'center') {
- const panel=createDialog({variant:'library-popover',title:'',content,behavior:{opener:anchor,initialFocus:()=>panel.element}});panel.open();
+ const panel=createDialog({variant:'library-popover',title:'',attrs:{'aria-label':anchor.getAttribute('aria-label')||anchor.textContent?.trim()||t('menu')},content,behavior:{opener:anchor,initialFocus:()=>panel.element}});panel.open();
  const place=()=>{const a=anchor.getBoundingClientRect(),p=panel.element.getBoundingClientRect();let left=align==='start'?a.left:a.left+(a.width-p.width)/2;left=Math.max(8,Math.min(window.innerWidth-p.width-8,left));const below=a.bottom+8;panel.element.style.left=`${left}px`;panel.element.style.top=`${Math.max(8,below+p.height>window.innerHeight-8?a.top-p.height-8:below)}px`;};place();requestAnimationFrame(place);return panel;
 }
 function libraryPrompt(options: {
@@ -255,7 +256,7 @@ const PREVIEW_NOTE_LABEL_MS = 1200;
 const SEARCH_THRESHOLD = 8; // the search field only appears once the library is long enough to need it
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
-app.classList.add(...shellRecipe('', 'app').split(' '));
+app.classList.add(...appShellRecipe().root.split(' '));
 /** The two playback modes: "Ensemble" names the choir (ensembles.ts), so the modes are Alone / Together. */
 function modeName(mode: 'solo' | 'ensemble'): string {
   return t(mode === 'solo' ? 'alone' : 'together');
@@ -587,13 +588,13 @@ function renderModeControls() {
 const narrowQuery = matchBreakpoint('panel', 'below');
 const FOLLOW_KEY = 'ai-capella-follow';
 let followPref = localStorage.getItem(FOLLOW_KEY) !== '0';
-document.querySelectorAll<HTMLButtonElement>('[data-action="follow"]').forEach((b) => updateButton(b,{pressed:followPref}));
+document.querySelectorAll<HTMLButtonElement>('[data-action=follow]').forEach((b) => updateButton(b,{pressed:followPref}));
 function followActive(): boolean {
   return followPref;
 }
 function applyAutoFit() {
   pianoRoll?.setAutoFit(followActive());
-  document.querySelectorAll<HTMLButtonElement>('[data-action="follow"]').forEach((b) => updateButton(b,{pressed:followPref}));
+  document.querySelectorAll<HTMLButtonElement>('[data-action=follow]').forEach((b) => updateButton(b,{pressed:followPref}));
   requestAnimationFrame(resizeCanvases);
 }
 function setFollow(on: boolean) {
@@ -610,7 +611,7 @@ function zoomRowsByHand(factor: number, y: number) {
     pianoRoll.freezeAutoFit();
     followPref = false;
     localStorage.setItem(FOLLOW_KEY, '0');
-    document.querySelectorAll<HTMLButtonElement>('[data-action="follow"]').forEach((b) => updateButton(b,{pressed:false}));
+    document.querySelectorAll<HTMLButtonElement>('[data-action=follow]').forEach((b) => updateButton(b,{pressed:false}));
     toast(t('followOff'));
   }
   pianoRoll.zoomRows(factor, y);
@@ -654,7 +655,7 @@ function chooseMode(mode: 'solo' | 'ensemble') {
   sessionMode = mode;
   renderModeControls();
   setViewMode('library');
-  if(mode==='ensemble'){arriveDirectly=true;app.classList.add(...shellRecipe("arriving").split(" "));setTimeout(endArrival,8000);}
+  if(mode==='ensemble'){arriveDirectly=true;app.classList.add(..."arriving".split(" "));setTimeout(endArrival,8000);}
   void runBootstrap();
 }
 document.querySelector<HTMLButtonElement>('#mode-solo-btn')!.addEventListener('click', () => chooseMode('solo'));
@@ -678,7 +679,7 @@ function renderLanding(_now=false) {
  if(empty)document.querySelector('#landing-empty')!.insertBefore(create,document.querySelector('#landing-samples'));else document.querySelector('.landing-choice')!.append(create);
  landingModesEl.hidden=empty;dedicationEl.hidden=empty;
  dedicationEl.replaceChildren();
- const name=document.createElement('span');name.className=shellRecipe("ded-name");name.textContent=(inPublicFolder()?'':t('dedicationFor')+' ')+ensembleName(currentEnsemble);dedicationEl.append(name);
+ const name=document.createElement('span');name.className=landingRecipe().dedicationName;name.textContent=(inPublicFolder()?'':t('dedicationFor')+' ')+ensembleName(currentEnsemble);dedicationEl.append(name);
  for(const id of unlockedEnsembles().filter(id=>id!==currentEnsemble)){const b=createButton({variant:'ensemble-other',text:ensembleName(id)});b.onclick=()=>{setActiveEnsemble(id);renderLanding(true);};dedicationEl.append(b);}
  document.querySelector<HTMLElement>('#mode-ensemble-btn')!.hidden=inPublicFolder();dedicationEl.classList.add('written');renderModeControls();
 }
@@ -1842,25 +1843,25 @@ function signed(n: number): string {
 
 /** Pushes the current tempo/key/loop/metronome state into every control bound to it (transport, dock, sheets, popovers). */
 function refreshBindings() {
-  document.querySelectorAll('[data-bind="count-in"]').forEach(el=>el.textContent=t('syncCountIn',{bars:sharedState?.countIn.bars??0}));
-  document.querySelectorAll('[data-bind="bpm"]').forEach((el) => (el.textContent = String(bpm)));
-  document.querySelectorAll('[data-bind="transpose"]').forEach((el) => (el.textContent = signed(transpose)));
+  document.querySelectorAll('[data-bind=count-in]').forEach(el=>el.textContent=t('syncCountIn',{bars:sharedState?.countIn.bars??0}));
+  document.querySelectorAll('[data-bind=bpm]').forEach((el) => (el.textContent = String(bpm)));
+  document.querySelectorAll('[data-bind=transpose]').forEach((el) => (el.textContent = signed(transpose)));
   const keyNow = transposedKeyName();
-  document.querySelectorAll('[data-bind="key"]').forEach((el) => (el.textContent = keyNow));
-  document.querySelectorAll('[data-bind="key-short"]').forEach((el) => (el.textContent = keyNow ? `${keyNow.split(/[ -]/)[0]} · ${signed(transpose)}` : signed(transpose)));
+  document.querySelectorAll('[data-bind=key]').forEach((el) => (el.textContent = keyNow));
+  document.querySelectorAll('[data-bind=key-short]').forEach((el) => (el.textContent = keyNow ? `${keyNow.split(/[ -]/)[0]} · ${signed(transpose)}` : signed(transpose)));
   document.querySelectorAll<HTMLButtonElement>('.bpm-preset').forEach((b) => updateButton(b,{pressed:Number(b.dataset.bpm)===bpm,disabled:b.disabled}));
   // Skipped while a field has focus -- otherwise a remote BPM change (another device's preset
   // click, in Ensemble mode) would overwrite whatever this device is still mid-typing.
   document.querySelectorAll<HTMLInputElement>('.bpm-input').forEach((input) => {
     if (document.activeElement !== input || syncEnabled()) input.value = String(bpm);
   });
-  document.querySelectorAll<HTMLElement>('[data-action="metronome"]').forEach((el) => {
+  document.querySelectorAll<HTMLElement>('[data-action=metronome]').forEach((el) => {
     if(el.getAttribute('role')==='switch')updateSwitch(el,{variant:'player-preference',label:t('metronome'),checked:metronomeOn});
     else updateButton(el as HTMLButtonElement,{pressed:metronomeOn,disabled:(el as HTMLButtonElement).disabled});
   });
   document.querySelectorAll<HTMLElement>('[data-bind-metro]').forEach((el) => el.classList.toggle('on', metronomeOn));
   document.querySelectorAll<HTMLElement>('[data-bind-tones]').forEach((el) => el.classList.toggle('on', startTonesOn));
-  document.querySelectorAll<HTMLElement>('[data-action="start-tones"]').forEach((el) => {
+  document.querySelectorAll<HTMLElement>('[data-action=start-tones]').forEach((el) => {
     if(el.getAttribute('role')==='switch')updateSwitch(el,{variant:'player-preference',label:t('startTones'),checked:startTonesOn});
     else updateButton(el as HTMLButtonElement,{pressed:startTonesOn,disabled:(el as HTMLButtonElement).disabled});
   });
@@ -1871,7 +1872,7 @@ function refreshBindings() {
     const to = measureAtBeat(currentScore, Math.max(loopRegion.start, loopRegion.end - 0.001))?.number ?? from;
     loopTitle = t('loopRegion', { from, to });
   } else loopTitle = t('loopWhole');
-  document.querySelectorAll<HTMLElement>('[data-action="loop"]').forEach((el) => {
+  document.querySelectorAll<HTMLElement>('[data-action=loop]').forEach((el) => {
     updateButton(el as HTMLButtonElement,{pressed:loopEnabled,disabled:(el as HTMLButtonElement).disabled});
     el.setAttribute('aria-label', loopTitle);
     el.title = loopTitle;
@@ -1879,7 +1880,7 @@ function refreshBindings() {
 }
 
 function syncPlayButtons(playing: boolean) {
-  document.querySelectorAll<HTMLButtonElement>('[data-action="play"]').forEach((b) => {
+  document.querySelectorAll<HTMLButtonElement>('[data-action=play]').forEach((b) => {
     b.innerHTML = icon(playing ? 'pause' : 'play');
     b.setAttribute('aria-label', playing ? t('pause') : t('play'));
     updateButton(b,{playing,disabled:b.disabled,attrs:{'aria-label':playing?t('pause'):t('play')}});
@@ -2688,10 +2689,10 @@ function renderSections() {
     ...sections.map((s, i) => {
       const b = sectionButton(s.label, i);
       const at = Math.max(0, Math.min(1, s.beat / total));
-      b.style.left = `calc(16px + (100% - 32px) * ${at})`;
+      b.style.left = `calc(var(--ds-overview-mark-inset) + (100% - var(--ds-overview-mark-gutters)) * ${at})`;
       // A mark that is a word ends before the next one (cut short with an ellipsis).
       const room = Math.max(0, Math.min(1, (sections[i + 1]?.beat ?? total) / total) - at);
-      b.style.maxWidth = `max(18px, calc((100% - 32px) * ${room} - 3px))`;
+      b.style.maxWidth = `max(var(--ds-overview-mark-minimum), calc((100% - var(--ds-overview-mark-gutters)) * ${room} - var(--ds-overview-mark-gap)))`;
       return b;
     }),
   );
@@ -3863,7 +3864,7 @@ const comeBack = (chosen: 'solo' | 'ensemble') => {
       arriveDirectly = true;
       arrivingAt = place;
     }
-    app.classList.add(...shellRecipe("arriving").split(" "));
+    app.classList.add(..."arriving".split(" "));
     // Should the song not come (offline, gone), the repertoire after all.
     setTimeout(() => {
       placeToRestore = null;

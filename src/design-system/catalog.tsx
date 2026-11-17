@@ -150,8 +150,8 @@ export function specimens(): Specimen[] {
     });
   rows.push({
     name: "control-group/trailing-action",
-    react: <R.ControlGroup><R.Input variant="ruled-account" layout="tw:pr-76" aria-label="Password" type="password" /><R.Button variant="password-toggle">show</R.Button></R.ControlGroup>,
-    dom: () => D.createControlGroup({content: [D.createInput({variant: "ruled-account", layout: "tw:pr-76", type: "password", attrs: {"aria-label": "Password"}}), D.createButton({variant: "password-toggle", text: "show"})]}),
+    react: <R.ControlGroup><R.Input variant="ruled-account" layout="tw:pr-action-reserve" aria-label="Password" type="password" /><R.Button variant="password-toggle">show</R.Button></R.ControlGroup>,
+    dom: () => D.createControlGroup({content: [D.createInput({variant: "ruled-account", layout: "tw:pr-action-reserve", type: "password", attrs: {"aria-label": "Password"}}), D.createButton({variant: "password-toggle", text: "show"})]}),
   });
   rows.push({
     name: "toggle-group/language-separated",
