@@ -222,6 +222,7 @@ export async function verifyDesignSystemBehavior() {
   );
   assert(modal.element.open, "Busy outside must stay open");
   modal.setBusy(false);
+  const escaped = new Promise(resolve => modal.element.addEventListener("close", resolve, {once: true}));
   modal.element.dispatchEvent(
     new KeyboardEvent("keydown", {
       key: "Escape",
@@ -229,6 +230,7 @@ export async function verifyDesignSystemBehavior() {
       cancelable: true,
     }),
   );
+  await escaped;
   assert(!modal.element.open && !opener.inert, "Escape cleanup");
   assert(document.activeElement === opener, "Focus return");
   const next = D.createSheet({ title: "Sheet", body: "Outside closes" });
@@ -453,6 +455,7 @@ export async function verifyP3ReviewFixes() {
         cancelable: true,
       }),
     );
+    await until(() => fixture.calls.close === 1, "React fade completes cancellation");
     assert(
       fixture.calls.close === 1 && fixture.calls.cancel === 1,
       "minor6 cancellation and completed close once",
@@ -479,6 +482,7 @@ export async function verifyP3ReviewFixes() {
     "minor9 nested confirm stacks above drawer",
   );
   nested.close();
+  await until(() => !nested.element.isConnected, "Nested centered confirm exit completes");
   assert(
     parent.element.open &&
       document.activeElement === parent.element.querySelector("button"),
@@ -498,6 +502,7 @@ export async function verifyP3ReviewFixes() {
     .dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
   assert(parent.element.open, "minor9 toast pointer does not cancel drawer");
   parent.close();
+  await until(() => !parent.element.isConnected, "Parent centered detail exit completes");
   // Simulate Safari pointer activation leaving activeElement on body.
   opener.focus();
   opener.blur();
@@ -508,6 +513,7 @@ export async function verifyP3ReviewFixes() {
   });
   safari.open();
   safari.close();
+  await until(() => !safari.element.isConnected, "Safari centered dialog exit completes");
   assert(
     document.activeElement === opener,
     "minor9 pointer opener focus return without activeElement",
