@@ -166,7 +166,7 @@ function fieldRecipeStyles(
       disabledRecipe,
       "tw:block tw:w-full tw:min-w-0 tw:font-regular tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
       kind === "textarea" && admin
-        ? "tw:h-auto tw:min-h-textarea tw:resize-y tw:border tw:border-solid tw:rounded-field tw:p-10 tw:font-auth-body tw:text-body tw:leading-admin tw:bg-admin-surface tw:text-admin-ink"
+        ? "tw:h-auto tw:min-h-textarea tw:resize-y tw:border tw:border-solid tw:rounded-field tw:p-10 tw:font-auth-body tw:text-label tw:leading-body tw:bg-admin-surface tw:text-admin-ink"
         : domain && kind === "select"
           ? "tw:rounded-field tw:border-0 tw:border-b tw:border-solid tw:px-8 tw:py-8 tw:leading-body tw:bg-transparent tw:text-ink tw:font-control tw:text-body"
           : ruled
