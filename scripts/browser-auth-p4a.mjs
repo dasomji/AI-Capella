@@ -14,12 +14,12 @@ export async function verifyAuthControls() {
   }
   const reveal = [...document.querySelectorAll('button')].find(button => /^(show|zeigen)$/.test(button.textContent));
   reveal.focus(); reveal.click();
-  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   assert(document.querySelector('input[name=password]') === password, 'Reveal preserves native control identity');
   assert(password.type === 'text' && reveal.getAttribute('aria-pressed') === 'true', 'Reveal exposes pressed state');
   assert(document.activeElement === reveal, 'Reveal preserves command focus');
   reveal.click();
-  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   assert(password.type === 'password', 'Hide restores native password type');
   return { colorScheme: getComputedStyle(password).colorScheme, focusable: [...document.querySelectorAll('button,input,a[href]')].filter(element => !element.disabled).map(element => element.name || element.textContent.trim()), overflow: document.documentElement.scrollWidth > innerWidth };
 }
