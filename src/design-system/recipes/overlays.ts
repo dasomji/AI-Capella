@@ -73,7 +73,7 @@ export interface MenuOptions {
 function menuRecipeStyles({ variant = "popover" }: MenuOptions = {}) {
   if (variant === "member" || variant === "job") return {
     root: "tw:absolute tw:right-0 tw:grid tw:box-border tw:border tw:border-solid tw:border-rule-strong tw:bg-surface-raised tw:text-ink tw:shadow-menu " + (variant === "member" ? "tw:top-full tw:z-stage tw:min-w-menu-member tw:p-0 tw:gap-0" : "tw:z-transcription tw:min-w-menu-job tw:p-12 tw:gap-8 tw:rounded-menu"),
-    item: variant === "member" ? controlBase + " " + disabledRecipe + " ds-menu-item tw:flex tw:items-center tw:gap-12 tw:min-h-44 tw:px-12 tw:py-0 tw:rounded-control tw:border-0 tw:bg-transparent tw:font-body tw:font-label tw:text-button tw:text-left tw:text-ink tw:cursor-pointer" : "ds-job-menu-item " + buttonRecipe(),
+    item: variant === "member" ? controlBase + " " + disabledRecipe + " ds-menu-item tw:flex tw:items-center tw:gap-12 tw:min-h-44 tw:px-12 tw:py-0 tw:rounded-control tw:border-0 tw:bg-transparent tw:font-body tw:font-label tw:text-button tw:text-left tw:text-ink tw:cursor-pointer" : "ds-job-menu-item " + buttonRecipe().replace("tw:font-control", "tw:font-auth-body"),
     danger: "tw:text-danger!", check: "tw:ml-auto tw:text-menu-check",
   };
   return {

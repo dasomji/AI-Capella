@@ -27,7 +27,7 @@ export interface ButtonOptions {
   pressed?: boolean;
 }
 const parityButtonShapes = {
-  "domain-language": "tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4 tw:rounded-card tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-label tw:text-small tw:leading-admin tw:text-center",
+  "domain-language": "tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4 tw:rounded-card tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-regular tw:text-small tw:leading-admin tw:text-center",
   tile: "tw:flex-1 tw:min-w-0 tw:min-h-upload-tile tw:max-score:min-h-upload-tile-phone tw:flex-col tw:px-10 tw:py-18 tw:whitespace-normal tw:rounded-transcription-tile tw:bg-surface tw:text-ink tw:border-rule-strong tw:text-button tw:font-label tw:font-auth-body tw:leading-body",
   compact: "tw:min-h-36 tw:p-6 tw:rounded-card tw:border-rule-strong tw:bg-transparent tw:text-ink tw:text-small tw:font-label tw:font-auth-body tw:leading-body",
   "review-item": "tw:min-h-control-height tw:w-full tw:mb-4 tw:justify-start tw:items-baseline tw:text-left tw:whitespace-normal tw:py-12 tw:px-0 tw:border-0 tw:border-b tw:rounded-field tw:border-rule-strong tw:bg-transparent tw:text-ink tw:font-auth-body tw:font-regular tw:text-body-small tw:leading-field",
@@ -158,7 +158,7 @@ function fieldRecipeStyles(
   return {
     root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-0" : variant === "ruled-account" ? "tw:block tw:mt-20 tw:min-w-0 tw:font-auth-body " + (invalid ? "tw:mb-16" : "tw:mb-20") : admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body tw:tabular-nums" : "tw:grid tw:gap-6 tw:min-w-0 " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
     label:
-      variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-body tw:text-ink" : ruled && !admin
+      variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-body tw:text-ink" : variant === "domain" ? "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-(--ds-domain-label-tracking) tw:leading-admin tw:text-ink-secondary" : ruled && !admin
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary"
         : admin ? "tw:text-label tw:font-auth-body tw:leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
     control: [
@@ -240,7 +240,7 @@ function switchRecipeStyles({
   };
   return {
     label:
-      (variant === "comparison" ? "tw:relative tw:flex" : "tw:relative tw:inline-flex") + " tw:items-center tw:gap-8 tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-32 tw:flex-nowrap" : variant === "comparison" ? " tw:min-h-36 tw:my-24 tw:text-label" : ""),
+      (variant === "comparison" ? "tw:relative tw:flex" : "tw:relative tw:inline-flex") + " tw:items-center tw:gap-8 tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-32 tw:flex-nowrap tw:leading-admin" : variant === "comparison" ? " tw:min-h-36 tw:my-24 tw:text-label" : ""),
     input: variant === "capability" || variant === "comparison" ? "tw:absolute tw:opacity-0 tw:w-28 tw:h-24 tw:m-0 tw:peer" : "tw:sr-only tw:peer",
     root:
       controlBase +
