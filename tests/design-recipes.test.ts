@@ -13,7 +13,7 @@ describe("pure recipes", () => {
     );
     expect(r.selectRecipe({ variant: "domain" })).toContain("tw:px-8");
     expect(r.inputRecipe({ variant: "domain" })).toContain("tw:px-0");
-    expect(r.cardRecipe({ variant: "tour" })).toContain("tw:py-14");
+    expect(r.cardRecipe({ variant: "tour" })).toContain("tw:pt-14");
   });
   it("gives the notifier and specimens one recipe plus a named placement", () => {
     expect(r.toastRecipe()).toContain("ds-reset");
@@ -168,9 +168,8 @@ describe("every recipe property is exclusive within a state and breakpoint", () 
     );
   });
   it("documents intentional aliases and exposes finite placement and alignment roles", () => {
-    expect(r.menuRecipe({ variant: "member" })).toEqual(
-      r.menuRecipe({ variant: "popover" }),
-    );
+    expect(r.menuRecipe({ variant: "member" }).root).toContain("tw:min-w-menu-member");
+    expect(r.menuRecipe({ variant: "job" }).root).toContain("tw:min-w-menu-job");
     expect(r.dialogRecipe({ variant: "confirm" })).toEqual(
       r.dialogRecipe({ variant: "dialog" }),
     );
