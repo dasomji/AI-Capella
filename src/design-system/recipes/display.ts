@@ -89,7 +89,7 @@ const feedback: Record<FeedbackIntent, string> = {
 function badgeRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
   if (variant === "offline-prepared") return extensions.badge?.("prepared") ?? missingArea("prepared badge");
   if (variant === "library") return extensions.badge?.("tag") ?? missingArea("library badge");
-  if(variant === "admin")return "tw:inline-block tw:box-border tw:px-segment tw:py-micro tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent tw:font-auth-body tw:text-body-small tw:leading-leading-body " + (intent === "accent" ? "tw:text-admin-accent tw:border-admin-accent" : "tw:text-admin-ink tw:border-admin-rule");
+  if(variant === "admin")return "tw:inline-block tw:box-border tw:px-segment tw:py-micro tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent tw:font-auth-body tw:text-body-small tw:leading-leading-body " + feedback[intent];
   return (
     "tw:inline-block tw:box-border tw:px-segment tw:py-micro tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent tw:font-body tw:text-small tw:leading-leading-body " +
     feedback[intent]
