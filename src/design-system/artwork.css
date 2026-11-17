@@ -1,0 +1,129 @@
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: var(--ds-shell-rise-transform-357);
+  }
+  to {
+    opacity: var(--ds-shell-rise-opacity-358);
+    transform: none;
+  }
+}
+
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+
+@keyframes shimmer {
+  to {
+    background-position: var(--ds-shell-shimmer-background-position-359);
+  }
+}
+
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+
+@keyframes pulse {
+  from {
+    opacity: var(--ds-shell-pulse-opacity-360);
+  }
+  to {
+    opacity: var(--ds-shell-pulse-opacity-361);
+  }
+}
+
+/* Typed interpolation of the generated ink-writing percentage requires @property. */
+
+@property --written {
+  syntax: var(--ds-shell-written-syntax-362);
+  inherits: false;
+  initial-value: 108%;
+}
+
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+@keyframes ls-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: var(--ds-shell-ls-appear-opacity-363);
+  }
+}
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+@keyframes ls-breathe {
+  0%,
+  100% {
+    opacity: var(--ds-shell-ls-breathe-opacity-364);
+  }
+  50% {
+    opacity: var(--ds-shell-ls-breathe-opacity-365);
+  }
+}
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+
+@keyframes ink-write {
+  from {
+    --written: var(--ds-shell-ink-write-written-366);
+  }
+  to {
+    --written: var(--ds-shell-ink-write-written-367);
+  }
+}
+
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+
+@keyframes ink-float {
+  0%,
+  100% {
+    transform: var(--ds-shell-ink-float-transform-368);
+  }
+  50% {
+    transform: var(--ds-shell-ink-float-transform-369);
+  }
+}
+
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+@keyframes ls-flare {
+  0% {
+    filter: var(--ds-shell-ls-flare-filter-370);
+  }
+  28% {
+    filter: var(--ds-shell-ls-flare-filter-371);
+  }
+  100% {
+    filter: var(--ds-shell-ls-flare-filter-372);
+  }
+}
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+@keyframes stage-ignite {
+  0% {
+    opacity: var(--ds-shell-stage-ignite-opacity-373);
+    filter: var(--ds-shell-stage-ignite-filter-374);
+  }
+  4% {
+    opacity: var(--ds-shell-stage-ignite-opacity-375);
+    filter: var(--ds-shell-stage-ignite-filter-376);
+  }
+  9% {
+    opacity: var(--ds-shell-stage-ignite-opacity-377);
+    filter: var(--ds-shell-stage-ignite-filter-378);
+  }
+  14% {
+    opacity: var(--ds-shell-stage-ignite-opacity-379);
+    filter: var(--ds-shell-stage-ignite-filter-380);
+  }
+  19% {
+    opacity: var(--ds-shell-stage-ignite-opacity-381);
+    filter: var(--ds-shell-stage-ignite-filter-382);
+  }
+  26% {
+    opacity: var(--ds-shell-stage-ignite-opacity-383);
+    filter: var(--ds-shell-stage-ignite-filter-384);
+  }
+  100% {
+    opacity: var(--ds-shell-stage-ignite-opacity-385);
+    filter: var(--ds-shell-stage-ignite-filter-386);
+  }
+}
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+@keyframes tx-flash {from{opacity:var(--ds-shell-tx-flash-opacity-387)}to{opacity:var(--ds-shell-tx-flash-opacity-388)}}
+/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+@keyframes tx-pulse {50%{opacity:var(--ds-shell-tx-pulse-opacity-389)}}

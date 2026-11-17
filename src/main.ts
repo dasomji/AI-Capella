@@ -1,3 +1,4 @@
+import { shellRecipe } from "./design-system/recipes/shell";
 import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
 import { matchBreakpoint } from './design-system/theme';
 import { localLibrary } from './local-library';
@@ -253,6 +254,7 @@ const PREVIEW_NOTE_LABEL_MS = 1200;
 const SEARCH_THRESHOLD = 8; // the search field only appears once the library is long enough to need it
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
+app.classList.add(...shellRecipe('', 'app').split(' '));
 /** The two playback modes: "Ensemble" names the choir (ensembles.ts), so the modes are Alone / Together. */
 function modeName(mode: 'solo' | 'ensemble'): string {
   return t(mode === 'solo' ? 'alone' : 'together');
@@ -651,7 +653,7 @@ function chooseMode(mode: 'solo' | 'ensemble') {
   sessionMode = mode;
   renderModeControls();
   setViewMode('library');
-  if(mode==='ensemble'){arriveDirectly=true;app.classList.add('arriving');setTimeout(endArrival,8000);}
+  if(mode==='ensemble'){arriveDirectly=true;app.classList.add(...shellRecipe("arriving").split(" "));setTimeout(endArrival,8000);}
   void runBootstrap();
 }
 document.querySelector<HTMLButtonElement>('#mode-solo-btn')!.addEventListener('click', () => chooseMode('solo'));
@@ -675,7 +677,7 @@ function renderLanding(_now=false) {
  if(empty)document.querySelector('#landing-empty')!.insertBefore(create,document.querySelector('#landing-samples'));else document.querySelector('.landing-choice')!.append(create);
  landingModesEl.hidden=empty;dedicationEl.hidden=empty;
  dedicationEl.replaceChildren();
- const name=document.createElement('span');name.className='ded-name';name.textContent=(inPublicFolder()?'':t('dedicationFor')+' ')+ensembleName(currentEnsemble);dedicationEl.append(name);
+ const name=document.createElement('span');name.className=shellRecipe("ded-name");name.textContent=(inPublicFolder()?'':t('dedicationFor')+' ')+ensembleName(currentEnsemble);dedicationEl.append(name);
  for(const id of unlockedEnsembles().filter(id=>id!==currentEnsemble)){const b=createButton({variant:'ensemble-other',text:ensembleName(id)});b.onclick=()=>{setActiveEnsemble(id);renderLanding(true);};dedicationEl.append(b);}
  document.querySelector<HTMLElement>('#mode-ensemble-btn')!.hidden=inPublicFolder();dedicationEl.classList.add('written');renderModeControls();
 }
@@ -3857,7 +3859,7 @@ const comeBack = (chosen: 'solo' | 'ensemble') => {
       arriveDirectly = true;
       arrivingAt = place;
     }
-    app.classList.add('arriving');
+    app.classList.add(...shellRecipe("arriving").split(" "));
     // Should the song not come (offline, gone), the repertoire after all.
     setTimeout(() => {
       placeToRestore = null;

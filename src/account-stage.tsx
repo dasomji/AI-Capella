@@ -1,3 +1,4 @@
+import { shellRecipe } from "./design-system/recipes/shell";
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Lang } from './i18n';
 import { ToggleGroup } from './design-system/react';
@@ -20,5 +21,5 @@ export function AccountStage({ language, onLanguage, children }: { language: Lan
     });
     return () => { stopped = true; stop(); };
   }, []);
-  return <main className="account-stage"><canvas ref={ribbons} className="account-ribbons" aria-hidden="true" /><LanguageToggle language={language} onChange={onLanguage} /><div className="account-content"><h1 ref={name} className="account-wordmark" aria-label="LightScore"><span className="ls-l">Light</span>Score</h1><div className="auth-shell">{children}</div></div></main>;
+  return <main className={shellRecipe("account-stage")}><canvas ref={ribbons} className={shellRecipe("account-ribbons")} aria-hidden="true" /><LanguageToggle language={language} onChange={onLanguage} /><div className={shellRecipe("account-content")}><h1 ref={name} className={shellRecipe("account-wordmark")} aria-label="LightScore"><span className={shellRecipe("ls-l")}>Light</span>Score</h1><div className={shellRecipe("auth-shell")}>{children}</div></div></main>;
 }

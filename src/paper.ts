@@ -1,7 +1,7 @@
 import { readTheme, subscribeTheme, getThemeRevision, type ThemeSnapshot } from './design-system/theme';
 // The paper of the paper design (design.ts). One texture, made on the device when the app starts
 // (seeded, so the same everywhere), and used by every paper surface: the CSS ones -- the ground,
-// the song cards, the bars, the sheets -- as a background image (--fibre), the canvases -- the
+// the song cards, the bars, the sheets -- as a background image (--ds-material-fibre), the canvases -- the
 // punched roll, the sheet view, the covers -- as a pattern.
 //
 // On the moving score the paper moves with the music, as the sheet the music is printed on would:
@@ -392,7 +392,7 @@ function tilesOf(k: PaperKind = kind): Tiles {
   return t;
 }
 
-/** The paper for CSS surfaces: --fibre, a 256 px tile (the same paper as on the canvases). */
+/** The paper for CSS surfaces: --ds-material-fibre, a 256 px tile (the same paper as on the canvases). */
 let appliedFibre = '';
 function applyCss() {
   if (readTheme().material.surface !== 'paper') {

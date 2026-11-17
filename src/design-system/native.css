@@ -1,0 +1,98 @@
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+*,
+*::before,
+*::after {
+    box-sizing: border-box
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: var(--ds-page-background);
+    color: var(--ds-shell-html-body-color-24);
+    font: var(--ds-shell-html-body-font-25);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+[hidden] {
+    display: none !important
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+button,
+input {
+    font: inherit;
+    color: inherit
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+button {
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+button:disabled {
+    cursor: default;
+    opacity: var(--ds-shell-button-disabled-opacity-26)
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+:focus-visible {
+    outline: var(--ds-shell-focus-visible-outline-27);
+    outline-offset: var(--ds-shell-focus-visible-outline-offset-28)
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+.ic {
+    width: var(--ds-shell-ic-width-29);
+    height: var(--ds-shell-ic-height-30);
+    flex: none;
+    display: block
+}
+@media (prefers-reduced-motion: reduce) {
+    /* Global native inheritance/reset or generated ground has no owning element recipe. */
+    *,
+  *::before,
+  *::after {
+        animation-duration: var(--ds-shell-before-after-animation-duration-97) !important;
+        animation-iteration-count: var(--ds-shell-before-after-animation-iteration-count-98) !important;
+        transition-duration: var(--ds-shell-before-after-transition-duration-99) !important
+    }
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+#bg-waves {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    display: var(--ds-shell-waves-display)
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+body::after {
+    content: var(--ds-shell-body-after-content-108);
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: var(--ds-shell-ground-texture)
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+body:has(#app.mode-landing)::after {
+    display: var(--ds-shell-landing-texture-display)
+}
+/* Global native inheritance/reset or generated ground has no owning element recipe. */
+:root[data-title='buehne'] body:has(#app.mode-landing),
+:root[data-title='buehne'] #landing {
+    background: var(--ds-shell-body-has-app-mode-landing-landing-background-144)
+}
+/* Native browser subpart cannot receive element utility classes. */
+.row-menu summary::-webkit-details-marker {
+    display: none
+}
+/* Native browser subpart cannot receive element utility classes. */
+.tx-job summary::-webkit-details-marker {
+    display: none
+}

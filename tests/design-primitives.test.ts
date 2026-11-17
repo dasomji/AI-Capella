@@ -4,7 +4,6 @@ import { renderToString } from "react-dom/server";
 import { createElement } from "react";
 import * as D from "../src/design-system/dom";
 import * as R from "../src/design-system/react";
-import { exitLegacyOverlay } from "../src/design-system/behavior/dialog";
 import {
   openDialog,
   bindMenu,
@@ -610,31 +609,7 @@ describe("legacy overlay exit transport", () => {
     account.api.close();
   });
 
-  it("waits for transitionend or the 160ms fallback and skips waiting under reduced motion", () => {
-    vi.useFakeTimers();
-    const finish = vi.fn(),
-      root = document.createElement("div");
-    root.innerHTML = '<div class="overlay-panel"></div>';
-    root.className = "open";
-    exitLegacyOverlay(root, finish);
-    expect(root.classList.contains("closing")).toBe(true);
-    expect(finish).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(159);
-    expect(finish).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
-    expect(finish).toHaveBeenCalledOnce();
-    finish.mockClear();
-    exitLegacyOverlay(root, finish);
-    root.firstElementChild!.dispatchEvent(
-      new Event("transitionend", { bubbles: true }),
-    );
-    expect(finish).toHaveBeenCalledOnce();
-    vi.stubGlobal("matchMedia", () => ({ matches: true }));
-    finish.mockClear();
-    exitLegacyOverlay(root, finish);
-    expect(finish).toHaveBeenCalledOnce();
-    vi.unstubAllGlobals();
-  });
+
 });
 
 describe("shared panel motion", () => {

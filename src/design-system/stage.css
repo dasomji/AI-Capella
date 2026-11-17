@@ -1,0 +1,102 @@
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+#player {
+    grid-template-columns: var(--ds-shell-player-grid-template-columns-79);
+    grid-template-rows: var(--ds-shell-player-grid-template-rows-80);
+    grid-template-areas: var(--ds-shell-player-grid-template-areas-81)
+}
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+.stage {
+    grid-area: stage;
+    position: relative;
+    min-height: 0;
+    min-width: 0
+}
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+#roll,
+#staff {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    user-select: none;
+    will-change: transform;
+    transform: var(--ds-shell-roll-staff-transform-82)
+}
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+#roll {
+    cursor: grab
+}
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+#roll.dragging {
+    cursor: grabbing
+}
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+.overview {
+    grid-area: ov;
+    position: relative;
+    border-top: var(--ds-shell-overview-border-top-83)
+}
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+#overview {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    touch-action: none
+}
+@media (width < theme(--breakpoint-panel)) {
+    /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+    #player {
+        grid-template-columns: var(--ds-shell-player-grid-template-columns-84);
+        grid-template-rows: var(--ds-shell-player-grid-template-rows-85);
+        grid-template-areas: var(--ds-shell-player-grid-template-areas-86)
+    }
+}
+@media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) {
+    /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+    #player {
+        grid-template-rows: var(--ds-shell-player-grid-template-rows-87);
+        grid-template-areas: var(--ds-shell-player-grid-template-areas-88)
+    }
+}
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+.following #overview {
+    opacity: var(--ds-shell-following-overview-opacity-100)
+}
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+#app.sing-along .overview {
+    display: none !important
+}
+@media (min-width: theme(--breakpoint-panel)) {
+    /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+    #app.sing-along #player {
+        grid-template-rows: var(--ds-shell-app-sing-along-player-grid-template-rows-101);
+        grid-template-areas: var(--ds-shell-app-sing-along-player-grid-template-areas-102)
+    }
+}
+@media (width < theme(--breakpoint-panel)) {
+    /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+    #app.sing-along #player {
+        grid-template-rows: var(--ds-shell-app-sing-along-player-grid-template-rows-103);
+        grid-template-areas: var(--ds-shell-app-sing-along-player-grid-template-areas-104)
+    }
+}
+@media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) {
+    /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+    #app.sing-along #player {
+        grid-template-rows: var(--ds-shell-app-sing-along-player-grid-template-rows-105);
+        grid-template-areas: var(--ds-shell-app-sing-along-player-grid-template-areas-106)
+    }
+}
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+.overview {
+    background: var(--ds-shell-overview-background-114);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none
+}
+/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+.overview {
+    box-shadow: var(--ds-shell-overview-box-shadow-115)
+}

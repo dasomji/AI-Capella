@@ -1,3 +1,4 @@
+import { shellRecipe } from "./design-system/recipes/shell";
 // The introduction: a short tour for someone opening the app for the first time. A spotlight
 // travels from one control to the next -- the light of the reading line, wandering over the page --
 // with a small card saying what each one does. One tour for the repertoire, one for the player,
@@ -310,32 +311,32 @@ export function startIntro(id: TourId, onClose?: () => void) {
   let index = 0;
 
   const root = document.createElement("div");
-  root.className = "intro";
+  root.className = shellRecipe("intro");
   // Catches every click outside the card; the spotlight lies over it, only to be seen.
   const block = document.createElement("div");
-  block.className = "intro-block";
+  block.className = shellRecipe("intro-block");
   const spot = document.createElement("div");
-  spot.className = "intro-spot";
+  spot.className = shellRecipe("intro-spot");
   spot.setAttribute("aria-hidden", "true");
   const opener = document.activeElement;
   const card = createCard({ as: "div", variant: "tour" });
-  card.classList.add("intro-card");
+  card.classList.add(...shellRecipe("intro-card").split(" "));
   card.setAttribute("role", "dialog");
   card.setAttribute("aria-modal", "true");
   card.setAttribute("aria-labelledby", "intro-title");
   const count = document.createElement("span");
-  count.className = "intro-count";
+  count.className = shellRecipe("intro-count");
   const title = document.createElement("h2");
   title.id = "intro-title";
   const text = document.createElement("p");
   const dots = document.createElement("div");
-  dots.className = "intro-dots";
+  dots.className = shellRecipe("intro-dots");
   dots.setAttribute("aria-hidden", "true");
   dots.append(...steps.map(() => document.createElement("i")));
   const actions = document.createElement("div");
-  actions.className = "intro-actions";
+  actions.className = shellRecipe("intro-actions");
   const asides = document.createElement("div");
-  asides.className = "intro-asides";
+  asides.className = shellRecipe("intro-asides");
   const button = (
     label: string,
     variant: ButtonOptions["variant"],
@@ -353,11 +354,11 @@ export function startIntro(id: TourId, onClose?: () => void) {
     "primary",
   );
   const moves = document.createElement("div");
-  moves.className = "intro-moves";
+  moves.className = shellRecipe("intro-moves");
   moves.append(back, next);
   actions.append(asides, moves);
   const head = document.createElement("div");
-  head.className = "intro-head";
+  head.className = shellRecipe("intro-head");
   head.append(count, dots);
   card.append(head, title, text, actions);
   root.append(block, spot, card);

@@ -1,3 +1,4 @@
+import { shellRecipe } from "../design-system/recipes/shell";
 import { offlineAccountId, purgeAccount } from '../offline-store';
 import { AccountStage } from "../account-stage";
 import { Button, Status } from "../design-system/react";
@@ -88,9 +89,9 @@ function Invitation() {
     <AccountStage language={language} onLanguage={setLanguage}>
       {preview && (
         <>
-          <h2 className="invitation-title"><span className="invitation-kicker">{text("invitationTitle", { name: "" }).trim()}</span>{" "}<span>{preview.ensembleName}</span></h2>
+          <h2 className="invitation-title"><span className={shellRecipe("invitation-kicker")}>{text("invitationTitle", { name: "" }).trim()}</span>{" "}<span>{preview.ensembleName}</span></h2>
           <p>{text("invitedBy", { name: preview.inviter })}</p>
-          <p className="account-email">{preview.email}</p>
+          <p className={shellRecipe("account-email")}>{preview.email}</p>
         </>
       )}
       <Status variant="account">
@@ -154,7 +155,7 @@ function Invitation() {
             <Button variant="cta" intent="primary" layout="tw:mt-10" onClick={() => authenticate("signup")}>
               {text("createAccount")}
             </Button>
-            <nav className="account-links"><Button variant="account-link" onClick={() => authenticate("signin")}>
+            <nav className={shellRecipe("account-links")}><Button variant="account-link" onClick={() => authenticate("signin")}>
               {text("signin")}
             </Button></nav>
           </div>

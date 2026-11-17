@@ -1,3 +1,4 @@
+import { shellRecipe } from "../recipes/shell";
 import {
   createPlayerPart,
   createMixerVolume,
@@ -96,6 +97,8 @@ function shell(tag: string, attrs: Record<string, string | boolean> = {}) {
     : document.createElement(tag);
   for (const [key, value] of Object.entries(attrs))
     el.setAttribute(key, value === true ? "" : String(value));
+  const classes = shellRecipe(String(attrs.class ?? ""), String(attrs.id ?? ""));
+  if (classes) el.setAttribute("class", classes);
   return el;
 }
 function search(copy: MainCopy) {

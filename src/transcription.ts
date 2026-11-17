@@ -1,3 +1,4 @@
+import { shellRecipe } from "./design-system/recipes/shell";
 import {
   createButton,
   updateButton as updatePrimitiveButton,
@@ -39,7 +40,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
 ) {
   const e = document.createElement(tag);
   if (text) e.textContent = text;
-  if (cls) e.className = cls;
+  if (cls) e.className = shellRecipe(cls);
   return e;
 }
 function button(
@@ -86,7 +87,7 @@ function modal(title: string, wide = false) {
       },
     }),
     d = modal.element;
-  d.classList.add("transcription-dialog");
+  d.classList.add(...shellRecipe("transcription-dialog").split(" "));
   if (wide) d.classList.add("transcription-review");
   const close = createIconButton({
     variant: "transcription",
@@ -327,7 +328,7 @@ export function installTranscription(options: {
         node.previousElementSibling!.classList.add("tx-label");
       } else {
         const wrap = createFieldGroup({ variant: "transcription", labelId: `${node.id}-label`, layout: "tw:my-24", label: tr(label), content: node });
-        wrap.classList.add("tx-field");
+        wrap.classList.add(...shellRecipe("tx-field").split(" "));
         wrap.firstElementChild!.classList.add("tx-label");
         d.append(wrap);
       }
@@ -351,7 +352,7 @@ export function installTranscription(options: {
       b.innerHTML = icon(name);
       b.append(el("span", tr(label)), el("span", tr(sub), "tx-pencil"));
       updateButton(b, { pressed: false });
-      b.classList.add("tx-tile");
+      b.classList.add(...shellRecipe("tx-tile").split(" "));
       choices.append(b);
       input.hidden = true;
       d.append(input);
@@ -603,7 +604,7 @@ export function installTranscription(options: {
         if (d.isConnected) renderFiles();
       }
     }
-    submit.classList.add("tx-start");
+    submit.classList.add(...shellRecipe("tx-start").split(" "));
     d.append(choices, strip);
     field("title", title);
     field("language", language);
@@ -888,7 +889,7 @@ export function installTranscription(options: {
         rect.setAttribute("y", String(bounds.y - 100));
         rect.setAttribute("width", String(bounds.width));
         rect.setAttribute("height", String(bounds.height + 100));
-        rect.classList.add("tx-wash");
+        rect.classList.add(...shellRecipe("tx-wash").split(" "));
         mark.setAttribute("x", String(bounds.x));
         mark.setAttribute("y", String(bounds.y - 20));
         mark.setAttribute("font-size", "320");
@@ -896,7 +897,7 @@ export function installTranscription(options: {
           "x",
           String(bounds.x + (target.querySelector(".tx-mark") ? 380 : 0)),
         );
-        mark.classList.add("tx-mark", item.kind);
+        mark.classList.add(...shellRecipe("tx-mark " + item.kind).split(" "));
         mark.textContent = item.kind === "warning" ? "!" : "?";
         if (item.kind === "warning") {
           const circle = document.createElementNS(ns, "circle");
@@ -908,7 +909,7 @@ export function installTranscription(options: {
           );
           circle.setAttribute("cy", String(bounds.y - 125));
           circle.setAttribute("r", "155");
-          circle.classList.add("tx-mark-ring");
+          circle.classList.add(...shellRecipe("tx-mark-ring").split(" "));
           target.append(circle);
         }
         if (!target.querySelector(".tx-wash")) target.prepend(rect);
