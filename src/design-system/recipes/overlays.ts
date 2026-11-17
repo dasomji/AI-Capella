@@ -1,5 +1,5 @@
 import { normalizeRecipe } from "./normalize";
-import { controlBase, disabledRecipe } from "./controls";
+import { controlBase, disabledRecipe, buttonRecipe } from "./controls";
 /** dialog/confirm share appearance pending D14; confirm adds alertdialog semantics. */
 export const dialogVariants = [
   "dialog",
@@ -7,6 +7,7 @@ export const dialogVariants = [
   "drawer",
   "confirm",
   "transcription",
+  "domain-sheet", "transcription-review",
   "admin-confirm",
   "admin-reason",
 ] as const;
@@ -26,7 +27,16 @@ function dialogRecipeStyles({ variant = "dialog" }: DialogOptions = {}) {
       actions:'tw:block',
     };
   }
-  const shapes: Record<DialogVariant, string> = {
+  if (variant === "domain-sheet") return {
+    panel: "tw:fixed tw:inset-x-0 tw:bottom-0 tw:m-0 tw:w-full tw:max-w-none tw:max-h-sheet tw:overflow-auto tw:border-0 tw:border-t tw:border-solid tw:border-rule-strong tw:rounded-t-sheet tw:p-(--ds-sheet-padding) tw:bg-material-vellum-strong tw:backdrop-filter-(--ds-material-filter-strong) tw:shadow-domain-sheet tw:text-ink tw:font-body tw:leading-body tw:panel:inset-x-auto tw:panel:left-sheet tw:panel:bottom-24 tw:panel:w-sheet tw:panel:rounded-transcription-dialog tw:panel:border tw:backdrop:bg-domain-backdrop",
+    content: "tw:block", header: "tw:relative tw:flex tw:items-center tw:justify-between tw:min-h-50 tw:pt-8",
+    title: "tw:m-0 tw:text-dialog tw:font-body tw:font-bold tw:leading-body", body: "tw:m-0 tw:font-body tw:text-body tw:leading-body", actions: "tw:flex tw:gap-10",
+  };
+  if (variant === "transcription" || variant === "transcription-review") return {
+    panel: "tw:box-border tw:border tw:border-solid tw:outline-none tw:overflow-auto tw:text-ink tw:font-auth-body tw:leading-body tw:bg-surface-raised tw:bg-(image:--ds-material-fibre) tw:border-rule-strong tw:backdrop:bg-transcription-backdrop tw:backdrop:backdrop-blur-(--ds-overlay-blur) " + (variant === "transcription-review" ? "tw:w-screen tw:h-dvh tw:max-w-none tw:max-h-none tw:m-0 tw:border-0 tw:rounded-field tw:p-24 tw:max-score:p-16 tw:bg-surface" : "tw:w-transcription tw:max-w-(--ds-dialog-transcription-max-width) tw:max-h-dialog tw:rounded-transcription-dialog tw:p-20 tw:max-score:p-18"),
+    content: "tw:block", header: "tw:flex tw:items-center tw:justify-between tw:gap-20 tw:mb-24 tw:min-h-50", title: variant === "transcription-review" ? "tw:m-0 tw:font-auth-display tw:font-emphasis tw:text-transcription-title tw:max-score:text-admin-title-phone tw:leading-label" : "tw:m-0 tw:font-auth-mono tw:font-bold tw:text-dialog tw:leading-title", body: "tw:m-0 tw:font-auth-body tw:text-body tw:leading-body", actions: "tw:flex tw:gap-10",
+  };
+  const shapes: Record<Exclude<DialogVariant,"domain-sheet"|"transcription"|"transcription-review">, string> = {
     dialog:
       "tw:w-dialog tw:max-w-dialog tw:rounded-dialog tw:p-24 tw:shadow-component-overlay",
     confirm:
@@ -35,15 +45,13 @@ function dialogRecipeStyles({ variant = "dialog" }: DialogOptions = {}) {
       "tw:fixed tw:inset-x-0 tw:bottom-0 tw:m-0 tw:w-full tw:max-w-none tw:max-h-sheet tw:rounded-t-sheet tw:p-20 tw:panel:inset-x-auto tw:panel:left-sheet tw:panel:bottom-24 tw:panel:w-sheet tw:panel:rounded-transcription-dialog",
     drawer:
       "tw:fixed tw:inset-y-0 tw:right-0 tw:m-0 tw:h-full tw:w-drawer tw:max-w-full tw:rounded-field tw:p-28 tw:shadow-admin-detail",
-    transcription:
-      "tw:w-transcription tw:max-w-dialog tw:rounded-transcription-dialog tw:p-20",
     "admin-confirm": "",
     "admin-reason": "",
   };
   return {
     panel:
       "tw:box-border tw:border tw:border-solid tw:outline-none tw:overflow-auto tw:overscroll-contain tw:bg-surface-raised tw:text-ink tw:border-rule-strong tw:leading-body tw:backdrop:bg-backdrop tw:motion-reduce:transition-none " +
-      (variant === "transcription" ? "tw:font-auth-body " : "tw:font-body ") +
+      "tw:font-body " +
       (variant === "sheet" ? "" : "tw:max-h-dialog ") +
       shapes[variant],
     content: "tw:grid tw:gap-14",
@@ -58,11 +66,16 @@ export const sheetRecipe = () => dialogRecipe({ variant: "sheet" });
 export const drawerRecipe = () => dialogRecipe({ variant: "drawer" });
 export const confirmRecipe = () => dialogRecipe({ variant: "confirm" });
 /** popover/sheet/member intentionally alias appearance pending D13; placement is separate. */
-export const menuVariants = ["popover", "sheet", "member", "admin"] as const;
+export const menuVariants = ["popover", "sheet", "member", "job", "admin"] as const;
 export interface MenuOptions {
   variant?: (typeof menuVariants)[number];
 }
 function menuRecipeStyles({ variant = "popover" }: MenuOptions = {}) {
+  if (variant === "member" || variant === "job") return {
+    root: "tw:absolute tw:right-0 tw:grid tw:box-border tw:border tw:border-solid tw:border-rule-strong tw:bg-surface-raised tw:text-ink tw:shadow-menu " + (variant === "member" ? "tw:top-full tw:z-stage tw:min-w-menu-member tw:p-0 tw:gap-0" : "tw:z-transcription tw:min-w-menu-job tw:p-12 tw:gap-8 tw:rounded-menu"),
+    item: variant === "member" ? controlBase + " " + disabledRecipe + " ds-menu-item tw:flex tw:items-center tw:gap-12 tw:min-h-44 tw:px-12 tw:py-0 tw:rounded-control tw:border-0 tw:bg-transparent tw:font-body tw:font-label tw:text-button tw:text-left tw:text-ink tw:cursor-pointer" : "ds-job-menu-item " + buttonRecipe(),
+    danger: "tw:text-danger!", check: "tw:ml-auto tw:text-menu-check",
+  };
   return {
     root: "tw:grid tw:gap-0 tw:box-border tw:p-8 tw:rounded-transcription-tile tw:border tw:border-solid tw:border-rule-strong tw:bg-surface-raised tw:text-ink tw:font-body tw:shadow-menu",
     item:
