@@ -370,7 +370,7 @@ export function createStatus(
 ) {
   return element("p", r.statusRecipe(options), options.text, {
     ...options,
-    attrs: { ...options.attrs, role: "status" },
+    attrs: { ...options.attrs, role: options.attrs?.role ?? "status" },
   });
 }
 export function createLoading(
@@ -451,7 +451,7 @@ export function createDialog(options: DialogOptions) {
   dialog.setAttribute(
     "role",
     (options.attrs?.role as string) ??
-      (options.variant === "confirm" || options.variant === "admin-confirm"
+      (options.variant === "confirm" || options.variant === "admin-confirm" || options.variant === "admin-reason"
         ? "alertdialog"
         : "dialog"),
   );
@@ -494,8 +494,8 @@ export const createSheet = (options: Omit<DialogOptions, "variant">) =>
   createDialog({ ...options, variant: "sheet" });
 export const createDrawer = (options: Omit<DialogOptions, "variant">) =>
   createDialog({ ...options, variant: "drawer" });
-export const createConfirmDialog = (options: Omit<DialogOptions, "variant">) =>
-  createDialog({ ...options, variant: "confirm" });
+export const createConfirmDialog = (options: Omit<DialogOptions, "variant"> & {variant?: "confirm"|"admin-confirm"|"admin-reason"}) =>
+  createDialog({ ...options, variant: options.variant ?? "confirm" });
 export interface MenuItem {
   label: string;
   disabled?: boolean;
@@ -622,4 +622,16 @@ export function createTableParts(
     pagination: () => createTablePagination({ variant }),
     wrap: () => createTableWrap({ variant }),
   };
+}
+
+export function createWorkspace<K extends keyof HTMLElementTagNameMap = 'div'>(options: ElementOptions & {as?:K;part:r.WorkspacePart;text?:string;content?:Node}) {
+  const node=element(options.as??'div',r.workspaceRecipe(options.part),options.text,options);
+  if(options.content)node.append(options.content);
+  return node;
+}
+export function createNavigationTabs(options: ElementOptions & r.NavigationOptions & {label:string;items:readonly {value:string;label:string;href:string}[];value:string;onNavigate?:(value:string)=>void}) {
+  const slots=r.navigationRecipe(options),nav=element('nav',slots.root,undefined,options);
+  nav.setAttribute('aria-label',options.label);
+  for(const item of options.items){const link=element('a',slots.item(item.value===options.value),item.label);link.href=item.href;if(item.value===options.value)link.setAttribute('aria-current','page');link.addEventListener('click',event=>{if(options.onNavigate&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey&&event.button===0){event.preventDefault();options.onNavigate(item.value);}});nav.append(link);}
+  return nav;
 }

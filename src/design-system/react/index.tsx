@@ -352,13 +352,14 @@ export function Card({
 export const Surface = Card;
 export function Badge({
   intent,
+  variant,
   layout,
   ...props
 }: Native<HTMLAttributes<HTMLSpanElement>> & r.FeedbackOptions) {
   return (
     <span
       {...props}
-      className={r.withLayout(r.badgeRecipe({ intent }), layout)}
+      className={r.withLayout(r.badgeRecipe({ intent, variant }), layout)}
     />
   );
 }
@@ -379,6 +380,7 @@ export function Toolbar({
   );
 }
 export function Status({
+  variant,
   intent,
   layout,
   ...props
@@ -386,8 +388,8 @@ export function Status({
   return (
     <p
       {...props}
-      role="status"
-      className={r.withLayout(r.statusRecipe({ intent }), layout)}
+      role={props.role ?? "status"}
+      className={r.withLayout(r.statusRecipe({ intent, variant }), layout)}
     />
   );
 }
@@ -544,7 +546,7 @@ export function Dialog({
       data-ds="dialog"
       role={
         props.role ??
-        (variant === "confirm" || variant === "admin-confirm"
+        (variant === "confirm" || variant === "admin-confirm" || variant === "admin-reason"
           ? "alertdialog"
           : "dialog")
       }
@@ -582,8 +584,8 @@ export const Sheet = (props: Omit<DialogProps, "variant">) => (
 export const Drawer = (props: Omit<DialogProps, "variant">) => (
   <Dialog {...props} variant="drawer" />
 );
-export const ConfirmDialog = (props: Omit<DialogProps, "variant">) => (
-  <Dialog {...props} variant="confirm" />
+export const ConfirmDialog = ({variant="confirm",...props}: Omit<DialogProps, "variant"> & {variant?: "confirm"|"admin-confirm"|"admin-reason"}) => (
+  <Dialog {...props} variant={variant} />
 );
 export interface MenuProps
   extends
@@ -752,6 +754,7 @@ export function TableHeader({
 }
 export function TableCell({
   variant,
+  mono,
   layout,
   ...props
 }: Native<TdHTMLAttributes<HTMLTableCellElement>> & r.TableOptions) {
@@ -760,7 +763,7 @@ export function TableCell({
     <td
       {...props}
       className={r.withLayout(
-        r.tableRecipe({ variant: variant ?? inherited }).cell,
+        r.tableRecipe({ variant: variant ?? inherited, mono }).cell,
         layout,
       )}
     />
@@ -784,6 +787,7 @@ export function TableRow({
 }
 export function TableEmpty({
   variant,
+  mono,
   layout,
   ...props
 }: Native<TdHTMLAttributes<HTMLTableCellElement>> & r.TableOptions) {
@@ -815,6 +819,7 @@ export function TablePagination({
   );
 }
 export function TableWrap({
+  bounded,
   variant,
   layout,
   ...props
@@ -823,8 +828,17 @@ export function TableWrap({
     <TableVariant value={variant}>
       <div
         {...props}
-        className={r.withLayout(r.tableRecipe({ variant }).wrap, layout)}
+        className={r.withLayout(r.tableRecipe({ variant, bounded }).wrap, layout)}
       />
     </TableVariant>
   );
+}
+
+/** Finite semantic composition slots, shared with DOM workspaces. */
+export function Workspace({as: Tag = 'div', part, layout, ...props}: Native<HTMLAttributes<HTMLElement>> & {as?: 'main'|'header'|'div'|'section'|'span'|'p'|'h1'|'h2'|'h3'|'dl'|'dt'|'dd'|'pre'|'strong'|'small'|'fieldset'|'legend'; part:r.WorkspacePart;ref?:Ref<any>}) {
+  return <Tag {...props} className={r.withLayout(r.workspaceRecipe(part),layout)}/>;
+}
+export function NavigationTabs({label, items, value, onNavigate, variant, layout, ...props}: Native<HTMLAttributes<HTMLElement>> & r.NavigationOptions & {label:string;items:readonly {value:string;label:string;href:string}[];value:string;onNavigate?:(value:string)=>void}) {
+  const slots=r.navigationRecipe({variant});
+  return <nav {...props} aria-label={label} className={r.withLayout(slots.root,layout)}>{items.map(item=><a key={item.value} href={item.href} aria-current={value===item.value?'page':undefined} className={slots.item(value===item.value)} onClick={event=>{if(onNavigate&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey&&event.button===0){event.preventDefault();onNavigate(item.value);}}}>{item.label}</a>)}</nav>;
 }

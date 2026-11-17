@@ -36,6 +36,7 @@
 @media (max-width:theme(--breakpoint-account)) {
   .ds-table-records { min-width:0;table-layout:fixed; }
   .ds-table-records thead,.ds-table-records thead tr { display:flex;flex-wrap:wrap;gap:var(--ds-space-8); }
+  .ds-table-records th:not(:has(button)) { display:none; }
   .ds-table-records th { position:static;border:0;white-space:normal; }
   .ds-table-records tbody,.ds-table-records tbody tr { display:block;width:100%; }
   .ds-table-records tbody tr { border-bottom:var(--ds-stroke-thin) solid var(--ds-admin-rule);padding:var(--ds-space-10) 0; }

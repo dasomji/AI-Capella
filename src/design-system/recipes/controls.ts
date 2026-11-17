@@ -12,6 +12,7 @@ export const buttonVariants = [
   "pill",
   "tour",
   "dense",
+  "dense-sort",
   "link",
 ] as const;
 export type ButtonVariant = (typeof buttonVariants)[number];
@@ -30,6 +31,7 @@ const buttonShapes: Record<ButtonVariant, string> = {
   tour: "tw:min-h-tour tw:rounded-card tw:px-16 tw:py-0 tw:text-button tw:font-label tw:font-control",
   dense:
     "tw:min-h-control-height-admin tw:rounded-admin-control tw:px-14 tw:py-10 tw:text-body-small tw:font-regular tw:font-auth-mono",
+  "dense-sort": "tw:min-h-control-height-admin tw:rounded-admin-control tw:px-0 tw:py-0 tw:text-body-small tw:font-regular tw:font-auth-mono",
   link: "tw:min-h-32 tw:rounded-field tw:px-0 tw:py-4 tw:text-label tw:font-label tw:font-control",
 };
 const buttonIntents: Record<ButtonIntent, string> = {
@@ -51,15 +53,15 @@ function buttonRecipeStyles({
       ? intent === "secondary" || intent === "quiet"
         ? "tw:bg-transparent tw:text-surface-sunken tw:border-tour-rule"
         : "tw:bg-surface tw:text-ink tw:border-surface tw:hover:bg-surface-overlay"
-      : variant === "dense"
+      : variant === "dense-sort" ? "tw:bg-transparent tw:text-admin-accent tw:border-transparent" : variant === "dense"
         ? intent === "danger"
           ? "tw:bg-transparent tw:text-admin-danger tw:border-admin-danger"
           : "tw:bg-transparent tw:text-admin-ink tw:border-admin-rule"
         : buttonIntents[intent];
   return [
     controlBase,
-    variant === "dense" ? denseDisabled : disabledRecipe,
-    variant === "dense" ? "tw:leading-admin" : "tw:leading-body",
+    variant.startsWith("dense") ? denseDisabled : disabledRecipe,
+    variant.startsWith("dense") ? "tw:leading-admin" : "tw:leading-body",
     "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 tw:border tw:border-solid tw:whitespace-nowrap tw:cursor-pointer",
     buttonShapes[variant],
     color,
@@ -118,13 +120,13 @@ function fieldRecipeStyles(
   const admin = variant === "admin";
   const ruled = variant !== "boxed";
   return {
-    root: "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
+    root: admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body" : "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
     label:
       ruled && !admin
         ? "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary"
-        : "tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
+        : admin ? "tw:text-label tw:font-auth-body tw:leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
     control: [
-      controlBase,
+      admin ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : controlBase,
       disabledRecipe,
       "tw:block tw:w-full tw:min-w-0 tw:font-regular tw:disabled:cursor-default",
       kind === "textarea" && admin
@@ -132,7 +134,7 @@ function fieldRecipeStyles(
         : variant === "domain" && kind === "select"
           ? "tw:rounded-field tw:border-0 tw:border-b tw:border-solid tw:px-8 tw:py-8 tw:leading-body tw:bg-transparent tw:text-ink tw:font-control tw:text-body"
           : ruled
-            ? `tw:rounded-field tw:border-0 tw:border-b tw:border-solid ${variant === "domain" ? "tw:py-8 tw:leading-admin" : admin ? "tw:py-10 tw:leading-body" : "tw:py-10 tw:leading-field"} ${admin ? "tw:px-2 tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-body" : variant === "domain" ? "tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body" : "tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input"}`
+            ? `tw:rounded-field tw:border-0 tw:border-b tw:border-solid ${variant === "domain" ? "tw:py-8 tw:leading-admin" : admin ? "tw:py-10 tw:leading-body" : "tw:py-10 tw:leading-field"} ${admin ? "tw:px-2 tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-label" : variant === "domain" ? "tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body" : "tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input"}`
             : (kind === "textarea"
                 ? "tw:h-auto tw:min-h-textarea tw:resize-y tw:p-10"
                 : "tw:h-control-height tw:px-12 tw:py-0") +
@@ -146,8 +148,8 @@ function fieldRecipeStyles(
             : ruled
               ? "tw:border-ink-secondary tw:focus:border-focus"
               : "tw:border-rule-strong tw:focus:border-ink-secondary",
-      ruled ? "tw:focus:shadow-focus" : "",
-      "tw:focus:outline-none",
+      ruled && !admin ? "tw:focus:shadow-focus" : "",
+      admin ? "" : "tw:focus:outline-none",
     ].join(" "),
     hint: "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
     error: "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-danger",
@@ -168,7 +170,7 @@ export interface CheckboxOptions {
 }
 function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
   return {
-    root: "tw:inline-flex tw:items-center tw:gap-8 tw:font-auth-body tw:text-label tw:text-ink",
+    root: "tw:inline-flex tw:items-center tw:gap-8 tw:font-auth-body tw:text-label tw:leading-body " + (variant === "permission" ? "tw:text-admin-ink" : "tw:text-ink"),
     control:
       controlBase +
       " " +

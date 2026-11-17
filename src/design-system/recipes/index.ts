@@ -4,6 +4,13 @@ export * from "./overlays";
 /** Layout-only extension, deliberately finite: visual overrides are not part of the API. */
 export const layoutClasses = [
   "tw:w-full",
+  "tw:m-4",
+  "tw:mb-20",
+  "tw:absolute",
+  "tw:right-16",
+  "tw:top-12",
+  "tw:relative",
+  "tw:sr-only",
   "tw:flex-1",
   "tw:shrink-0",
   "tw:ml-auto",
@@ -32,3 +39,5 @@ export function withLayout(recipe: string, layout?: LayoutClass) {
     ? recipe + " " + (typeof layout === "string" ? layout : layout.join(" "))
     : recipe;
 }
+
+export * from './workspace';

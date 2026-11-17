@@ -1140,3 +1140,32 @@
   --color-transcription-warning: var(--ds-transcription-warning);
 }
 
+
+/* Workspace parity geometry; D06/D12/D16 retain these independent roles. */
+:root {
+  --ds-workspace-inset: clamp(16px,4vw,64px);
+  --ds-workspace-rule-inset: calc(-1 * var(--ds-workspace-inset));
+  --ds-workspace-rule-phone-inset: -16px;
+  --ds-workspace-search-min: 180px;
+  --ds-workspace-filter-min: 140px;
+  --ds-workspace-heading-margin: .83em;
+  --ds-workspace-subheading-margin: 1em;
+  --ds-workspace-definition-columns: minmax(100px,1fr) 2fr;
+  --ds-workspace-definition-phone-columns: 1fr 1.5fr;
+  --ds-workspace-metric-columns: repeat(auto-fit,minmax(150px,1fr));
+  --ds-workspace-confirm-width: min(440px,calc(100vw - 32px));
+  --ds-workspace-confirm-height: 90dvh;
+  --ds-content-empty: '';
+  --ds-size-metric: 26px;
+  --ds-size-wordmark: 22px;
+  --ds-table-cell-min: 140px;
+  --ds-table-cell-mono-min: 110px;
+  --ds-table-cell-max: 320px;
+  --ds-table-height: 65vh;
+  --ds-table-row-hover: color-mix(in srgb,var(--ds-admin-accent) 8%,transparent);
+}
+@theme inline {
+  --text-metric: var(--ds-size-metric);
+  --text-wordmark: var(--ds-size-wordmark);
+  --color-table-row-hover: var(--ds-table-row-hover);
+}

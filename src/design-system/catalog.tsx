@@ -10,6 +10,10 @@ export interface Specimen {
 }
 export function specimens(): Specimen[] {
   const rows: Specimen[] = [];
+  for(const part of r.workspaceParts) rows.push({name:`workspace/${part}`,react:<R.Workspace part={part}>Workspace</R.Workspace>,dom:()=>D.createWorkspace({part,text:'Workspace'})});
+  rows.push({name:'navigation/admin',react:<R.NavigationTabs label="Pages" items={[{value:'users',label:'Users',href:'/admin/users'}]} value="users"/>,dom:()=>D.createNavigationTabs({label:'Pages',items:[{value:'users',label:'Users',href:'/admin/users'}],value:'users'})});
+  rows.push({name:'status/admin',react:<R.Status variant="admin">Saved</R.Status>,dom:()=>D.createStatus({variant:'admin',text:'Saved'})});
+  rows.push({name:'badge/admin',react:<R.Badge variant="admin" intent="accent">Lead</R.Badge>,dom:()=>D.createBadge({variant:'admin',intent:'accent',text:'Lead'})});
   for (const variant of r.buttonVariants)
     for (const intent of ["secondary", "primary", "danger", "quiet"] as const)
       for (const state of ["default", "disabled", "busy", "pressed"] as const) {
