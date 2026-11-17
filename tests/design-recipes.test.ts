@@ -51,9 +51,9 @@ describe("pure recipes", () => {
         const classes = r.buttonRecipe({ variant, intent }).split(/\s+/);
         if (variant.startsWith("panel-") || variant.startsWith("section-")) {
           expect(classes).toContain("ds-panel-button");
-          const source=readFileSync("src/design-system/panels.css","utf8");
-          const slot=classes.find(c=>c.startsWith("ds-panel-")&&c!=="ds-panel-button");
-          expect(source).toContain("."+(slot??"ds-panel-stepper > button"));
+          expect(classes).toContain("tw:panel-inherit");
+          expect(classes).toContain("tw:focus-visible:outline-ink");
+          expect(classes.some(c => c.startsWith("tw:"))).toBe(true);
           expect(new Set(classes).size).toBe(classes.length);
           continue;
         }
@@ -124,10 +124,10 @@ describe("pure recipes", () => {
         "error",
       ]);
       expect(slots.control.includes("tw:rounded-card")).toBe(
-        variant === "boxed" || variant === "library-prompt",
+        variant === "boxed" || variant === "library-prompt" || variant === "panel-measure" || variant === "panel-export",
       );
       expect(slots.control.includes("tw:rounded-field")).toBe(
-        variant !== "boxed" && variant !== "library-prompt" && variant !== "player-volume" && !variant.startsWith("panel-"),
+        variant === "panel-offset" || (variant !== "boxed" && variant !== "library-prompt" && variant !== "player-volume" && !variant.startsWith("panel-")),
       );
     }
   });

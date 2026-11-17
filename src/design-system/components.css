@@ -1,20 +1,4 @@
-/* Native modal transport is transparent; legacy children own their existing scrims/layout. */
-.ds-legacy-dialog {
-  position:fixed; inset:0; width:100%; height:100%; max-width:none; max-height:none;
-  margin:0; padding:0; border:0; background:transparent; color:inherit; font:inherit;
-  overflow:visible;
-}
-.ds-legacy-dialog::backdrop { background:transparent; }
-/* Explicit normalization belongs to primitives, never global Preflight. */
-[data-ds] { box-sizing:border-box; }
-[data-ds='dialog'][open] { display:block; }
-[data-ds='checkbox'] { margin:0; }
-/* Showcase containment only: fixed sheet/drawer specimens stay in their comparison cells. */
-.ds-specimens { display:grid; gap:var(--ds-space-24); }
-.ds-specimen-pair { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--ds-space-24); }
-.ds-specimen-pair > div { min-width:0; position:relative; transform:translateZ(0); }
-.ds-specimen-pair dialog { position:relative !important; inset:auto !important; margin:0 !important; width:100% !important; height:auto !important; max-width:100% !important; max-height:none !important; }
-/* This reset is opt-in on recipe slots. Utilities above this layer define every appearance. */
+/* The opt-in all:initial boundary and inheritance restores have no Tailwind equivalent. */
 .ds-reset {
   all:initial;
   display:revert;
@@ -31,66 +15,23 @@
   line-height:var(--ds-leading-body);
   color:var(--ds-ink);
 }
+/* Animation frames require a keyframes rule; the animation is selected by a token-backed utility. */
 @keyframes ds-loading { 0%,100% {opacity:1} 50% {opacity:var(--ds-opacity-loading)} }
-/* Named record appearance retains the admin phone layout. Comparison tables keep scrolling. */
-@media (max-width:theme(--breakpoint-account)) {
-  .ds-table-records { min-width:0;table-layout:fixed; }
-  .ds-table-records thead,.ds-table-records thead tr { display:flex;flex-wrap:wrap;gap:var(--ds-space-8); }
-  .ds-table-records th:not(:has(button)) { display:none; }
-  .ds-table-records th { position:static;border:0;white-space:normal; }
-  .ds-table-records tbody,.ds-table-records tbody tr { display:block;width:100%; }
-  .ds-table-records tbody tr { border-bottom:var(--ds-stroke-thin) solid var(--ds-admin-rule);padding:var(--ds-space-10) 0; }
-  .ds-table-records td { display:block;min-width:0;max-width:none;width:100%;border:0;white-space:normal;overflow-wrap:anywhere;padding:var(--ds-space-6) var(--ds-space-10); }
-  .ds-table-records td::before { content:attr(data-label);display:block;font-family:inherit;font-size:var(--ds-size-small);line-height:inherit;color:var(--ds-admin-secondary); }
-}
+/* Generated pseudo-elements must share the opt-in all:initial boundary. */
 .ds-reset::before,.ds-reset::after { all:initial;content:none; }
-.ds-menu-item { position:relative;isolation:isolate; }
+/* The generated menu glow has no DOM node to receive element utility classes. */
 .ds-menu-item::before {
   content:'';position:absolute;inset:var(--ds-menu-glow-inset);z-index:var(--ds-layer-behind);
   border-radius:var(--ds-radius-round);background:var(--ds-component-menu-glow);
   filter:blur(var(--ds-menu-glow-blur));opacity:0;pointer-events:none;
   transition:opacity var(--ds-duration-fast);
 }
-.ds-menu-item:hover,.ds-menu-item:focus-visible { color:var(--ds-component-menu-hover);text-shadow:var(--ds-component-menu-shadow); }
-.ds-menu-item:hover::before,.ds-menu-item:focus-visible::before { opacity:1; }
+/* The generated menu glow must remove its transition for reduced motion. */
 @media (prefers-reduced-motion:reduce) { .ds-menu-item::before { transition:none; } }
-
+/* The reset boundary must preserve native hidden regardless of slot display utilities. */
 .ds-reset[hidden] { display:none !important; }
-.ds-menu-anchor { position:relative; }
-.ds-menu-anchor > [role='menu'] { position:absolute; top:100%; left:0; z-index:var(--ds-layer-menu); }
-.ds-menu-anchor[data-placement='end'] > [role='menu'] { left:auto; right:0; }
-/* Placement roles use the same values as the original notifier in both themes. */
-.ds-toast-placement {
-  inset:auto; left:50%; bottom:var(--ds-toast-bottom); max-width:var(--ds-toast-max-width);
-  transform:translate(-50%, var(--ds-space-16)); opacity:0;
-  transition:opacity var(--ds-duration-normal), transform var(--ds-duration-normal) var(--ds-ease-standard);
-}
-.ds-toast-placement.show { opacity:1; transform:translate(-50%, 0); }
-@media (width < theme(--breakpoint-panel)) { .ds-toast-placement { bottom:var(--ds-toast-bottom-phone); } }
-body:has(.domain-sheet) .ds-toast-placement { top:var(--ds-space-16); bottom:auto; max-width:var(--ds-toast-max-width-sheet); }
-/* Generated decorations must obey the same inherited visibility and input policy. */
+/* Generated decorations restore inherited visibility and input policy after all:initial. */
 .ds-reset::before, .ds-reset::after {
   color-scheme:inherit; visibility:inherit; pointer-events:inherit;
   accent-color:inherit; print-color-adjust:inherit;
-}
-
-/* Native overlays retain their named material independently of panel geometry. */
-.ds-domain-sheet { background:var(--ds-material-vellum-strong);backdrop-filter:var(--ds-material-filter-strong); }
-.ds-transcription-panel { background-image:var(--ds-material-fibre); }
-.ds-transcription-panel::backdrop { backdrop-filter:blur(var(--ds-overlay-blur)); }
-
-/* Placement and lifecycle belong to the named inverted note recipes. */
-.ds-tour-note { position:absolute;left:0;top:0;width:var(--ds-tour-note-width);opacity:0;transition:opacity var(--ds-duration-note-out) ease; }
-.ds-tour-note.shown { opacity:1;transition-duration:var(--ds-duration-note-in); }
-.ds-power-note { position:fixed;left:50%;bottom:var(--ds-toast-bottom);z-index:var(--ds-layer-note);width:var(--ds-power-note-width);transform:translate(-50%,var(--ds-note-enter-offset));opacity:0;transition:opacity var(--ds-duration-normal),transform var(--ds-duration-normal) var(--ds-ease-standard); }
-.ds-power-note.show { opacity:1;transform:translate(-50%,0); }
-@media (width < theme(--breakpoint-panel)) { .ds-power-note { bottom:var(--ds-toast-bottom-phone); } }
-
-/* Sheet transport matches the legacy slide, retaining the top layer through exit. */
-.ds-sheet-motion { transition:transform var(--ds-duration-normal) var(--ds-ease-standard); }
-.ds-sheet-motion[data-sheet-state='entering'],.ds-sheet-motion[data-sheet-state='closing'] { transform:translateY(100%); }
-.ds-sheet-motion::backdrop { opacity:1;transition:opacity var(--ds-duration-normal); }
-.ds-sheet-motion[data-sheet-state='entering']::backdrop,.ds-sheet-motion[data-sheet-state='closing']::backdrop { opacity:0; }
-@media (prefers-reduced-motion:reduce) {
-  .ds-sheet-motion,.ds-sheet-motion::backdrop { transition:none; }
 }

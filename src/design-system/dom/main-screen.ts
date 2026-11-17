@@ -144,7 +144,7 @@ export function createMainScreen(copy: MainCopy) {
           shell("p", {
             id: "landing-dedication",
             hidden: true,
-            class: "landing-dedication",
+            class: "landing-dedication tw:panel-dedication-wait tw:[:root[data-title=zeile]_&]:panel-dedication-staff tw:[:root[data-title=buehne]_&]:panel-dedication-night",
           }),
         ),
         append(

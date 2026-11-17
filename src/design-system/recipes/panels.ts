@@ -1,51 +1,66 @@
 import { normalizeRecipe } from "./normalize";
-import { buttonRecipe } from "./controls";
-/** D2: compositions retain printed marks and numeric/export appearances pending owner decisions. */
+/** P6a: shared, token-backed utilities preserve the P5 panel hooks and native semantics. */
+const inherit = "tw:panel-inherit";
+const focus = "tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-ink tw:focus-visible:outline-offset-2";
+const buttonBase = inherit + " tw:bg-transparent tw:border-0 tw:p-0 tw:cursor-pointer tw:text-center tw:select-none tw:disabled:cursor-default tw:disabled:opacity-(--ds-opacity-disabled) " + focus;
+export const panelButtonStyles = {
+  "panel-step": "ds-panel-button " + buttonBase,
+  "panel-tempo": "ds-panel-button ds-panel-stepper-value stepper-value " + inherit + " tw:inline-flex tw:items-center tw:gap-4 tw:h-32 tw:py-0 tw:px-8 tw:rounded-panel-step tw:font-mono tw:font-label tw:text-panel-field tw:leading-panel-single tw:whitespace-nowrap tw:hover:bg-surface-overlay tw:bg-transparent tw:border-0 tw:cursor-pointer tw:text-center tw:select-none tw:disabled:cursor-default tw:disabled:opacity-(--ds-opacity-disabled) tw:[&_.ic]:size-panel-mark " + focus,
+  "panel-round": "ds-panel-button ds-panel-round-btn round-btn " + inherit + " tw:size-52 tw:rounded-panel-round tw:border tw:border-solid tw:border-rule-strong tw:bg-surface-overlay tw:grid tw:place-items-center tw:touch-manipulation tw:hover:border-ink-secondary tw:p-0 tw:cursor-pointer tw:text-center tw:select-none tw:disabled:cursor-default tw:disabled:opacity-(--ds-opacity-disabled) " + focus,
+  "panel-preset": "ds-panel-button ds-panel-bpm-preset bpm-preset " + inherit + " tw:flex-1 tw:h-panel-control tw:rounded-panel-preset tw:border tw:border-solid tw:border-rule-strong tw:font-mono tw:font-label tw:text-panel-copy tw:leading-panel-single tw:text-ink-secondary tw:min-w-0 tw:aria-pressed:bg-ink tw:aria-pressed:border-ink tw:aria-pressed:text-surface-sunken tw:bg-transparent tw:p-0 tw:cursor-pointer tw:text-center tw:select-none tw:disabled:cursor-default tw:disabled:opacity-(--ds-opacity-disabled) " + focus,
+};
+const mark = "ds-panel-button ds-panel-rmark rmark " + inherit + " tw:inline-block tw:min-w-36 tw:max-w-full tw:h-36 tw:py-0 tw:px-6 tw:panel-mark-stroke tw:border-solid tw:border-ink tw:rounded-panel-mark tw:font-display tw:font-panel-mark tw:leading-panel-mark tw:text-center tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:text-ink tw:bg-surface tw:hover:bg-surface-overlay tw:cursor-pointer tw:select-none tw:disabled:cursor-default tw:disabled:opacity-(--ds-opacity-disabled) tw:[:root[data-type=revival]_&]:font-panel-revival tw:[:root[data-type=revival]_&]:font-synthesis-none " + focus;
+export function panelSectionMarkStyles(word = false) {
+  return mark + (word ? " word tw:text-panel-word" : " tw:text-panel-mark");
+}
+export const panelInputStyles = {
+  "panel-tempo": "ds-panel-field ds-panel-bpm-input bpm-input field " + inherit + " tw:w-panel-tempo tw:h-panel-control tw:rounded-panel-preset tw:border tw:border-solid tw:border-rule-strong tw:bg-surface tw:font-mono tw:font-label tw:text-panel-copy tw:leading-panel-single tw:min-w-0 tw:text-center tw:py-0 tw:px-6 tw:appearance-textfield tw:focus:border-ink-secondary tw:focus:outline-none " + focus,
+  "panel-measure": "ds-panel-field ds-panel-measure-input measure-input field " + inherit + " tw:h-control-height tw:rounded-card tw:border tw:border-solid tw:border-rule-strong tw:bg-surface tw:py-0 tw:px-12 tw:text-panel-field tw:min-w-0 tw:focus:border-ink-secondary tw:focus:outline-none " + focus,
+  "panel-export": "ds-panel-field field " + inherit + " tw:h-control-height tw:rounded-card tw:border tw:border-solid tw:border-rule-strong tw:bg-surface tw:py-0 tw:px-12 tw:text-panel-field tw:min-w-0 tw:focus:border-ink-secondary tw:focus:outline-none " + focus,
+  "panel-offset": "ds-panel-range " + inherit + " tw:p-0 tw:border-0 tw:bg-transparent tw:rounded-field tw:flex-1 tw:appearance-none tw:h-panel-range tw:m-2 tw:cursor-default tw:select-text " + focus,
+};
+export const panelCheckboxStyles = inherit + " tw:p-0 tw:border-0 tw:bg-transparent tw:rounded-field tw:appearance-auto tw:mt-3 tw:mr-3 tw:mb-3 tw:ml-4 " + focus;
 const parts = {
-  "ctl-block": "ds-panel-part ds-panel-ctl-block ctl-block",
-  "ctl-head": "ds-panel-part ds-panel-ctl-head ctl-head",
-  "ctl-note": "ds-panel-part ds-panel-ctl-note ctl-note",
-  "big-stepper": "ds-panel-part ds-panel-big-stepper big-stepper",
-  "big-value": "ds-panel-part ds-panel-big-value big-value",
-  presets: "ds-panel-part ds-panel-presets presets",
-  "custom-tempo": "ds-panel-part ds-panel-custom-tempo custom-tempo",
-  "goto-row": "ds-panel-part ds-panel-goto-row goto-row",
-  "mark-row": "ds-panel-part ds-panel-mark-row mark-row",
-  "popover-body": "ds-panel-part ds-panel-popover-body popover-body",
-  "sheet-body": "ds-panel-part ds-panel-sheet-body sheet-body",
-  "offset-body":
-    "ds-panel-part ds-panel-offset-body ds-panel-sheet-body sheet-body offset-body",
-  "offset-row": "ds-panel-part ds-panel-offset-row offset-row",
-  "offset-value": "ds-panel-part ds-panel-offset-value offset-value",
-  "export-body":
-    "ds-panel-part ds-panel-export-body ds-panel-sheet-body sheet-body export-body",
-  "export-voices": "ds-panel-part ds-panel-export-voices export-voices",
-  "export-voice-list":
-    "ds-panel-part ds-panel-export-voice-list export-voice-list",
-  "export-status": "ds-panel-part ds-panel-export-status export-status",
-  "scan-marks-body":
-    "ds-panel-part ds-panel-scan-marks-body ds-panel-sheet-body sheet-body scan-marks-body",
-  "scan-mark-list": "ds-panel-part ds-panel-scan-mark-list scan-mark-list",
-  "scan-mark": "ds-panel-part ds-panel-scan-mark scan-mark",
-  "scan-q-head": "ds-panel-part ds-panel-scan-q-head scan-q-head",
-  "scan-q-text": "ds-panel-part ds-panel-scan-q-text scan-q-text",
-  "scan-actions": "ds-panel-part ds-panel-scan-actions scan-actions",
-  "scan-mark-img": "ds-panel-part ds-panel-scan-mark-img scan-mark-img",
-  label: "ds-panel-part ds-panel-label label",
-  stepper: "ds-panel-part ds-panel-stepper stepper",
-  "stepper-value": "ds-panel-part ds-panel-stepper-value stepper-value",
-  "section-marks": "ds-panel-part ds-panel-section-marks ",
-  "section-add": "ds-panel-part ds-panel-section-add ",
-  "export-row": "ds-panel-part ds-panel-export-row ",
-  "export-summary": "ds-panel-part ds-panel-export-summary ",
-  "sync-debug": "ds-panel-part ds-panel-sync-debug sync-debug",
-  "fps-probe": "ds-panel-part ds-panel-fps-probe fps-probe",
-  "paper-body": "ds-panel-part ds-panel-paper-body paper-body",
+  "ctl-block": "ds-panel-part ds-panel-ctl-block ctl-block tw:panel-inherit tw:select-text tw:pt-14 tw:pb-16 tw:px-0 tw:border-t tw:border-solid tw:border-rule tw:[.ds-panel-popover-body_&:first-child]:border-t-0 tw:[.ds-panel-sheet-body_>&:first-child]:border-t-0",
+  "ctl-head": "ds-panel-part ds-panel-ctl-head ctl-head tw:panel-inherit tw:select-text tw:flex tw:justify-between tw:items-baseline tw:gap-12",
+  "ctl-note": "ds-panel-part ds-panel-ctl-note ctl-note tw:panel-inherit tw:select-text tw:block tw:text-panel-note tw:text-ink-secondary tw:[p&]:my-panel-note tw:[p&]:mx-0 tw:[.ds-panel-export-body_&]:m-0",
+  "big-stepper": "ds-panel-part ds-panel-big-stepper big-stepper tw:panel-inherit tw:select-text tw:flex tw:items-center tw:justify-between tw:mt-12",
+  "big-value": "ds-panel-part ds-panel-big-value big-value tw:panel-inherit tw:select-text tw:inline-flex tw:items-center tw:gap-8 tw:font-mono tw:font-label tw:text-panel-value tw:leading-panel-single tw:[&_.ic]:size-28 tw:[&_small]:font-body tw:[&_small]:font-emphasis tw:[&_small]:text-panel-unit tw:[&_small]:leading-panel-single tw:[&_small]:text-ink-secondary",
+  "presets": "ds-panel-part ds-panel-presets presets tw:panel-inherit tw:select-text tw:flex tw:gap-6 tw:mt-14",
+  "custom-tempo": "ds-panel-part ds-panel-custom-tempo custom-tempo tw:panel-inherit tw:select-text tw:flex tw:items-center tw:justify-between tw:gap-12 tw:mt-12 tw:text-panel-copy tw:text-ink-secondary",
+  "goto-row": "ds-panel-part ds-panel-goto-row goto-row tw:panel-inherit tw:select-text tw:flex tw:gap-10 tw:mt-10 tw:[&_.ds-panel-field]:flex-1 tw:[&_.ds-panel-field]:font-mono tw:[&_.ds-panel-field]:appearance-textfield",
+  "mark-row": "ds-panel-part ds-panel-mark-row mark-row tw:panel-inherit tw:select-text tw:flex tw:flex-wrap tw:gap-10 tw:mt-12 tw:[&_.ds-panel-rmark]:min-w-control-height tw:[&_.ds-panel-rmark]:h-control-height tw:[&_.ds-panel-rmark]:text-panel-mark-row tw:[&_.ds-panel-rmark]:leading-panel-mark-row tw:[&_.ds-panel-rmark.word]:text-panel-copy",
+  "popover-body": "ds-panel-part ds-panel-popover-body popover-body tw:panel-inherit tw:select-text tw:py-6 tw:px-8 tw:w-panel-popover tw:max-w-full",
+  "sheet-body": "ds-panel-part ds-panel-sheet-body sheet-body tw:panel-inherit tw:select-text tw:block",
+  "offset-body": "ds-panel-part ds-panel-offset-body ds-panel-sheet-body sheet-body offset-body tw:panel-inherit tw:select-text tw:grid tw:gap-14",
+  "offset-row": "ds-panel-part ds-panel-offset-row offset-row tw:panel-inherit tw:select-text tw:grid tw:panel-offset-columns tw:items-center tw:gap-12 tw:text-panel-offset tw:text-ink-secondary tw:[&_input]:w-full tw:[&_input]:accent-ink",
+  "offset-value": "ds-panel-part ds-panel-offset-value offset-value tw:panel-inherit tw:select-text tw:m-0 tw:text-center tw:tabular-nums",
+  "export-body": "ds-panel-part ds-panel-export-body ds-panel-sheet-body sheet-body export-body tw:panel-inherit tw:select-text tw:grid tw:gap-14",
+  "export-voices": "ds-panel-part ds-panel-export-voices export-voices tw:panel-inherit tw:select-text tw:[&_summary]:cursor-pointer tw:[&_summary]:text-panel-copy tw:[&_summary]:text-ink-secondary",
+  "export-voice-list": "ds-panel-part ds-panel-export-voice-list export-voice-list tw:panel-inherit tw:select-text tw:list-none tw:mt-12 tw:mx-0 tw:mb-0 tw:p-0 tw:grid tw:gap-8 tw:[&_li]:flex tw:[&_li]:items-center tw:[&_li]:gap-10 tw:[&_input[type=checkbox]]:size-20 tw:[&_input[type=checkbox]]:flex-none tw:[&_input[type=checkbox]]:panel-voice-accent tw:[&_.ds-panel-field]:flex-1 tw:[&_.ds-panel-field]:min-w-0 tw:[&_.ds-panel-field]:h-panel-control tw:[&_li.off_.ds-panel-field]:opacity-(--ds-panel-export-voice-list-li-off-field-opacity-59)",
+  "export-status": "ds-panel-part ds-panel-export-status export-status tw:panel-inherit tw:select-text tw:min-h-panel-status tw:m-0 tw:text-panel-copy tw:text-ink-secondary",
+  "scan-marks-body": "ds-panel-part ds-panel-scan-marks-body ds-panel-sheet-body sheet-body scan-marks-body tw:panel-inherit tw:select-text tw:block",
+  "scan-mark-list": "ds-panel-part ds-panel-scan-mark-list scan-mark-list tw:panel-inherit tw:select-text tw:list-none tw:mt-0 tw:mx-0 tw:mb-18 tw:p-0 tw:grid tw:gap-14",
+  "scan-mark": "ds-panel-part ds-panel-scan-mark scan-mark tw:panel-inherit tw:select-text tw:pt-12 tw:px-12 tw:pb-14 tw:rounded-card tw:bg-surface tw:border tw:border-solid tw:border-rule tw:list-none tw:[&_.ds-panel-scan-actions_.ds-panel-scan-button]:flex-1",
+  "scan-q-head": "ds-panel-part ds-panel-scan-q-head scan-q-head tw:panel-inherit tw:select-text tw:flex tw:items-baseline tw:gap-10 tw:mb-10 tw:text-panel-copy tw:[&_span]:text-ink-secondary",
+  "scan-q-text": "ds-panel-part ds-panel-scan-q-text scan-q-text tw:panel-inherit tw:select-text tw:mt-0 tw:mx-0 tw:mb-10 tw:leading-panel-scan",
+  "scan-actions": "ds-panel-part ds-panel-scan-actions scan-actions tw:panel-inherit tw:select-text tw:flex tw:flex-wrap tw:gap-10 tw:[&_.ds-panel-scan-button.primary]:flex-auto tw:[&_.ds-panel-scan-button.primary]:basis-full",
+  "scan-mark-img": "ds-panel-part ds-panel-scan-mark-img scan-mark-img tw:panel-inherit tw:select-text tw:block tw:w-full tw:h-auto tw:mb-10 tw:rounded-panel-step tw:bg-panel-scan-image",
+  "label": "ds-panel-part ds-panel-label label tw:panel-inherit tw:select-text tw:font-mono tw:font-label tw:text-panel-label tw:leading-panel-label tw:tracking-panel-label tw:uppercase tw:text-ink-muted",
+  "stepper": "ds-panel-part ds-panel-stepper stepper tw:panel-inherit tw:select-text tw:inline-flex tw:items-center tw:gap-2 tw:h-44 tw:rounded-panel-stepper tw:border tw:border-solid tw:border-material-edge tw:py-0 tw:px-5 tw:bg-panel-stepper tw:shadow-panel-stepper tw:[:root[data-theme=parchment]_&]:bg-panel-stepper-parchment tw:[:root[data-theme=parchment]_&]:shadow-panel-stepper-parchment tw:[&_.ds-panel-label]:py-0 tw:[&_.ds-panel-label]:pl-8 tw:[&_.ds-panel-label]:pr-4 tw:[&>button:not(.ds-panel-stepper-value)]:size-32 tw:[&>button:not(.ds-panel-stepper-value)]:rounded-panel-step tw:[&>button:not(.ds-panel-stepper-value)]:grid tw:[&>button:not(.ds-panel-stepper-value)]:place-items-center tw:[&>button:not(.ds-panel-stepper-value)]:text-ink-secondary tw:[&>button:not(.ds-panel-stepper-value):hover]:bg-surface-overlay tw:[&>button:not(.ds-panel-stepper-value):hover]:text-ink tw:[&>button_.ic]:size-16 tw:[&_.ds-panel-stepper-value_.ic]:size-panel-mark",
+  "stepper-value": "ds-panel-part ds-panel-stepper-value stepper-value tw:panel-inherit tw:select-text tw:inline-flex tw:items-center tw:gap-4 tw:h-32 tw:py-0 tw:px-8 tw:rounded-panel-step tw:font-mono tw:font-label tw:text-panel-field tw:leading-panel-single tw:whitespace-nowrap tw:[&_.ic]:size-panel-mark tw:[button&:hover]:bg-surface-overlay",
+  "section-marks": "ds-panel-part ds-panel-section-marks tw:panel-inherit tw:select-text tw:absolute tw:inset-0 tw:pointer-events-none tw:max-panel:hidden tw:[.following_&]:opacity-(--ds-panel-following-section-marks-opacity-47) tw:[&_.ds-panel-rmark]:absolute tw:[&_.ds-panel-rmark]:top-3 tw:[&_.ds-panel-rmark]:min-w-18 tw:[&_.ds-panel-rmark]:h-18 tw:[&_.ds-panel-rmark]:py-0 tw:[&_.ds-panel-rmark]:px-2 tw:[&_.ds-panel-rmark]:text-panel-overview tw:[&_.ds-panel-rmark]:leading-panel-overview tw:[&_.ds-panel-rmark]:panel-overview-stroke tw:[&_.ds-panel-rmark]:rounded-panel-overview tw:[&_.ds-panel-rmark]:pointer-events-auto tw:[&_.ds-panel-rmark]:-translate-x-1 tw:max-panel:[&_.ds-panel-rmark]:top-2 tw:max-panel:[&_.ds-panel-rmark]:min-w-14 tw:max-panel:[&_.ds-panel-rmark]:h-14 tw:max-panel:[&_.ds-panel-rmark]:text-panel-overview-phone tw:max-panel:[&_.ds-panel-rmark]:leading-panel-overview-phone tw:[:root_&_.ds-panel-rmark.word]:text-panel-overview-word tw:[:root_&_.ds-panel-rmark.word]:font-panel-overview-word",
+  "section-add": "ds-panel-part ds-panel-section-add tw:panel-inherit tw:select-text tw:absolute tw:right-4 tw:top-1/2 tw:-translate-y-1/2 tw:bg-surface tw:max-panel:hidden!",
+  "export-row": "ds-panel-part ds-panel-export-row tw:panel-inherit tw:select-text",
+  "export-summary": "ds-panel-part ds-panel-export-summary tw:panel-inherit tw:select-text",
+  "sync-debug": "ds-panel-part ds-panel-sync-debug sync-debug tw:panel-inherit tw:select-text tw:fixed tw:bottom-0 tw:left-0 tw:z-panel-sync-debug tw:bg-surface tw:text-ink tw:p-8 tw:pointer-events-none",
+  "fps-probe": "ds-panel-part ds-panel-fps-probe fps-probe tw:panel-inherit tw:select-text tw:fixed tw:left-8 tw:bottom-8 tw:z-panel-fps tw:py-4 tw:px-8 tw:rounded-panel-debug tw:bg-panel-debug tw:text-print-paper tw:font-panel-debug tw:font-emphasis tw:text-panel-debug tw:leading-panel-debug tw:pointer-events-none",
+  "paper-body": "ds-panel-part ds-panel-paper-body paper-body tw:panel-inherit tw:select-text",
 } as const;
 export type PanelPart = keyof typeof parts;
 export function panelPartRecipe(part: PanelPart) {
   return normalizeRecipe(parts[part]);
 }
 export function sectionMarkRecipe(word = false) {
-  return buttonRecipe({ variant: word ? "section-word" : "section-mark" });
+  return normalizeRecipe(panelSectionMarkStyles(word));
 }
