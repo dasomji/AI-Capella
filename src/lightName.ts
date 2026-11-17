@@ -277,8 +277,8 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
       const y = nib.y * dpr;
       const r = art.size * 0.09 * dpr;
       const spot = ctx.createRadialGradient(x, y, 0, x, y, r);
-      spot.addColorStop(0, readTheme().color('title-name-flare-core').rgba(0.8 * k));
-      spot.addColorStop(0.3, readTheme().color('title-name-flare-edge').rgba(0.25 * k));
+      spot.addColorStop(0, readTheme().color('title-name-flare-core').rgba(Number(readTheme().roles['title-name-flare-core-alpha']) * k));
+      spot.addColorStop(0.3, readTheme().color('title-name-flare-edge').rgba(Number(readTheme().roles['title-name-flare-edge-alpha']) * k));
       spot.addColorStop(1, readTheme().color('title-name-flare-edge').rgba(0));
       ctx.fillStyle = spot;
       ctx.fillRect(x - r, y - r, r * 2, r * 2);
@@ -300,7 +300,7 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
     // On a phone's staff the name starts the line and leaves its end to the voices (titleStaff.ts).
     const narrowStaff = mode === 'staff' && matchBreakpoint('wordmark', 'below').matches;
     const fit = Math.min(1, (window.innerWidth * (narrowStaff ? 0.62 : 0.9)) / (lightW + base * (GAP + 2.95)));
-    wrap.style.marginLeft = narrowStaff ? '6px' : '';
+    wrap.style.marginLeft = narrowStaff ? readTheme().roles['light-name-letter-spacing'] : '';
     host.style.alignSelf = narrowStaff ? 'stretch' : '';
     const size = base * fit;
 

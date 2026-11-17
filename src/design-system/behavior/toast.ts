@@ -3,6 +3,7 @@ import {
   toastPlacementRecipe,
   type ToastOptions,
 } from "../recipes/overlays";
+import { readTheme } from "../theme";
 import { toastPart } from "../parts";
 export interface ToastMessage {
   text: string;
@@ -35,7 +36,7 @@ export function dismissToast() {
     fadeTimer = setTimeout(() => {
       host.hidePopover?.();
       host.textContent = "";
-    }, 300);
+    }, parseFloat(readTheme().roles["toast-duration-exit"]));
   }
   listeners.forEach((fn) => fn());
 }
@@ -74,5 +75,5 @@ export function toast(text: string, kind: ToastMessage["kind"] = "info") {
   message = { text, kind, id: ++sequence };
   render();
   listeners.forEach((fn) => fn());
-  timer = setTimeout(dismissToast, kind === "error" ? 6500 : 3200);
+  timer = setTimeout(dismissToast, parseFloat(readTheme().roles[kind === "error" ? "toast-duration-error" : "toast-duration-info"]));
 }
