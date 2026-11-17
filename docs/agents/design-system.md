@@ -17,41 +17,57 @@ flowchart LR
 
 ## Add a token
 
-1. Reuse a semantic role when its purpose and appearance are the same. When existing
-   appearances differ, give them distinct roles; do not normalize without an owner decision.
-2. Name private pigments by origin (for example `--pigment-admin-accent`), then map a shared
-   role once in `:root`, or a varying role in every theme block. The theme blocks must have
-   identical key sets and must never redefine the shared set.
-   Type, dimension, effect, motion, spectrum, material, and print values belong here too.
-   Keep `--ds-*` backing variables even when no utility uses them: renderers need them.
-3. Expose semantic `@theme inline` mappings. The pixel-valued space scale uses its authored
-   numbers (`tw:p-2` is 2px, not Tailwind's default 8px); layer names map via `--z-index-*`
-   (`tw:z-dialog`). All authored spacing, layers, sizes and shadows are exposed.
-   Use complete literal class strings such as `tw:bg-surface tw:text-ink tw:border-rule`.
-   Prefix goes before variants: `tw:hover:bg-surface-hover`. The default Tailwind theme
-   namespaces are reset; no default palette, font, radius or shadow vocabulary is available.
-4. For concrete renderer colors/fonts, extend `colorRoles`/`fontRoles` in `theme/index.ts`.
-   `readTheme().roles` also includes every material/dimensional value. The parser accepts
-   authored sRGB hex/RGB and generated degree-based HSL; adding a different color space
-   requires extending and testing normalization, not a silent fallback.
-5. Run `npm run check:design-tokens`, typecheck, and the relevant tests/browser checks.
+1. Reuse the role for the same purpose and rendered value. Names describe a purpose:
+   `--ds-space-control`, `--ds-radius-card`, `--ds-control-height-touch`, `--ds-stroke-focus`,
+   `--ds-layer-dialog`. Rule numbers, selector indices, and values in names are forbidden.
+   Equal values serving the same role are one token. Preserve different values under distinct
+   names while an owner decision is pending; never normalize appearance as part of a rename.
+2. The core spacing scale is `none`, `hairline`, `micro`, `compact`, `snug`, `small`, `control`,
+   `content`, `section`, `panel`, `page`, `stage`. Existing density roles such as `tight`,
+   `inline`, `row`, `action`, and `heading` compose that scale. Radii use `field`, `track`,
+   `control-dense`, `media`, `indicator`, `tile-dense`, `menu`, `control`, `icon`, `segment`,
+   `card`, `tile`, `card-roomy`, `dialog`, `dialog-roomy`, `sheet`, `pill`, and `round`.
+   D08/D10 retain distinct control/card densities; D12 retains the dialog/sheet distinctions.
+3. Define shared dimensions, type metrics and motion once on `:root`. Define every display
+   paint, including pigments mapped to renderer roles, gradients, glows, shadows and transparent
+   materials, in **every theme block** with identical key sets. Equal values across themes are
+   intentional parity mappings. Only `print-paper` and `print-ink` are theme-independent paint
+   exceptions: D18 keeps exported engraving independent of the display theme. Private
+   `--pigment-*` declarations are ingredients, not component APIs.
+4. Expose an ordinary property through `@theme inline` and use complete semantic classes such
+   as `tw:p-control tw:rounded-card tw:text-ink tw:border-rule tw:z-dialog`.
+   `tw:p-control` uses the authored spacing role, not Tailwind's numeric default scale.
+   The prefix precedes variants: `tw:hover:bg-surface-hover`. The default theme namespaces
+   are reset. Full background/font/border/transition shorthands and raw authored shadow lists
+   use the small semantic `surface-*`, `type-*`, `frame-all-*`, `motion-*`, and `elevation-*`
+   helpers because those shorthands cannot be expressed by an ordinary theme namespace.
+   Never create a selector-specific utility or a utility/variant numbered after a rule.
+5. Renderer inputs stay in the snapshot contract even when no utility consumes them.
+   `fontRoles`, spectrum families and dynamically selected material roles are public consumers;
+   a text search alone cannot prove their tokens unused. Extend `colorRoles`/`fontRoles` in
+   `theme/index.ts` when adding concrete renderer colors/fonts. `readTheme().roles` contains
+   every authored role. Run the guard, typecheck and relevant unit/browser checks.
 
 ## Add a theme or preset
 
 Add one complete varying-role block in `tokens.css` and one entry in
-`theme/resolver.js`'s `themeRegistry` (ID, label, URL aliases, storage key, default title start,
-color scheme, optional system appearance and menu label policy). Existing translated labels
-are retained; `menuLabel: null` keeps Velvet URL-only, as before. New entries without a
-translation key use their registry label. Copy an existing theme block to retain its
-complete key set, then edit its role values. Shared roles come from `:root`.
-There are no legacy theme attributes or compatibility aliases. Components never select a
-theme ID. Material recipes use the `material-family` and `color-scheme` token values for their
-paper/waves and light material strategies; a new theme chooses these values in its block.
+`theme/resolver.js`'s `themeRegistry` (ID, label, aliases, storage key, title start and menu
+policy). Color scheme comes from the token block. Copy an existing block to retain the
+complete key set, then change role values there: player disc, selected pills, voice materials,
+library cover ground, sheens and renderer effects are included. Shared roles supply geometry
+and typography; they do not hide an extra display palette. Existing translated labels remain;
+`menuLabel: null` keeps Velvet URL-only. New entries can use their registry label.
 
-`npm run test:browser:theme-extension` adds a test-only fourth block and registry entry through
-Vite transforms, then renders React auth/account/invite/admin/showcase, the main shell/sheets,
-and real canvas renderers. It asserts complete resolved roles, the distinctive new accent,
-and absence of legacy attributes. No fourth theme is included in production.
+Components never select a theme ID. Material recipes query the `material-family` and
+`color-scheme` roles for paper/waves and light-material strategies. A new theme chooses those
+roles in its block. Revival is an orthogonal `data-type` preset declared solely in `tokens.css`:
+it overrides typography roles used by the same recipes without component selectors.
+
+`npm run test:browser:theme-extension` injects one test-only block and registry entry, strongly
+rotates all resolved display paints, and checks actual element paints and canvas pixels across
+main screens and renderers. Keep this loud-theme check as well as the three-theme parity
+matrix: complete token keys alone do not prove that a component consumes its theme roles.
+No fourth theme ships in production. Print colors remain stable under D18.
 
 The self-contained resolver's raw source, including its registry/helpers, is injected before
 hydration; Vite uses the identical serializer for the offline shell. Do not serialize compiled
@@ -100,15 +116,26 @@ Use `matchBreakpoint('panel', 'below')` / `tw:max-panel:`; there is no `panel-ma
 Read breakpoints lazily after CSS loads. Notation geometry and measured popup/drag positions
 remain in their existing modules.
 
-## Add a component (P3 contract)
+## Add a component
 
-Put framework-free typed class recipes under `design-system/recipes/`. They may import
-other recipes via `./` or `../recipes/`, plus type-only token/theme imports; runtime theme,
-React, DOM adapters and application dependencies are forbidden. Static/dynamic imports and
-re-exports all follow this allowlist.
-Both `design-system/react/` and `design-system/dom/` consume those recipes. Preserve all
-`data-action`, `data-bind` and ID hooks during screen migration. New primitives explicitly
-normalize their own controls; global Preflight is deliberately omitted.
+Start with an existing primitive (`Button`, `Field`, `Dialog`, `Card`, `Menu`, and their DOM
+builders) when its semantics fit. Both adapters use the same pure recipe. Add a named variant
+for an actual density, intent or focus difference; do not patch a completed class string.
+For a domain composition, put typed named slots under `design-system/recipes/` and combine
+those primitives. For example `transportRecipe`, `voiceRowRecipe`, `libraryDialogRecipe`,
+`libraryHeaderRecipe`, `transcriptionJobRecipe` and `ensemblePanelRecipe` centralize their
+component roles. Unknown slot/variant keys must fail typechecking.
+
+Structural containers use `appShellRecipe().root` or a named header/stage slot explicitly at
+construction. These native containers inherit their parent typography. Primitive controls
+normalize their own slots with `ds-reset`; global Preflight is deliberately omitted. Keep
+stable IDs, classes, `data-action` and `data-bind` hooks as behavior contracts, independently
+of the selected recipe. Never interpret a bag of hook strings to discover appearance.
+
+Recipes are framework-free TypeScript with complete literal semantic `tw:` strings. They may
+import other recipes and type-only token/theme declarations. Runtime theme, React, DOM and
+application imports are forbidden, including through re-exports. React and DOM builders own
+native semantics and lifecycle; recipes own visual roles and explicit variants.
 
 `app.css` is the sole CSS/font entry: `theme → fonts → tokens → native → components → utilities`.
 It contains imports and Tailwind directives/mappings, with no ordinary component selectors.
@@ -128,8 +155,8 @@ their default-theme roles for development and builds because external icons cann
 page CSS. Raster brand artwork remains fixed asset data.
 
 The dev-only `/dev/design-system` route renders the palette, spectrum and fonts and offers
-the switcher. Its module/route are eliminated from production. P3 adds the React/DOM
-component comparisons there.
+the switcher and shared React/DOM component comparisons. Its module/route are eliminated
+from production.
 
 ## Guard: zero baseline
 
