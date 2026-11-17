@@ -181,11 +181,12 @@ function fieldRecipeStyles(
         : admin
           ? "tw:border-admin-rule"
           : domain && kind === "select"
-            ? "tw:border-rule-strong tw:focus:border-focus"
+            ? "tw:border-rule-strong"
+            : domain ? "tw:border-ink-secondary"
             : ruled
               ? "tw:border-ink-secondary tw:focus:border-focus"
               : "tw:border-rule-strong tw:focus:border-ink-secondary",
-      ruled && !admin ? "tw:focus:shadow-focus" : "",
+      ruled && !admin && !domain ? "tw:focus:shadow-focus" : "",
       admin ? "" : "tw:focus:outline-none",
     ].join(" "),
     hint: "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
