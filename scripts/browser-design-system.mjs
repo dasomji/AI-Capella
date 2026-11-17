@@ -722,6 +722,15 @@ export async function verifyOwnerComponents() {
     const boxed=document.querySelector(`[data-specimen="field/search/input/normal"] [data-renderer="${renderer}"] input`);
     if(getComputedStyle(normal).borderTopWidth!=='0px'||getComputedStyle(normal).borderBottomWidth==='0px') throw Error('Normal forms must use writing lines');
     if(getComputedStyle(boxed).borderTopWidth==='0px') throw Error('Search must use a box');
+    const luminance=paint=>{
+      const rgb=paint.match(/[\d.]+/g).slice(0,3).map(Number).map(value=>{value/=255;return value<=0.04045?value/12.92:((value+0.055)/1.055)**2.4;});
+      return rgb[0]*0.2126+rgb[1]*0.7152+rgb[2]*0.0722;
+    };
+    for(const checked of [false,true]) {
+      const track=document.querySelector(`[data-specimen="switch/shared-device/${checked}"] [data-renderer="${renderer}"] [role=switch]`);
+      const thumb=track.querySelector('span'),a=luminance(getComputedStyle(track).backgroundColor),b=luminance(getComputedStyle(thumb).backgroundColor);
+      if((Math.max(a,b)+0.05)/(Math.min(a,b)+0.05)<3)throw Error(`${renderer} switch ${checked} thumb contrast below 3:1`);
+    }
     const shared=document.querySelector(`[data-specimen="switch/shared-device/true"] [data-renderer="${renderer}"] [role=switch]`);
     if(!shared || getComputedStyle(shared).display==='none') throw Error('Immediate shared-device setting must show a switch');
     const jobs=document.querySelector(`[data-specimen="empty/jobs-hidden"] [data-renderer="${renderer}"] section`);
