@@ -47,7 +47,7 @@ export const emptyStateVariants = [
 export interface EmptyStateOptions {
   variant?: (typeof emptyStateVariants)[number];
 }
-/** scroll/metrics intentionally alias until D16; records owns the responsive layout. */
+/** D16 A: records adapt to labelled cards on phones; scroll and metrics keep contained columns. */
 export const tableVariants = ["records", "scroll", "metrics"] as const;
 export interface TableOptions {
   bounded?: boolean;
@@ -161,28 +161,38 @@ function loadingRecipeStyles() {
   return "tw:m-flush tw:font-control tw:text-body-small tw:leading-leading-body tw:text-ink-secondary tw:py-control tw:animate-animation-loading tw:motion-reduce:animate-none";
 }
 function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }: TableOptions = {}) {
+  // D16 A: records become labelled cards below the account breakpoint (one strict threshold for
+  // rows, cells, header and wrapper); scroll/metrics stay tables in their own bounded scroller.
+  const records = variant === "records";
+  const line = "tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid";
   return {
     root:
-      (variant === "records"
-        ? "ds-table-records tw:max-account:min-w-flush tw:[@media_(max-width:_theme(--breakpoint-account))]:table-fixed tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead]:flex tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead_tr]:flex tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead]:flex-wrap tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead_tr]:flex-wrap tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead]:gap-small tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_thead_tr]:gap-small tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_th:not(:has(button))]:hidden tw:max-account:[&_th]:static tw:max-account:[&_th]:border-0 tw:max-account:[&_th]:whitespace-normal tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody]:block tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:block tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody]:w-full tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:w-full tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:border-0 tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:[border-bottom-width:var(--ds-stroke-thin)] tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:border-solid tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:border-admin-rule tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:py-inline tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_tbody_tr]:px-flush tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:block tw:max-account:[&_td]:min-w-flush tw:max-account:[&_td]:max-w-none tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:w-full tw:max-account:[&_td]:border-0 tw:max-account:[&_td]:whitespace-normal tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:wrap-anywhere tw:max-account:[&_td]:py-snug tw:max-account:[&_td]:px-inline tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:content-[attr(data-label)] tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:block tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:font-inherit tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:font-family-inherit tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:normal-nums tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:text-small tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:[line-height:inherit] tw:[@media_(max-width:_theme(--breakpoint-account))]:[&_td]:before:text-admin-secondary "
-        : "") +
-      "tw:w-full tw:min-w-width-table tw:border-collapse tw:font-auth-body tw:text-body-small tw:leading-leading-body tw:text-admin-ink tw:tabular-nums",
-    wrap: "tw:normal-nums tw:max-w-full tw:overflow-auto tw:overscroll-contain" + (bounded ? " tw:max-h-(--ds-table-height)" : "") + (variant === "records" ? " tw:max-account:overflow-visible tw:max-account:max-h-none" : ""),
+      "tw:w-full tw:border-collapse tw:font-control tw:text-body-small tw:leading-leading-body tw:text-ink tw:tabular-nums " +
+      (variant === "metrics" ? "tw:min-w-(--ds-admin-metrics-width)" : "tw:min-w-(--ds-admin-records-width)") +
+      (records
+        ? " tw:max-account:block tw:max-account:min-w-flush tw:max-account:[&_thead]:block tw:max-account:[&_thead_tr]:flex tw:max-account:[&_thead_tr]:flex-wrap tw:max-account:[&_thead_tr]:gap-x-control tw:max-account:[&_thead_tr]:pb-small tw:max-account:[&_th:not(:has(button))]:hidden tw:max-account:[&_tbody]:grid tw:max-account:[&_tbody]:gap-small tw:max-account:[&_tbody_tr]:grid tw:max-account:[&_tbody_tr]:gap-compact tw:max-account:[&_tbody_tr]:p-control tw:max-account:[&_tbody_tr]:rounded-card tw:max-account:[&_tbody_tr]:border-(length:--ds-stroke-thin) tw:max-account:[&_tbody_tr]:border-solid tw:max-account:[&_tbody_tr]:border-rule tw:max-account:[&_tbody_tr]:bg-surface"
+        : ""),
+    wrap:
+      "tw:max-w-full tw:min-w-flush tw:overflow-x-auto tw:overscroll-x-contain tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-focus tw:focus-visible:outline-offset-(--ds-space-compact)" +
+      (bounded ? " tw:max-h-(--ds-table-height) tw:overflow-y-auto" : "") +
+      (records ? " tw:max-account:overflow-visible tw:max-account:max-h-none" : ""),
     header:
-      (variant === "records"
-        ? "tw:max-account:static tw:max-account:border-0 tw:max-account:whitespace-normal "
-        : "") +
-      "tw:font-auth-body tw:text-body-small tw:leading-leading-body tw:text-admin-ink tw:tabular-nums tw:align-middle tw:max-account:px-inline tw:max-account:py-inline tw:sticky tw:top-flush tw:bg-admin-surface tw:text-left tw:font-weight-medium tw:whitespace-nowrap tw:px-row tw:py-control tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid tw:border-admin-rule",
+      "tw:text-left tw:align-bottom tw:font-control tw:text-small tw:font-weight-label tw:leading-leading-body tw:text-ink-secondary tw:whitespace-nowrap tw:px-small tw:py-small tw:bg-surface-sunken tw:border-rule-strong " + line +
+      (bounded ? " tw:sticky tw:top-flush" : "") +
+      (records ? " tw:max-account:static tw:max-account:border-0 tw:max-account:p-flush tw:max-account:bg-transparent" : ""),
     cell:
-      (variant === "records"
-        ? "tw:max-account:block tw:max-account:w-full tw:max-account:min-w-flush tw:max-account:max-w-none tw:max-account:border-0 tw:max-account:whitespace-normal tw:max-account:py-snug tw:max-account:px-inline "
-        : "") +
-      (mono ? "tw:min-w-(--ds-table-cell-mono-min) tw:font-auth-mono tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:max-account:overflow-visible tw:max-account:wrap-anywhere" : "tw:min-w-(--ds-table-cell-min) tw:font-auth-body") + " tw:text-body-small tw:leading-leading-body tw:tabular-nums tw:max-w-(--ds-table-cell-max) tw:px-row tw:py-control " + (variant === "records" ? "" : "tw:max-account:p-inline ") + "tw:text-admin-secondary tw:first:text-admin-ink tw:align-top tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid tw:border-admin-rule",
+      "tw:text-left tw:align-top tw:leading-leading-body tw:text-ink tw:tabular-nums tw:px-small tw:py-small tw:max-w-(--ds-table-cell-max) tw:border-rule " + line + " " +
+      (mono ? "tw:font-mono tw:text-small tw:whitespace-nowrap" : "tw:font-control tw:text-body-small tw:wrap-anywhere") +
+      (records
+        ? " tw:max-account:max-w-none tw:max-account:border-0 tw:max-account:p-flush tw:max-account:whitespace-normal tw:max-account:wrap-anywhere tw:max-account:grid tw:max-account:grid-cols-(--ds-admin-definition-columns) tw:max-account:gap-small tw:max-account:before:content-[attr(data-label)] tw:max-account:before:text-small tw:max-account:before:text-ink-secondary tw:max-account:before:font-control"
+        : ""),
     row:
-      variant === "records" ? "tw:normal-nums tw:[&[tabindex]]:hover:bg-table-row-hover tw:[&[tabindex]]:cursor-pointer" : "tw:normal-nums tw:bg-transparent",
-    empty: "tw:p-section tw:text-admin-secondary tw:text-left",
+      records
+        ? "tw:[&[data-href]]:cursor-pointer tw:[&[data-href]]:hover:bg-table-row-hover"
+        : "tw:bg-transparent",
+    empty: "tw:p-section tw:text-ink-secondary tw:text-left",
     pagination:
-      "tw:flex tw:items-center tw:flex-wrap tw:gap-control tw:mt-control tw:mb-section tw:font-auth-body tw:text-body tw:leading-leading-body tw:text-admin-ink tw:tabular-nums",
+      "tw:flex tw:items-center tw:flex-wrap tw:gap-small tw:mt-small tw:font-control tw:text-body-small tw:leading-leading-body tw:text-ink-secondary tw:tabular-nums",
   };
 }
 function cardRecipe(

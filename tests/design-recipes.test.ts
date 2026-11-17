@@ -231,9 +231,10 @@ describe("every recipe property is exclusive within a state and breakpoint", () 
     expect(r.dialogRecipe({ variant: "confirm" })).toEqual(
       r.dialogRecipe({ variant: "dialog" }),
     );
-    expect(r.tableRecipe({ variant: "scroll" })).toEqual(
-      r.tableRecipe({ variant: "metrics" }),
-    );
+    // D16 A: metrics keep their own narrower contained table; scroll keeps record columns.
+    expect(r.tableRecipe({ variant: "metrics" }).root).toContain("tw:min-w-(--ds-admin-metrics-width)");
+    expect(r.tableRecipe({ variant: "scroll" }).root).toContain("tw:min-w-(--ds-admin-records-width)");
+    expect(r.tableRecipe({ variant: "metrics" }).root).not.toContain("tw:max-account:");
     expect(r.fieldRecipe({ variant: "ruled" })).toEqual(
       r.fieldRecipe({ variant: "transcription" }),
     );

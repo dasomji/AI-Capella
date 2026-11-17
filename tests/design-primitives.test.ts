@@ -486,10 +486,10 @@ describe("P3 review regression contracts", () => {
     const parsed = document.createElement("div");
     parsed.innerHTML = table;
     expect(parsed.querySelector("td")?.className).toContain(
-      "tw:max-account:block",
+      "tw:max-account:grid",
     );
     const parts = D.createTableParts({ variant: "records" });
-    expect(parts.cell("Name").className).toContain("tw:max-account:block");
+    expect(parts.cell("Name").className).toContain("tw:max-account:grid");
   });
   it("forwards root hooks, dialog associations and confirm semantics, and Card as", () => {
     const html = renderToString(
