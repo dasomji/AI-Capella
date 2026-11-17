@@ -217,7 +217,7 @@ function fieldRecipeStyles(
   const prompt = variant === "library-prompt";
   const ruled = !["search", "numeric", "repeated-name"].includes(variant);
   return {
-    root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-flush" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-flush tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group")  : "tw:grid tw:gap-snug tw:min-w-flush " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
+    root: "tw:normal-case " + (variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-flush" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-flush tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group")  : "tw:grid tw:gap-snug tw:min-w-flush " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body")),
     label:
       variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-leading-body tw:text-ink" : variant === "domain" ? "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-(--ds-tracking-label) tw:leading-leading-admin tw:text-ink-secondary" : ruled
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-tracking-auth-label tw:leading-leading-field tw:text-ink-secondary"
