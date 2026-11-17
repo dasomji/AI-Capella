@@ -1252,3 +1252,6 @@
   --ds-duration-note-out: 170ms;
   --ds-duration-note-in: 300ms;
 }
+
+:root { --ds-leading-transcription-heading: 1.3; }
+@theme inline { --leading-transcription-heading: var(--ds-leading-transcription-heading); }

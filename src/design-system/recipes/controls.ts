@@ -240,7 +240,7 @@ function switchRecipeStyles({
   };
   return {
     label:
-      "tw:relative tw:inline-flex tw:items-center tw:gap-8 tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-32 tw:flex-nowrap" : variant === "comparison" ? " tw:min-h-36 tw:my-24 tw:text-label" : ""),
+      (variant === "comparison" ? "tw:relative tw:flex" : "tw:relative tw:inline-flex") + " tw:items-center tw:gap-8 tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-32 tw:flex-nowrap" : variant === "comparison" ? " tw:min-h-36 tw:my-24 tw:text-label" : ""),
     input: variant === "capability" || variant === "comparison" ? "tw:absolute tw:opacity-0 tw:w-28 tw:h-24 tw:m-0 tw:peer" : "tw:sr-only tw:peer",
     root:
       controlBase +
