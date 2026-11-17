@@ -42,7 +42,7 @@ const libraryStyles = {
   menuValue: "tw:ml-auto tw:text-ink-secondary tw:font-weight-medium",
   menuSub: "tw:grid",
   menuOption: "tw:min-h-toolbar! tw:font-weight-medium!",
-  menuDanger: "tw:text-danger tw:[&_.ic]:text-danger",
+  menuDanger: "tw:text-danger tw:[&_.ic]:text-danger!",
   offlineUpdate: "tw:fixed tw:bottom-action tw:right-action tw:z-library-update-layer",
   link: "tw:min-h-flush tw:text-label tw:font-weight-label tw:text-ink-secondary tw:p-library-link-padding tw:rounded-tile-dense tw:text-center tw:[&:hover]:text-ink tw:[&.ds-library-landing-aside]:text-body-small",
   tag: "tw:type-library-tag-font tw:tracking-library-tag-tracking tw:uppercase tw:text-ink-muted tw:frame-all-library-tag-border tw:rounded-pill tw:p-library-tag-padding",
