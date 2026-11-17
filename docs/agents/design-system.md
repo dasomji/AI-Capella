@@ -278,6 +278,22 @@ strategies (`light`/`ink`, lantern/gel) retain their renderer algorithms. `paper
 procedural output to `--ds-material-fibre-live`; output completion is not a new preference.
 Other component decisions are owned by their recipes; see [design-primitives.md](design-primitives.md).
 
+### Applied component decisions (COMPONENTS handoff)
+
+- D08/D10: Button `size="standard" | "compact" | "full-width" | "touch"`, with ordinary
+  primary/secondary/quiet/danger intents. Retired appearance aliases: cta → full-width;
+  pill/tour/job-action → standard; dense/compact → compact size; dense-sort/link/tour-link/
+  hint-link/transcription-link → quiet + compact; hint → standard secondary. Specialized
+  music/domain compositions retain semantic hooks.
+- D09/D10: normal Field uses writing-line `ruled`. Generic boxed is replaced by explicit
+  `purpose="search" | "numeric" | "repeated-name"`. Fields, checkboxes and switches expose
+  standard/compact/touch density.
+- D11: switches express immediate settings; checkboxes express choices saved with a form.
+- D15: each field error is adjacent to its field, with a danger writing line.
+- D17: EmptyState landing-actions/library-text → standard, admin-text → compact; jobs-hidden
+  remains hidden. Tour/power-hint cards use surface + ink, retaining the spotlight.
+
+
 ## Verification
 
 Run `npm run typecheck`, `npm test`, `npm run build`, `npm run check:design-tokens`,
