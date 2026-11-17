@@ -105,6 +105,8 @@ export function transcriptionJobRecipe() {
     score: "tx-score tw:min-w-flush tw:flex-1 tw:max-score-inclusive:min-w-full",
     scorePage: "tx-score-page tw:text-ink tw:m-transcription-score-page-margin tw:max-w-transcription-score-page-max-width tw:[&_svg]:block tw:[&_svg]:w-full tw:[&_svg]:h-auto tw:[&_svg]:max-h-none tw:[&_svg]:fill-current tw:[&_svg]:overflow-visible tw:[&_svg_[color]]:text-inherit",
     original: "tx-original tw:flex-1 tw:min-w-transcription-original-min-width tw:m-flush tw:sticky tw:top-flush tw:[&_img]:w-full tw:[&_img]:rounded-media tw:[&_figcaption]:type-transcription-original-figcaption-font tw:[&_figcaption]:text-ink-secondary tw:[&_figcaption]:mb-control tw:max-score-inclusive:min-w-flush tw:max-score-inclusive:w-full",
+    comparisonWide: "tw:max-score-inclusive:hidden",
+    comparisonToggle: "tw:hidden tw:max-score-inclusive:block tw:mb-control",
     reviewItems: "tx-review-items tw:list-none tw:p-flush",
     reviewActions: "tx-review-actions tw:grid tw:gap-control tw:mt-section",
     secondary: "tx-secondary tw:flex tw:gap-content tw:items-center tw:flex-wrap",
