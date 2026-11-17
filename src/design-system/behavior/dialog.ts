@@ -241,7 +241,7 @@ export function mountLegacyOverlay(
   onClose?: () => void,
 ): () => void {
   const dialog = document.createElement("dialog");
-  dialog.className = "ds-legacy-dialog";
+  dialog.className = "ds-legacy-dialog tw:box-border tw:fixed tw:inset-0 tw:w-full tw:h-full tw:max-w-none tw:max-h-none tw:m-0 tw:p-0 tw:border-0 tw:bg-transparent tw:panel-inherit tw:overflow-visible tw:backdrop:bg-transparent";
   const panel = root.querySelector<HTMLElement>(".overlay-panel");
   panel?.setAttribute("tabindex", "-1");
   dialog.append(root);
