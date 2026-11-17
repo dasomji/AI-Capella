@@ -5,6 +5,7 @@ export * from "./overlays";
 export const layoutClasses = [
   "tw:w-full",
   "tw:mt-10",
+  "tw:my-24",
   "tw:pr-76",
   "tw:m-4",
   "tw:mb-20",
