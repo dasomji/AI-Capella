@@ -11,6 +11,7 @@ import {
   verifyDesignSystemBehavior,
   verifyP3ReviewFixes,
   verifyP3ReducedMotion,
+  verifyOwnerComponents,
 } from "./browser-design-system.mjs";
 const base =
   process.env.BASE_URL ??
@@ -27,7 +28,9 @@ try {
   for (const theme of ["papier", "pergament", "samt"])
     for (const viewport of [
       { width: 1440, height: 900 },
+      { width: 768, height: 1024 },
       { width: 390, height: 844 },
+      { width: 844, height: 390 },
     ]) {
       const context = await browser.newContext({
         viewport,
@@ -47,6 +50,7 @@ try {
           contexts = await page.evaluate(verifyDesignSystemContexts);
         assert.deepEqual(comparison.mismatches, []);
         assert.deepEqual(contexts.mismatches, []);
+        const ownerComponents = await page.evaluate(verifyOwnerComponents);
         await page.keyboard.press("Tab"); // Trusted keyboard modality for computed :focus-visible checks.
         const behavior = await page.evaluate(verifyDesignSystemBehavior),
           fixes = await page.evaluate(verifyP3ReviewFixes);
@@ -112,6 +116,7 @@ try {
           theme,
           viewport,
           comparison,
+          ownerComponents,
           contexts,
           behavior,
           fixes,
