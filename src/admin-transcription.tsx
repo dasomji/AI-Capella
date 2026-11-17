@@ -155,8 +155,8 @@ export function TranscriptionScreen({ query, setQuery }: { query: Query; setQuer
           filters={{
             ...(query.state ? { state: query.state } : {}),
             ...(query.ensemble ? { ensemble: query.ensemble } : {}),
-            ...(query.from && !query.all ? { from } : {}),
-            ...(query.to && !query.all ? { to } : {}),
+            // One range for the whole page: statistics and jobs answer the same period.
+            ...(query.all ? {} : { from, to }),
           }}
           filtered={!!(query.search || query.state || query.ensemble)}
           onClear={() => setQuery({})}

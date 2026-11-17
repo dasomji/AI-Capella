@@ -206,18 +206,17 @@ export function AdminDataTable({
                       }
                     >
                       {header.column.getCanSort() ? (
-                        <Button
-                          size="compact"
-                          intent="quiet"
+                        <button
                           type="button"
+                          className={ui.sort}
                           aria-disabled={busy}
                           onClick={() => {
                             if (!busy) header.column.toggleSorting();
                           }}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
-                          {sorted === "asc" ? " ↑" : sorted === "desc" ? " ↓" : ""}
-                        </Button>
+                          <span aria-hidden="true">{sorted === "asc" ? "↑" : sorted === "desc" ? "↓" : ""}</span>
+                        </button>
                       ) : (
                         flexRender(header.column.columnDef.header, header.getContext())
                       )}

@@ -76,10 +76,10 @@ function useAuditColumns(): Column[] {
   const { t, language } = useAdmin();
   const columns: Column[] = [
     { id: "created_at", label: t.time, cell: (r) => <Instant value={r.created_at} /> },
-    { id: "actor_id", label: t.actor, cell: (r) => <>{r.actor_name ?? "—"} <Identifier value={r.actor_id} label={t.actorId} /></> },
+    { id: "actor_id", label: t.actor, cell: (r) => r.actor_id ? <>{r.actor_name ?? ""} <Identifier value={r.actor_id} label={t.actorId} /></> : "—" },
     { id: "action", label: t.action },
     { id: "outcome", label: t.outcome, cell: (r) => <StateBadge value={r.outcome} /> },
-    { id: "reason_excerpt", label: t.reasonExcerpt, cell: (r) => r.reason_excerpt ?? "—" },
+    { id: "reason_excerpt", label: t.reasonExcerpt, cell: (r) => r.reason_excerpt || "—" },
   ];
   return columns.map((c) => ({ ...c, label: c.label || vocabulary(c.id, language) }));
 }

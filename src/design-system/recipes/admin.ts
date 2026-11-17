@@ -16,7 +16,6 @@ export function adminRecipe() {
     bar: "tw:flex tw:flex-wrap tw:items-center tw:gap-x-control tw:gap-y-compact tw:pb-small",
     brand:
       "tw:inline-flex tw:items-baseline tw:gap-small tw:min-w-flush tw:rounded-field tw:no-underline tw:text-ink " + focus,
-    wordmark: "tw:font-brand tw:text-section tw:font-weight-medium tw:leading-leading-body tw:text-accent",
     area: "tw:font-control tw:text-body-small tw:text-ink-secondary",
     barEnd: "tw:ml-auto tw:flex tw:items-center tw:gap-control",
     back:
@@ -30,7 +29,7 @@ export function adminRecipe() {
     titleBlock: "tw:grid tw:gap-compact tw:min-w-flush",
     crumb:
       "tw:inline-flex tw:items-center tw:justify-self-start tw:min-h-control-height-compact tw:touch:min-h-control-target-touch tw:rounded-field tw:font-control tw:text-body-small tw:text-ink-secondary tw:no-underline tw:hover:text-ink " + focus,
-    title: "tw:m-flush tw:font-display tw:text-workspace-heading tw:font-weight-medium tw:leading-leading-body tw:text-ink tw:wrap-anywhere",
+    title: "tw:m-flush tw:focus:outline-none tw:font-display tw:text-workspace-heading tw:font-weight-medium tw:leading-leading-body tw:text-ink tw:wrap-anywhere",
     lede: "tw:m-flush tw:font-control tw:text-body-small tw:leading-leading-body tw:text-ink-secondary",
     meta: "tw:flex tw:flex-wrap tw:items-center tw:gap-small tw:font-control tw:text-body-small tw:text-ink-secondary tw:wrap-anywhere",
     toolbar: "tw:flex tw:flex-wrap tw:items-end tw:gap-x-control tw:gap-y-small tw:mb-content",
@@ -39,10 +38,10 @@ export function adminRecipe() {
     range: "tw:flex tw:flex-wrap tw:items-end tw:gap-x-control tw:gap-y-small tw:min-w-flush",
     note: "tw:font-control tw:text-small tw:leading-leading-body tw:text-ink-secondary",
     stack: "tw:grid tw:gap-content tw:min-w-flush",
-    columns: "tw:grid tw:gap-content tw:min-w-flush tw:grid-cols-(--ds-admin-section-columns)",
+    columns: "tw:grid tw:items-start tw:gap-content tw:min-w-flush tw:grid-cols-(--ds-admin-section-columns)",
     section: "tw:block tw:box-border tw:min-w-flush tw:m-flush tw:p-content tw:max-account:p-control " + panel,
     sectionHead: "tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-small tw:mb-small",
-    sectionTitle: "tw:m-flush tw:font-control tw:text-headline-small tw:font-weight-label tw:leading-leading-body tw:text-ink",
+    sectionTitle: "tw:m-flush tw:focus:outline-none tw:font-control tw:text-headline-small tw:font-weight-label tw:leading-leading-body tw:text-ink",
     sectionNote: "tw:m-flush tw:font-control tw:text-body-small tw:leading-leading-body tw:text-ink-secondary",
     definitions: "tw:grid tw:m-flush tw:min-w-flush",
     definition: "tw:grid tw:grid-cols-(--ds-admin-definition-columns) tw:gap-small tw:py-compact tw:min-w-flush tw:last:border-b-0 " + line,
@@ -66,6 +65,8 @@ export function adminRecipe() {
     content:
       "tw:block tw:m-flush tw:mt-small tw:max-h-(--ds-admin-content-height) tw:overflow-auto tw:p-control tw:rounded-field tw:bg-surface-sunken tw:font-mono tw:text-small tw:leading-leading-body tw:text-ink tw:whitespace-pre-wrap tw:wrap-anywhere " + focus,
     picker: "tw:grid tw:m-flush tw:p-flush tw:list-none tw:max-h-(--ds-admin-picker-height) tw:overflow-y-auto tw:min-w-flush",
+    sort:
+      "tw:inline-flex tw:items-center tw:gap-micro tw:m-flush tw:px-flush tw:py-flush tw:min-h-control-height-compact tw:touch:min-h-control-target-touch tw:border-0 tw:rounded-field tw:bg-transparent tw:font-control tw:text-small tw:font-weight-label tw:leading-leading-body tw:text-ink-secondary tw:whitespace-nowrap tw:cursor-pointer tw:hover:text-ink tw:aria-disabled:cursor-wait " + focus,
     srOnly: "tw:sr-only",
   } as const;
 }

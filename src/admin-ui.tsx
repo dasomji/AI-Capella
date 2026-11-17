@@ -8,6 +8,7 @@ import { TranscriptionScreen } from "./admin-transcription";
 import { AdminContext, Count, Identifier, Instant, StateBadge, YesNo, ui, useAdmin, vocabulary, type AdminRow } from "./admin-format";
 import { calendarInstant } from "./admin-time";
 import { adminUiMessages, type Lang } from "./i18n";
+import { brandRecipe } from "./design-system/recipes/auth";
 
 export const adminSections = ["users", "ensembles", "pieces", "transcription", "audit"] as const;
 export type AdminSection = (typeof adminSections)[number];
@@ -21,7 +22,12 @@ export function adminLocation(splat: string | undefined) {
   return { section, id };
 }
 
-export function AdminPage({ splat, query }: { splat?: string; query: Query }) {
+/** URL keys that are list filters; anything else (for example ?design=) is preserved untouched. */
+const filterKeys = ["search", "verified", "sysadmin", "format", "ensemble", "targetType", "action", "outcome", "actor", "target", "state", "from", "to", "all"];
+
+export function AdminPage({ splat, query: search }: { splat?: string; query: Query }) {
+  const query = Object.fromEntries(Object.entries(search).filter(([key]) => filterKeys.includes(key)));
+  const preserved = Object.fromEntries(Object.entries(search).filter(([key]) => !filterKeys.includes(key)));
   const [language, setLanguage] = useState<Lang>("en"), [zone, setZone] = useState("UTC");
   const navigate = useNavigate();
   const { section, id } = adminLocation(splat);
@@ -32,7 +38,7 @@ export function AdminPage({ splat, query }: { splat?: string; query: Query }) {
   const t = adminUiMessages[language];
   const context = useMemo(() => ({ language, zone, setZone }), [language, zone]);
   const setQuery = (next: Query) => {
-    void navigate({ to: "/admin/$", params: { _splat: splat ?? section }, search: next, replace: true });
+    void navigate({ to: "/admin/$", params: { _splat: splat ?? section }, search: { ...preserved, ...next }, replace: true });
   };
   const titles: Record<AdminSection, string> = {
     users: t.allUsers, ensembles: t.allEnsembles, pieces: t.allPieces,
@@ -44,7 +50,7 @@ export function AdminPage({ splat, query }: { splat?: string; query: Query }) {
         <div className={ui.frame}>
           <header className={ui.bar}>
             <a href="/app" className={ui.brand} aria-label={"LightScore · " + t.back}>
-              <span className={ui.wordmark}>LightScore</span>
+              <span className={brandRecipe().wordmark} aria-hidden="true"><span className={brandRecipe().script}>Light</span>Score</span>
               <span className={ui.area}>{t.area}</span>
             </a>
             <div className={ui.barEnd}>
@@ -146,11 +152,11 @@ function ListScreen({ section, title, query, setQuery }: { section: AdminSection
           search: t.searchAudit, fields: ["action", "outcome", "targetType", "actor", "target"], open: undefined, defaultSort: { id: "created_at", desc: true },
           columns: [
             { ...created, label: t.time },
-            { id: "actor_id", label: t.actor, cell: (r) => <>{r.actor_name ?? "—"} <Identifier value={r.actor_id} label={t.actorId} /></> },
+            { id: "actor_id", label: t.actor, cell: (r) => r.actor_id ? <>{r.actor_name ?? ""} <Identifier value={r.actor_id} label={t.actorId} /></> : "—" },
             { id: "action", label: t.action, sort: "name" },
             { id: "target_id", label: t.target, cell: (r) => <Identifier value={r.target_id} label={t.targetId} /> },
             { id: "outcome", label: t.outcome, cell: (r) => <StateBadge value={r.outcome} /> },
-            { id: "reason_excerpt", label: t.reasonExcerpt, cell: (r) => r.reason_excerpt ?? "—" },
+            { id: "reason_excerpt", label: t.reasonExcerpt, cell: (r) => r.reason_excerpt || "—" },
           ] as AdminColumn[],
         };
     }
