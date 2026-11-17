@@ -611,7 +611,7 @@ subscribeTheme(theme => {
     return;
   }
   materialKey = key;
-  kind = theme.material.onLight ? 'pergament' : preferredKind;
+  kind = theme.material.paperKind === 'device' ? preferredKind : theme.material.paperKind;
   made.clear(); composed.clear(); patterns = new WeakMap();
   if (paperInitialized) scheduleTexture(theme);
 }, { immediate: true });

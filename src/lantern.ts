@@ -241,9 +241,9 @@ export class Lantern {
     // against a lamp glows a deeper amber, the inks around a sounding note taking on its colour.
     const smoothing = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true;
-    ctx.globalCompositeOperation = readTheme().material.onLight ? 'multiply' : 'source-over';
+    ctx.globalCompositeOperation = readTheme().material.lanternComposite;
     ctx.drawImage(this.glow, 0, 0, this.width * HALO_SCALE, this.height * HALO_SCALE, 0, 0, this.width, this.height);
-    if (readTheme().material.onLight) ctx.globalCompositeOperation = 'source-over';
+    if (readTheme().material.lanternComposite === 'multiply') ctx.globalCompositeOperation = 'source-over';
     ctx.imageSmoothingEnabled = smoothing;
   }
 }

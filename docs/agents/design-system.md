@@ -60,8 +60,9 @@ library cover ground, sheens and renderer effects are included. Shared roles sup
 and typography; they do not hide an extra display palette. Existing translated labels remain;
 `menuLabel: null` keeps Velvet URL-only. New entries can use their registry label.
 
-Components never select a theme ID. Material recipes query the `material-family` and
-`color-scheme` roles for paper/waves and light-material strategies. A new theme chooses those
+Components never select a theme ID. CSS material recipes query `material-family` and
+`color-scheme`; renderers consume the typed `material-strategy` role for paper kind and
+ink/light compositing independently of the browser scheme. A new theme chooses those
 roles in its block. Revival is an orthogonal `data-type` preset declared solely in `tokens.css`:
 it overrides typography roles used by the same recipes without component selectors.
 
@@ -271,3 +272,11 @@ Primitives, parity decisions, adapter examples and browser-check APIs:
 for Night paper and Velvet. Parchment deliberately uses its accent link color instead of
 the native blue (`rgb(0,0,238)`); this is the sole visible P6d cleanup change.
 The color is a complete theme role, so added themes can choose their own link paint.
+
+### Material strategy
+
+Each theme authors `--ds-material-strategy: light | ink`, independent of its browser
+`color-scheme`. The typed snapshot maps `light` to device-selected paper, source-over
+lanterns and additive ribbons; `ink` to pergament, multiplied lanterns/glows and
+source-over ribbon lines. Night paper/Velvet select `light`; Parchment selects `ink`.
+These roles preserve the previous pixels without using browser scheme as a material policy.

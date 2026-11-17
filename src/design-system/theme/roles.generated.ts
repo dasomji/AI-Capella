@@ -459,6 +459,7 @@ export const themeRoleNames = [
   "material-reading-strip-alpha",
   "material-sheet",
   "material-stage-background",
+  "material-strategy",
   "material-title-l-color",
   "material-title-l-text-shadow",
   "material-vellum",
