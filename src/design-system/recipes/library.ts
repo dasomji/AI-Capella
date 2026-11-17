@@ -25,18 +25,8 @@ const libraryStyles = {
   landingAside: "tw:text-body-small",
   landingEmpty: emptyStateRecipe().root + " tw:[&>p]:m-flush tw:[&>p]:font-control tw:[&>p]:leading-leading-body tw:[&>p:first-child]:text-body tw:[&>p:first-child]:font-weight-label tw:[&>p:first-child]:text-ink tw:[&>p:not(:first-child)]:text-body-small tw:[&>p:not(:first-child)]:text-ink-secondary tw:[&[hidden]]:hidden!",
   searchInput: "tw:font-inherit tw:font-family-inherit tw:text-inherit tw:p-library-search-input-padding",
-  overlay: "tw:text-ink tw:font-inherit tw:font-family-inherit tw:outline-none tw:box-border tw:surface-material-vellum-strong tw:[backdrop-filter:var(--ds-material-filter-strong)] tw:frame-all-library-overlay-border tw:shadow-domain-sheet-shadow tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:[&::backdrop]:surface-library-overlay-backdrop tw:[&_*]:font-smoothing-inherit tw:[&_*]:locale-inherit tw:[&_*]:tap-highlight-inherit",
-  overlayContent: "tw:block",
-  prompt: "tw:m-auto tw:p-section tw:w-width-dialog tw:max-w-library-prompt-max tw:rounded-dialog tw:fixed tw:inset-flush tw:h-fit tw:max-h-max-height-dialog tw:motion-library-prompt-transition tw:[&_form:empty]:hidden tw:[&[data-panel-state='entering']]:opacity-opacity-hidden tw:[&[data-panel-state='entering']]:[transform:var(--ds-library-prompt-enter)] tw:[&[data-panel-state='closing']]:opacity-opacity-hidden tw:[&[data-panel-state='closing']]:[transform:var(--ds-library-prompt-enter)] tw:[&[data-panel-state='open']]:opacity-opacity-visible tw:[&[data-panel-state='open']]:transform-none",
-  promptContent: "tw:grid tw:gap-row tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit",
-  promptTitle: "tw:whitespace-normal tw:m-flush tw:type-library-prompt-heading tw:wrap-anywhere tw:[font-family:var(--ds-type-library-prompt-font-family)] tw:[font-weight:var(--ds-type-library-prompt-font-weight)] tw:[font-size:var(--ds-type-library-prompt-font-size)] tw:[line-height:var(--ds-type-library-prompt-line-height)] tw:[letter-spacing:var(--ds-type-library-prompt-letter-spacing)] tw:[text-transform:var(--ds-type-library-prompt-text-transform)] tw:[font-synthesis:var(--ds-type-library-prompt-font-synthesis)]",
   promptBody: "tw:m-flush tw:text-ink-secondary tw:select-text tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit",
   promptActions: "tw:flex tw:justify-end tw:gap-inline tw:mt-snug",
-  popover: "tw:fixed tw:m-flush tw:min-w-library-popover-min tw:max-w-library-popover-max tw:p-small tw:rounded-tile tw:overflow-visible tw:motion-library-popover-transition tw:[&:modal::backdrop]:surface-material-clear tw:[&[data-panel-state='entering']]:opacity-opacity-hidden tw:[&[data-panel-state='entering']]:[transform:var(--ds-library-popover-enter)] tw:[&[data-panel-state='open']]:opacity-opacity-visible tw:[&[data-panel-state='open']]:transform-none tw:[&[data-panel-state='closing']]:opacity-opacity-hidden",
-  sheet: "tw:fixed tw:inset-library-sheet-inset tw:m-flush tw:w-full tw:[max-width:none] tw:max-h-max-height-sheet tw:overflow-y-auto tw:p-library-sheet-padding tw:rounded-library-sheet-border-radius tw:border-0 tw:frame-top-library-sheet-border-top tw:panel:left-library-sheet-left tw:panel:right-auto tw:panel:w-width-sheet tw:panel:ml-library-sheet-offset tw:panel:bottom-section tw:panel:rounded-dialog-roomy tw:panel:frame-all-library-sheet-border",
-  sheetHead: "tw:relative tw:flex tw:items-center tw:justify-between tw:min-h-voice-row tw:pt-small",
-  sheetTitle: "tw:m-flush tw:text-section tw:font-weight-strong",
-  sheetGrab: "tw:absolute tw:top-flush tw:left-library-sheet-grab-left tw:w-toolbar tw:h-control-dense tw:ml-library-grab-offset tw:rounded-control-dense tw:surface-rule-strong",
   menu: "tw:grid",
   menuItem: "tw:flex tw:items-center tw:gap-control tw:min-h-touch tw:p-library-menu-item-padding tw:border-0 tw:rounded-control tw:font-inherit tw:font-family-inherit tw:text-button tw:font-weight-label tw:[:where(&)]:text-inherit tw:surface-material-clear tw:text-left tw:cursor-pointer tw:motion-library-menu-item-transition tw:[&:hover]:outline-none tw:[&:focus-visible]:outline-none tw:[&:disabled]:cursor-default tw:[&:disabled]:opacity-opacity-disabled tw:[&_.ic]:w-action tw:[&_.ic]:h-action tw:[&_.ic]:text-ink-secondary tw:[&[aria-checked=true]_.ds-library-menu-check]:text-component-menu-check tw:[&_.ic.ds-library-menu-chevron]:w-content tw:[&_.ic.ds-library-menu-chevron]:h-content tw:[&_.ic.ds-library-menu-chevron]:motion-library-menu-item-transition-phone tw:[&[aria-expanded=true]_.ds-library-menu-chevron]:[transform:var(--ds-library-menu-item-transform)]",
   menuCheck: "tw:text-start tw:ml-auto tw:text-ink-secondary tw:font-inherit tw:font-family-inherit tw:cursor-inherit tw:text-inherit tw:select-text tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit",
@@ -47,12 +37,10 @@ const libraryStyles = {
   offlineUpdate: "tw:flex-none tw:self-end tw:m-small tw:max-w-full tw:whitespace-normal",
   link: "tw:min-h-flush tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:max-w-full tw:wrap-anywhere tw:text-label tw:font-weight-label tw:text-ink-secondary tw:p-library-link-padding tw:rounded-tile-dense tw:text-center tw:[&:hover]:text-ink tw:[&.ds-library-landing-aside]:text-body-small",
   tag: "tw:type-library-tag-font tw:tracking-library-tag-tracking tw:uppercase tw:text-ink-muted tw:frame-all-library-tag-border tw:rounded-pill tw:p-library-tag-padding",
-  promptHead: "tw:contents",
 } as const;
-export const libraryParts = ["sheet-grab","song-grid","cover","song-body","song-title","song-meta","vdots","banner","paper-list","paper-swatch","paper-text","landing-empty","landing-aside","empty-note"] as const;
+export const libraryParts = ["song-grid","cover","song-body","song-title","song-meta","vdots","banner","paper-list","paper-swatch","paper-text","landing-empty","landing-aside","empty-note"] as const;
 export type LibraryPart = (typeof libraryParts)[number];
 const parts = {
-  "sheet-grab": "ds-library-sheet-grab sheet-grab" + " " + libraryStyles.sheetGrab,
   "song-grid": "ds-library-song-grid song-grid" + " " + libraryStyles.songGrid,
   "cover": "ds-library-cover cover" + " " + libraryStyles.cover,
   "song-body": "ds-library-song-body song-body" + " " + libraryStyles.songBody,
