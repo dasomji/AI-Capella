@@ -238,6 +238,7 @@ export function updateField(
     if (options[key]) {
       const part = element("p", slots[key], options[key]);
       part.id = control.id + "-" + key;
+      if (key === "error") part.setAttribute("role", "alert");
       root.append(part);
       described.push(part.id);
     }
