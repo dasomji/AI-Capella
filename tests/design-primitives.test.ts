@@ -780,3 +780,16 @@ it('uses token durations for toast lifetime and exit rather than numeric default
     vi.advanceTimersByTime(1); expect(getToast()).toBeNull();
   } finally { Object.assign(toastRoles, original); }
 });
+
+it('finishes a sheet through its duration fallback when transitionend is absent', () => {
+  vi.useFakeTimers();
+  const {dialog,api,opener}=modal({motion:'sheet'});
+  vi.advanceTimersByTime(20);
+  dialog.style.transitionDuration='0.22s';
+  api.close();
+  vi.advanceTimersByTime(269);
+  expect(dialog.open).toBe(true);
+  vi.advanceTimersByTime(1);
+  expect(dialog.open).toBe(false);
+  expect(document.activeElement).toBe(opener);
+});

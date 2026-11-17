@@ -142,7 +142,7 @@ try {
           "review assertions",
         );
       } catch (error) {
-        console.error({errors,body:await page.locator("body").innerText()});
+        console.error({errors,body:(await page.locator("body").innerText()).slice(0,2000)});
         throw error;
       } finally {
         await context.close();
