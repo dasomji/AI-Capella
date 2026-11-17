@@ -58,13 +58,6 @@
       "count": 1
     },
     {
-      "file": "src/auth.css",
-      "kind": "screen-control-selector",
-      "context": ".language-toggle button",
-      "value": ".language-toggle button",
-      "count": 1
-    },
-    {
       "file": "src/intro.ts",
       "kind": "raw-media-query",
       "context": "narrow",
