@@ -7,20 +7,24 @@
 .ds-legacy-dialog::backdrop { background:transparent; }
 /* Explicit normalization belongs to primitives, never global Preflight. */
 [data-ds] { box-sizing:border-box; }
-[data-ds='button'], [data-ds='icon-button'], [data-ds='switch'], [data-ds='menu-item'] { font-family:var(--ds-font-control); line-height:var(--ds-leading-body); }
 [data-ds='dialog'][open] { display:block; }
 [data-ds='checkbox'] { margin:0; }
 /* Showcase containment only: fixed sheet/drawer specimens stay in their comparison cells. */
 .ds-specimens { display:grid; gap:var(--ds-space-24); }
 .ds-specimen-pair { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--ds-space-24); }
 .ds-specimen-pair > div { min-width:0; position:relative; transform:translateZ(0); }
-.ds-specimen-pair dialog { position:relative; inset:auto; margin:0; width:100%; height:auto; max-width:100%; }
+.ds-specimen-pair dialog { position:relative !important; inset:auto !important; margin:0 !important; width:100% !important; height:auto !important; max-width:100% !important; max-height:none !important; }
 /* This reset is opt-in on recipe slots. Utilities above this layer define every appearance. */
 .ds-reset {
   all:initial;
   display:revert;
   appearance:revert;
   direction:inherit;
+  color-scheme:inherit;
+  visibility:inherit;
+  pointer-events:inherit;
+  accent-color:inherit;
+  print-color-adjust:inherit;
   box-sizing:border-box;
   font-family:var(--ds-font-body);
   font-size:var(--ds-size-body);
@@ -49,3 +53,22 @@
 .ds-menu-item:hover,.ds-menu-item:focus-visible { color:var(--ds-component-menu-hover);text-shadow:var(--ds-component-menu-shadow); }
 .ds-menu-item:hover::before,.ds-menu-item:focus-visible::before { opacity:1; }
 @media (prefers-reduced-motion:reduce) { .ds-menu-item::before { transition:none; } }
+
+.ds-reset[hidden] { display:none !important; }
+.ds-menu-anchor { position:relative; }
+.ds-menu-anchor > [role='menu'] { position:absolute; top:100%; left:0; z-index:var(--ds-layer-menu); }
+.ds-menu-anchor[data-placement='end'] > [role='menu'] { left:auto; right:0; }
+/* Placement roles use the same values as the original notifier in both themes. */
+.ds-toast-placement {
+  inset:auto; left:50%; bottom:var(--ds-toast-bottom); max-width:var(--ds-toast-max-width);
+  transform:translate(-50%, var(--ds-space-16)); opacity:0;
+  transition:opacity var(--ds-duration-normal), transform var(--ds-duration-normal) var(--ds-ease-standard);
+}
+.ds-toast-placement.show { opacity:1; transform:translate(-50%, 0); }
+@media (width < theme(--breakpoint-panel)) { .ds-toast-placement { bottom:var(--ds-toast-bottom-phone); } }
+body:has(.domain-sheet) .ds-toast-placement { top:var(--ds-space-16); bottom:auto; max-width:var(--ds-toast-max-width-sheet); }
+/* Generated decorations must obey the same inherited visibility and input policy. */
+.ds-reset::before, .ds-reset::after {
+  color-scheme:inherit; visibility:inherit; pointer-events:inherit;
+  accent-color:inherit; print-color-adjust:inherit;
+}

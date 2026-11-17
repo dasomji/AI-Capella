@@ -244,11 +244,10 @@
   box-shadow: var(--glass-hi), 0 30px 70px -20px rgb(90 60 25 / 0.45);
 }
 
-:root[data-ground='pergament'] #toast,
 :root[data-ground='pergament'] .power-hint,
 :root[data-ground='pergament'] .fb-ask,
 :root[data-ground='pergament'] .intro-card {
-  box-shadow: 0 16px 40px rgb(90 60 25 / 0.3);
+  box-shadow: var(--ds-component-toast-shadow);
 }
 
 :root[data-ground='pergament'] #sound-prompt {

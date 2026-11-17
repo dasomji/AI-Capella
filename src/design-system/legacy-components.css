@@ -10,7 +10,6 @@
 :root[data-title='buehne'] .landing-code { --ded-wait: var(--ds-duration-dedication-parchment); }
 
 /* Account/admin overlays keep the shell's historical stack, including body-mounted toast. */
-.admin-detail, .admin-confirm,
-body:has(.admin-shell) #toast, body:has(.account-stage) #toast {
+.admin-detail, .admin-confirm {
   font-family:var(--ds-font-auth-body);
 }

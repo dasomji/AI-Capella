@@ -1439,13 +1439,6 @@
     {
       "file": "src/parchment.css",
       "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] #toast, :root[data-ground='pergament'] .power-hint, :root[data-ground='pergament'] .fb-ask, :root[data-ground='pergament'] .intro-card / box-shadow",
-      "value": "rgb(90 60 25 / 0.3)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
       "context": ":root[data-ground='pergament'] input[type='range']::-webkit-slider-thumb / box-shadow",
       "value": "rgb(90 60 25 / 0.35)",
       "count": 1
@@ -2820,13 +2813,6 @@
       "kind": "raw-color",
       "context": "#sound-prompt / box-shadow",
       "value": "rgba(200, 161, 90, 0.25)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": "#toast / box-shadow",
-      "value": "rgba(0, 0, 0, 0.5)",
       "count": 1
     },
     {
