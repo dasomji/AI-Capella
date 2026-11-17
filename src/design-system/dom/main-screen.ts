@@ -1,4 +1,4 @@
-import { shellRecipe } from "../recipes/shell";
+import { appShellRecipe, brandRecipe, landingRecipe, libraryHeaderRecipe, transcriptionJobRecipe } from "../recipes/shell";
 import {
   createPlayerPart,
   createMixerVolume,
@@ -91,13 +91,13 @@ function append<T extends Element>(
   return parent;
 }
 /** Shell/renderer geometry only; control appearance belongs to recipes. */
-function shell(tag: string, attrs: Record<string, string | boolean> = {}) {
+function shell(tag: string, attrs: Record<string, string | boolean> = {}, recipe = "") {
   const el = ["svg", "path"].includes(tag)
     ? document.createElementNS("http://www.w3.org/2000/svg", tag)
     : document.createElement(tag);
   for (const [key, value] of Object.entries(attrs))
     el.setAttribute(key, value === true ? "" : String(value));
-  const classes = shellRecipe(String(attrs.class ?? ""), String(attrs.id ?? ""));
+  const classes = [String(attrs.class ?? ""), recipe].filter(Boolean).join(" ");
   if (classes) el.setAttribute("class", classes);
   return el;
 }
@@ -128,27 +128,27 @@ export function createMainScreen(copy: MainCopy) {
         id: "landing",
         "aria-label": "LightScore",
         class: "view",
-      }),
+      }, appShellRecipe().view + " " + appShellRecipe().landing),
       append(
         shell("canvas", {
           id: "landing-ribbons",
           "aria-hidden": "true",
           class: "ribbons",
-        }),
+        }, brandRecipe().ribbons),
       ),
       append(
-        shell("h1", { "aria-label": "LightScore", class: "landing-name" }),
-        append(shell("span", { class: "ls-l" }), "Light"),
+        shell("h1", { "aria-label": "LightScore", class: "landing-name" }, landingRecipe().name),
+        append(shell("span", { class: "ls-l" }, brandRecipe().script), "Light"),
         "Score",
       ),
       append(
-        shell("div", { class: "landing-choice" }),
+        shell("div", { class: "landing-choice" }, landingRecipe().choice),
         append(
           shell("p", {
             id: "landing-dedication",
             hidden: true,
-            class: "landing-dedication tw:panel-dedication-wait tw:[:root[data-title=zeile]_&]:panel-dedication-staff tw:[:root[data-title=buehne]_&]:panel-dedication-night",
-          }),
+            class: "landing-dedication tw:[--ded-wait:var(--ds-duration-dedication)] tw:[:root[data-title=zeile]_&]:[--ded-wait:var(--ds-duration-dedication-staff)] tw:[:root[data-title=buehne]_&]:[--ded-wait:var(--ds-duration-dedication-night)]",
+          }, landingRecipe().dedication),
         ),
         append(
           createLibraryPart("div", "landing-empty", {
@@ -170,7 +170,7 @@ export function createMainScreen(copy: MainCopy) {
           ),
         ),
         append(
-          shell("div", { class: "landing-modes" }),
+          shell("div", { class: "landing-modes" }, landingRecipe().modes),
           append(
             createButton({
               variant: "landing-mode",
@@ -206,20 +206,20 @@ export function createMainScreen(copy: MainCopy) {
   );
   fragment.append(
     append(
-      shell("section", { id: "library", class: "view" }),
+      shell("section", { id: "library", class: "view" }, appShellRecipe().view + " " + appShellRecipe().library),
       append(
-        shell("header", { class: "lib-top" }),
+        shell("header", { class: "lib-top" }, libraryHeaderRecipe().root),
         append(
-          shell("span", { class: "brand" }),
-          append(shell("canvas", { "aria-hidden": "true", class: "mark" })),
+          shell("span", { class: "brand" }, brandRecipe().group),
+          append(shell("canvas", { "aria-hidden": "true", class: "mark" }, brandRecipe().mark)),
           append(
-            shell("span", { "aria-label": "LightScore", class: "wordmark" }),
-            append(shell("span", { class: "ls-l" }), "Light"),
+            shell("span", { "aria-label": "LightScore", class: "wordmark" }, brandRecipe().wordmark),
+            append(shell("span", { class: "ls-l" }, brandRecipe().script), "Light"),
             "Score",
           ),
         ),
         append(
-          shell("div", { class: "lib-top-r" }),
+          shell("div", { class: "lib-top-r" }, libraryHeaderRecipe().actions),
           append(
             createPlayerPart("div", "mode-group", {
               attrs: {
@@ -256,7 +256,7 @@ export function createMainScreen(copy: MainCopy) {
           ),
           append(
             createIconButton({
-              variant: "standard",
+              variant: "library-menu",
               label: `${copy.t("menu")}`,
               attrs: { id: "lib-menu-btn" },
             }),
@@ -265,16 +265,16 @@ export function createMainScreen(copy: MainCopy) {
         ),
       ),
       append(
-        shell("div", { class: "lib-scroll" }),
+        shell("div", { class: "lib-scroll" }, libraryHeaderRecipe().scroll),
         append(
-          shell("div", { class: "lib-head" }),
+          shell("div", { class: "lib-head" }, libraryHeaderRecipe().heading),
           append(
             shell("div", {}),
             append(shell("h1", { id: "lib-title" }), copy.t("repertoire")),
-            append(shell("p", { id: "lib-count" })),
+            append(shell("p", { id: "lib-count" }, libraryHeaderRecipe().count)),
           ),
           append(
-            shell("div", { class: "lib-tools" }),
+            shell("div", { class: "lib-tools" }, libraryHeaderRecipe().tools),
             search(copy),
             append(
               createButton({
@@ -320,7 +320,7 @@ export function createMainScreen(copy: MainCopy) {
             id: "transcription-jobs",
             hidden: true,
             "aria-label": `${copy.tr("work")}`,
-          }),
+          }, transcriptionJobRecipe().list),
         ),
         append(
           createLibraryPart("div", "banner", {
@@ -331,13 +331,13 @@ export function createMainScreen(copy: MainCopy) {
           createLibraryPart("ul", "song-grid", { attrs: { id: "song-grid" } }),
         ),
         append(
-          shell("p", { class: "lib-tip" }),
+          shell("p", { class: "lib-tip" }, libraryHeaderRecipe().tip),
           copy.icon("upload"),
           append(shell("span", {}), copy.t("dropTip")),
         ),
       ),
       append(
-        shell("div", { "aria-hidden": "true", class: "drop-veil" }),
+        shell("div", { "aria-hidden": "true", class: "drop-veil" }, libraryHeaderRecipe().dropZone),
         append(shell("span", {}), copy.icon("upload"), copy.t("dropHere")),
       ),
       append(
@@ -353,7 +353,7 @@ export function createMainScreen(copy: MainCopy) {
   );
   fragment.append(
     append(
-      shell("section", { id: "player", class: "view" }),
+      shell("section", { id: "player", class: "view" }, appShellRecipe().view + " " + appShellRecipe().player),
       append(
         createPlayerPart("header", "header", { attrs: {} }),
         append(
@@ -497,7 +497,7 @@ export function createMainScreen(copy: MainCopy) {
         ),
       ),
       append(
-        shell("div", { id: "stage", class: "stage" }),
+        shell("div", { id: "stage", class: "stage" }, appShellRecipe().stage),
         append(shell("canvas", { id: "roll" })),
         append(shell("canvas", { id: "staff", hidden: true })),
         append(
@@ -546,7 +546,7 @@ export function createMainScreen(copy: MainCopy) {
         ),
       ),
       append(
-        shell("div", { id: "overview-wrap", class: "overview" }),
+        shell("div", { id: "overview-wrap", class: "overview" }, appShellRecipe().overview),
         append(
           shell("canvas", { id: "overview", title: `${copy.t("wholePiece")}` }),
         ),

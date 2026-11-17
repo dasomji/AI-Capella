@@ -1,4 +1,4 @@
-import { shellRecipe } from "./design-system/recipes/shell";
+import { controlNoteRecipe, ensemblePanelRecipe, sheetHandleRecipe } from "./design-system/recipes/shell";
 import { randomId } from "./uuid";
 import { api } from "./domain-client";
 import {
@@ -81,7 +81,7 @@ function openSheet(
   });
   const head = sheet.element.querySelector("header")!;
   const grab = element("span");
-  grab.className = shellRecipe("sheet-grab");
+  grab.className = sheetHandleRecipe();
   grab.setAttribute("aria-hidden", "true");
   const close = createIconButton({
     label: t("close"),
@@ -135,7 +135,7 @@ async function action(fn: () => Promise<void>) {
 }
 export function createEnsembleSheet(done: (id: string) => void, opener?: HTMLElement) {
   const body = element("form");
-  body.className = shellRecipe("sheet-body domain-sheet");
+  body.className = "sheet-body" + " " + ensemblePanelRecipe().body;
   const name = field(body, pt("ensembleName"), "text", "domain-create");
   name.required = true;
   name.maxLength = 200;
@@ -175,7 +175,7 @@ export function createEnsembleSheet(done: (id: string) => void, opener?: HTMLEle
 }
 export async function membersSheet(id: string, anchor?: HTMLElement) {
   const body = element("div");
-  body.className = shellRecipe("sheet-body domain-sheet");
+  body.className = "sheet-body" + " " + ensemblePanelRecipe().body;
   const menus: (() => void)[] = [];
   openSheet(pt("membersInvitations"), body, anchor, () =>
     menus.splice(0).forEach((dispose) => dispose()),
@@ -195,7 +195,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
       key: "membersHeading" | "invitationsHeading" | "inviteHeading",
     ) => {
       const h = element("h3", pt(key));
-      h.className = shellRecipe("domain-heading");
+      h.className = ensemblePanelRecipe().heading;
       body.append(h);
     };
     const menu = (
@@ -204,7 +204,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
     ) => {
       if (!actions.length) return;
       const details = element("details");
-      details.className = shellRecipe("row-menu");
+      details.className = ensemblePanelRecipe().rowMenu;
       const summary = element("summary", "⋯");
       summary.setAttribute("aria-label", pt("membersInvitations"));
       details.append(summary);
@@ -259,19 +259,19 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
     heading("membersHeading");
     for (const m of members) {
       const row = element("section");
-      row.className = shellRecipe("member-row");
+      row.className = ensemblePanelRecipe().memberRow;
       const head = element("div");
-      head.className = shellRecipe("member-head");
+      head.className = ensemblePanelRecipe().memberHead;
       const identity = element("div");
-      identity.className = shellRecipe("member-identity");
+      identity.className = ensemblePanelRecipe().identity;
       identity.append(element("b", m.name || m.email));
       const email = element("p", m.email);
-      email.className = shellRecipe("member-email");
+      email.className = ensemblePanelRecipe().email;
       identity.append(email);
       head.append(identity);
       if (m.isLead) {
         const mark = element("span", pt("lead"));
-        mark.className = shellRecipe("domain-gold");
+        mark.className = ensemblePanelRecipe().accent;
         head.append(mark);
       }
       row.append(head);
@@ -316,12 +316,12 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
       menu(head, actions);
       if (self && last) {
         const note = element("p", pt("onlyLead"));
-        note.className = shellRecipe("ctl-note");
+        note.className = controlNoteRecipe();
         row.append(note);
       }
       if (!m.isLead) {
         const caps = element("div");
-        caps.className = shellRecipe("capability-row");
+        caps.className = ensemblePanelRecipe().capabilities;
         for (const cap of capabilities) {
           if (isLead) {
             const input = capabilitySwitch(caps, pt(cap), m.capabilities[cap]);
@@ -342,7 +342,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
               "span",
               `${m.capabilities[cap] ? "✓" : "–"} ${pt(cap)}`,
             );
-            state.className = shellRecipe("ctl-note");
+            state.className = controlNoteRecipe();
             caps.append(state);
           }
         }
@@ -353,11 +353,11 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
     heading("invitationsHeading");
     for (const i of invitations) {
       const row = element("section");
-      row.className = shellRecipe("member-row invitation-row");
+      row.className = ensemblePanelRecipe().memberRow + " " + "invitation-row";
       const head = element("div");
-      head.className = shellRecipe("member-head");
+      head.className = ensemblePanelRecipe().memberHead;
       const email = element("span", i.email);
-      email.className = shellRecipe("member-email member-identity");
+      email.className = ensemblePanelRecipe().email + " " + ensemblePanelRecipe().identity;
       head.append(email);
       const state = element(
         "span",
@@ -367,7 +367,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
             : (i.state as "pending"),
         ),
       );
-      state.className = shellRecipe("invitation-state");
+      state.className = ensemblePanelRecipe().invitationState;
       head.append(state);
       row.append(head);
       if (i.state === "pending")
@@ -381,7 +381,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
                 });
               } catch (e) {
                 const note = element("p", domainError((e as Error).message));
-                note.className = shellRecipe("ctl-note");
+                note.className = controlNoteRecipe();
                 row.append(note);
                 throw e;
               }
@@ -424,7 +424,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
     form.append(label);
     const grants: Record<string, HTMLInputElement> = {};
     const caps = element("div");
-    caps.className = shellRecipe("capability-row");
+    caps.className = ensemblePanelRecipe().capabilities;
     if (isLead)
       for (const cap of capabilities)
         grants[cap] = capabilitySwitch(caps, pt(cap));

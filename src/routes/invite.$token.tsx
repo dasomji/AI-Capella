@@ -1,4 +1,4 @@
-import { shellRecipe } from "../design-system/recipes/shell";
+import { accountStageRecipe } from "../design-system/recipes/shell";
 import { offlineAccountId, purgeAccount } from '../offline-store';
 import { AccountStage } from "../account-stage";
 import { Button, Status } from "../design-system/react";
@@ -89,9 +89,9 @@ function Invitation() {
     <AccountStage language={language} onLanguage={setLanguage}>
       {preview && (
         <>
-          <h2 className="invitation-title"><span className={shellRecipe("invitation-kicker")}>{text("invitationTitle", { name: "" }).trim()}</span>{" "}<span>{preview.ensembleName}</span></h2>
+          <h2 className="invitation-title"><span className={accountStageRecipe().invitationKicker}>{text("invitationTitle", { name: "" }).trim()}</span>{" "}<span>{preview.ensembleName}</span></h2>
           <p>{text("invitedBy", { name: preview.inviter })}</p>
-          <p className={shellRecipe("account-email")}>{preview.email}</p>
+          <p className={accountStageRecipe().email}>{preview.email}</p>
         </>
       )}
       <Status variant="account">
@@ -120,7 +120,7 @@ function Invitation() {
           <a href="/app">LightScore</a>
         </>
       ) : state === "wrong_account" ? (
-        <Button variant="cta" intent="primary" layout="tw:mt-10" busy={busy}
+        <Button variant="cta" intent="primary" layout="tw:mt-inline" busy={busy}
           onClick={async () => {
             if (busy) return;
             setBusy(true);
@@ -146,16 +146,16 @@ function Invitation() {
           {text("switchAccount")}
         </Button>
       ) : preview && user ? (
-        <Button variant="cta" intent="primary" layout="tw:mt-10" busy={busy} onClick={() => void accept()}>
+        <Button variant="cta" intent="primary" layout="tw:mt-inline" busy={busy} onClick={() => void accept()}>
           {text("acceptInvitation")}
         </Button>
       ) : (
         preview && (
           <div>
-            <Button variant="cta" intent="primary" layout="tw:mt-10" onClick={() => authenticate("signup")}>
+            <Button variant="cta" intent="primary" layout="tw:mt-inline" onClick={() => authenticate("signup")}>
               {text("createAccount")}
             </Button>
-            <nav className={shellRecipe("account-links")}><Button variant="account-link" onClick={() => authenticate("signin")}>
+            <nav className={accountStageRecipe().links}><Button variant="account-link" onClick={() => authenticate("signin")}>
               {text("signin")}
             </Button></nav>
           </div>

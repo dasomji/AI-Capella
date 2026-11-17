@@ -7,7 +7,7 @@ export interface MenuItem {
   label: string;
   icon?: IconName;
   // A sign from the music font (Bravura) shown in place of the icon: a clef, say.
-  glyph?: { text: string; kind: string };
+  glyph?: { text: string; kind: "" | "treble" | "treble8" | "bass" };
   danger?: boolean;
   disabled?: boolean;
   checked?: boolean;

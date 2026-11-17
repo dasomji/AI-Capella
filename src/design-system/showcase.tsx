@@ -13,7 +13,7 @@ const examples=specimens();
 /** Development-only comparisons; production routing eliminates this entire graph. */
 export function DesignSystemShowcase() {
   const theme = useTheme();
-  return <main className="tw:bg-surface tw:text-ink tw:font-body tw:p-content">
+  return <main className="tw:bg-surface tw:text-ink tw:font-body tw:p-section">
     <h1 className="tw:font-heading">LightScore design tokens</h1>
     <label>Theme <select aria-label="Theme" value={theme?.preference ?? 'system'} onChange={event => setThemePreference(event.target.value as ThemePreference)}>
       <option value="system">System</option>{themeRegistry.map(theme => <option key={theme.id} value={theme.id}>{theme.label}</option>)}
@@ -22,11 +22,11 @@ export function DesignSystemShowcase() {
     <h2>Shared primitives · React / DOM</h2>
     <p>Every named variant, state and slot uses the same typed recipe. Dialog specimens are nonmodal; open a modal with the behavior controls.</p>
     <button type="button" onClick={async()=>{const {createDialog,createButton}=await import('./dom');const close=createButton({text:'Close',onClick:()=>modal.close()});const modal=createDialog({title:'Keyboard and focus',body:'Escape and outside click close this modal.',actions:close});modal.open();}}>Open lifecycle example</button>
-    <div className="ds-specimens tw:grid tw:gap-24">{examples.map(example=><section key={example.name} data-specimen={example.name}><h3>{example.name}</h3><div className="ds-specimen-pair tw:grid tw:grid-cols-2 tw:gap-24 tw:[&>div]:min-w-0 tw:[&>div]:relative tw:[&>div]:panel-specimen-transform tw:[&_dialog]:relative! tw:[&_dialog]:inset-auto! tw:[&_dialog]:m-0! tw:[&_dialog]:w-full! tw:[&_dialog]:h-auto! tw:[&_dialog]:max-w-full! tw:[&_dialog]:max-h-none!"><div data-renderer="react">{example.react}</div><DomSpecimen build={example.dom}/></div></section>)}</div>
+    <div className="ds-specimens tw:grid tw:gap-section">{examples.map(example=><section key={example.name} data-specimen={example.name}><h3>{example.name}</h3><div className="ds-specimen-pair tw:grid tw:grid-cols-2 tw:gap-section tw:[&>div]:min-w-none tw:[&>div]:relative tw:[&>div]:[transform:var(--ds-panel-specimen-transform)] tw:[&_dialog]:relative! tw:[&_dialog]:inset-auto! tw:[&_dialog]:m-none! tw:[&_dialog]:w-full! tw:[&_dialog]:h-auto! tw:[&_dialog]:max-w-full! tw:[&_dialog]:max-h-none!"><div data-renderer="react">{example.react}</div><DomSpecimen build={example.dom}/></div></section>)}</div>
     <h2 className="tw:font-display">Semantic color roles</h2>
-    <div className="tw:flex tw:flex-wrap tw:gap-content">
-      {theme && colorRoles.map(role => <article key={role} className="tw:border tw:border-solid tw:border-rule tw:rounded-card tw:p-control">
-        <div aria-hidden="true" className="tw:h-swatch tw:w-swatch" style={{ backgroundColor: theme.colors[role].css }} />
+    <div className="tw:flex tw:flex-wrap tw:gap-section">
+      {theme && colorRoles.map(role => <article key={role} className="tw:border-(length:--ds-stroke-thin) tw:border-solid tw:border-rule tw:rounded-card tw:p-control">
+        <div aria-hidden="true" className="tw:h-stage tw:w-stage" style={{ backgroundColor: theme.colors[role].css }} />
         <code>{role}</code><p>{theme.colors[role].css}</p>
       </article>)}
     </div>

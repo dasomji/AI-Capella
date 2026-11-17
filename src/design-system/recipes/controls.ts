@@ -1,10 +1,18 @@
-import { libraryAccountUtilityRecipe } from "./library";
+import { libraryControlRecipe, libraryMoreRecipe, librarySearchRecipe, offlineUpdateRecipe, type LibraryControl } from "./library";
+import { accountFieldRecipe, sharedDeviceRecipe } from "./account";
 import { panelButtonStyles, panelSectionMarkStyles, panelInputStyles, panelCheckboxStyles, panelPartRecipe } from "./panels";
-import { playerUtilityClasses } from "./player";
+import { playerControlRecipe, type PlayerControl } from "./player";
 import { normalizeRecipe } from "./normalize";
 /** Pure, literal Tailwind recipes. Each property owns disjoint CSS properties. */
-export const controlBase =
-  "tw:box-border tw:m-0 tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-focus tw:focus-visible:outline-offset-4 tw:disabled:cursor-default tw:aria-disabled:cursor-wait tw:motion-reduce:transition-none";
+const controlBehavior = "tw:box-border tw:disabled:cursor-default tw:aria-disabled:cursor-wait tw:motion-reduce:transition-none";
+const controlFocus = {
+  standard: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-focus tw:focus-visible:outline-offset-compact",
+  admin: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-admin-accent tw:focus-visible:outline-offset-tight",
+  library: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-ink tw:focus-visible:outline-offset-compact",
+};
+const unfocusedControlBase = controlBehavior + " tw:m-none";
+const adminControlBase = unfocusedControlBase + " " + controlFocus.admin;
+export const controlBase = unfocusedControlBase + " " + controlFocus.standard;
 export const disabledRecipe =
   "tw:disabled:opacity-(--ds-opacity-disabled) tw:aria-disabled:opacity-(--ds-opacity-disabled)";
 const actionDisabled = "tw:disabled:opacity-(--ds-opacity-disabled-action) tw:aria-disabled:opacity-(--ds-opacity-disabled-action) tw:disabled:pointer-events-none tw:aria-disabled:pointer-events-none";
@@ -71,34 +79,34 @@ const parityButtonShapes = {
   "paper-choice": "ds-library-paper-option",
   "sound-prompt": "ds-library-sound-prompt",
   "offline-update": "ds-library-offline-update",
-  "domain-language": "tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4 tw:rounded-card tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-regular tw:text-small tw:leading-admin tw:text-center",
-  tile: "tw:flex-1 tw:min-w-0 tw:min-h-upload-tile tw:max-score:min-h-upload-tile-phone tw:flex-col tw:px-10 tw:py-18 tw:whitespace-normal tw:rounded-transcription-tile tw:bg-surface tw:text-ink tw:border-rule-strong tw:text-button tw:font-label tw:font-auth-body tw:leading-body",
-  compact: "tw:min-h-36 tw:p-6 tw:rounded-card tw:border-rule-strong tw:bg-transparent tw:text-ink tw:text-small tw:font-label tw:font-auth-body tw:leading-body",
-  "review-item": "tw:min-h-control-height tw:w-full tw:mb-4 tw:justify-start tw:items-baseline tw:text-left tw:whitespace-normal tw:py-12 tw:px-0 tw:border-0 tw:border-b tw:rounded-field tw:border-rule-strong tw:bg-transparent tw:text-ink tw:font-auth-body tw:font-regular tw:text-body-small tw:leading-field",
-  "transcription-link": "tw:min-h-0 tw:rounded-field tw:px-0 tw:py-8 tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:hover:text-ink tw:hover:underline tw:font-auth-body tw:font-regular tw:text-label tw:leading-body",
-  "transcription-language": "tw:min-h-36 tw:rounded-field tw:px-0 tw:py-4 tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-regular tw:text-small tw:leading-field",
-  "tour-link": "tw:min-h-0 tw:rounded-control tw:px-6 tw:py-4 tw:border-0 tw:bg-transparent tw:text-note-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-label tw:leading-body",
-  "hint-link": "tw:min-h-0 tw:rounded-control tw:px-6 tw:py-4 tw:border-0 tw:bg-transparent tw:text-hint-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-label tw:leading-body",
-  hint: "tw:min-h-control-height tw:rounded-card tw:px-18 tw:py-0 tw:text-button tw:font-label tw:font-control tw:leading-body tw:border-rule-strong tw:hover:border-ink-secondary tw:bg-transparent tw:text-surface-sunken",
+  "domain-language": "tw:min-h-panel tw:min-w-heading tw:px-none tw:py-compact tw:rounded-card tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-weight-body tw:text-small tw:leading-leading-admin tw:text-center",
+  tile: "tw:flex-1 tw:min-w-none tw:min-h-upload-tile-height tw:max-score:min-h-upload-tile-phone-height tw:flex-col tw:px-inline tw:py-action tw:whitespace-normal tw:rounded-tile tw:bg-surface tw:text-ink tw:border-rule-strong tw:text-button tw:font-weight-label tw:font-auth-body tw:leading-leading-body",
+  compact: "tw:min-h-toolbar-dense tw:p-snug tw:rounded-card tw:border-rule-strong tw:bg-transparent tw:text-ink tw:text-small tw:font-weight-label tw:font-auth-body tw:leading-leading-body",
+  "review-item": "tw:min-h-control-height tw:w-full tw:mb-compact tw:justify-start tw:items-baseline tw:text-left tw:whitespace-normal tw:py-control tw:px-none tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:rounded-field tw:border-rule-strong tw:bg-transparent tw:text-ink tw:font-auth-body tw:font-weight-body tw:text-body-small tw:leading-leading-field",
+  "transcription-link": "tw:min-h-none tw:rounded-field tw:px-none tw:py-small tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:hover:text-ink tw:hover:underline tw:font-auth-body tw:font-weight-body tw:text-label tw:leading-leading-body",
+  "transcription-language": "tw:min-h-toolbar-dense tw:rounded-field tw:px-none tw:py-compact tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-weight-body tw:text-small tw:leading-leading-field",
+  "tour-link": "tw:min-h-none tw:rounded-control tw:px-snug tw:py-compact tw:border-0 tw:bg-transparent tw:text-note-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-weight-label tw:leading-leading-body",
+  "hint-link": "tw:min-h-none tw:rounded-control tw:px-snug tw:py-compact tw:border-0 tw:bg-transparent tw:text-hint-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-weight-label tw:leading-leading-body",
+  hint: "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-none tw:text-button tw:font-weight-label tw:font-control tw:leading-leading-body tw:border-rule-strong tw:hover:border-ink-secondary tw:bg-transparent tw:text-surface-sunken",
 } as const;
 const buttonShapes: Record<Exclude<ButtonVariant, "scan-mark-go" | "scan-mark-ok" | keyof typeof panelButtons | keyof typeof parityButtonShapes>, string> = {
   standard:
-    "tw:min-h-control-height tw:rounded-card tw:px-18 tw:py-0 tw:text-button tw:font-label tw:font-control",
-  cta: "tw:min-h-control-height-auth tw:rounded-card tw:px-18 tw:py-0 tw:w-full tw:text-button tw:font-label tw:font-auth-body",
-  pill: "tw:min-h-control-height-transcription tw:rounded-chip tw:px-18 tw:py-0 tw:text-button tw:font-label tw:font-auth-body",
-  tour: "tw:min-h-tour tw:rounded-card tw:px-16 tw:py-0 tw:text-button tw:font-label tw:font-control",
+    "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-none tw:text-button tw:font-weight-label tw:font-control",
+  cta: "tw:min-h-control-height-touch tw:rounded-card tw:px-action tw:py-none tw:w-full tw:text-button tw:font-weight-label tw:font-auth-body",
+  pill: "tw:min-h-control-height-touch tw:rounded-pill tw:px-action tw:py-none tw:text-button tw:font-weight-label tw:font-auth-body",
+  tour: "tw:min-h-control-height-tour tw:rounded-card tw:px-content tw:py-none tw:text-button tw:font-weight-label tw:font-control",
   dense:
-    "tw:min-h-control-height-admin tw:rounded-admin-control tw:px-14 tw:py-10 tw:text-body-small tw:font-regular tw:font-auth-mono",
-  "dense-sort": "tw:min-h-control-height-admin tw:rounded-admin-control tw:px-0 tw:py-0 tw:text-body-small tw:font-regular tw:font-auth-mono",
-  "account-link": "tw:min-h-0 tw:rounded-field tw:px-0 tw:py-4 tw:text-body tw:font-regular tw:font-auth-body",
-  "password-toggle": "tw:min-h-0 tw:rounded-field tw:px-0 tw:py-4 tw:text-small tw:font-regular tw:font-auth-mono",
-  link: "tw:min-h-32 tw:rounded-field tw:px-0 tw:py-4 tw:text-label tw:font-label tw:font-control",
+    "tw:min-h-control-height-touch tw:rounded-control-dense tw:px-row tw:py-inline tw:text-body-small tw:font-weight-body tw:font-auth-mono",
+  "dense-sort": "tw:min-h-control-height-touch tw:rounded-control-dense tw:px-none tw:py-none tw:text-body-small tw:font-weight-body tw:font-auth-mono",
+  "account-link": "tw:min-h-none tw:rounded-field tw:px-none tw:py-compact tw:text-body tw:font-weight-body tw:font-auth-body",
+  "password-toggle": "tw:min-h-none tw:rounded-field tw:px-none tw:py-compact tw:text-small tw:font-weight-body tw:font-auth-mono",
+  link: "tw:min-h-panel tw:rounded-field tw:px-none tw:py-compact tw:text-label tw:font-weight-label tw:font-control",
 };
 const buttonIntents: Record<ButtonIntent, string> = {
   secondary:
     "tw:bg-transparent tw:text-ink tw:border-rule-strong tw:hover:border-ink-secondary",
   primary:
-    "tw:bg-ink tw:text-surface-sunken tw:border-ink tw:hover:bg-action-hover",
+    "tw:bg-ink tw:text-surface-sunken tw:border-ink tw:hover:bg-component-action-hover",
   danger: "tw:bg-danger tw:text-on-danger tw:border-danger",
   quiet:
     "tw:bg-transparent tw:text-ink-secondary tw:border-transparent tw:hover:text-ink",
@@ -106,22 +114,35 @@ const buttonIntents: Record<ButtonIntent, string> = {
 const panelButtons = {
  "panel-step":"ds-panel-button", "panel-tempo":"ds-panel-button ds-panel-stepper-value stepper-value", "panel-round":"ds-panel-button ds-panel-round-btn round-btn", "panel-preset":"ds-panel-button ds-panel-bpm-preset bpm-preset", "section-mark":"ds-panel-button ds-panel-rmark rmark", "section-word":"ds-panel-button ds-panel-rmark rmark word",
 } as const;
+function actionRecipe(intent: ButtonIntent, pressed: boolean, variant: "standard"|"landing"|"library"|"scan-go"|"scan-ok") {
+  const landing = variant === "landing";
+  const colors: Record<ButtonIntent,string> = variant === "scan-ok" ? {
+    secondary:"tw:bg-transparent tw:text-ink-secondary tw:border-transparent tw:hover:border-ink-secondary",
+    primary:"tw:bg-ink tw:text-surface-sunken tw:border-transparent tw:hover:bg-action-hover",
+    danger:"tw:bg-danger tw:text-on-danger tw:border-transparent",
+    quiet:"tw:bg-transparent tw:text-ink-secondary tw:border-transparent tw:hover:text-ink",
+  } : variant === "library" ? {...buttonIntents,danger:"tw:bg-danger tw:text-surface-sunken tw:border-danger"} : buttonIntents;
+  return [landing ? controlBehavior + " " + controlFocus.standard : controlBase,
+    actionDisabled, "tw:leading-leading-body tw:border-(length:--ds-stroke-thin) tw:border-solid tw:whitespace-nowrap tw:cursor-pointer tw:items-center tw:justify-center tw:gap-small",
+    landing ? "tw:block tw:min-h-control-height tw:rounded-card tw:px-action tw:py-none tw:text-body-small tw:font-weight-label tw:font-control tw:mx-auto tw:mt-action tw:text-center" : "tw:inline-flex " + buttonShapes.standard,
+    colors[intent], pressed ? "tw:shadow-emboss-pressed" : "",
+    variant === "library" ? "tw:text-center" : variant === "scan-go" || variant === "scan-ok" ? "ds-panel-scan-button tw:flex-1 tw:text-center" + (variant === "scan-ok" ? " ds-panel-scan-quiet" : "") : "",
+  ].join(" ");
+}
 function buttonRecipeStyles({
   variant = "standard",
   intent = "secondary",
   pressed = false,
   playing = false,
 }: ButtonOptions = {}): string {
-  if (variant === "scan-mark-go" || variant === "scan-mark-ok") return [...new Set((buttonRecipeStyles({variant:'standard',intent,pressed}).split(' ').filter(c=>variant!=='scan-mark-ok'||!['tw:border-rule-strong','tw:text-ink','tw:border-ink','tw:border-danger'].includes(c)).join(' ') + ' ds-panel-scan-button tw:flex-1 tw:text-center tw:disabled:opacity-(--ds-opacity-disabled-action) tw:disabled:pointer-events-none' + (variant === 'scan-mark-ok' ? ' ds-panel-scan-quiet tw:border-transparent tw:text-ink-secondary' : '')).split(' '))].join(' ');
+  if (variant === "scan-mark-go" || variant === "scan-mark-ok") return actionRecipe(intent,pressed,variant === "scan-mark-go" ? "scan-go" : "scan-ok");
   if (variant in panelButtons) return variant === "section-mark" || variant === "section-word" ? panelSectionMarkStyles(variant === "section-word") : panelButtonStyles[variant as keyof typeof panelButtonStyles];
-  if (variant in playerButtonShapes) return playerUtilityClasses(playerButtonShapes[variant as keyof typeof playerButtonShapes]) + (variant === "player-play" && playing ? " playing" : "");
-  if (variant === 'landing-create') return buttonRecipeStyles({variant:'standard',intent,pressed}).replace('tw:text-button','tw:text-body-small').replace('tw:inline-flex','tw:block').replace('tw:m-0','') + ' tw:mx-auto tw:mt-18 tw:text-center';
-  if (variant === 'library-action' || variant === 'offline-update') {
-    const standard = buttonRecipeStyles({variant:'standard',intent,pressed});
-    return variant === 'offline-update' ? libraryAccountUtilityRecipe(standard + ' ds-library-offline-update') : standard.replace('tw:text-on-danger','tw:text-surface-sunken') + ' tw:text-center';
-  }
+  if (variant in playerButtonShapes) return playerControlRecipe(variant as PlayerControl) + (variant === "player-play" && playing ? " playing" : "");
+  if (variant === "landing-create") return actionRecipe(intent,pressed,"landing");
+  if (variant === "library-action") return actionRecipe(intent,pressed,"library");
+  if (variant === "offline-update") return actionRecipe(intent,pressed,"standard") + " " + offlineUpdateRecipe();
   if (["ensemble-switch", "ensemble-other", "device-link", "account-delete-confirm", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt"].includes(variant))
-    return libraryAccountUtilityRecipe("ds-library-button " + parityButtonShapes[variant as keyof typeof parityButtonShapes]);
+    return libraryControlRecipe(variant as LibraryControl);
   // D08/D10: retain account navigation and password reveal typography separately.
   if (variant === "account-link" || variant === "password-toggle")
     return [
@@ -131,18 +152,18 @@ function buttonRecipeStyles({
       "tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:cursor-pointer",
       variant === "account-link"
         ? "tw:inline-block tw:leading-(--ds-leading-account-links) tw:hover:text-ink tw:hover:underline"
-        : "tw:block tw:absolute tw:right-0 tw:bottom-10 tw:leading-admin tw:normal-case tw:tracking-normal",
+        : "tw:block tw:absolute tw:right-none tw:bottom-inline tw:leading-leading-admin tw:normal-case tw:tracking-normal",
     ].join(" ");
   if (variant in parityButtonShapes) {
     const shape = parityButtonShapes[variant as keyof typeof parityButtonShapes];
-    return [controlBase, ["tile", "compact", "review-item", "hint", "domain-language"].includes(variant) ? actionDisabled : disabledRecipe, "tw:inline-flex tw:gap-8 tw:cursor-pointer", variant === "review-item" ? "tw:border-solid" : "tw:items-center tw:justify-center " + (["tile","compact","hint"].includes(variant) ? "tw:border tw:border-solid" : ""), shape,
+    return [controlBase, ["tile", "compact", "review-item", "hint", "domain-language"].includes(variant) ? actionDisabled : disabledRecipe, "tw:inline-flex tw:gap-small tw:cursor-pointer", variant === "review-item" ? "tw:border-solid" : "tw:items-center tw:justify-center " + (["tile","compact","hint"].includes(variant) ? "tw:border-(length:--ds-stroke-thin) tw:border-solid" : ""), shape,
       (variant === "transcription-language" || variant === "domain-language") ? pressed ? "tw:text-ink" : "tw:text-ink-secondary" : "",
       variant === "tile" && pressed ? "tw:border-transcription-accent tw:shadow-transcription-selected" : ""].join(" ");
   }
   const color =
     variant === "tour"
       ? intent === "secondary" || intent === "quiet"
-        ? "tw:bg-transparent tw:text-surface-sunken tw:border-tour-rule"
+        ? "tw:bg-transparent tw:text-surface-sunken tw:border-component-tour-rule"
         : "tw:bg-surface tw:text-ink tw:border-surface tw:hover:bg-surface-overlay"
       : variant === "dense-sort" ? "tw:bg-transparent tw:text-admin-accent tw:border-transparent" : variant === "dense"
         ? intent === "danger"
@@ -150,10 +171,10 @@ function buttonRecipeStyles({
           : "tw:bg-transparent tw:text-admin-ink tw:border-admin-rule"
         : buttonIntents[intent];
   return [
-    variant.startsWith("dense") ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : controlBase,
+    variant.startsWith("dense") ? adminControlBase : controlBase,
     variant.startsWith("dense") ? denseDisabled : ["standard", "pill", "tour"].includes(variant) ? actionDisabled : disabledRecipe,
-    variant.startsWith("dense") ? "tw:leading-admin tw:normal-nums" : "tw:leading-body",
-    (variant.startsWith("dense") ? (variant==="dense-sort"?"tw:inline-block ":"tw:inline-block tw:text-center ") : "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 ") + "tw:border-solid tw:whitespace-nowrap tw:cursor-pointer " + (variant === "dense-sort" ? "tw:border-0 tw:text-left" : "tw:border"),
+    variant.startsWith("dense") ? "tw:leading-leading-admin tw:normal-nums" : "tw:leading-leading-body",
+    (variant.startsWith("dense") ? (variant==="dense-sort"?"tw:inline-block ":"tw:inline-block tw:text-center ") : "tw:inline-flex tw:items-center tw:justify-center tw:gap-small ") + "tw:border-solid tw:whitespace-nowrap tw:cursor-pointer " + (variant === "dense-sort" ? "tw:border-0 tw:text-left" : "tw:border-(length:--ds-stroke-thin)"),
     buttonShapes[variant as keyof typeof buttonShapes],
     color,
     pressed ? "tw:shadow-emboss-pressed" : "",
@@ -163,7 +184,7 @@ export const iconButtonVariants = [
   "section-add", "player", "player-landscape", "player-zoom", "player-follow", "voice-more",
   "standard",
   "small",
-  "library-more",
+  "library-more", "library-menu",
   "transcription",
   "admin-close",
   "admin-copy",
@@ -174,25 +195,26 @@ export interface IconButtonOptions {
 function iconButtonRecipeStyles({
   variant = "standard",
 }: IconButtonOptions = {}) {
-  if (variant === "section-add") return playerUtilityClasses("ds-player-button ds-player-icon ds-player-icon-small ds-panel-section-add icon-btn small") + " tw:absolute tw:right-4 tw:top-1/2 tw:-translate-y-1/2 tw:bg-surface tw:max-panel:hidden!";
-  if (["player", "player-landscape", "player-zoom", "player-follow", "voice-more"].includes(variant)) return playerUtilityClasses("ds-player-button ds-player-icon icon-btn" + ({player:"", "player-landscape":" ds-player-landscape-only landscape-only", "player-zoom":"", "player-follow":" ds-player-follow-btn follow-btn", "voice-more":" ds-player-voice-more voice-more ds-player-icon-small small"} as Record<string,string>)[variant]);
-  if (variant === "library-more") return libraryAccountUtilityRecipe("ds-library-button ds-library-song-more song-more tw:inline-grid tw:place-items-center tw:flex-none tw:size-40 tw:rounded-icon");
+  if (variant === "section-add") return playerControlRecipe("section-add") + " tw:absolute tw:right-compact tw:top-1/2 tw:-translate-y-1/2 tw:bg-surface tw:max-panel:hidden!";
+  if (variant === "player" || variant === "player-landscape" || variant === "player-zoom" || variant === "player-follow" || variant === "voice-more") return playerControlRecipe(variant);
+  if (variant === "library-more") return libraryMoreRecipe();
   const shapes: Record<NonNullable<IconButtonOptions["variant"]>, string> = {
     "section-add":"", player:"", "player-landscape":"", "player-zoom":"", "player-follow":"", "voice-more":"",
-    "library-more": "ds-library-song-more song-more tw:min-h-0 tw:size-40 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:hover:bg-surface-overlay tw:hover:text-ink",
+    "library-more": "ds-library-song-more song-more tw:min-h-none tw:size-toolbar tw:rounded-icon tw:p-none tw:font-control tw:text-body tw:leading-leading-body tw:hover:bg-surface-overlay tw:hover:text-ink",
+    "library-menu": "tw:min-h-none tw:size-toolbar tw:rounded-icon tw:p-none tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     standard:
-      "tw:min-h-0 tw:size-40 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
+      "tw:min-h-none tw:size-toolbar tw:rounded-icon tw:p-none tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     small:
-      "tw:min-h-0 tw:size-32 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
+      "tw:min-h-none tw:size-panel tw:rounded-icon tw:p-none tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     transcription:
-      "tw:min-h-0 tw:size-40 tw:rounded-field tw:p-0 tw:font-close tw:font-close-light tw:text-close tw:leading-close tw:text-ink-secondary tw:hover:text-ink",
+      "tw:min-h-none tw:size-toolbar tw:rounded-field tw:p-none tw:font-close tw:font-weight-close-light tw:text-close tw:leading-leading-close tw:text-ink-secondary tw:hover:text-ink",
     "admin-close":
-      "tw:min-h-44 tw:w-auto tw:h-auto tw:rounded-admin-control tw:px-12 tw:py-4 tw:font-close tw:text-admin-close tw:leading-admin tw:text-admin-ink",
+      "tw:min-h-touch tw:w-auto tw:h-auto tw:rounded-control-dense tw:px-control tw:py-compact tw:font-close tw:text-admin-close tw:leading-leading-admin tw:text-admin-ink",
     "admin-copy":
-      "tw:min-h-32 tw:w-auto tw:h-auto tw:rounded-admin-control tw:p-4 tw:font-auth-mono tw:text-body-small tw:leading-admin tw:text-admin-ink",
+      "tw:min-h-panel tw:w-auto tw:h-auto tw:rounded-control-dense tw:p-compact tw:font-auth-mono tw:text-body-small tw:leading-leading-admin tw:text-admin-ink",
   };
   return [
-    controlBase,
+    variant === "library-menu" ? unfocusedControlBase + " " + controlFocus.library : controlBase,
     variant.startsWith("admin") ? denseDisabled : disabledRecipe,
     (variant.startsWith("admin") ? "tw:inline-block tw:text-center " : "tw:inline-grid tw:place-items-center tw:flex-none ") + "tw:border-0 tw:bg-transparent tw:cursor-pointer",
     shapes[variant],
@@ -223,38 +245,35 @@ function fieldRecipeStyles(
   kind: "input" | "select" | "textarea" = "input",
 ): Record<'root'|'label'|'control'|'hint'|'error', string> {
   if (variant.startsWith("panel-")) {
-    return {root:"ds-panel-part ds-panel-field-group tw:panel-inherit tw:select-text tw:grid",label:panelPartRecipe("label"),control:"ds-panel-input " + panelInputStyles[variant as keyof typeof panelInputStyles],hint:"tw:sr-only",error:"tw:sr-only"};
+    return {root:"ds-panel-part ds-panel-field-group tw:font-inherit tw:font-family-inherit tw:text-inherit tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:select-text tw:grid",label:panelPartRecipe("label"),control:"ds-panel-input " + panelInputStyles[variant as keyof typeof panelInputStyles],hint:"tw:sr-only",error:"tw:sr-only"};
   }
-  if (variant === "player-volume") return {root:playerUtilityClasses("ds-player-duck-row"),label:playerUtilityClasses("ds-player-label label"),control:playerUtilityClasses("ds-player-input ds-player-volume duck-range"),hint:"tw:sr-only",error:"tw:sr-only"};
-  if (variant === "account-password") return libraryAccountUtilityRecipe({root:"ds-account-password",label:"ds-account-label",control:"ds-account-input tw:rounded-field",hint:"tw:sr-only",error:"ds-account-error"});
-  if (variant === 'library-prompt') {
-    const boxed = fieldRecipeStyles({variant:'boxed',invalid},kind);
-    return {...boxed,control:boxed.control.split(' ').filter(c=>!c.startsWith('tw:focus-visible:')).join(' ') + ' tw:outline-none tw:outline-offset-(--ds-space-micro)'};
-  }
-  if (variant === "library-search") return libraryAccountUtilityRecipe({root: "ds-library-search", label: "tw:sr-only", control: "ds-library-search-input tw:rounded-field", hint: "tw:sr-only", error: "tw:sr-only"});
+  if (variant === "player-volume") return {root:playerControlRecipe("volume-root"),label:playerControlRecipe("volume-label"),control:playerControlRecipe("volume-input"),hint:"tw:sr-only",error:"tw:sr-only"};
+  if (variant === "account-password") return accountFieldRecipe();
+  if (variant === "library-search") return librarySearchRecipe();
   const admin = variant === "admin";
   const domain = variant === "domain" || variant === "domain-create";
-  const ruled = variant !== "boxed";
+  const prompt = variant === "library-prompt";
+  const ruled = variant !== "boxed" && !prompt;
   return {
-    root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-0" : variant === "ruled-account" ? "tw:block tw:mt-20 tw:min-w-0 tw:font-auth-body " + (invalid ? "tw:mb-16" : "tw:mb-20") : admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body tw:tabular-nums" : "tw:grid tw:gap-6 tw:min-w-0 " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
+    root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-none" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-none tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group") : admin ? "tw:grid tw:gap-snug tw:min-w-none tw:font-auth-body tw:text-label tw:leading-leading-body tw:tabular-nums" : "tw:grid tw:gap-snug tw:min-w-none " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
     label:
-      variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-body tw:text-ink" : variant === "domain" ? "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-(--ds-domain-label-tracking) tw:leading-admin tw:text-ink-secondary" : ruled && !admin
-        ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary"
-        : admin ? "tw:text-label tw:font-auth-body tw:leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
+      variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-leading-body tw:text-ink" : variant === "domain" ? "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-(--ds-domain-label-tracking) tw:leading-leading-admin tw:text-ink-secondary" : ruled && !admin
+        ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-tracking-auth-label tw:leading-leading-field tw:text-ink-secondary"
+        : admin ? "tw:text-label tw:font-auth-body tw:leading-leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-leading-body tw:text-ink-secondary",
     control: [
-      admin ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : variant === "ruled" || variant === "transcription" ? controlBase.split(" ").filter(name => !name.startsWith("tw:focus-visible:")).join(" ") : controlBase,
+      admin ? adminControlBase : variant === "ruled" || variant === "transcription" ? unfocusedControlBase : prompt ? unfocusedControlBase + " tw:outline-none tw:outline-offset-(--ds-space-micro)" : controlBase,
       variant === "ruled" || variant === "transcription" ? "" : disabledRecipe,
-      "tw:block tw:w-full tw:min-w-0 tw:font-regular tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
+      "tw:block tw:w-full tw:min-w-none tw:font-weight-body tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
       kind === "textarea" && admin
-        ? "tw:h-auto tw:min-h-textarea tw:resize-y tw:border tw:border-solid tw:rounded-field tw:p-10 tw:font-auth-body tw:text-label tw:leading-body tw:bg-admin-surface tw:text-admin-ink"
+        ? "tw:h-auto tw:min-h-control-textarea-height tw:resize-y tw:border-(length:--ds-stroke-thin) tw:border-solid tw:rounded-field tw:p-inline tw:font-auth-body tw:text-label tw:leading-leading-body tw:bg-admin-surface tw:text-admin-ink"
         : domain && kind === "select"
-          ? "tw:rounded-field tw:border-0 tw:border-b tw:border-solid tw:px-8 tw:py-8 tw:leading-body tw:bg-transparent tw:text-ink tw:font-control tw:text-body"
+          ? "tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid tw:px-small tw:py-small tw:leading-leading-body tw:bg-transparent tw:text-ink tw:font-control tw:text-body"
           : ruled
-            ? `tw:rounded-field tw:border-0 tw:border-b tw:border-solid ${domain ? "tw:py-8 tw:leading-admin" : admin ? "tw:py-10 tw:leading-body" : "tw:py-10 tw:leading-field"} ${admin ? "tw:px-2 tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-label" : domain ? "tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body" : "tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input"}`
+            ? `tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid ${domain ? "tw:py-small tw:leading-leading-admin" : admin ? "tw:py-inline tw:leading-leading-body" : "tw:py-inline tw:leading-leading-field"} ${admin ? "tw:px-micro tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-label" : domain ? "tw:px-none tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body" : "tw:px-none tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input"}`
             : (kind === "textarea"
-                ? "tw:h-auto tw:min-h-textarea tw:resize-y tw:p-10"
-                : "tw:h-control-height tw:px-12 tw:py-0") +
-              " tw:rounded-card tw:border tw:border-solid tw:bg-surface tw:text-ink tw:font-control tw:text-body tw:leading-body",
+                ? "tw:h-auto tw:min-h-control-textarea-height tw:resize-y tw:p-inline"
+                : "tw:h-control-height tw:px-control tw:py-none") +
+              " tw:rounded-card tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-surface tw:text-ink tw:font-control tw:text-body tw:leading-leading-body",
       invalid && variant !== "ruled-account"
         ? "tw:border-danger"
         : admin
@@ -268,8 +287,8 @@ function fieldRecipeStyles(
       ruled && !admin && !domain ? "tw:focus:shadow-focus" : "",
       admin ? "" : "tw:focus:outline-none",
     ].join(" "),
-    hint: "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
-    error: variant === "ruled-account" ? "tw:block tw:mt-20 tw:mb-16 tw:text-body tw:font-auth-body tw:leading-account tw:text-center tw:text-danger" : "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-danger",
+    hint: "tw:m-none tw:text-label tw:font-body tw:leading-leading-body tw:text-ink-secondary",
+    error: variant === "ruled-account" ? "tw:block tw:mt-group tw:mb-content tw:text-body tw:font-auth-body tw:leading-leading-account tw:text-center tw:text-danger" : "tw:m-none tw:text-label tw:font-body tw:leading-leading-body tw:text-danger",
   };
 }
 function inputRecipeStyles(options: FieldOptions = {}) {
@@ -286,17 +305,17 @@ export interface CheckboxOptions {
   variant?: (typeof checkboxVariants)[number];
 }
 function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
-  if (variant === "export-voice") return {root:"ds-panel-part tw:panel-inherit tw:select-text",control:"ds-panel-input ds-panel-export-check " + panelCheckboxStyles};
+  if (variant === "export-voice") return {root:"ds-panel-part tw:font-inherit tw:font-family-inherit tw:text-inherit tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:select-text",control:"ds-panel-input ds-panel-export-check " + panelCheckboxStyles};
   return {
-    root: "tw:inline-flex tw:items-center tw:gap-8 tw:font-auth-body tw:text-label tw:leading-body " + (variant === "permission" ? "tw:text-admin-ink" : "tw:text-ink"),
+    root: "tw:inline-flex tw:items-center tw:gap-small tw:font-auth-body tw:text-label tw:leading-leading-body " + (variant === "permission" ? "tw:text-admin-ink" : "tw:text-ink"),
     control:
       controlBase +
       " " +
       disabledRecipe +
-      " tw:appearance-auto tw:p-0 tw:shrink-0 " +
+      " tw:appearance-auto tw:p-none tw:shrink-0 " +
       (variant === "permission"
-        ? "tw:size-20 tw:accent-admin-accent tw:mt-3 tw:mr-3 tw:mb-3 tw:ml-4"
-        : "tw:size-18 tw:accent-accent"),
+        ? "tw:size-group tw:accent-admin-accent tw:mt-tight tw:mr-tight tw:mb-tight tw:ml-compact"
+        : "tw:size-action tw:accent-accent"),
   };
 }
 export const switchVariants = ["player", "player-preference", "admin", "capability", "comparison", "shared-device"] as const;
@@ -308,52 +327,52 @@ function switchRecipeStyles({
   variant = "player",
   checked = false,
 }: SwitchOptions = {}) {
-  if (variant === "player-preference") return {label:"ds-player-switch-label",input:"tw:sr-only",root:playerUtilityClasses("ds-player-button ds-player-switch switch"),thumb:"tw:hidden"};
+  if (variant === "player-preference") return {label:"ds-player-switch-label",input:"tw:sr-only",root:playerControlRecipe("preference-switch"),thumb:"tw:hidden"};
   // D11: the offline policy retains its native checkbox, rather than a drawn track.
-  if (variant === "shared-device") return libraryAccountUtilityRecipe({label:"ds-account-shared",input:"ds-account-shared-input",root:"tw:hidden",thumb:"tw:hidden"});
+  if (variant === "shared-device") return sharedDeviceRecipe();
   const sizes = {
-    player: "tw:w-52 tw:h-32 tw:p-4",
-    admin: "tw:w-48 tw:h-26 tw:p-0",
-    capability: "tw:w-28 tw:h-16 tw:p-2",
-    comparison: "tw:w-28 tw:h-16 tw:p-2",
+    player: "tw:w-switch tw:h-panel tw:p-compact",
+    admin: "tw:w-page tw:h-sheet-dense tw:p-none",
+    capability: "tw:w-heading tw:h-content tw:p-micro",
+    comparison: "tw:w-heading tw:h-content tw:p-micro",
   };
   const thumbs = {
-    player: "tw:size-24",
-    admin: "tw:size-18",
-    capability: "tw:size-10",
-    comparison: "tw:size-10",
+    player: "tw:size-section",
+    admin: "tw:size-action",
+    capability: "tw:size-inline",
+    comparison: "tw:size-inline",
   };
   return {
     label:
-      (variant === "comparison" ? "tw:relative tw:flex" : "tw:relative tw:inline-flex") + " tw:items-center tw:gap-8 tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-32 tw:flex-nowrap tw:leading-admin" : variant === "comparison" ? " tw:min-h-36 tw:my-24 tw:text-label" : ""),
-    input: variant === "capability" || variant === "comparison" ? "tw:absolute tw:opacity-0 tw:w-28 tw:h-24 tw:m-0 tw:peer" : "tw:sr-only tw:peer",
+      (variant === "comparison" ? "tw:relative tw:flex" : "tw:relative tw:inline-flex") + " tw:items-center tw:gap-small tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-panel tw:flex-nowrap tw:leading-leading-admin" : variant === "comparison" ? " tw:min-h-toolbar-dense tw:my-section tw:text-label" : ""),
+    input: variant === "capability" || variant === "comparison" ? "tw:absolute tw:opacity-hidden tw:w-heading tw:h-section tw:m-none tw:peer" : "tw:sr-only tw:peer",
     root:
       controlBase +
       " " +
       (variant === "admin" ? denseDisabled : disabledRecipe) +
-      (variant === "admin" ? " tw:min-h-26 tw:font-auth-mono tw:text-body-small tw:leading-admin tw:relative tw:inline-block tw:shrink-0 tw:rounded-chip tw:border-solid tw:cursor-pointer " :
-      " tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-2 tw:peer-focus-visible:outline-focus tw:peer-focus-visible:outline-offset-4 tw:peer-disabled:opacity-(--ds-opacity-disabled) tw:min-h-0 tw:leading-body tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:rounded-chip tw:border-solid tw:cursor-pointer ") +
+      (variant === "admin" ? " tw:min-h-sheet-dense tw:font-auth-mono tw:text-body-small tw:leading-leading-admin tw:relative tw:inline-block tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer " :
+      " tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-(length:--ds-stroke-focus) tw:peer-focus-visible:[outline-color:var(--ds-focus)] tw:peer-focus-visible:outline-offset-compact tw:peer-disabled:opacity-(--ds-opacity-disabled) tw:min-h-none tw:leading-leading-body tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer ") +
       sizes[variant] +
       " " +
       (variant === "player"
         ? "tw:border-0 " + (checked ? "tw:bg-ink" : "tw:bg-surface-hover")
-        : "tw:border " +
+        : "tw:border-(length:--ds-stroke-thin) " +
           (checked
             ? variant === "admin"
               ? "tw:bg-admin-accent tw:border-admin-secondary"
               : "tw:bg-accent tw:border-accent"
             : "tw:bg-transparent tw:border-ink-secondary")),
     thumb:
-      (variant === "admin" ? "tw:absolute tw:left-3 tw:top-3 " : "") + "tw:block tw:rounded-round tw:shrink-0 tw:transition-transform tw:duration-switch tw:motion-reduce:transition-none " +
+      (variant === "admin" ? "tw:absolute tw:left-tight tw:top-tight " : "") + "tw:block tw:rounded-round tw:shrink-0 tw:transition-transform tw:duration-switch tw:motion-reduce:transition-none " +
       thumbs[variant] +
       " " +
       (checked
         ? "tw:bg-surface-sunken " +
           {
-            player: "tw:translate-x-20",
-            admin: "tw:translate-x-switch-admin",
-            capability: "tw:translate-x-12",
-            comparison: "tw:translate-x-12",
+            player: "tw:translate-x-group",
+            admin: "tw:translate-x-switch-admin-travel",
+            capability: "tw:translate-x-control",
+            comparison: "tw:translate-x-control",
           }[variant]
         : variant === "player"
           ? "tw:bg-ink-secondary"
