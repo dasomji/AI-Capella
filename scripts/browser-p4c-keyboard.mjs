@@ -32,7 +32,7 @@ export async function verifyP4cKeyboard(page, theme) {
   await page.locator('#transcription-entry').click();await wrap(page.getByRole('dialog'));
   const choose=page.getByRole('button',{name:/Choose PDF/});await choose.focus();const chooser=page.waitForEvent('filechooser');await page.keyboard.press('Enter');await (await chooser).setFiles([]);
   await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});assert.ok(await active(page.locator('#transcription-entry')));
-  const review=page.getByRole('button',{name:'Review',exact:true});await review.click();await page.locator('.tx-score svg').waitFor();await wrap(page.getByRole('dialog'));
+  const review=page.getByRole('button',{name:'Review',exact:true});await review.click();await page.locator('.tx-score svg').first().waitFor();await wrap(page.getByRole('dialog'));
   const comparison=page.getByRole('switch');await comparison.focus();await page.keyboard.press('Space');await page.locator('.tx-original img').waitFor();assert.equal(await comparison.getAttribute('aria-checked'),'true');assert.ok(await active(comparison));
   await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});assert.ok(await active(review));
   await page.evaluate(async()=>{window.tx.dispose();document.body.replaceChildren();const opener=document.createElement('button');opener.id='fixture-opener';opener.className='ens-switch';opener.textContent='Testchor';document.body.append(opener);opener.focus();window.intro.startIntro('library');});

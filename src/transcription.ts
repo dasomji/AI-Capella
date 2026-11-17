@@ -525,7 +525,7 @@ export function installTranscription(options: {
     const submit = button(tr("start"), () => void upload(), {
       variant: "pill",
       intent: "primary",
-      layout: "tw:w-full",
+      layout: ["tw:w-full", "tw:mt-10"],
     });
     async function upload() {
       if (busy || !canTranscribe(destination)) return;
