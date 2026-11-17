@@ -260,6 +260,7 @@ export const themeRoleNames = [
   "size-transcription-mobile",
   "size-transcription-title",
   "size-wordmark",
+  "size-workspace-heading",
   "size-workspace-wordmark",
   "space-0",
   "space-1",
