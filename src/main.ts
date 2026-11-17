@@ -1,4 +1,4 @@
-import { createButton, updateButton, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
+import { createButton, updateButton, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
 import { matchBreakpoint } from './design-system/theme';
 import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
@@ -862,15 +862,15 @@ function renderLanding(_now=false) {
  landingModesEl.hidden=empty;dedicationEl.hidden=empty;
  dedicationEl.replaceChildren();
  const name=document.createElement('span');name.className='ded-name';name.textContent=(inPublicFolder()?'':t('dedicationFor')+' ')+ensembleName(currentEnsemble);dedicationEl.append(name);
- for(const id of unlockedEnsembles().filter(id=>id!==currentEnsemble)){const b=document.createElement('button');b.className='ded-other';b.textContent=ensembleName(id);b.onclick=()=>{setActiveEnsemble(id);renderLanding(true);};dedicationEl.append(b);}
+ for(const id of unlockedEnsembles().filter(id=>id!==currentEnsemble)){const b=createButton({variant:'ensemble-other',text:ensembleName(id)});b.onclick=()=>{setActiveEnsemble(id);renderLanding(true);};dedicationEl.append(b);}
  document.querySelector<HTMLElement>('#mode-ensemble-btn')!.hidden=inPublicFolder();dedicationEl.classList.add('written');renderModeControls();
 }
 const createEnsemble=()=>createEnsembleSheet(id=>{setActiveEnsemble(id);sessionStorage.setItem(MODE_SWITCH_KEY,'solo');location.reload();});
 document.querySelector('#landing-create')!.addEventListener('click',createEnsemble);
 document.querySelector('#landing-samples')!.addEventListener('click',()=>{setActiveEnsemble(PUBLIC_ID);currentEnsemble=PUBLIC_ID;setViewMode('library');void runBootstrap();});
 function renderLibraryHead() {
- const btn=document.createElement('button');btn.className='ens-switch';btn.textContent=ensembleName(currentEnsemble);btn.insertAdjacentHTML('beforeend',icon('chevronDown'));btn.onclick=()=>void openEnsembleMenu(btn);libTitleEl.replaceChildren(btn);libTitleEl.classList.add('ens-title');
- importBtn.disabled=isOffline();importBtn.title=isOffline()?off('online'):'';
+ const btn=createButton({variant:'ensemble-switch',text:ensembleName(currentEnsemble)});btn.append(libraryIcon('chevronDown'));btn.onclick=()=>void openEnsembleMenu(btn);libTitleEl.replaceChildren(btn);libTitleEl.classList.add('ens-title');
+ updateButton(importBtn,{disabled:isOffline()});importBtn.title=isOffline()?off('online'):'';
  importBtn.hidden=inPublicFolder();importBtn.querySelector('span')!.textContent=editable()?t('addArrangement'):pt('openLocal');document.querySelector<HTMLElement>('.lib-tip')!.hidden=!editable();
 }
 async function openEnsembleMenu(anchor:HTMLElement) {
@@ -889,7 +889,7 @@ async function openEnsembleMenu(anchor:HTMLElement) {
  if(preparing)items.push({label:off('cancel'),onSelect:()=>preparing?.abort()});
  items.push({label:off('remove'),icon:'trash',onSelect:()=>void removeOfflineEnsemble().catch(e=>toast(errorText(e),'error'))});
  }
- openMenu(anchor,items,t('ensembleLabel'));
+ openLibraryMenu(anchor,items,t('ensembleLabel'));
 }
 let preparing: AbortController | undefined;
 async function prepareRepertoire() {
@@ -902,7 +902,7 @@ async function switchEnsemble(id:string) {if(id===currentEnsemble)return;leavePl
 
 async function renameCurrentEnsemble() {
   const id = currentEnsemble;
-  const value = await promptDialog(t('renameEnsemble'), ensembleName(id), t('save'));
+  const value = await libraryPrompt({title:t('renameEnsemble'),value:ensembleName(id),confirmLabel:t('save'),opener:libTitleEl.querySelector('.ens-switch')});
   if (!value) return;
   try {
     await renameEnsemble(id, value);
@@ -1427,10 +1427,10 @@ function songCard(song: SongEntry): HTMLLIElement {
   open.append(cover, body);
   li.appendChild(open);
   if(song.imported && isPrepared(song.id)) {
-    const mark=document.createElement('span');mark.className='offline-mark';mark.style.color='var(--ds-accent-offline)';mark.title=off('available');mark.setAttribute('aria-label',off('available'));
+    const mark=createBadge({variant:'offline-prepared',text:''});mark.title=off('available');mark.setAttribute('aria-label',off('available'));
     mark.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25"><path d="M7 17H6a4 4 0 0 1-1-8 6 6 0 0 1 11-2 5 5 0 0 1 2 10h-1M9 16l2 2 4-5"/></svg>';li.append(mark);
   }
-  if(song.imported && isOffline() && !isPrepared(song.id)){open.disabled=true;li.style.opacity='var(--ds-opacity-disabled-offline)';open.title=off('unavailable');meta.textContent=off('unavailable');}
+  if(song.imported && isOffline() && !isPrepared(song.id)){updateButton(open,{disabled:true});li.setAttribute('data-offline-unavailable','');open.title=off('unavailable');meta.textContent=off('unavailable');}
   if (song.imported) {
     const more = createIconButton({variant:'library-more',label:t('moreFor', { title: song.title })});
     more.setAttribute('aria-label', t('moreFor', { title: song.title }));
@@ -4216,9 +4216,9 @@ window.addEventListener('offline', renderSongList);
 void registerOfflineWorker().catch(console.error);
 function offlineControls() {
  const together=document.querySelector<HTMLButtonElement>('#mode-ensemble-btn')!;
- together.disabled=isOffline();together.title=isOffline()?off('together'):'';
- const create=document.querySelector<HTMLButtonElement>('#landing-create');if(create){create.disabled=isOffline();create.title=isOffline()?off('online'):'';}
- document.querySelector<HTMLButtonElement>('#transcription-entry')!.disabled=isOffline();document.querySelector<HTMLButtonElement>('#transcription-entry')!.title=isOffline()?off('online'):'';
+ updateButton(together,{disabled:isOffline()});together.title=isOffline()?off('together'):'';
+ const create=document.querySelector<HTMLButtonElement>('#landing-create');if(create){updateButton(create,{disabled:isOffline()});create.title=isOffline()?off('online'):'';}
+ const entry=document.querySelector<HTMLButtonElement>('#transcription-entry')!;updateButton(entry,{disabled:isOffline(),attrs:{hidden:entry.hidden||undefined}});document.querySelector<HTMLButtonElement>('#transcription-entry')!.title=isOffline()?off('online'):'';
  renderLibraryHead();renderSongList();refreshBindings();
 }
 window.addEventListener('offline:changed',offlineControls);
@@ -4229,26 +4229,29 @@ queueMicrotask(offlineControls);
 
 
 async function openAccountArea(anchor: HTMLElement) {
-  const body = document.createElement("div");
-  body.className = "sheet-body domain-sheet account-sheet";
-  const email = document.createElement("p");
-  email.className = "member-email";
+  const body = createAccountPart("div", "body");
+  const email = createAccountPart("p", "email");
   email.textContent = account?.email ?? "";
   body.append(email);
-  if(!offlineStorageAvailable()){const note=document.createElement('p');note.textContent=lang==='de'?'Offline-Speicher nicht verfügbar':'Offline storage unavailable';body.append(note);}
-  const sharedLabel=document.createElement('label'), sharedToggle=document.createElement('input');
-  sharedToggle.type='checkbox';sharedToggle.checked=localStorage.getItem('lightscore-shared-device')==='1';
-  sharedToggle.onchange=()=>localStorage.setItem('lightscore-shared-device',sharedToggle.checked?'1':'0');
-  sharedLabel.append(sharedToggle,document.createTextNode(lang==='de'?'Dieses Gerät wird geteilt (24 h offline)':'This device is shared (24 h offline)'));body.append(sharedLabel);
+  if(!offlineStorageAvailable()){const note=createAccountPart('p','note');note.textContent=lang==='de'?'Offline-Speicher nicht verfügbar':'Offline storage unavailable';body.append(note);}
+  const sharedText = lang==='de'?'Dieses Gerät wird geteilt (24 h offline)':'This device is shared (24 h offline)';
+  const sharedLabel = createSwitch({
+    variant:'shared-device', mode:'checkbox', label:sharedText,
+    checked:localStorage.getItem('lightscore-shared-device')==='1',
+    onChange:checked=>{
+      localStorage.setItem('lightscore-shared-device',checked?'1':'0');
+      updateSwitch(sharedLabel,{variant:'shared-device',label:sharedText,checked});
+    },
+  });
+  body.append(sharedLabel);
 
   void appendAdminAccountLink(body);
-  const signout = document.createElement("button");
-  signout.className = "btn primary";
-  signout.textContent = t("accountSignOut");
+  const signout = createButton({text:t("accountSignOut"),intent:"primary"});
   signout.onclick = async () => {
     if(leavingAccount)return;
     sessionStorage.removeItem("lightscore-invite");
     leavingAccount = true;
+    updateButton(signout,{busy:true});
     leavePlaybackSession();
     audioEngine?.stop();
     accountEvents.disconnect();
@@ -4274,45 +4277,35 @@ async function openAccountArea(anchor: HTMLElement) {
     } catch {location.replace('/app');}
   };
   body.append(signout);
-  const remove = document.createElement("button");
-  remove.className = "link-btn";
-  remove.textContent = t("accountDelete");
-  remove.disabled=isOffline();remove.title=isOffline()?off("online"):"";
+  const remove = createButton({variant:"device-link",text:t("accountDelete"),disabled:isOffline(),attrs:{title:isOffline()?off("online"):""}});
   remove.onclick = async () => {
     const plan = await api("/account/deletion");
-    const sheet = document.createElement("div");
-    sheet.className = "sheet-body domain-sheet";
-    const note = document.createElement("p");
+    const sheet = createAccountPart("div", "body");
+    const note = createAccountPart("p", "note");
     note.textContent = t("accountDeleteEnsembles");
     sheet.append(note);
     for (const e of plan.deleteEnsembles) {
-      const row = document.createElement("p");
+      const row = createAccountPart("p", "note");
       row.textContent = e.name;
       sheet.append(row);
     }
     if (plan.lastLead.length) {
-      const warning = document.createElement("p");
+      const warning = createAccountPart("p", "note");
       warning.textContent = pt("lastLead");
       sheet.append(warning);
     }
-    const label = document.createElement("label");
-    label.textContent = t("accountPassword");
-    const password = document.createElement("input");
-    password.type = "password";
-    password.autocomplete = "current-password";
-    label.append(password);
-    sheet.append(label);
-    const inlineError = document.createElement("p");
-    inlineError.setAttribute("role","alert");
-    inlineError.className="account-error";
+    const password = createInput({variant:"account-password",type:"password",attrs:{autocomplete:"current-password"}});
+    const passwordField = createField({variant:"account-password",label:t("accountPassword"),control:password});
+    sheet.append(passwordField);
+    // The error belongs to the deletion sheet, outside the auth shell's selector scope.
+    const inlineError = createStatus({variant:"account-delete",intent:"error",text:"",attrs:{role:"alert"}});
     sheet.append(inlineError);
-    const confirm = document.createElement("button");
-    confirm.textContent = t("accountDeleteConfirm");
-    confirm.disabled = !!plan.lastLead.length;
+    const confirm = createButton({variant:"account-delete-confirm",text:t("accountDeleteConfirm"),disabled:!!plan.lastLead.length});
     confirm.onclick = async () => {
       if(leavingAccount)return;
       inlineError.textContent="";
       leavingAccount=true;
+      updateButton(confirm,{busy:true});
       leavePlaybackSession();
     audioEngine?.stop();
     accountEvents.disconnect();
@@ -4326,21 +4319,22 @@ async function openAccountArea(anchor: HTMLElement) {
         location.replace("/?state=signed-out");
       } catch (e) {
         leavingAccount=false;
+        updateButton(confirm,{busy:false});
         if((e as Error).message === "SESSION_EXPIRED") {location.replace("/?state=expired");return;}
         accountEvents.connect();
         inlineError.textContent = (e as Error).message === "recent_auth_required" ? t("accountPasswordInvalid") : domainError((e as Error).message);
       }
     };
     sheet.append(confirm);
-    openSheet(remove.textContent, sheet);
+    openLibrarySheet(remove.textContent!, sheet, remove).element.focus({preventScroll:true});
   };
   body.append(remove);
-  openSheet(t("accountArea"), body, anchor);
-  const heading = document.createElement("h3");
-  heading.className = "domain-heading";
+  const accountSheet = openLibrarySheet(t("accountArea"), body, anchor);
+  accountSheet.element.focus({preventScroll:true});
+  const heading = createAccountPart("h3", "heading");
   heading.textContent = pt("devices");
   body.append(heading);
-  if(isOffline()){const note=document.createElement("p");note.textContent=off("online");body.append(note);return;}
+  if(isOffline()){const note=createAccountPart("p", "note");note.textContent=off("online");body.append(note);return;}
   const response = await fetch("/api/auth/list-sessions");
   if (!response.ok) {
     toast(pt("errorGeneric"), "error");
@@ -4348,13 +4342,11 @@ async function openAccountArea(anchor: HTMLElement) {
   }
   const sessions = await response.json();
   for (const session of sessions) {
-    const row = document.createElement("p");
+    const row = createAccountPart("p", "note");
     row.textContent =
       deviceLabel(session.userAgent) +
       (session.current ? " · " + pt("thisDevice") : "");
-    const revoke = document.createElement("button");
-    revoke.className = "link-btn";
-    revoke.textContent = t("accountRevoke");
+    const revoke = createButton({variant:"device-link",text:t("accountRevoke")});
     revoke.onclick = async () => {
       const result = await fetch("/api/auth/revoke-session", {
         method: "POST",

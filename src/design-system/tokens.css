@@ -1502,3 +1502,22 @@
 :root { --ds-library-popover-enter: translateY(-4px) scale(.98); }
 
 :root { --ds-library-prompt-enter: scale(.97); }
+
+/* Account/ensemble parity dimensions; no pending owner policy is normalized. */
+:root {
+ --ds-opacity-half:.5;
+ --ds-navigation-switch-gap:.22em;
+ --ds-navigation-switch-icon:.5em;
+ --ds-navigation-switch-hover-opacity:.9;
+ --ds-navigation-other-size:.66em;
+ --ds-navigation-other-opacity:.75;
+ --ds-navigation-other-padding:0 .15em;
+ --ds-navigation-other-rule-width:.9em;
+ --ds-navigation-other-rule-margin:0 .45em .18em 0;
+ --ds-account-email-font:400 12px var(--ds-font-auth-mono);
+ --ds-account-heading-font:500 11px/1.5 var(--ds-font-auth-mono);
+ --ds-account-input-font:400 16px var(--ds-font-auth-body);
+ --ds-account-gap:1.2rem;
+ --ds-account-heading-tracking:.13em;
+ --ds-native-checkbox-margin:3px 3px 3px 4px;
+}

@@ -797,3 +797,10 @@ export function createLibraryPart<K extends keyof HTMLElementTagNameMap>(
 export function updateLibraryBanner(banner: HTMLElement, muted: boolean) {
   banner.className = r.libraryPartRecipe("banner") + (muted ? " muted" : "");
 }
+
+/** Shared account composition, including the native Administration navigation link. */
+export function createAccountPart<K extends keyof HTMLElementTagNameMap>(
+  tag: K, part: r.AccountPart, options: ElementOptions & {text?: string} = {},
+) {
+  return element(tag, r.accountPartRecipe(part), options.text, options);
+}

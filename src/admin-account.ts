@@ -1,4 +1,5 @@
 import { lang } from './i18n';
+import { createAccountPart } from './design-system/dom';
 /** Fetch the current server decision; an offline account sheet remains usable. */
 export async function appendAdminAccountLink(body:HTMLElement){
  try{
@@ -6,6 +7,6 @@ export async function appendAdminAccountLink(body:HTMLElement){
   if(!response.ok)return;
   const me=await response.json();
   if(!me.user.sysadmin)return;
-  const link=document.createElement('a');link.href='/admin';link.textContent=lang==='de'?'Verwaltung':'Administration';body.prepend(link);
+  const link=createAccountPart('a','admin-link',{text:lang==='de'?'Verwaltung':'Administration',attrs:{href:'/admin'}});body.prepend(link);
  }catch{/* This optional online entry does not block account/device controls. */}
 }

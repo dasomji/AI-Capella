@@ -1446,13 +1446,6 @@
     {
       "file": "src/style.css",
       "kind": "raw-color",
-      "context": ".domain-sheet input[type=checkbox] / accent-color",
-      "value": "#d4ad65",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
       "context": ".drop-slot / background",
       "value": "rgb(255 244 228 / 0.03)",
       "count": 1
@@ -2071,27 +2064,6 @@
       "kind": "screen-control-selector",
       "context": ".back-btn span, .seg button span, #song-meta, .badge span",
       "value": ".back-btn span, .seg button span, #song-meta, .badge span",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".domain-sheet input:not([type=checkbox]), .domain-sheet select",
-      "value": ".domain-sheet input:not([type=checkbox]), .domain-sheet select",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".domain-sheet input:not([type=checkbox])",
-      "value": ".domain-sheet input:not([type=checkbox])",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".domain-sheet input[type=checkbox]",
-      "value": ".domain-sheet input[type=checkbox]",
       "count": 1
     },
     {

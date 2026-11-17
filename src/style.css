@@ -2518,28 +2518,6 @@ body:has(#app.mode-landing)::after {
     animation: ink-write 1.4s cubic-bezier(0.45, 0.1, 0.4, 1) calc(var(--ded-delay, var(--ded-wait)) + 0.25s) both;
   }
 }
-.ded-other {
-  font: inherit;
-  font-size: 0.66em;
-  color: var(--paper-dim);
-  opacity: 0.75;
-  padding: 0 0.15em;
-  transition: opacity var(--t-fast), color var(--t-fast);
-}
-.ded-other::before {
-  content: '';
-  display: inline-block;
-  width: 0.9em;
-  height: 1px;
-  margin: 0 0.45em 0.18em 0;
-  vertical-align: middle;
-  background: currentColor;
-  opacity: 0.5;
-}
-.ded-other:hover {
-  opacity: 1;
-  color: var(--paper);
-}
 
 .landing-code {
   position: relative;
@@ -2590,24 +2568,6 @@ body:has(#app.mode-landing)::after {
 /* The repertoire's heading names the open ensemble; a tap switches to another. */
 .lib-head h1.ens-title {
   margin-bottom: 6px;
-}
-.ens-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.22em;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-}
-.ens-switch .ic {
-  width: 0.5em;
-  height: 0.5em;
-  opacity: 0.5;
-  transition: opacity var(--t-fast), transform var(--t-fast);
-}
-.ens-switch:hover .ic {
-  opacity: 0.9;
-  transform: translateY(2px);
 }
 
 /* ---- Draft title "Die Bühne" (?start=buehne, titleStage.ts) ----------------------------------
@@ -2881,9 +2841,6 @@ body:has(#app.mode-landing)::after {
 
 .domain-sheet { display:grid; gap:1.2rem; }
 .domain-sheet form { display:grid; gap:1rem; }
-.domain-sheet label { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; }
-.domain-sheet input:not([type=checkbox]), .domain-sheet select { color:var(--paper); background:transparent; border:0; border-bottom:1px solid var(--hair-2); padding:.5rem; font:inherit; }
-.domain-sheet input[type=checkbox] { accent-color:var(--gold, #d4ad65); }
 .member-row { padding:1rem 0; border-bottom:1px solid var(--hair-2); display:grid; gap:.6rem; }
 .domain-gold { color:var(--gold, #d4ad65); }
 
@@ -2896,8 +2853,6 @@ body:has(#app.mode-landing)::after {
 .member-email { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:4px 0 0; color:var(--paper-dim); font:400 12px var(--ds-font-auth-mono); }
 .domain-gold, .invitation-state { font:500 10px var(--ds-font-auth-mono); text-transform:uppercase; letter-spacing:.06em; }
 .invitation-state { color:var(--paper-dim); }
-.domain-sheet form > label { display:grid; gap:6px; color:var(--paper-dim); font:500 11px var(--ds-font-auth-mono); text-transform:uppercase; letter-spacing:.08em; }
-.domain-sheet input:not([type=checkbox]) { width:100%; min-width:0; box-sizing:border-box; border-color:var(--paper-dim); padding:8px 0; font:400 16px var(--ds-font-auth-body); }
 .capability-row { display:flex; flex-wrap:wrap; gap:12px 18px; }
 .row-menu { position:relative; flex:none; }
 .row-menu summary { list-style:none; cursor:pointer; padding:6px 10px; font-size:22px; color:var(--paper-dim); }

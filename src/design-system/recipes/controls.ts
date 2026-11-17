@@ -8,6 +8,7 @@ const actionDisabled = "tw:disabled:opacity-(--ds-opacity-disabled-action) tw:ar
 const denseDisabled =
   "tw:disabled:opacity-(--ds-opacity-disabled-admin) tw:aria-disabled:opacity-(--ds-opacity-disabled-admin)";
 export const buttonVariants = [
+  "ensemble-switch", "ensemble-other", "device-link", "account-delete-confirm",
   "landing-create", "library-action", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update",
   "standard",
   "cta",
@@ -29,6 +30,10 @@ export interface ButtonOptions {
   pressed?: boolean;
 }
 const parityButtonShapes = {
+  "ensemble-switch": "ds-navigation-switch ens-switch",
+  "ensemble-other": "ds-navigation-other ded-other",
+  "device-link": "ds-library-link",
+  "account-delete-confirm": "ds-account-delete-confirm",
   "landing-create": "",
   "library-action": "",
   "landing-link": "ds-library-link",
@@ -80,7 +85,7 @@ function buttonRecipeStyles({
     const standard = buttonRecipeStyles({variant:'standard',intent,pressed});
     return variant === 'offline-update' ? standard + ' ds-library-offline-update' : standard.replace('tw:text-on-danger','tw:text-surface-sunken') + ' tw:text-center';
   }
-  if (["landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt"].includes(variant))
+  if (["ensemble-switch", "ensemble-other", "device-link", "account-delete-confirm", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt"].includes(variant))
     return "ds-library-button " + parityButtonShapes[variant as keyof typeof parityButtonShapes];
   // D08/D10: retain account navigation and password reveal typography separately.
   if (variant === "account-link" || variant === "password-toggle")
@@ -156,6 +161,7 @@ function iconButtonRecipeStyles({
 }
 /** ruled/transcription intentionally preserve identical looks pending D09/D10. */
 export const fieldVariants = [
+  "account-password",
   "library-prompt",
   "library-search",
   "boxed",
@@ -175,6 +181,7 @@ function fieldRecipeStyles(
   { variant = "boxed", invalid = false }: FieldOptions = {},
   kind: "input" | "select" | "textarea" = "input",
 ): Record<'root'|'label'|'control'|'hint'|'error', string> {
+  if (variant === "account-password") return {root:"ds-account-password",label:"ds-account-label",control:"ds-account-input tw:rounded-field",hint:"tw:sr-only",error:"ds-account-error"};
   if (variant === 'library-prompt') {
     const boxed = fieldRecipeStyles({variant:'boxed',invalid},kind);
     return {...boxed,control:boxed.control.split(' ').filter(c=>!c.startsWith('tw:focus-visible:')).join(' ') + ' tw:outline-none tw:outline-offset-2'};
@@ -246,7 +253,7 @@ function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
         : "tw:size-18 tw:accent-accent"),
   };
 }
-export const switchVariants = ["player", "admin", "capability", "comparison"] as const;
+export const switchVariants = ["player", "admin", "capability", "comparison", "shared-device"] as const;
 export interface SwitchOptions {
   variant?: (typeof switchVariants)[number];
   checked?: boolean;
@@ -255,6 +262,8 @@ function switchRecipeStyles({
   variant = "player",
   checked = false,
 }: SwitchOptions = {}) {
+  // D11: the offline policy retains its native checkbox, rather than a drawn track.
+  if (variant === "shared-device") return {label:"ds-account-shared",input:"ds-account-shared-input",root:"tw:hidden",thumb:"tw:hidden"};
   const sizes = {
     player: "tw:w-52 tw:h-32 tw:p-4",
     admin: "tw:w-48 tw:h-26 tw:p-0",

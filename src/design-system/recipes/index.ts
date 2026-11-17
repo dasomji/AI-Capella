@@ -47,3 +47,5 @@ export function withLayout(recipe: string, layout?: LayoutClass) {
 export * from './workspace';
 
 export * from './library';
+
+export * from "./account";

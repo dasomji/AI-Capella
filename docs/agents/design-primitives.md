@@ -212,3 +212,21 @@ Library prompts and popovers retain their measured scale/fade entrance and exit 
 shared native panel-motion controller; sheets keep the slide/swipe controller. Focus and
 scroll lock remain with the native dialog until the exit completes, with reduced motion closing
 immediately. The recipes retain their separate historical scale inputs.
+
+### Account/ensemble/offline parity (P5 slice 2)
+
+`ensemble-switch` / `ensemble-other`, `device-link` and `account-delete-confirm` keep the
+navigation and deletion action appearances. The final deletion command retains its historical
+text-button shape pending D14. `shared-device` is a native checkbox appearance of Switch:
+use `mode:"checkbox"` and `updateSwitch`; its 24-hour policy remains in offline-store.ts.
+`account-password` supplies the ruled password field. `createAccountPart` owns account body,
+email, note, heading and Administration-link composition; `Status`'s `account-delete` variant
+puts the error at its existing position below the password, with the shared danger role.
+The old account-error class had no matching error styling outside the auth shell.
+`Badge`'s `offline-prepared` variant retains prepared marks; card availability is the named
+`data-offline-unavailable` state. Offline identity, membership, expiry and purge gates stay
+in their existing storage/library modules.
+
+Update builder controls with `updateButton`. When screen code changes a native attribute
+also present in the builder's initial `attrs` (for example transcription entry `hidden`),
+pass its current value in the update so initial construction state is not reapplied.
