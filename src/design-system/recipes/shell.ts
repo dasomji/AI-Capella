@@ -120,10 +120,6 @@ export function transcriptionJobRecipe() {
   } as const;
 }
 
-export function sheetHandleRecipe() {
-  return "sheet-grab tw:absolute tw:top-flush tw:left-sheet-grab-left tw:w-toolbar tw:h-control-dense tw:ml-sheet-grab-margin-left tw:rounded-control-dense tw:surface-rule-strong";
-}
-
 export function controlNoteRecipe() {
   return "ctl-note tw:select-none tw:block tw:text-note tw:text-ink-secondary";
 }
