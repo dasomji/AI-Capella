@@ -168,3 +168,7 @@ it.each(['tw:[line-height:inherit]','tw:[background:var(--c)]','tw:[transform:pe
 it.each(['tw:[transform:translateX(13px)_var(--ds-transform)]','tw:[background:linear-gradient(red,_var(--ds-ground))]','tw:[color:var(--legacy-color)]'])('still rejects aesthetic fragments around semantic variables %s', cls => {
   expect(scan(`const x='${cls}'`).some(r=>r.kind==='arbitrary-aesthetic'||r.kind==='named-color')).toBe(true);
 });
+
+it('permits named element-local writing inputs inside token-backed material expressions', () => {
+  expect(scan("const x='tw:[mask-image:linear-gradient(var(--ds-writing-angle),_var(--ds-writing-ink)_calc(var(--written)_-_var(--ds-writing-feather)),_transparent_var(--written))]'")).toEqual([]);
+});
