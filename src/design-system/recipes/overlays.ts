@@ -45,7 +45,7 @@ function dialogRecipeStyles({ variant = "dialog", destructive = false }: DialogO
       : centeredPanel + (variant === "domain-sheet" || variant === "sheet" || admin ? " tw:w-width-sheet" : variant === "transcription" ? " tw:w-width-transcription" : "")) + (admin ? " tw:tabular-nums" : "") + (destructive ? " tw:border-danger" : ""),
     content: "tw:grid tw:gap-row tw:min-w-flush",
     header: "tw:flex tw:items-center tw:justify-between tw:gap-group",
-    title: "tw:m-flush tw:font-body tw:text-dialog tw:font-weight-strong tw:leading-leading-label tw:wrap-anywhere",
+    title: review ? "tw:m-flush tw:font-auth-display tw:font-weight-medium tw:text-transcription-title tw:max-score:text-transcription-title-phone tw:leading-leading-label" : "tw:m-flush tw:font-body tw:text-dialog tw:font-weight-strong tw:leading-leading-label tw:wrap-anywhere",
     body: "tw:m-flush tw:text-ink-secondary tw:font-body tw:text-body tw:leading-leading-body",
     actions: "tw:flex tw:flex-wrap tw:justify-end tw:gap-inline tw:mt-snug",
   };
