@@ -133,6 +133,13 @@ try {
         await page.getByText('Account and devices', { exact: true }).click();
         await page.getByText(/· This device$/).waitFor();
         await page.evaluate(() => document.fonts.ready);
+        await page.locator('.sheet-root.open').waitFor();
+        await page.evaluate(async () => {
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          for (const animation of document.getAnimations()) {
+            if (animation.effect?.getComputedTiming().iterations !== Infinity) animation.finish();
+          }
+        });
         await page.screenshot({ path: `${evidence}/${theme}-${width}-account-sheet.png` });
         await page.keyboard.press('Escape');
         await page.locator('.account-sheet').waitFor({ state: 'detached' });
