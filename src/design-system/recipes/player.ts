@@ -150,10 +150,10 @@ const playerUtilities: Readonly<Record<string, string>> = {
     "tw:max-panel:[&_.ds-player-seg-item]:p-player-seg-button-padding-91",
     // .ds-player-seg · (prefers-reduced-transparency: reduce)
     "tw:player-reduced-transparency:backdrop-filter-none tw:player-reduced-transparency:player-pos-background",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-seg .ds-player-seg-item[aria-pressed="true"]
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_.ds-player-seg-item[aria-pressed='true']]:player-t-btn-background-3 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_.ds-player-seg-item[aria-pressed='true']]:border-transparent tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_.ds-player-seg-item[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
-    // :root[data-theme="parchment"] .ds-player-seg .ds-player-seg-item[aria-pressed="true"]
-    "tw:[:root[data-theme='parchment']_&_.ds-player-seg-item[aria-pressed='true']]:player-t-btn-background-4 tw:[:root[data-theme='parchment']_&_.ds-player-seg-item[aria-pressed='true']]:border-transparent tw:[:root[data-theme='parchment']_&_.ds-player-seg-item[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
+
+    "tw:material-paper:[&_.ds-player-seg-item[aria-pressed='true']]:player-t-btn-background-3 tw:material-paper:[&_.ds-player-seg-item[aria-pressed='true']]:border-transparent tw:material-paper:[&_.ds-player-seg-item[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
+
+    "tw:material-light:[&_.ds-player-seg-item[aria-pressed='true']]:player-t-btn-background-4 tw:material-light:[&_.ds-player-seg-item[aria-pressed='true']]:border-transparent tw:material-light:[&_.ds-player-seg-item[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
   ].join(" "),
   "ds-player-live-dot": [
     // .ds-player-live-dot
@@ -168,8 +168,8 @@ const playerUtilities: Readonly<Record<string, string>> = {
     "tw:[&_.ds-player-seg]:backdrop-filter-none",
     // .ds-player-p-top · (prefers-reduced-transparency: reduce)
     "tw:player-reduced-transparency:backdrop-filter-none tw:player-reduced-transparency:player-pos-background",
-    // :root[data-theme="parchment"] .ds-player-p-top
-    "tw:[:root[data-theme='parchment']_&]:player-shadow-player-p-top-box-shadow-166",
+
+    "tw:material-light:[&]:player-shadow-player-p-top-box-shadow-166",
   ].join(" "),
   "ds-player-back-btn": [
     // .ds-player-back-btn
@@ -224,10 +224,10 @@ const playerUtilities: Readonly<Record<string, string>> = {
     "tw:[&_.follow-pos]:player-badge-font tw:[&_.follow-pos]:whitespace-nowrap",
     // #app.sing-along .ds-player-badge
     "tw:[#app.sing-along_&]:border-player-app-sing-along-badge-border-color-105 tw:[#app.sing-along_&]:text-player-app-sing-along-badge-color-106",
-    // :root[data-theme="parchment"] .ds-player-badge.is-leading
-    "tw:[:root[data-theme='parchment']_&.is-leading]:border-player-badge-is-leading-border-color-167 tw:[:root[data-theme='parchment']_&.is-leading]:text-player-badge-is-leading-color-168 tw:[:root[data-theme='parchment']_&.is-leading]:player-badge-background-2 tw:[:root[data-theme='parchment']_&.is-leading]:player-shadow-player-utility-badge-box-shadow-2",
-    // :root[data-theme="parchment"] #app.sing-along .ds-player-badge
-    "tw:[:root[data-theme='parchment']_#app.sing-along_&]:border-player-badge-is-leading-border-color-167 tw:[:root[data-theme='parchment']_#app.sing-along_&]:text-player-badge-is-leading-color-168 tw:[:root[data-theme='parchment']_#app.sing-along_&]:player-badge-background-2 tw:[:root[data-theme='parchment']_#app.sing-along_&]:player-shadow-player-utility-badge-box-shadow-2",
+
+    "tw:material-light:[&.is-leading]:border-player-badge-is-leading-border-color-167 tw:material-light:[&.is-leading]:text-player-badge-is-leading-color-168 tw:material-light:[&.is-leading]:player-badge-background-2 tw:material-light:[&.is-leading]:player-shadow-player-utility-badge-box-shadow-2",
+
+    "tw:material-light:[#app.sing-along_&]:border-player-badge-is-leading-border-color-167 tw:material-light:[#app.sing-along_&]:text-player-badge-is-leading-color-168 tw:material-light:[#app.sing-along_&]:player-badge-background-2 tw:material-light:[#app.sing-along_&]:player-shadow-player-utility-badge-box-shadow-2",
   ].join(" "),
   "ds-player-voices-panel": [
     // .ds-player-voices-panel
@@ -260,8 +260,8 @@ const playerUtilities: Readonly<Record<string, string>> = {
     "tw:[&.is-dimmed_.ds-player-voice-name]:text-ink-muted",
     // .ds-player-voice-row.is-muted .ds-player-light
     "tw:[&.is-muted_.ds-player-light]:opacity-(--ds-player-voice-row-is-muted-light-opacity-31)",
-    // :root[data-theme="parchment"] .ds-player-voice-row:hover
-    "tw:[:root[data-theme='parchment']_&:hover]:player-voice-row-background-2",
+
+    "tw:material-light:[&:hover]:player-voice-row-background-2",
   ].join(" "),
   "ds-player-voice-more": [
     // .ds-player-voice-more
@@ -344,26 +344,26 @@ const playerUtilities: Readonly<Record<string, string>> = {
     "tw:[&.is-muted_i]:opacity-(--ds-player-chip-is-muted-i-opacity-63)",
     // .ds-player-chip · (prefers-reduced-transparency: reduce)
     "tw:player-reduced-transparency:backdrop-filter-none tw:player-reduced-transparency:player-pos-background",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-chip
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&]:rounded-player-seg-button-border-radius-6 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&]:player-chip-background-5 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&]:border-player-chip-border-color-138 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&]:player-shadow-player-chip-box-shadow-139",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-chip i
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_i]:w-player-utility-zoom-sep-height tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_i]:h-player-utility-chip-height-3 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_i]:rounded-player-chip-i-border-radius-140 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_i]:player-chip-background-6 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_i]:player-chip-box-shadow-5",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-chip.is-solo
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.is-solo]:player-chip-border-color-4 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.is-solo]:player-chip-background-7",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-chip.is-dimmed i
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.is-dimmed_i]:opacity-100 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.is-dimmed_i]:player-chip-background-8 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.is-dimmed_i]:player-shadow-player-chip-is-dimmed-i-box-shadow-146",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-chip.is-muted i
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.is-muted_i]:opacity-100 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.is-muted_i]:player-chip-background-9 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.is-muted_i]:player-shadow-player-chip-is-dimmed-i-box-shadow-146",
-    // :root[data-theme="parchment"] .ds-player-chip
-    "tw:[:root[data-theme='parchment']_&]:border-player-chip-border-color-157 tw:[:root[data-theme='parchment']_&]:player-shadow-player-chip-box-shadow-158",
-    // :root[data-theme="parchment"] .ds-player-chip i
-    "tw:[:root[data-theme='parchment']_&_i]:player-chip-background-10 tw:[:root[data-theme='parchment']_&_i]:player-chip-box-shadow-8",
-    // :root[data-theme="parchment"] .ds-player-chip.is-solo
-    "tw:[:root[data-theme='parchment']_&.is-solo]:player-chip-border-color-4 tw:[:root[data-theme='parchment']_&.is-solo]:player-chip-background-11",
-    // :root[data-theme="parchment"] .ds-player-chip.is-dimmed i
-    "tw:[:root[data-theme='parchment']_&.is-dimmed_i]:player-chip-background-12 tw:[:root[data-theme='parchment']_&.is-dimmed_i]:player-shadow-player-chip-is-dimmed-i-box-shadow-163",
-    // :root[data-theme="parchment"] .ds-player-chip.is-muted i
-    "tw:[:root[data-theme='parchment']_&.is-muted_i]:player-chip-background-13 tw:[:root[data-theme='parchment']_&.is-muted_i]:player-shadow-player-chip-is-dimmed-i-box-shadow-163",
+
+    "tw:material-paper:[&]:rounded-player-seg-button-border-radius-6 tw:material-paper:[&]:player-chip-background-5 tw:material-paper:[&]:border-player-chip-border-color-138 tw:material-paper:[&]:player-shadow-player-chip-box-shadow-139",
+
+    "tw:material-paper:[&_i]:w-player-utility-zoom-sep-height tw:material-paper:[&_i]:h-player-utility-chip-height-3 tw:material-paper:[&_i]:rounded-player-chip-i-border-radius-140 tw:material-paper:[&_i]:player-chip-background-6 tw:material-paper:[&_i]:player-chip-box-shadow-5",
+
+    "tw:material-paper:[&.is-solo]:player-chip-border-color-4 tw:material-paper:[&.is-solo]:player-chip-background-7",
+
+    "tw:material-paper:[&.is-dimmed_i]:opacity-100 tw:material-paper:[&.is-dimmed_i]:player-chip-background-8 tw:material-paper:[&.is-dimmed_i]:player-shadow-player-chip-is-dimmed-i-box-shadow-146",
+
+    "tw:material-paper:[&.is-muted_i]:opacity-100 tw:material-paper:[&.is-muted_i]:player-chip-background-9 tw:material-paper:[&.is-muted_i]:player-shadow-player-chip-is-dimmed-i-box-shadow-146",
+
+    "tw:material-light:[&]:border-player-chip-border-color-157 tw:material-light:[&]:player-shadow-player-chip-box-shadow-158",
+
+    "tw:material-light:[&_i]:player-chip-background-10 tw:material-light:[&_i]:player-chip-box-shadow-8",
+
+    "tw:material-light:[&.is-solo]:player-chip-border-color-4 tw:material-light:[&.is-solo]:player-chip-background-11",
+
+    "tw:material-light:[&.is-dimmed_i]:player-chip-background-12 tw:material-light:[&.is-dimmed_i]:player-shadow-player-chip-is-dimmed-i-box-shadow-163",
+
+    "tw:material-light:[&.is-muted_i]:player-chip-background-13 tw:material-light:[&.is-muted_i]:player-shadow-player-chip-is-dimmed-i-box-shadow-163",
   ].join(" "),
   "ds-player-chips-mixer": [
     // .ds-player-chips-mixer
@@ -374,16 +374,16 @@ const playerUtilities: Readonly<Record<string, string>> = {
     "tw:player-short-landscape:hidden!",
     // #app.sing-along .ds-player-chips-mixer · (width < theme(--breakpoint-panel))
     "tw:max-panel:[#app.sing-along_&]:self-start tw:max-panel:[#app.sing-along_&]:p-player-app-sing-along-chips-mixer-padding-110 tw:max-panel:[#app.sing-along_&]:bg-none",
-    // :root[data-theme="parchment"] .ds-player-chips-mixer
-    "tw:[:root[data-theme='parchment']_&]:player-chips-mixer-background-3",
+
+    "tw:material-light:[&]:player-chips-mixer-background-3",
   ].join(" "),
   "ds-player-mixer-chip": [
     // .ds-player-mixer-chip
     "tw:p-player-mixer-chip-padding-66 tw:player-mixer-chip-background",
     // .ds-player-mixer-chip .ic
     "tw:[&_.ic]:w-player-utility-native-width-18px tw:[&_.ic]:h-player-utility-native-width-18px",
-    // :root[data-theme="parchment"] .ds-player-mixer-chip
-    "tw:[:root[data-theme='parchment']_&]:player-chip-background-5",
+
+    "tw:material-light:[&]:player-chip-background-5",
   ].join(" "),
   "ds-player-zoom": [
     // .ds-player-zoom
@@ -402,14 +402,14 @@ const playerUtilities: Readonly<Record<string, string>> = {
     "tw:[&_.ds-player-follow-btn[aria-pressed='true']_.ic]:filter-(--ds-player-zoom-follow-btn-aria-pressed-true-ic-filter-122)",
     // .ds-player-zoom · (prefers-reduced-transparency: reduce)
     "tw:player-reduced-transparency:backdrop-filter-none tw:player-reduced-transparency:player-pos-background",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-zoom .ds-player-follow-btn[aria-pressed="true"]
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_.ds-player-follow-btn[aria-pressed='true']]:player-t-btn-background-3 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_.ds-player-follow-btn[aria-pressed='true']]:border-transparent tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_.ds-player-follow-btn[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-zoom .ds-player-follow-btn[aria-pressed="true"] .ic
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_.ds-player-follow-btn[aria-pressed='true']_.ic]:filter-none",
-    // :root[data-theme="parchment"] .ds-player-zoom .ds-player-follow-btn[aria-pressed="true"]
-    "tw:[:root[data-theme='parchment']_&_.ds-player-follow-btn[aria-pressed='true']]:player-t-btn-background-4 tw:[:root[data-theme='parchment']_&_.ds-player-follow-btn[aria-pressed='true']]:border-transparent tw:[:root[data-theme='parchment']_&_.ds-player-follow-btn[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
-    // :root[data-theme="parchment"] .ds-player-zoom
-    "tw:[:root[data-theme='parchment']_&]:player-zoom-background-6",
+
+    "tw:material-paper:[&_.ds-player-follow-btn[aria-pressed='true']]:player-t-btn-background-3 tw:material-paper:[&_.ds-player-follow-btn[aria-pressed='true']]:border-transparent tw:material-paper:[&_.ds-player-follow-btn[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
+
+    "tw:material-paper:[&_.ds-player-follow-btn[aria-pressed='true']_.ic]:filter-none",
+
+    "tw:material-light:[&_.ds-player-follow-btn[aria-pressed='true']]:player-t-btn-background-4 tw:material-light:[&_.ds-player-follow-btn[aria-pressed='true']]:border-transparent tw:material-light:[&_.ds-player-follow-btn[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
+
+    "tw:material-light:[&]:player-zoom-background-6",
   ].join(" "),
   "ds-player-zoom-value": [
     // .ds-player-zoom-value
@@ -440,8 +440,8 @@ const playerUtilities: Readonly<Record<string, string>> = {
     "tw:[&.on]:opacity-100 tw:[&.on]:text-ink",
     // .ds-player-info-metro.on .ic
     "tw:[&.on_.ic]:filter-(--ds-player-zoom-follow-btn-aria-pressed-true-ic-filter-122)",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-info-metro.on .ic
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.on_.ic]:filter-none",
+
+    "tw:material-paper:[&.on_.ic]:filter-none",
   ].join(" "),
   "ds-player-transport": [
     // .ds-player-transport
@@ -494,12 +494,12 @@ const playerUtilities: Readonly<Record<string, string>> = {
     "tw:player-short-landscape:w-player-utility-zoom-value-min-width tw:player-short-landscape:h-player-utility-zoom-value-min-width",
     // .ds-player-t-btn.ds-player-toggle[aria-pressed="true"] .ic
     "tw:[&.ds-player-toggle[aria-pressed='true']_.ic]:filter-(--ds-player-zoom-follow-btn-aria-pressed-true-ic-filter-122)",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-t-btn.ds-player-toggle[aria-pressed="true"]
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.ds-player-toggle[aria-pressed='true']]:player-t-btn-background-3 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.ds-player-toggle[aria-pressed='true']]:border-transparent tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.ds-player-toggle[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-t-btn.ds-player-toggle[aria-pressed="true"] .ic
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&.ds-player-toggle[aria-pressed='true']_.ic]:filter-none",
-    // :root[data-theme="parchment"] .ds-player-t-btn.ds-player-toggle[aria-pressed="true"]
-    "tw:[:root[data-theme='parchment']_&.ds-player-toggle[aria-pressed='true']]:player-t-btn-background-4 tw:[:root[data-theme='parchment']_&.ds-player-toggle[aria-pressed='true']]:border-transparent tw:[:root[data-theme='parchment']_&.ds-player-toggle[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
+
+    "tw:material-paper:[&.ds-player-toggle[aria-pressed='true']]:player-t-btn-background-3 tw:material-paper:[&.ds-player-toggle[aria-pressed='true']]:border-transparent tw:material-paper:[&.ds-player-toggle[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
+
+    "tw:material-paper:[&.ds-player-toggle[aria-pressed='true']_.ic]:filter-none",
+
+    "tw:material-light:[&.ds-player-toggle[aria-pressed='true']]:player-t-btn-background-4 tw:material-light:[&.ds-player-toggle[aria-pressed='true']]:border-transparent tw:material-light:[&.ds-player-toggle[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
   ].join(" "),
   "ds-player-t-stop-left": [
     // .ds-player-t-stop-left
@@ -530,22 +530,22 @@ const playerUtilities: Readonly<Record<string, string>> = {
     "tw:max-panel:[&_.ic]:w-player-utility-voice-more-width tw:max-panel:[&_.ic]:h-player-utility-voice-more-width",
     // .ds-player-play-btn · (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape)
     "tw:player-short-landscape:w-player-utility-t-btn-width-3 tw:player-short-landscape:h-player-utility-t-btn-width-3",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-play-btn
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&]:text-ink tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&]:player-play-btn-background-2 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&]:player-shadow-shadow-emboss-raised",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-play-btn:hover
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&:hover]:text-ink tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&:hover]:player-play-btn-background-2 tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&:hover]:player-shadow-shadow-emboss-raised",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-play-btn:active
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&:active]:player-shadow-shadow-emboss-pressed",
-    // :root:is([data-theme="night-paper"], [data-theme="parchment"]) .ds-player-play-btn .ic
-    "tw:[:root:is([data-theme='night-paper'],_[data-theme='parchment'])_&_.ic]:filter-(--ds-player-play-btn-ic-filter-136)",
-    // :root[data-theme="parchment"] .ds-player-play-btn
-    "tw:[:root[data-theme='parchment']_&]:text-ink tw:[:root[data-theme='parchment']_&]:player-play-btn-background-3 tw:[:root[data-theme='parchment']_&]:player-shadow-shadow-emboss-raised",
-    // :root[data-theme="parchment"] .ds-player-play-btn:hover
-    "tw:[:root[data-theme='parchment']_&:hover]:text-ink tw:[:root[data-theme='parchment']_&:hover]:player-play-btn-background-3 tw:[:root[data-theme='parchment']_&:hover]:player-shadow-shadow-emboss-raised",
-    // :root[data-theme="parchment"] .ds-player-play-btn:active
-    "tw:[:root[data-theme='parchment']_&:active]:player-shadow-shadow-emboss-pressed",
-    // :root[data-theme="parchment"] .ds-player-play-btn .ic
-    "tw:[:root[data-theme='parchment']_&_.ic]:filter-(--ds-player-play-btn-ic-filter-152)",
+
+    "tw:material-paper:[&]:text-ink tw:material-paper:[&]:player-play-btn-background-2 tw:material-paper:[&]:player-shadow-shadow-emboss-raised",
+
+    "tw:material-paper:[&:hover]:text-ink tw:material-paper:[&:hover]:player-play-btn-background-2 tw:material-paper:[&:hover]:player-shadow-shadow-emboss-raised",
+
+    "tw:material-paper:[&:active]:player-shadow-shadow-emboss-pressed",
+
+    "tw:material-paper:[&_.ic]:filter-(--ds-player-play-btn-ic-filter-136)",
+
+    "tw:material-light:[&]:text-ink tw:material-light:[&]:player-play-btn-background-3 tw:material-light:[&]:player-shadow-shadow-emboss-raised",
+
+    "tw:material-light:[&:hover]:text-ink tw:material-light:[&:hover]:player-play-btn-background-3 tw:material-light:[&:hover]:player-shadow-shadow-emboss-raised",
+
+    "tw:material-light:[&:active]:player-shadow-shadow-emboss-pressed",
+
+    "tw:material-light:[&_.ic]:filter-(--ds-player-play-btn-ic-filter-152)",
   ].join(" "),
   "ds-player-t-right": [
     // .ds-player-t-right

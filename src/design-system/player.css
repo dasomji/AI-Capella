@@ -42,8 +42,11 @@
   display: none;
 }
 /* Native pseudo-element styling retains the browser slider/decorative part. */
-:root[data-theme="parchment"] .ds-player-volume::-webkit-slider-thumb {
+@container style(--ds-color-scheme: light) {
+/* Native thumb shadow follows the material color-scheme role. */
+:root:root .ds-player-volume::-webkit-slider-thumb {
   box-shadow: var(
     --ds-player-input-type-range-webkit-slider-thumb-box-shadow-156
   );
+}
 }

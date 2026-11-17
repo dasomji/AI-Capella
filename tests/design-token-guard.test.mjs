@@ -26,11 +26,11 @@ describe('design token guard', () => {
   it('permits semantic roles, geometry triples and runtime channels', () => {
     expect(scan('const point = [12,34,56]; el.style.color = theme.colors.ink.css; const x = <div className="tw:bg-surface tw:font-body"/>;')).toEqual([]);
   });
-  it('rejects stale baseline entries and attempts to expand the baseline', () => {
+  it('forbids every non-empty baseline, including exact current/ceiling matches', () => {
     const rows = aggregate(scan('el.style.color = "#123456";'));
-    expect(checkBaseline([], rows, rows)[0]).toContain('STALE');
-    expect(checkBaseline(rows, rows, [])[0]).toContain('BASELINE GREW');
-    expect(checkBaseline(rows, rows, rows)).toEqual([]);
+    expect(checkBaseline([], rows, rows)[0]).toContain('NONEMPTY');
+    expect(checkBaseline(rows, rows, rows)).toEqual(expect.arrayContaining([expect.stringContaining('NONEMPTY'), expect.stringContaining('NEW')]));
+    expect(checkBaseline([], [], rows)).toEqual([]);
   });
   it('catches scoped component CSS and forbidden recipe imports', () => {
     expect(scanDesignFile('src/new.css', '.screen button { color: navy; font-family: Georgia, serif; }').map(row => row.kind)).toEqual(expect.arrayContaining(['named-color', 'raw-font', 'screen-control-selector']));
@@ -89,18 +89,22 @@ describe('review guard regressions M3–M6 / N1', () => {
   it('M6 permits semantic arbitrary variables and semantic scales', () => {
     expect(scan("const cls='tw:p-(--ds-space-12) tw:z-[var(--ds-layer-menu)] tw:max-panel:w-24 tw:p-2';")).toEqual([]);
   });
-  it('N1 merges only upgraded rules with exact immutable-ceiling membership', () => {
-    const row = { file:'src/old.ts', kind:'font-allowlist', context:'old', value:'12px Georgia', count:1 };
-    const previous = { entries:[] };
-    const merged = mergeNewRules([row], previous, [row]);
-    expect(merged.entries).toEqual([row]);
-    expect(checkBaseline([row], merged.entries, [row])).toEqual([]);
-    expect(checkGrowth(merged, previous)).toEqual([]);
-    expect(() => mergeNewRules([row], previous, [])).toThrow('production ceiling');
-    expect(() => mergeNewRules([{...row,count:2}], previous, [row])).toThrow('production ceiling');
-    expect(() => mergeNewRules([row], {entries:[],ruleVersions}, [row])).toThrow('not new');
-    expect(checkGrowth({entries:[row],ruleVersions}, {entries:[],ruleVersions})[0]).toContain('GREW');
-    const legacy = {...row,kind:'raw-color'};
-    expect(() => mergeNewRules([legacy], previous, [legacy])).toThrow('not new');
+  it('cannot revive the retired baseline mechanism through upgraded rules', () => {
+    const row = {file:'src/old.ts',kind:'raw-color',context:'old',value:'#123456',count:1};
+    expect(() => mergeNewRules([row], {entries:[]}, [row])).toThrow('forbidden');
+    expect(checkGrowth({entries:[row]}, {entries:[row]})[0]).toContain('NONEMPTY');
+  });
+  it.each(['1px','2rem','.3em','10ms','1.5s','50%','calc(100% - 2px)','var(--ds-gap, 3px)'])('requires component CSS dimensions/durations to use tokens: %s', value => {
+    expect(scanDesignFile('src/design-system/example.css', `x { width:${value} }`).some(row=>row.kind==='raw-css-dimension')).toBe(true);
+  });
+  it('permits token dimensions, zero, full extents and non-dimensional asset identities', () => {
+    expect(scanDesignFile('src/design-system/example.css', 'x{padding:0; width:100%; height:var(--ds-height); transition:var(--ds-transition); background:url("size-12px.svg")}')).toEqual([]);
+  });
+  it('keeps non-theme exceptions narrow and structural', () => {
+    expect(scanDesignFile('src/staffView.ts', "const from=shape.filled ? 'black' : 'half';")).toEqual([]);
+    expect(scanDesignFile('src/staffView.ts', "ctx.fillStyle='black';").some(r=>r.kind==='named-color')).toBe(true);
+    expect(scanDesignFile('src/paper.ts', 'const specs={formation:[[12,12,.4]]}; ctx.fillStyle=specs;')).toEqual([]);
+    expect(scanDesignFile('src/paper.ts', 'const color=[12,12,.4]; ctx.fillStyle=color;').some(r=>r.kind==='raw-channels-at-sink')).toBe(true);
+    expect(scanDesignFile('src/design-system/example.css', ':root[data-design="papier"] x {display:none}').some(r=>r.kind==='legacy-theme-selector')).toBe(true);
   });
 });

@@ -30,14 +30,14 @@ export function deviceChoice<T extends string>(param: string, key: string, value
   }
 }
 
-export type Design = typeof themeRegistry[number]['compat']['design'] | Exclude<typeof themeRegistry[number]['compat']['ground'], null>;
+export type Design = typeof themeRegistry[number]['aliases'][number];
 /** What a device chose for its look: 'auto' (everyone's) is night paper in dark mode, parchment in light mode. */
 export type DesignChoice = 'auto' | Design;
 const appearance = typeof document === 'undefined' ? undefined : bootstrapTheme();
 initializeTheme();
 export function legacyDesign(id: string): Design {
   const theme = themeRegistry.find(theme => theme.id === id) ?? themeRegistry[0];
-  return theme.compat.ground ?? theme.compat.design;
+  return theme.aliases[0];
 }
 export let DESIGN_CHOICE: DesignChoice = !appearance || appearance.preference === 'system' ? 'auto' : legacyDesign(appearance.preference);
 export function systemDesign(): Design { return legacyDesign(systemTheme()); }
@@ -77,7 +77,7 @@ export const START_STAGE = START_CHOICE === 'buehne';
 /**
  * The faces from Font Revival (assets/fonts/revival), everyone's since October 2026 -- headings in
  * Baltimore Title, song titles in Modern Antique, rehearsal letters in Baltimore Bold, text and
- * controls in Remington, the "Score" of the name in Baltimore Black Slope (revivalType.css).
+ * controls in Remington, the "Score" of the name in Baltimore Black Slope (tokens.css).
  * ?schrift=bodoni brings back the earlier ones (Bodoni Moda, Atkinson Hyperlegible) on a device
  * ('heute' as it was called while the new ones were a test), ?schrift=neu the new ones.
  */

@@ -114,9 +114,9 @@ describe('theme source contracts M1/M2/M6/M7 and m1/m3/m4/m6/N2', () => {
       const dom = boot('?design='+alias);
       const data = dom.window.document.documentElement.dataset;
       expect(data.theme).toBe(theme.id);
-      expect(data.design).toBe(theme.compat.design);
-      expect(data.ground ?? null).toBe(theme.compat.ground);
-      if (theme.compat.start) expect(data.start).toBeUndefined();
+      expect(data.design).toBeUndefined();
+      expect(data.ground).toBeUndefined();
+      if (theme.defaultStart) expect(data.start).toBeUndefined();
       dom.window.close();
     }
   });
@@ -136,7 +136,7 @@ describe('theme source contracts M1/M2/M6/M7 and m1/m3/m4/m6/N2', () => {
     const entry = themeRegistry[0], storage = entry.storage;
     try {
       Object.assign(entry, { storage: 'future-theme-storage' });
-      expect(legacyDesign(entry.id)).toBe(entry.compat.ground ?? entry.compat.design);
+      expect(legacyDesign(entry.id)).toBe(entry.aliases[0]);
     } finally { Object.assign(entry, { storage }); }
   });
   it('m5 imports staffView without a DOM or loaded stylesheet', async () => {

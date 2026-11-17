@@ -1,8 +1,8 @@
 /* Canonical pre-paint resolver. This exact source also runs inline; keep it self-contained. */
 export const themeRegistry = /** @type {const} */ ([
-    { id: 'night-paper', label: 'Night paper', aliases: ['papier'], storage: 'papier', compat: { design: 'papier', ground: null, start: null }, colorScheme: 'dark', system: 'dark' },
-    { id: 'parchment', label: 'Parchment', aliases: ['pergament'], storage: 'pergament', compat: { design: 'papier', ground: 'pergament', start: null }, colorScheme: 'light', system: 'light' },
-    { id: 'velvet', label: 'Velvet', aliases: ['samt'], storage: 'samt', compat: { design: 'samt', ground: null, start: 'heute' }, colorScheme: 'dark', system: null },
+    { id: 'night-paper', label: 'Night paper', aliases: ['papier'], storage: 'papier', defaultStart: null, colorScheme: 'dark', system: 'dark' },
+    { id: 'parchment', label: 'Parchment', aliases: ['pergament'], storage: 'pergament', defaultStart: null, colorScheme: 'light', system: 'light' },
+    { id: 'velvet', label: 'Velvet', aliases: ['samt'], storage: 'samt', defaultStart: 'heute', colorScheme: 'dark', system: null },
 ]);
 /** @param {string | null} value */
 export function themePreference(value) {
@@ -28,13 +28,10 @@ export default function bootstrapTheme(next) {
     try { light = matchMedia('(prefers-color-scheme: light)').matches; } catch { /* Dark default. */ }
     const theme = themeRegistry.find(theme => selected === 'system' ? theme.system === (light ? 'light' : 'dark') : theme.id === selected) ?? themeRegistry[0];
     const type = choice('schrift', 'ai-capella-schrift', ['neu', 'bodoni', 'heute', 'test'], 'neu');
-    const start = theme.compat.start ?? choice('start', 'ai-capella-start', ['neu', 'heute', 'zeile', 'buehne'], 'neu');
+    const start = theme.defaultStart ?? choice('start', 'ai-capella-start', ['neu', 'heute', 'zeile', 'buehne'], 'neu');
     root.dataset.theme = theme.id;
     root.style.colorScheme = theme.colorScheme;
     root.dataset.themePreference = selected;
-    root.dataset.design = theme.compat.design;
-    if (theme.compat.ground) root.dataset.ground = theme.compat.ground;
-    else delete root.dataset.ground;
     if (type !== 'bodoni' && type !== 'heute') root.dataset.type = 'revival';
     else delete root.dataset.type;
     if (start !== 'heute') root.dataset.start = 'neu';

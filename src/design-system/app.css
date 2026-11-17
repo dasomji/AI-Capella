@@ -27,6 +27,11 @@
 
 @import './panels.css' layer(components);
 
+/* Material strategies are token values: any registry entry can choose either family/scheme.
+   Repeated :root preserves the former selector specificity against state recipes. */
+@custom-variant material-paper { @container style(--ds-material-family: paper) { :root:root & { @slot; } } }
+@custom-variant material-light { @container style(--ds-color-scheme: light) { :root:root & { @slot; } } }
+
 /* Player shorthands and consumer-local voice materials. */
 @custom-variant player-short-landscape { @media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) { @slot; } }
 @custom-variant player-reduced-transparency { @media (prefers-reduced-transparency: reduce) { @slot; } }

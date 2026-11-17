@@ -507,6 +507,7 @@
   --ds-warning: var(--pigment-warning);
   --ds-on-accent: var(--pigment-surface-sunken);
   --ds-on-danger: var(--pigment-ink);
+  --ds-material-family: paper;
   --ds-color-scheme: dark;
   --ds-browser-chrome: var(--pigment-page-background);
   --ds-admin-surface: var(--pigment-admin-surface);
@@ -689,6 +690,7 @@
   --ds-warning: var(--pigment-warning-2);
   --ds-on-accent: var(--pigment-on-accent);
   --ds-on-danger: var(--pigment-on-accent);
+  --ds-material-family: paper;
   --ds-color-scheme: light;
   --ds-browser-chrome: var(--pigment-browser-chrome);
   --ds-admin-surface: var(--pigment-admin-surface-2);
@@ -869,6 +871,7 @@
   --ds-warning: var(--pigment-warning);
   --ds-on-accent: var(--pigment-surface-sunken);
   --ds-on-danger: var(--pigment-ink);
+  --ds-material-family: waves;
   --ds-color-scheme: dark;
   --ds-browser-chrome: var(--pigment-page-background);
   --ds-admin-surface: var(--pigment-admin-surface);
@@ -2710,4 +2713,13 @@
   --ds-shell-tx-flash-opacity-387: .4;
   --ds-shell-tx-flash-opacity-388: .06;
   --ds-shell-tx-pulse-opacity-389: .35;
+}
+
+/* Installed browser artwork uses the stable default-theme roles, generated at the CSS boundary. */
+:root {
+  --ds-icon-ground: var(--ds-page-background);
+  --ds-icon-voice-1: var(--ds-voice-1);
+  --ds-icon-voice-3: var(--ds-voice-3);
+  --ds-icon-voice-6: var(--ds-voice-6);
+  --ds-icon-voice-8: var(--ds-voice-8);
 }

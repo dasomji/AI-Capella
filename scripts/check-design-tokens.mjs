@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
@@ -8,17 +7,24 @@ import postcss from 'postcss';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const baselinePath = path.join(root, 'scripts/design-token-baseline.json');
-// Migration ceiling: the merged production source before AICAP-28. Even editing the
-// baseline cannot admit a new violation: every entry must exist in this source.
-const legacyCommit = '3c9d43c';
 const colorAtom = /#[\da-f]{3,8}\b|(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)\([^)]*\)/gi;
 const namedColors = new Set(('aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen').split(' '));
 const fontStack = /(?:['"](?:Atkinson[^'";]+|Bodoni[^'";]+|Baltimore[^'";]+|Remington[^'";]+|Modern Antique[^'";]+|Italianno|LightScore Engraving|Bravura)['"][^;\n]*|(?:system-ui|ui-monospace|sans-serif|monospace|\bserif\b|\bcursive\b))/g;
 const paletteClass = /(?:^|\s)tw:(?:[\w-]+:)*(?:bg|text|border|outline|ring|fill|stroke|shadow|from|via|to|decoration|accent|caret)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(?:-\d+)?(?:\/\d+)?\b/g;
 const arbitraryAesthetic = /(?:^|\s)tw:(?:[\w-]+:)*-?(?:(?:bg|text|border|outline|ring|fill|stroke|font|rounded|shadow|tracking|leading|opacity|duration|ease|from|via|to|p[xysetblr]?|m[xysetblr]?|gap(?:-[xy])?|space-[xy]|inset(?:-[xy])?|top|right|bottom|left|start|end|w|h|size|min-[wh]|max-[wh]|z|basis)-(?:\[[^\]]+\]|\([^)]*\))|\[(?:color|background|font|border|box-shadow|border-radius|padding|margin|gap|width|height|inset|z-index)[^\]]*\])/g;
-// Increment only for strengthened rules. A migration is permitted once per version,
-// and each added exact entry/count must also exist at the immutable source ceiling.
-export const ruleVersions = { 'font-allowlist': 2, 'named-color': 2, 'recipe-boundary': 2, 'computed-style-token-read': 2, 'raw-media-query': 2, 'raw-breakpoint-compare': 2, 'unlayered-css-import': 2, 'legacy-theme-read': 2, 'arbitrary-aesthetic': 2 };
+/** Named, structural exceptions for data that is not a theme value. */
+export const exceptionRules = {
+  'paper-noise-geometry': 'Paper formation/flocs/tooth triples are [cell count X, cell count Y, amplitude], never RGB channels.',
+  'notation-stem-shape': 'black/half are engraving shape-table keys; changing these strings changes notation geometry.',
+  'document-white-flattening': 'Optical document preprocessing flattens alpha to white before grayscale; this is input processing, independent of display/print themes.',
+  'ink-interpolation-registration': '@property requires a computationally independent initial percentage; 108% is the completed ink-writing geometry.',
+};
+export const ruleVersions = {};
+function cssLengths(value) {
+  // Asset URLs and quoted font/content identities are not CSS dimensions.
+  const syntax = value.replace(/url\((?:[^()'"]|'[^']*'|"[^"]*")*\)/gi, '').replace(/(['"])(?:\\.|(?!\1).)*?\1/g, '');
+  return [...syntax.matchAll(/(?<![\w-])(-?(?:\d*\.)?\d+)(px|rem|em|ms|s|%|vh|vw|dvh|svh|vmax|ch|pt)(?![a-z])/g)].map(m=>m[0]).filter(v=>!/^[-+]?0(?:\.0+)?(?:px|rem|em|ms|s|%|vh|vw|dvh|svh|vmax|ch|pt)$/.test(v) && v!=='100%');
+}
 function namedTokens(value) {
   // Lex CSS identifiers, skipping balanced var()/url() arguments and quoted strings.
   // In particular --ds-red and animation identifiers are not the color token red.
@@ -82,6 +88,8 @@ export function scanDesignFile(file, source) {
       while (node && node.type !== 'root') { ancestry.unshift(node.selector ?? `@${node.name} ${node.params ?? ''}`); node = node.parent; }
       const context = ancestry.join(' / ') + ' / ' + decl.prop;
       if (decl.parent.type === 'atrule' && decl.parent.name === 'font-face' && decl.prop === 'font-family' && assetFaces.has(decl.value.replace(/^['"]|['"]$/g, ''))) return;
+      const registration = decl.parent.type === 'atrule' && decl.parent.name === 'property' && decl.parent.params === '--written' && decl.prop === 'initial-value' && decl.value === '108%';
+      if (file.startsWith('src/design-system/') && !registration) for (const value of cssLengths(decl.value)) add('raw-css-dimension', context, value);
       colors(decl.value, context, !/^(?:font|font-family|animation-name|content)$/.test(decl.prop));
       if (/^(?:font|font-family)$/.test(decl.prop) && !tokenFont(decl.value) && !fontStack.test(decl.value)) add('font-allowlist', context, decl.value);
       fontStack.lastIndex = 0;
@@ -94,6 +102,7 @@ export function scanDesignFile(file, source) {
       if (!file.startsWith('src/design-system/') && rule.name === 'media' && /\b(?:width|height)\s*[:<>=][^)]*\d+(?:px|rem|em)\b/.test(rule.params)) add('raw-media-query', '@media', rule.params);
     });
     tree.walkRules(rule => {
+      if (/data-(?:design|ground)\s*[=\]]/.test(rule.selector)) add('legacy-theme-selector', rule.selector, rule.selector);
       if (file.startsWith('src/design-system/')) return;
       if (/(?:^|[\s>+~])(?:button|input|select|textarea)(?:[\s.:[>#]|$)/.test(rule.selector) && /[.#][\w-]+/.test(rule.selector)) add('screen-control-selector', rule.selector, rule.selector);
     });
@@ -119,6 +128,8 @@ export function scanDesignFile(file, source) {
   }
   collect(ast);
   function rawChannels(node, result = []) {
+    // paper-noise-geometry: exclude only tuples directly in those three named noise fields.
+    if (file === 'src/paper.ts' && ts.isArrayLiteralExpression(node) && ts.isArrayLiteralExpression(node.parent) && ts.isPropertyAssignment(node.parent.parent) && ['formation','flocs','tooth'].includes(node.parent.parent.name.getText(ast))) return result;
     if (ts.isArrayLiteralExpression(node) && node.elements.length === 3 && node.elements.every(n => ts.isNumericLiteral(n) && +n.text >= 0 && +n.text <= 255)) result.push(node.getText(ast));
     if (ts.isStringLiteralLike(node) && /^\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}$/.test(node.text)) result.push(node.getText(ast));
     ts.forEachChild(node, child => { rawChannels(child, result); }); return result;
@@ -188,7 +199,9 @@ export function scanDesignFile(file, source) {
       // safe-svg's exact expected renderer CSS is a protocol/security contract.
       // It stays visible in the immutable legacy ceiling; no file-wide exclusion.
       const protocol = file === 'src/safe-svg.ts' && createHash('sha256').update(text).digest('hex') === 'a2eac41dcdc8619d76a7fa20a204e3493f6db8670d9f659c9ad2f71f1622731c';
-      if (!protocol) colors(text, owner, namedColors.has(text.toLowerCase()) || /(?:fill|stroke|color|background(?:-color)?)\s*[:=]/i.test(text));
+      const stemShape = file === 'src/staffView.ts' && text === 'black' && ts.isConditionalExpression(node.parent) && node.parent.condition.getText(ast) === 'shape.filled';
+      const documentWhite = file === 'server/page-render.mjs' && text === '#ffffff' && ts.isPropertyAssignment(node.parent) && node.parent.name.getText(ast) === 'background' && node.parent.parent.parent?.expression?.getText(ast).endsWith('.flatten');
+      if (!protocol && !stemShape && !documentWhite) colors(text, owner, namedColors.has(text.toLowerCase()) || /(?:fill|stroke|color|background(?:-color)?)\s*[:=]/i.test(text));
       if (fontStack.test(text)) add('raw-font', owner, text);
       fontStack.lastIndex = 0;
       classes(text, owner);
@@ -235,54 +248,21 @@ function aggregate(entries) {
   return [...result.values()].sort((a, b) => key(a).localeCompare(key(b)));
 }
 function observations(read, paths) { return aggregate(paths.flatMap(file => scanDesignFile(file, read(file)))); }
-export function checkBaseline(actual, baseline, ceiling) {
-  const errors = [], current = new Map(actual.map(row => [key(row), row.count]));
-  const approved = new Map(baseline.map(row => [key(row), row.count]));
-  const original = new Map(ceiling.map(row => [key(row), row.count]));
-  for (const row of actual) if ((approved.get(key(row)) ?? 0) < row.count) errors.push(`NEW ${key(row)} (${row.count} > ${approved.get(key(row)) ?? 0})`);
-  for (const row of baseline) {
-    if (current.get(key(row)) !== row.count) errors.push(`STALE baseline: remove/update ${key(row)} (${row.count} → ${current.get(key(row)) ?? 0})`);
-    if ((original.get(key(row)) ?? 0) < row.count) errors.push(`BASELINE GREW beyond production ceiling: ${key(row)}`);
-  }
-  return errors;
+export function checkBaseline(actual, baseline) {
+  return [
+    ...baseline.map(row => `NONEMPTY baseline is forbidden: ${key(row)}`),
+    ...actual.map(row => `NEW ${key(row)} (${row.count ?? 1} occurrences)`),
+  ];
 }
-/** Only upgraded rule versions can gain entries, once, bounded by production. */
-export function mergeNewRules(actual, baseline, ceiling) {
-  const old = new Map(baseline.entries.map(row => [key(row), row]));
-  const original = new Map(ceiling.map(row => [key(row), row.count]));
-  for (const row of actual) {
-    if ((old.get(key(row))?.count ?? 0) >= row.count) continue;
-    if ((ruleVersions[row.kind] ?? 1) <= (baseline.ruleVersions?.[row.kind] ?? 1)) throw Error(`Rule is not new: ${key(row)}`);
-    if ((original.get(key(row)) ?? 0) < row.count) throw Error(`New rule exceeds production ceiling: ${key(row)}`);
-    old.set(key(row), row);
-  }
-  return { ...baseline, ruleVersions, entries: [...old.values()].sort((a, b) => key(a).localeCompare(key(b))) };
-}
-export function checkGrowth(baseline, previous) {
-  const cap = new Map(previous.entries.map(row => [key(row), row.count]));
-  return baseline.entries.filter(row => (cap.get(key(row)) ?? 0) < row.count && (baseline.ruleVersions?.[row.kind] ?? 1) <= (previous.ruleVersions?.[row.kind] ?? 1)).map(row => `BASELINE GREW since reference: ${key(row)}`);
-}
+/** The migration is complete; neither CLI switches nor new rule versions can revive a baseline. */
+export function mergeNewRules() { throw Error('Non-empty baselines are forbidden; fix violations at their source.'); }
+export function checkGrowth(baseline) { return baseline.entries.map(row => `NONEMPTY baseline is forbidden: ${key(row)}`); }
 function main() {
+  if (process.argv.includes('--initialize-baseline') || process.argv.includes('--merge-new-rules')) throw Error('Baseline migration is retired; the baseline must remain empty.');
+  const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
   const actual = observations(file => fs.readFileSync(path.join(root, file), 'utf8'), files());
-  const originalPaths = execFileSync('git', ['ls-tree', '-r', '--name-only', legacyCommit], { cwd: root, encoding: 'utf8' }).trim().split('\n').filter(productFile);
-  const ceiling = observations(file => execFileSync('git', ['show', `${legacyCommit}:${file}`], { cwd: root, encoding: 'utf8', maxBuffer: 4e6 }), originalPaths);
-  if (process.argv.includes('--initialize-baseline')) {
-    if (fs.existsSync(baselinePath)) throw Error('Baseline already exists; remove resolved entries explicitly. It may only shrink.');
-    const errors = checkBaseline(actual, actual, ceiling); if (errors.length) throw Error(errors.join('\n'));
-    fs.writeFileSync(baselinePath, JSON.stringify({ legacyCommit, entries: actual }, null, 2) + '\n');
-  }
-  let baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
-  if (process.argv.includes('--merge-new-rules')) {
-    baseline = mergeNewRules(actual, baseline, ceiling);
-    fs.writeFileSync(baselinePath, JSON.stringify(baseline, null, 2) + '\n');
-  }
-  if (baseline.legacyCommit !== legacyCommit) throw Error('Cannot change the legacy production ceiling');
-  const errors = checkBaseline(actual, baseline.entries, ceiling);
-  const reference = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'HEAD';
-  let previous;
-  try { previous = JSON.parse(execFileSync('git', ['show', `${reference}:scripts/design-token-baseline.json`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })); } catch { /* First foundation commit has no baseline yet. */ }
-  if (previous) errors.push(...checkGrowth(baseline, previous));
+  const errors = checkBaseline(actual, baseline.entries);
   if (errors.length) { console.error(errors.join('\n')); process.exitCode = 1; }
-  else console.log(`Design token guard passed: ${actual.length} exact legacy entries (${actual.reduce((sum, row) => sum + row.count, 0)} occurrences); zero new violations.`);
+  else console.log('Design token guard passed: 0 baseline entries; zero violations.');
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

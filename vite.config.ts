@@ -1,3 +1,4 @@
+import { designAssetsPlugin } from './scripts/design-assets.mjs';
 import { inlineThemeSource } from './scripts/theme-source.mjs';
 import { writeRoleManifest } from './scripts/design-token-manifest.mjs';
 import { join } from 'node:path';
@@ -22,7 +23,7 @@ export default defineConfig({
       hmr: { protocol: 'wss', host: previewOrigin.hostname, clientPort: Number(previewOrigin.port || 443) },
     } : {}),
   },
-  plugins: [{ name: 'theme-role-manifest', buildStart() { writeRoleManifest(); }, watchChange(id) { if (id.endsWith('/design-system/tokens.css')) writeRoleManifest(); } },
+  plugins: [designAssetsPlugin(), { name: 'theme-role-manifest', buildStart() { writeRoleManifest(); }, watchChange(id) { if (id.endsWith('/design-system/tokens.css')) writeRoleManifest(); } },
     {
       name: 'lightscore-offline-shell',
       generateBundle(_, bundle) {
