@@ -1258,3 +1258,5 @@
 
 :root { --ds-space-36: 36px; }
 @theme inline { --spacing-36: var(--ds-space-36); }
+
+:root { --ds-opacity-disabled-action: .45; }

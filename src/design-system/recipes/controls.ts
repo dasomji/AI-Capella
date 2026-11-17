@@ -4,6 +4,7 @@ export const controlBase =
   "tw:box-border tw:m-0 tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-focus tw:focus-visible:outline-offset-4 tw:disabled:cursor-default tw:aria-disabled:cursor-wait tw:motion-reduce:transition-none";
 export const disabledRecipe =
   "tw:disabled:opacity-(--ds-opacity-disabled) tw:aria-disabled:opacity-(--ds-opacity-disabled)";
+const actionDisabled = "tw:disabled:opacity-(--ds-opacity-disabled-action) tw:aria-disabled:opacity-(--ds-opacity-disabled-action) tw:disabled:pointer-events-none tw:aria-disabled:pointer-events-none";
 const denseDisabled =
   "tw:disabled:opacity-(--ds-opacity-disabled-admin) tw:aria-disabled:opacity-(--ds-opacity-disabled-admin)";
 export const buttonVariants = [
@@ -77,7 +78,7 @@ function buttonRecipeStyles({
     ].join(" ");
   if (variant in parityButtonShapes) {
     const shape = parityButtonShapes[variant as keyof typeof parityButtonShapes];
-    return [controlBase, disabledRecipe, "tw:inline-flex tw:gap-8 tw:cursor-pointer", variant === "review-item" ? "tw:border-solid" : "tw:items-center tw:justify-center " + (["tile","compact","hint"].includes(variant) ? "tw:border tw:border-solid" : ""), shape,
+    return [controlBase, ["tile", "compact", "review-item", "hint", "domain-language"].includes(variant) ? actionDisabled : disabledRecipe, "tw:inline-flex tw:gap-8 tw:cursor-pointer", variant === "review-item" ? "tw:border-solid" : "tw:items-center tw:justify-center " + (["tile","compact","hint"].includes(variant) ? "tw:border tw:border-solid" : ""), shape,
       (variant === "transcription-language" || variant === "domain-language") ? pressed ? "tw:text-ink" : "tw:text-ink-secondary" : "",
       variant === "tile" && pressed ? "tw:border-transcription-accent tw:shadow-transcription-selected" : ""].join(" ");
   }
@@ -93,7 +94,7 @@ function buttonRecipeStyles({
         : buttonIntents[intent];
   return [
     variant.startsWith("dense") ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : controlBase,
-    variant.startsWith("dense") ? denseDisabled : disabledRecipe,
+    variant.startsWith("dense") ? denseDisabled : ["standard", "pill", "tour"].includes(variant) ? actionDisabled : disabledRecipe,
     variant.startsWith("dense") ? "tw:leading-admin tw:normal-nums" : "tw:leading-body",
     (variant.startsWith("dense") ? (variant==="dense-sort"?"tw:inline-block ":"tw:inline-block tw:text-center ") : "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 ") + "tw:border-solid tw:whitespace-nowrap tw:cursor-pointer " + (variant === "dense-sort" ? "tw:border-0 tw:text-left" : "tw:border"),
     buttonShapes[variant as keyof typeof buttonShapes],
@@ -163,7 +164,7 @@ function fieldRecipeStyles(
         : admin ? "tw:text-label tw:font-auth-body tw:leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
     control: [
       admin ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : variant === "ruled" || variant === "transcription" ? controlBase.split(" ").filter(name => !name.startsWith("tw:focus-visible:")).join(" ") : controlBase,
-      disabledRecipe,
+      variant === "ruled" || variant === "transcription" ? "" : disabledRecipe,
       "tw:block tw:w-full tw:min-w-0 tw:font-regular tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
       kind === "textarea" && admin
         ? "tw:h-auto tw:min-h-textarea tw:resize-y tw:border tw:border-solid tw:rounded-field tw:p-10 tw:font-auth-body tw:text-label tw:leading-body tw:bg-admin-surface tw:text-admin-ink"
