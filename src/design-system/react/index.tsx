@@ -242,7 +242,7 @@ export function Field({
         </p>
       )}
       {error && (
-        <p id={controlId + "-error"} className={slots.error}>
+        <p id={controlId + "-error"} role="alert" className={slots.error}>
           {error}
         </p>
       )}
