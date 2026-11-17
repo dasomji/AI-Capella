@@ -8,7 +8,7 @@ export async function registerOfflineWorker() {
     if (!registration.active || document.querySelector('#offline-update')) return;
     const notice = createButton({text:off('update'),variant:'offline-update',attrs:{id:'offline-update'}});
     notice.onclick = () => { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {once:true}); registration.waiting?.postMessage('ACTIVATE_UPDATE'); };
-    document.body.append(notice);
+    (document.querySelector("#app") ?? document.body).append(notice);
   };
   const warm=()=>registration.active?.postMessage('PREPARE_ASSETS');
   if('requestIdleCallback' in window)window.requestIdleCallback(warm,{timeout:10000});else setTimeout(warm,10000);
