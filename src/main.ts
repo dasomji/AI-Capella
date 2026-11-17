@@ -71,7 +71,7 @@ function openLibrarySheet(
     variant: "library-sheet",
     title,
     content,
-    behavior: { opener, onClose },
+    behavior: { opener, onClose, ...(closeVariant === "player" ? { initialFocus: (): HTMLElement => sheet.element } : {}) },
   });
   const head = sheet.element.querySelector("header")!;
   const grab = document.createElement("span");
