@@ -94,3 +94,11 @@ Each theme authors `--ds-material-strategy: light | ink`, independent of its bro
 lanterns and additive ribbons; `ink` to pergament, multiplied lanterns/glows and
 source-over ribbon lines. Night paper/Velvet select `light`; Parchment selects `ink`.
 These roles preserve the previous pixels without using browser scheme as a material policy.
+
+### Canvas reset constants
+
+The eight remaining literal `globalAlpha = 1` writes reset drawing state before the next
+layer; they do not choose paint strength. The two `shadowBlur = 0` writes in `lightName.ts`
+and `titleStage.ts` end the glow pass so the crisp foreground is drawn without shadow.
+These are canvas state resets, independent of theme. Staff (12) and roll (18) sounding-note
+glow blur are design values and now consume `score-staff-glow-blur` / `score-roll-glow-blur`.

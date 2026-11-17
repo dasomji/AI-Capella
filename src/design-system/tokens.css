@@ -13,6 +13,8 @@
 
 /* Primitive palette; only semantic --ds-* roles are public. */
 :root {
+  --ds-score-staff-glow-blur: 12;
+  --ds-score-roll-glow-blur: 18;
   --ds-scale-card-lift: 1.03;
   --ds-compositor-opacity: opacity;
   --ds-position-center: 50%;
@@ -2205,7 +2207,6 @@
   --ds-panel-toast-enter-transform: translate(-50%, var(--ds-space-content));
   --ds-panel-toast-shown-transform: translate(-50%, 0);
   --ds-panel-note-enter-transform: translate(-50%,var(--ds-note-enter-offset));
-  --ds-panel-specimen-transform: translateZ(0);
   --ds-panel-debug-font-family: ui-monospace, monospace;
 }
 

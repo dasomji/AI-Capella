@@ -921,7 +921,7 @@ export class PianoRoll {
         // Lit gel, glowing in the voice's colour.
         ctx.save();
         ctx.shadowColor = s.color;
-        ctx.shadowBlur = 18;
+        ctx.shadowBlur = Number(this.theme.roles['score-roll-glow-blur']);
         gelPill(ctx, s.x, s.y, s.w, s.h, s.color, true);
         ctx.restore();
       }
