@@ -603,7 +603,7 @@ export function createMenu(options: MenuOptions) {
       if (item.icon) button.append(item.icon);
       button.append(document.createTextNode(item.label));
       if (nested && options.variant === "library")
-        button.classList.add("ds-library-menu-option");
+        button.classList.add(...r.libraryUtilityRecipe("ds-library-menu-option").split(" "));
       if (item.checked) {
         const check = element("span", slots.check, "✓");
         check.setAttribute("aria-hidden", "true");
@@ -613,17 +613,17 @@ export function createMenu(options: MenuOptions) {
       if (item.options) {
         const value = element(
           "span",
-          "ds-library-menu-value",
+          r.libraryUtilityRecipe("ds-library-menu-value"),
           item.value ?? "",
         );
         button.append(value);
         const chevron = item.disclosureIcon ?? element("span", "", "⌄");
         if (chevron instanceof Element) {
-          chevron.classList.add("ds-library-menu-chevron");
+          chevron.classList.add(...r.libraryUtilityRecipe("ds-library-menu-chevron").split(" "));
           chevron.setAttribute("aria-hidden", "true");
         }
         button.append(chevron);
-        const sub = element("div", "ds-library-menu-sub");
+        const sub = element("div", r.libraryUtilityRecipe("ds-library-menu-sub"));
         sub.hidden = true;
         sub.setAttribute("role", "group");
         sub.setAttribute("aria-label", item.label);
