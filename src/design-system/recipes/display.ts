@@ -183,7 +183,7 @@ function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }
       (records ? " tw:max-account:static tw:max-account:border-0 tw:max-account:p-flush tw:max-account:bg-transparent" : ""),
     cell:
       "tw:text-left tw:align-top tw:leading-leading-body tw:text-ink tw:tabular-nums tw:px-small tw:py-small tw:max-w-(--ds-table-cell-max) tw:border-rule " + line + " " +
-      (mono ? "tw:font-mono tw:text-small tw:whitespace-nowrap" : variant === "metrics" ? "tw:font-control tw:text-body-small tw:whitespace-nowrap" : "tw:font-control tw:text-body-small tw:wrap-anywhere") +
+      (mono ? "tw:font-mono tw:text-small tw:whitespace-nowrap" : variant === "metrics" ? "tw:font-control tw:text-body-small tw:whitespace-nowrap" : (records ? "tw:font-control tw:text-body-small tw:wrap-break-word" : "tw:font-control tw:text-body-small tw:wrap-anywhere")) +
       (records
         ? " tw:max-account:max-w-none tw:max-account:border-0 tw:max-account:p-flush tw:max-account:whitespace-normal tw:max-account:wrap-anywhere tw:max-account:grid tw:max-account:grid-cols-(--ds-admin-definition-columns) tw:max-account:gap-small tw:max-account:justify-items-start tw:max-account:items-baseline tw:max-account:before:content-[attr(data-label)] tw:max-account:before:text-small tw:max-account:before:text-ink-secondary tw:max-account:before:font-control"
         : ""),
