@@ -343,3 +343,6 @@
 
 /* Text alignment inheritance has no named Tailwind utility. */
 @utility text-align-inherit { text-align: inherit; }
+
+/* The switch thumb is generated, but its simple geometry is utility-expressible. */
+@utility player-switch-thumb-transition { transition: var(--ds-player-switch-after-transition-101); }
