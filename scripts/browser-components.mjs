@@ -10,13 +10,13 @@ const records=[];
 try {
  for(const theme of ['night-paper','parchment'])for(const [width,height]of [[1440,900],[768,1024],[390,844],[844,390]]) {
   const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce'});
-  let rejectCreate=true,patches=0,invitations=0;
+  let rejectCreate=true,patches=0,invitations=0,holdCreate=false,releaseCreate;
   const capabilities={manageMembers:false,editPieces:false,transcribe:false};
   const ensemble={id:'fixture',name:'Evening singers',kind:'choir',isLead:true,membershipId:'lead-membership',capabilities:{manageMembers:true,editPieces:true,transcribe:true}};
   await page.route('**/api/**',async route=>{
    const request=route.request(),path=new URL(request.url()).pathname;
    let data={},status=200;
-   if(path==='/api/ensembles'&&request.method()==='POST') {if(rejectCreate){data={code:'service_unavailable'};status=503;}else data={id:'fixture'};}
+   if(path==='/api/ensembles'&&request.method()==='POST') {if(holdCreate)await new Promise(resolve=>{releaseCreate=resolve;});if(rejectCreate){data={code:'service_unavailable'};status=503;}else data={id:'fixture'};}
    else if(path==='/api/ensembles')data=[ensemble];
    else if(path==='/api/me')data={user:{id:'lead',name:'Test lead',email:'admin@test.com'}};
    else if(path==='/api/ensembles/fixture/members')data=[{id:'member',userId:'singer',name:'Singer',email:'user@test.com',isLead:false,capabilities}];
@@ -69,7 +69,20 @@ try {
   await page.screenshot({path:`${out}/${theme}-${width}x${height}-destructive-confirm.png`});
   await page.keyboard.press('Escape');
   await confirmation.waitFor({state:'detached'});
-  records.push({theme,width,height,inlineError:!baseline,memberPatches:patches,invitationPosts:invitations,danger:true});
+  // A failure that arrives after dismissal must still be announced, without changing save timing.
+  await page.evaluate(()=>B.closeOverlay());
+  await page.locator('dialog[open]').waitFor({state:'detached'});
+  rejectCreate=true;holdCreate=true;
+  await page.evaluate(()=>C.createEnsembleSheet(()=>{}));
+  await page.locator('dialog[open] input').fill('Evening singers');
+  await page.locator('dialog[open] button[type=submit]').click();
+  await page.keyboard.press('Escape');
+  await page.locator('dialog[open]').waitFor({state:'detached'});
+  assert.ok(releaseCreate,'Creation reached the API before dismissal');
+  releaseCreate();
+  const lateError=page.locator('#toast[role=alert]');
+  await lateError.waitFor();assert.ok(await lateError.innerText());
+  records.push({theme,width,height,inlineError:!baseline,memberPatches:patches,invitationPosts:invitations,danger:true,lateErrorAfterClose:true});
   await page.close();
   console.log('COMPONENTS',theme,width,height,'PASS');
  }
