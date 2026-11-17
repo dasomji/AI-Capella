@@ -1769,3 +1769,96 @@
 }
 
 :root {--ds-debug-ground:rgb(0 0 0 / 0.75);--ds-debug-font:500 12px/1.3 ui-monospace, monospace;}
+
+/* P6a panels: structural sizes and effects shared by all themes. */
+:root {
+  --ds-panel-leading-mark: 33px;
+  --ds-panel-leading-overview: 15.6px;
+  --ds-panel-leading-overview-phone: 11.6px;
+  --ds-panel-leading-mark-row: 39px;
+  --ds-panel-leading-status: 1.3em;
+  --ds-panel-leading-scan: 1.45;
+  --ds-panel-stroke-mark: 1.5px;
+  --ds-panel-size-mark: 17px;
+  --ds-panel-size-value: 36px;
+  --ds-panel-size-unit: 15px;
+  --ds-panel-size-debug: 12px;
+  --ds-panel-leading-debug: 1.3;
+  --ds-panel-size-label: 11px;
+  --ds-panel-leading-label: 1.2;
+  --ds-panel-leading-single: 1;
+  --ds-panel-popover-width: 320px;
+  --ds-panel-tempo-width: 84px;
+  --ds-panel-control-height: 38px;
+  --ds-panel-range-height: 22px;
+  --ds-panel-layer-sync-debug: 10000;
+  --ds-panel-layer-fps: 2000;
+  --ds-panel-toast-transition: opacity var(--ds-duration-normal), transform var(--ds-duration-normal) var(--ds-ease-standard);
+  --ds-panel-sheet-transition: transform var(--ds-duration-normal) var(--ds-ease-standard);
+  --ds-panel-backdrop-transition: opacity var(--ds-duration-normal);
+  --ds-panel-tour-transition: opacity var(--ds-duration-note-out) ease;
+  --ds-panel-sheet-enter-transform: translateY(100%);
+  --ds-panel-toast-enter-transform: translate(-50%, var(--ds-space-16));
+  --ds-panel-toast-shown-transform: translate(-50%, 0);
+  --ds-panel-note-enter-transform: translate(-50%,var(--ds-note-enter-offset));
+  --ds-panel-specimen-transform: translateZ(0);
+  --ds-panel-debug-font-family: ui-monospace, monospace;
+}
+@theme inline {
+  --leading-panel-mark: var(--ds-panel-leading-mark);
+  --leading-panel-overview: var(--ds-panel-leading-overview);
+  --leading-panel-overview-phone: var(--ds-panel-leading-overview-phone);
+  --leading-panel-mark-row: var(--ds-panel-leading-mark-row);
+  --spacing-panel-status: var(--ds-panel-leading-status);
+  --leading-panel-scan: var(--ds-panel-leading-scan);
+  --font-weight-panel-mark: var(--ds-weight-strong);
+  --text-panel-mark: var(--ds-panel-size-mark);
+  --text-panel-value: var(--ds-panel-size-value);
+  --text-panel-unit: var(--ds-panel-size-unit);
+  --text-panel-debug: var(--ds-panel-size-debug);
+  --leading-panel-debug: var(--ds-panel-leading-debug);
+  --text-panel-label: var(--ds-panel-size-label);
+  --leading-panel-label: var(--ds-panel-leading-label);
+  --leading-panel-single: var(--ds-panel-leading-single);
+  --spacing-panel-popover: var(--ds-panel-popover-width);
+  --spacing-panel-tempo: var(--ds-panel-tempo-width);
+  --spacing-panel-control: var(--ds-panel-control-height);
+  --spacing-panel-range: var(--ds-panel-range-height);
+  --z-index-panel-sync-debug: var(--ds-panel-layer-sync-debug);
+  --z-index-panel-fps: var(--ds-panel-layer-fps);
+  --font-panel-debug: var(--ds-panel-debug-font-family);
+  --tracking-panel-label: var(--ds-panel-label-letter-spacing-2);
+  --text-panel-field: var(--ds-panel-field-font-size-5);
+  --radius-panel-mark: var(--ds-panel-rmark-border-radius-8);
+  --text-panel-word: var(--ds-panel-rmark-word-font-size-10);
+  --text-panel-overview: var(--ds-panel-section-marks-rmark-font-size-12);
+  --radius-panel-overview: var(--ds-panel-section-marks-rmark-border-radius-14);
+  --radius-panel-stepper: var(--ds-panel-stepper-border-radius-18);
+  --radius-panel-step: var(--ds-panel-stepper-button-not-stepper-value-border-radius-22);
+  --text-panel-overview-phone: var(--ds-panel-section-marks-rmark-font-size-26);
+  --text-panel-note: var(--ds-panel-ctl-note-font-size-31);
+  --radius-panel-round: var(--ds-panel-round-btn-border-radius-33);
+  --radius-panel-preset: var(--ds-panel-bpm-preset-border-radius-39);
+  --text-panel-copy: var(--ds-panel-custom-tempo-font-size-41);
+  --text-panel-mark-row: var(--ds-panel-mark-row-rmark-font-size-43);
+  --text-panel-overview-word: var(--ds-panel-section-marks-rmark-word-font-size-44);
+  --font-weight-panel-overview-word: var(--ds-panel-section-marks-rmark-word-font-weight-45);
+  --color-panel-scan-image: var(--ds-panel-scan-mark-img-background-53);
+  --color-panel-stepper: var(--ds-panel-stepper-background-54);
+  --shadow-panel-stepper: var(--ds-panel-stepper-box-shadow-55);
+  --text-panel-offset: var(--ds-panel-offset-row-font-size-56);
+  --color-panel-stepper-parchment: var(--ds-panel-stepper-background-61);
+  --shadow-panel-stepper-parchment: var(--ds-panel-stepper-box-shadow-62);
+  --font-panel-revival: var(--ds-panel-rmark-font-family-63);
+  --font-weight-panel-revival: var(--ds-panel-rmark-font-weight-64);
+  --color-panel-debug: var(--ds-debug-ground);
+  --spacing-panel-tour: var(--ds-tour-note-width);
+  --spacing-panel-power: var(--ds-power-note-width);
+  --spacing-panel-toast-bottom: var(--ds-toast-bottom);
+  --spacing-panel-toast-bottom-phone: var(--ds-toast-bottom-phone);
+  --spacing-panel-toast-max: var(--ds-toast-max-width);
+  --spacing-panel-toast-max-sheet: var(--ds-toast-max-width-sheet);
+  --transition-duration-panel-note-in: var(--ds-duration-note-in);
+  --text-shadow-panel-menu: var(--ds-component-menu-shadow);
+  --color-panel-menu-hover: var(--ds-component-menu-hover);
+}
