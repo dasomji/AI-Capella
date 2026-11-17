@@ -231,6 +231,7 @@ export async function verifyDesignSystemBehavior() {
   assert(document.activeElement === opener, "Focus return");
   const next = D.createSheet({ title: "Sheet", body: "Outside closes" });
   next.open();
+  const closed = new Promise(resolve => next.element.addEventListener("close", resolve, { once: true }));
   next.element.dispatchEvent(
     new PointerEvent("pointerdown", {
       bubbles: true,
@@ -238,6 +239,7 @@ export async function verifyDesignSystemBehavior() {
       clientY: -1,
     }),
   );
+  await closed;
   assert(!next.element.open, "Outside policy");
   let selected = 0;
   const menu = D.createMenu({
