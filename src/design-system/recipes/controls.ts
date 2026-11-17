@@ -296,7 +296,7 @@ function switchRecipeStyles({
     label: "tw:relative tw:inline-flex tw:items-center tw:font-control tw:text-label tw:leading-leading-body tw:text-ink tw:cursor-pointer " + controlSizeRecipe(density),
     input: "tw:sr-only tw:peer",
     root: controlBase + " " + disabledRecipe + " tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:w-switch tw:min-w-control-target-touch tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:px-compact tw:py-flush tw:cursor-pointer tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-(length:--ds-stroke-focus) tw:peer-focus-visible:outline-focus tw:peer-focus-visible:outline-offset-(--ds-space-compact) tw:peer-disabled:opacity-(--ds-opacity-disabled) " + (density === "compact" ? "tw:min-h-control-height-compact tw:touch:min-h-control-target-touch " : "tw:min-h-control-target-touch ") + (checked ? "tw:bg-accent tw:border-accent" : "tw:bg-surface-hover tw:border-rule-strong"),
-    thumb: "tw:block tw:size-section tw:rounded-round tw:shrink-0 tw:bg-surface-sunken tw:transition-transform tw:duration-switch tw:motion-reduce:transition-none " + (checked ? "tw:translate-x-group" : ""),
+    thumb: "tw:block tw:size-section tw:rounded-round tw:shrink-0 tw:transition-transform tw:duration-switch tw:motion-reduce:transition-none " + (checked ? "tw:bg-on-accent tw:translate-x-group" : "tw:bg-ink-secondary"),
   };
 }
 function buttonRecipe(
