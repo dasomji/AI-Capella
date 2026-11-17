@@ -15,7 +15,7 @@ import { Button, Field, Input, Dialog, toast } from './design-system/react';
   {association => <Input {...association} type="email" required
     value={email} onChange={event => setEmail(event.target.value)} />}
 </Field>
-<Button variant="cta" intent="primary" type="submit" busy={saving}>Save</Button>
+<Button size="full-width" intent="primary" type="submit" busy={saving}>Save</Button>
 <Dialog open={open} title="Rename" onCancel={() => setOpen(false)}
   behavior={{ opener: triggerRef.current, busy: saving, busyCancel: 'block', outside: 'ignore' }}>
   {/* Screen-owned form / translated text / validation */}
@@ -52,7 +52,7 @@ const field = createField({
 });
 const save = createButton({
   text: "Save",
-  variant: "cta",
+  size: "full-width",
   intent: "primary",
   busy: saving,
   attrs: { "data-action": "save" },
@@ -74,8 +74,9 @@ place and retain existing IDs/data hooks and layout. `updateButton(iconButton, {
 its icon recipe; `updateField(field, {error: undefined})` clears error appearance and associations
 without replacing or blurring the native control. Both button adapters default to `type=button`.
 Busy uses guarded `aria-disabled`, preserving focus; actual `disabled` remains native.
-Switches default to command buttons; `mode="checkbox"` / `{mode:'checkbox', name:'permission'}`
-preserves native form semantics. Switches and toggle groups are controlled: the owner updates
+Switches default to command buttons; `mode="checkbox"` preserves a native input with switch semantics.
+Use switches for immediately applied settings. Use `Checkbox` for choices submitted together with Save
+or Invite; changing the visual control must never change when data saves. Switches and toggle groups are controlled: the owner updates
 checked/value after the command succeeds. Use `createMenu(...).dispose()` when removing a menu.
 
 Other exports: IconButton, Select, Textarea, Checkbox, Switch, Surface/Card, Badge, ToggleGroup,
@@ -158,41 +159,42 @@ pointer-events, accent-color and print-color-adjust despite the opt-in reset.
 5. Use onCancel for requested cancellation and onClose only for completed-close notification.
    Give dialogs an opener; confirm dialogs may stack above drawers. Never add manual inert
    observers. Toast-then-close is supported.
-6. Preserve intentional aliases below until the owner resolves their named decisions. Aliases
-   preserve existing looks; they do not promise distinct appearance.
+6. Use independent intent and size choices for ordinary actions. Named domain composition slots
+   preserve behavior hooks; they do not introduce another ordinary button family.
 7. Verify keyboard focus, actual Tab wrap/return, nested stacking, native dark controls, menu
    rerenders, toast-then-close and closing transitions in a real browser for every screen slice.
    Attribute/ARIA parity and computed-style parity are complementary checks.
 
-## Pending owner choices and named parity variants
+## Decided controls (AICAP-28)
 
-| Recipe                      | Named appearances                                                                                                                       | Pending decision              |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| button                      | standard (42px, radius 12), cta (full width, 44px), pill (44px, round), tour (inverted, 38px), dense (44px, radius 3, admin mono), link | D08; dense/link D10; tour D17 |
-| button intent               | secondary, primary, danger, quiet; admin danger remains outlined                                                                        | D08 / D14                     |
-| icon-button                 | standard (40), small (32), transcription (40), admin-close (28px system close glyph, min-height 44), admin-copy (min-height 32)         | D08 / D10                     |
-| field/input/select/textarea | boxed, ruled (account), domain, transcription, admin; label/control/hint/error slots                                                    | D09 / D10                     |
-| checkbox                    | standard, permission (20), export (18)                                                                                                  | D11 / D10                     |
-| switch                      | player (52×32), admin (48×26), capability (28×16); button or native checkbox semantics                                                  | D11 / D10                     |
-| surface/card                | surface, raised, material, admin, tour (inverted)                                                                                       | D12 / D10 / D17               |
-| badge/status                | neutral, success, warning, error, accent                                                                                                | D15                           |
-| toggle-group                | segmented, language, transcription, admin, presets                                                                                      | D10 / D11                     |
-| toolbar                     | one wrapping appearance; screen owns contents                                                                                           | D10                           |
-| empty-state                 | landing-actions, library-text, admin-text, jobs-hidden                                                                                  | D17                           |
-| loading                     | one status appearance, reduced-motion-aware                                                                                             | D17                           |
-| table                       | records (phone labeled records), scroll, metrics; header/cell/row/empty/pagination slots                                                | D10 / D16                     |
-| dialog                      | dialog, sheet, drawer, confirm, transcription, admin-confirm; panel/content/header/title/body/actions slots                             | D12 / D14                     |
-| menu                        | popover, sheet, member, admin; original warm hover/check roles retained                                                                 | D13 / D10                     |
-| toast                       | info/error; one recipe and separate placement role                                                                                      | D15                           |
+| Primitive | Choices and behavior |
+| --- | --- |
+| Button | `standard` ordinary family; `primary`, `secondary`, `quiet`, `danger` intents; `size="standard"`, `compact`, `full-width`, `touch` |
+| IconButton | Explicit `size="standard"`, `compact`, `touch`; named glyph/domain variants retain their semantics |
+| Field/Input/Select/Textarea | Default `ruled` writing line; boxed exceptions `search`, `numeric`, `repeated-name`; domain/account variants retain layout and association hooks |
+| Checkbox | `standard`, `permission`, `export`, `export-voice`; use for submitted choices |
+| Switch | Use for immediate settings, including shared-device policy and member capabilities; invitation permissions use checkboxes |
+| Field/Checkbox/Switch | `density="standard"`, `compact`, `touch`; Field density is inherited by its native React control |
+| EmptyState | `standard`, `compact`, `jobs-hidden`; supply a useful next action when available; irrelevant scan work stays hidden |
+| Loading/Status | Related readable inline layouts; distinguish loading from empty and error; use explicit feedback intent |
+| Tour/power hint | Ordinary paper surface and ink; tour spotlight and keyboard behavior remain |
 
-Intentional aliases: menu popover/sheet/member (D13); dialog/confirm appearance (D14, different
-roles); table scroll/metrics (D16); field ruled/transcription (D09/D10); toggle admin/presets
-unselected items (D10, selected admin is underlined); tour danger=primary and quiet=secondary
-(D17); dense primary/quiet=secondary (D10). These aliases are explicit in recipe comments and
-covered by regression tests. Card accepts `as="article" | "section" | "div" | "aside"`.
+Standard actions are at least 44×44. Compact actions use the authored desktop roles and expand
+at `tw:touch:` (phones/tablets up to the panel breakpoint and any device with a coarse pointer).
+Specialized music controls retain their shape; their composition owns the surrounding hit area.
+Informational badges are passive labels, with shared intent colors and readable text.
 
-No pending decision is treated as accepted. Keep role names in screens; changing the retained
-appearance after a decision belongs to recipes/tokens rather than per-screen class rewrites.
+Retired ordinary Button variants: `cta` → `size="full-width"`; `pill`, `tour`, `job-action` →
+standard; `dense`, `compact` → `size="compact"`; `dense-sort`, `link`, `tour-link`, `hint-link`,
+`transcription-link` → quiet compact; `hint` → secondary; `account-delete-confirm` → danger.
+Generic `boxed` fields are retired in favor of the three purpose variants above.
+`landing-actions`/`library-text` empty states become `standard`; `admin-text` becomes `compact`.
+
+Field errors follow their controls and participate in `aria-describedby`/`aria-invalid`.
+`updateField` preserves the focused input. Operation errors belong inside the active panel and
+stay until resolved. Irreversible confirmations use `destructive` on ConfirmDialog plus a danger
+final action; `confirmAction` can build that action. Caller-supplied actions remain responsible
+for their intent. See [the design-system guide](design-system.md) for overlay, theme and support decisions.
 
 ## Verification
 
@@ -222,11 +224,11 @@ Card/Badge add `library`; overlays add `library-prompt`, `library-sheet` and `li
 Menu adds `library`. Their material and responsive slots live in `recipes/library.ts` and read `tokens.css`;
 `library.css` contains generated spotlight residue only. `createLibraryPart` owns typed composition slots;
 `updateLibraryBanner` retains its hooks during state changes. These names preserve parity,
-including the historical night-paper loading card and parchment phone menu-button ground.
+including the parchment phone menu-button ground. Library waiting and empty content now use the shared Loading/EmptyState family.
 
 DOM Menu items may supply an icon Node, radio semantics and nested `options` with a current
 `value`. Labels remain text, disabled commands stay guarded, and the menu owner disposes the
-binding on close. Popovers share native modal focus and measured entrance/fade transport.
+binding on close. Popovers share native modal focus and fade transport.
 
 Library prompts, main menus and settings panels now share centered geometry and fade through
 `openDialog`. Their legacy variant names retain stable hooks only; they no longer select
