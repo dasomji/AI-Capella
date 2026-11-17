@@ -279,3 +279,11 @@ it('emits the standard, admin and player focus offsets from their authored spaci
     expect(values,variant).toContain(`var(--ds-space-${scale})`);
   }
 },15000);
+
+it('keeps player domain compositions equivalent to their shared app controls',()=>{
+  expect(r.transportRecipe().play).toBe(r.buttonRecipe({variant:'player-play'}));
+  expect(r.transportRecipe().command).toBe(r.buttonRecipe({variant:'player-transport'}));
+  expect(r.voiceRowRecipe().name).toBe(r.buttonRecipe({variant:'player-voice-name'}));
+  expect(r.voiceRowRecipe().more).toBe(r.iconButtonRecipe({variant:'voice-more'}));
+  expect(r.voiceChipRecipe()).toBe(r.buttonRecipe({variant:'player-chip'}));
+});
