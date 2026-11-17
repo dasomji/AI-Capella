@@ -182,7 +182,7 @@ function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }
       variant === "records" ? "tw:hover:bg-table-row-hover tw:cursor-pointer" : "tw:bg-transparent",
     empty: "tw:p-24 tw:text-admin-secondary tw:text-left",
     pagination:
-      "tw:flex tw:items-center tw:flex-wrap tw:gap-12 tw:mt-12 tw:mb-24 tw:font-auth-body tw:text-body tw:leading-body tw:text-admin-ink",
+      "tw:flex tw:items-center tw:flex-wrap tw:gap-12 tw:mt-12 tw:mb-24 tw:font-auth-body tw:text-body tw:leading-body tw:text-admin-ink tw:tabular-nums",
   };
 }
 /** Shared appearances; screen-owned data/selection/sorting stay outside recipes. */
