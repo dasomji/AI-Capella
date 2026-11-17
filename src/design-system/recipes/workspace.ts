@@ -57,6 +57,6 @@ export interface NavigationOptions { variant?: 'admin' }
 export function navigationRecipe(_options: NavigationOptions={}) {
   return normalizeRecipe({
     root:"tw:normal-nums tw:flex tw:gap-section tw:overflow-auto tw:max-account:gap-action",
-    item:(current=false)=>"tw:inline tw:shrink-0 tw:font-auth-mono tw:font-weight-body tw:text-body-small tw:leading-leading-admin tw:uppercase tw:tracking-(--ds-tracking-label) tw:py-inline tw:px-flush tw:whitespace-nowrap tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:[outline-color:var(--ds-admin-accent)] tw:focus-visible:outline-offset-(--ds-space-tight) tw:tabular-nums "+(current?'tw:text-admin-accent tw:underline tw:underline-offset-(--ds-space-small)':'tw:text-admin-ink tw:no-underline'),
+    item:(current=false)=>"tw:inline-flex tw:items-center tw:min-h-control-height-compact tw:min-w-control-height-compact tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:shrink-0 tw:font-auth-mono tw:font-weight-body tw:text-body-small tw:leading-leading-admin tw:uppercase tw:tracking-(--ds-tracking-label) tw:py-inline tw:px-flush tw:whitespace-nowrap tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:[outline-color:var(--ds-admin-accent)] tw:focus-visible:outline-offset-(--ds-space-tight) tw:tabular-nums "+(current?'tw:text-admin-accent tw:underline tw:underline-offset-(--ds-space-small)':'tw:text-admin-ink tw:no-underline'),
   });
 }
