@@ -340,3 +340,6 @@
 @utility panel-dedication-wait { --ded-wait: var(--ds-duration-dedication); }
 @utility panel-dedication-staff { --ded-wait: var(--ds-duration-dedication-staff); }
 @utility panel-dedication-night { --ded-wait: var(--ds-duration-dedication-night); }
+
+/* Text alignment inheritance has no named Tailwind utility. */
+@utility text-align-inherit { text-align: inherit; }
