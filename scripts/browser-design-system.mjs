@@ -366,6 +366,13 @@ export async function verifyP3ReviewFixes() {
     results.push(message);
   };
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const until = async (condition, message) => {
+    const deadline = performance.now() + 2000;
+    while (!condition()) {
+      if (performance.now() >= deadline) throw Error(message);
+      await wait(16);
+    }
+  };
   const opener = document.createElement("button");
   opener.textContent = "Regression opener";
   document.body.append(opener);
@@ -492,7 +499,7 @@ export async function verifyP3ReviewFixes() {
   const sheet = D.createSheet({ title: "Exit regression", content, behavior: { opener } });
   sheet.open();
   const close = sheet.close;
-  await wait(80);
+  await until(() => sheet.element.dataset.sheetState === "open", "Sheet enters open state");
   const nativeSheet = sheet.element;
   B.toast("Sheet toast then close");
   close();
@@ -504,7 +511,7 @@ export async function verifyP3ReviewFixes() {
     document.getElementById("toast").textContent === "Sheet toast then close",
     "M1 sheet toast survives close request",
   );
-  await wait(260);
+  await until(() => !nativeSheet.isConnected, "Sheet exit completes via transition or duration fallback");
   assert(
     !nativeSheet.isConnected &&
       document.getElementById("toast").getClientRects().length > 0,
@@ -542,7 +549,7 @@ export async function verifyP3ReviewFixes() {
     swipeDialog.open && swipeDialog.dataset.sheetState === "closing",
     "M2 swipe starts exit transition",
   );
-  await wait(260);
+  await until(() => !swipeDialog.isConnected, "Swipe exit completes via transition or duration fallback");
   assert(!swipeDialog.isConnected, "M2 swipe completes dismissal");
   swipeClose();
   B.dismissToast();
