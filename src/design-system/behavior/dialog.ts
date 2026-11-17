@@ -16,6 +16,8 @@ export interface DialogController {
     setBusy(busy: boolean): void;
 }
 let current: DialogController | undefined;
+let currentDialog: HTMLDialogElement | undefined;
+export function getActiveDialog() { return currentDialog; }
 export function closeOverlay() { current?.close(); }
 const focusable = 'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex]:not([tabindex="-1"])';
 function targets(root: HTMLElement) { return [...root.querySelectorAll<HTMLElement>(focusable)].filter(el => !el.closest('[hidden],[inert]') && el.getClientRects().length > 0); }
@@ -53,8 +55,7 @@ export function openDialog(dialog: HTMLDialogElement, options: DialogBehaviorOpt
             for (const [el, value] of saved)
                 el.inert = value;
             doc.body.style.overflow = previousOverflow;
-            if (current === controller)
-                current = undefined;
+            if (current === controller) { current = undefined; currentDialog=undefined; }
             if (previousFocus instanceof HTMLElement && previousFocus.isConnected && !previousFocus.closest('[inert]'))
                 previousFocus.focus({ preventScroll: true });
             options.onClose?.();
@@ -104,6 +105,7 @@ export function openDialog(dialog: HTMLDialogElement, options: DialogBehaviorOpt
     observer.observe(doc.body, { childList: true });
     doc.body.style.overflow = 'hidden';
     current = controller;
+  currentDialog=dialog;
     controller.setBusy(busy);
     const initial = typeof options.initialFocus === 'function' ? options.initialFocus() : options.initialFocus;
     (initial ?? dialog.querySelector<HTMLElement>('[autofocus]') ?? targets(dialog)[0] ?? dialog).focus({ preventScroll: true });

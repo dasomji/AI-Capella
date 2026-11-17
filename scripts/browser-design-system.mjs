@@ -45,7 +45,8 @@ export async function verifyDesignSystemBehavior() {
   let selected=0;const menu=D.createMenu({label:'Actions',items:[{label:'Alpha',onSelect:()=>selected++},{label:'Disabled',disabled:true,onSelect:()=>selected++},{label:'Beta',onSelect:()=>selected++}]});document.body.append(menu.element);const items=menu.element.querySelectorAll('button');items[0].focus();
   menu.element.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true}));assert(document.activeElement===items[2],'Skip disabled menu item');menu.element.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));assert(selected===1,'Keyboard menu activation');
   const busy=D.createButton({text:'Busy',busy:true,onClick:()=>selected++});document.body.append(busy);busy.focus();busy.click();assert(selected===1&&document.activeElement===busy&&!busy.disabled,'Focusable busy guard');
-  B.toast('<unsafe text>');assert(document.querySelectorAll('#toast').length===1,'Singleton toast');assert(document.querySelector('#toast').textContent==='<unsafe text>','Safe toast text');B.dismissToast();
+  const existingHost=document.getElementById('toast');
+  B.toast('<unsafe text>');assert(document.querySelectorAll('#toast').length===1,'Singleton toast');assert(document.querySelector('#toast').textContent==='<unsafe text>','Safe toast text');B.dismissToast();if(!existingHost)document.getElementById('toast')?.remove();
   menu.dispose();menu.element.remove();opener.remove();busy.remove();
   return {dialogFocus:true,inert:true,tabWrap:true,focusReturn:true,escape:true,outside:true,busyCancel:true,menuKeyboard:true,busyButton:true,toast:true};
 }

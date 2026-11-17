@@ -1,3 +1,4 @@
+import { getActiveDialog } from './dialog';
 import { toastRecipe, type ToastOptions } from '../recipes';
 export interface ToastMessage {
     text: string;
@@ -26,7 +27,8 @@ function render() {
         host.setAttribute('aria-atomic', 'true');
         document.body.append(host);
     }
-    const activeDialog = [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')].at(-1);
+    let activeDialog=getActiveDialog();
+    if(!activeDialog) { try { activeDialog=document.querySelector<HTMLDialogElement>('dialog:modal')??undefined; } catch { /* DOM test engines may not implement :modal. */ } }
     const parent = activeDialog ?? document.body;
     if (host.parentElement !== parent)
         parent.append(host);
