@@ -214,7 +214,7 @@ export function installTranscription(options: {
       if (j.state === "completed")
         actions.append(
           button(tr("review"), () => void review(j, title), {
-            variant: "pill",
+            variant: "standard",
             intent: "primary",
           }),
         );
@@ -455,7 +455,7 @@ export function installTranscription(options: {
               files = reorderPhotos(files, i, i + delta);
               renderFiles();
             },
-            { variant: "compact" },
+            { variant: "standard", size: "compact" },
           );
           b.setAttribute("aria-label", tr(label));
           updateButton(b, {
@@ -470,7 +470,7 @@ export function installTranscription(options: {
             files.splice(i, 1);
             renderFiles();
           },
-          { variant: "compact" },
+          { variant: "standard", size: "compact" },
         );
         updateButton(remove, { disabled: busy });
         controls.append(remove);
@@ -529,7 +529,7 @@ export function installTranscription(options: {
       language.append(chip);
     }
     const submit = button(tr("start"), () => void upload(), {
-      variant: "pill",
+      variant: "standard",
       intent: "primary",
       layout: ["tw:w-full", "tw:mt-inline"],
     });
@@ -706,27 +706,38 @@ export function installTranscription(options: {
           transcriptionJobRecipe().pencil,
         ),
       );
+      let comparing = false;
       const comparison = createSwitch({
-          mode: "checkbox",
-          variant: "comparison",
-          label: tr("compare"),
-          checked: false,
-          onChange: (checked) => {
-            updateSwitch(comparison, {
-              variant: "comparison",
-              label: tr("compare"),
-              checked,
-            });
-            if (checked) void showOriginal(currentPage);
-            else {
-              imageGeneration++;
-              imageAbort?.abort();
-              original.hidden = true;
-            }
-          },
-        }),
-        toggle = comparison.querySelector<HTMLInputElement>("input")!;
-      panel.append(comparison);
+        mode: "checkbox",
+        variant: "comparison",
+        label: tr("compare"),
+        checked: false,
+        onChange: setComparison,
+      });
+      const narrowToggle = createButton({
+        text: tr("showOriginal"),
+        attrs: { "aria-pressed": "false" },
+        onClick: () => setComparison(!comparing),
+      });
+      const narrowControls = el("div", undefined, transcriptionJobRecipe().comparisonToggle);
+      narrowControls.append(narrowToggle);
+      const wideControls = el("div", undefined, transcriptionJobRecipe().comparisonWide);
+      wideControls.append(comparison);
+      // Above the panes, so switching back never requires scrolling through the review form.
+      layout.before(narrowControls);
+      function setComparison(checked: boolean) {
+        comparing = checked;
+        main.dataset.comparison = checked ? "original" : "score";
+        updateSwitch(comparison, { variant: "comparison", label: tr("compare"), checked });
+        updateButton(narrowToggle, { text: tr(checked ? "showScore" : "showOriginal"), pressed: checked });
+        if (checked) void showOriginal(currentPage);
+        else {
+          imageGeneration++;
+          imageAbort?.abort();
+          original.hidden = true;
+        }
+      }
+      panel.append(wideControls);
       const list = el("ul", undefined, transcriptionJobRecipe().reviewItems);
       function focusItem(item: ReviewItem) {
         const target = score.querySelector<SVGGraphicsElement>(
@@ -740,12 +751,8 @@ export function installTranscription(options: {
         target?.classList.remove(...transcriptionJobRecipe().flash.split(" "));
         requestAnimationFrame(() => target?.classList.add(...transcriptionJobRecipe().flash.split(" ")));
         if (item.page) {
-          updateSwitch(comparison, {
-            variant: "comparison",
-            label: tr("compare"),
-            checked: true,
-          });
-          void showOriginal(item.page);
+          currentPage = item.page;
+          setComparison(true);
         }
       }
       for (const item of items) {
@@ -776,7 +783,7 @@ export function installTranscription(options: {
           );
       const actions = el("div", undefined, transcriptionJobRecipe().reviewActions);
       importButton = button(tr("import"), () => void importResult(), {
-        variant: "pill",
+        variant: "standard",
         intent: "primary",
       });
       importButton.dataset.valid = String(
@@ -843,7 +850,7 @@ export function installTranscription(options: {
       actions.append(importButton, secondary, permissionNote);
       panel.append(actions);
       layout.append(main, panel);
-      d.append(layout);
+      d.append(narrowControls, layout);
       const [{ default: create }, { VerovioToolkit }] = await Promise.all([
         import("verovio/wasm"),
         import("verovio/esm"),
