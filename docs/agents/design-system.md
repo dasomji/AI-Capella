@@ -73,12 +73,14 @@ P2/P3 API:
   `.rgba()` returns a CSS string, `.withAlpha()` a frozen Color. Existing `theme.colors` remains.
 - React imports `useTheme` from `design-system/theme/react`; it returns `undefined` during SSR
   and initial hydration, then the cached client snapshot through `useSyncExternalStore`.
-- `onSystemThemeChange(fn)` maintains a set of disposably registered quiet-moment handlers.
-  While main registers its handler (unconditionally), OS, storage and explicit choices defer
-  the entire DOM/canvas change to its existing quiet-moment reload. Storage/menu choices consume
-  the initial `?design=` override so it cannot overwrite a newer preference on reload. Consumers without that handler, including main and the showcase, apply changes live.
 - Runtime material writers update their distinct live input, then call
   `notifyThemeMaterialChange()` to invalidate the snapshot/revision and notify subscribers.
+  The generated paper texture is a CSS output and does not publish a semantic revision.
+
+Cached reads do not poll DOM attributes; the preference API invalidates synchronously and the
+attribute observer handles external attribute edits at its next delivery. Subscriber errors
+are isolated with `reportError`; nested invalidation continues the current pass with the
+latest snapshot for remaining listeners. There is no quiet-moment preference override API.
 
 Reuse one snapshot per drawing frame; never read computed styles per note. Renderer caches compare revisions; see `renderer-themes.md`. Verify actual playback swaps as
 well as the showcase.

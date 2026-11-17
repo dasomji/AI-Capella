@@ -13,9 +13,12 @@ Light word is paired with the bundled Italianno face; another script requires an
 
 `main.ts` subscribes without registering a quiet-moment preference handler. It reassigns DOM
 voice colors and repaints covers, marks, overview and the open score view without changing audio
-or rehearsal state. Font completion rebuilds metrics. Neither color, material nor type swaps
+or rehearsal state. Fonts already loaded cause one repaint pass; a pending font completion rebuilds metrics only
+if its captured revision is still current. Neither color, material nor type swaps
 reload the page. Roll bitmaps/buffers and overview layers compare theme revisions; paper tiles
-compare material inputs (ignoring their own generated CSS image notification). Pattern caches
+compare material inputs. New textures are generated at idle with revision gating; a plain
+new-theme ground is drawn until completion. Generated CSS fibre does not publish a new
+semantic revision, and `paperchange` invalidates texture-dependent buffers on completion. Pattern caches
 are per context; existing dimension/DPR keys remain. Title subscriptions dispose with their
 animations and invalidate all retained sprites/layers. Use the runtime fibre input
 `--ds-material-fibre-live`; do not overwrite the selected `material-fibre` role.
@@ -46,7 +49,8 @@ cache key includes every texture input and ignores only its own generated image 
 The remaining `paper.ts` channel-flow entries are noise recipe triples `[cellsX,cellsY,weight]`,
 not RGB. `staffView.ts`'s `black` labels select filled SMuFL notehead stem geometry.
 These exact legacy entries remain visible in the shrinking baseline. Coverage masks use the
-opaque print-paper input; only its alpha contributes to destination-in/out operations.
+opaque `canvas-mask` input; only its alpha contributes to destination-in/out operations.
+Visible gel highlights use `material-gel-gloss-color`, independently of print paper.
 
 ## Static brand exception
 
@@ -57,3 +61,24 @@ existing literal baseline entries stay visible. The favicon/manifest ground is t
 night-paper brand ground; favicon voice paths retain the original 4-voice brand spectrum.
 The theme controller updates browser chrome metadata live. Future brand changes must generate
 these assets from the token source together, rather than recoloring each asset independently.
+
+## Live-swap regression
+
+`npm run test:browser:renderer-themes` starts a disposable Vite fixture and Playwright browser,
+using isolated storage for retained/fresh instances. It compares exact canvas pixels for all
+six directed swaps among night-paper, parchment and velvet, including velvet/parchment-start
+rolls, staff, overview, paper, gel shades, stage fill, covers, title layers, ribbons and backdrop.
+It checks the production DOM voice/repaint subscriber, idle completion ordering, warm frame
+attribute/style reads, and rasterized PDF job-start print freeze. CI runs it after Chromium
+installation. `pdftoppm` is used in CI; local environments may use Python PyMuPDF as a fallback.
+
+`P2_MUTANT=roll|paper|overview|stage|lantern npm run test:browser:renderer-themes` applies the
+reviewer's stale-cache or construction-only Lantern mutation inside the fixture's Vite
+transform. Each invocation must fail at the affected pixel comparison. It never edits the
+owner preview's source. `BROWSER_EVIDENCE` selects the external artifact directory.
+
+Material strategy objects are selected lazily from current inputs. The roll drops/creates its
+Lantern as its style changes; title ribbons select the current/earlier draft from the snapshot
+and dispose/recreate their interactive field when that strategy changes. Explicit title drafts
+and roll overrides remain device choices. Covers have no retained color state; title layers
+and backdrop already invalidate through their theme subscriptions.

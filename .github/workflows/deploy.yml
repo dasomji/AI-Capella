@@ -112,6 +112,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser:renderer-themes
       - name: Start local S3 service
         run: docker run -d --name ci-seaweedfs -p 127.0.0.1:28333:8333 -v "$PWD/scripts/s3-local.json:/etc/seaweedfs/s3.json:ro" -v "$PWD/scripts/s3-local-master.toml:/etc/seaweedfs/master.toml:ro" chrislusf/seaweedfs:4.06@sha256:a064c6923daf4451c943cec2f437a67523d7792ee589089bc4d4c27a61d78dea server -master.volumeSizeLimitMB=64 -s3 -s3.config=/etc/seaweedfs/s3.json
       - name: Wait for S3
