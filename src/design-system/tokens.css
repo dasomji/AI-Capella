@@ -249,7 +249,16 @@
   --ds-radius-indicator: 5px;
   --ds-radius-tile-dense: 6px;
   --ds-radius-media: 4px;
+  /* D10: size API. Compact is desktop-only; touch restores the minimum target. */
   --ds-control-height-touch: 44px;
+  --ds-control-height-compact: var(--ds-space-panel);
+  --ds-control-target-touch: var(--ds-control-height-touch);
+  --ds-control-padding-inline: var(--ds-space-content);
+  --ds-control-padding-block: var(--ds-space-small);
+  --ds-control-padding-inline-compact: var(--ds-space-inline);
+  --ds-control-padding-block-compact: var(--ds-space-compact);
+  --ds-control-gap: var(--ds-space-small);
+  --ds-control-gap-compact: var(--ds-space-snug);
   --ds-size-note: 13.5px;
   --ds-size-position: 23px;
   --ds-size-voice-chip: 15.5px;
@@ -2781,6 +2790,14 @@
   --spacing-control-dense: var(--ds-space-control-dense);
   --spacing-control-height: var(--ds-control-height);
   --spacing-control-height-touch: var(--ds-control-height-touch);
+  --spacing-control-height-compact: var(--ds-control-height-compact);
+  --spacing-control-target-touch: var(--ds-control-target-touch);
+  --spacing-control-padding-inline: var(--ds-control-padding-inline);
+  --spacing-control-padding-block: var(--ds-control-padding-block);
+  --spacing-control-padding-inline-compact: var(--ds-control-padding-inline-compact);
+  --spacing-control-padding-block-compact: var(--ds-control-padding-block-compact);
+  --spacing-control-gap: var(--ds-control-gap);
+  --spacing-control-gap-compact: var(--ds-control-gap-compact);
   --spacing-control-height-tour: var(--ds-control-height-tour);
   --spacing-control-textarea-height: var(--ds-control-textarea-height);
   --spacing-ded-name-padding: var(--ds-ded-name-padding);
