@@ -158,6 +158,7 @@ function libraryPrompt(options: {
     actions.append(cancel, submit);
     const dialog = createDialog({
       variant: "library-prompt",
+      destructive: options.danger,
       title: options.title,
       body: options.body,
       content: form,
@@ -355,8 +356,7 @@ function setViewMode(mode: 'landing' | 'library' | 'player') {
   app.classList.toggle('mode-landing', mode === 'landing');
   app.classList.toggle('mode-library', mode === 'library');
   app.classList.toggle('mode-player', mode === 'player');
-  if (mode === 'player') setAppearanceRehearsing(true);
-  else if (mode === 'library') setAppearanceRehearsing(false);
+  setAppearanceRehearsing(mode === 'player');
   // The title screen keeps its plain ground: only the voice ribbons move there.
   backdrop.setShown(mode !== 'landing');
   closeOverlay();
@@ -1395,7 +1395,8 @@ const reorder = attachReorder(songGridEl, document.querySelector<HTMLElement>('.
     const places=ids.filter(id=>importedSongs.some(song=>song.id===id)).map((id,sortKey)=>({id,sortKey}));
     for(const place of places){const song=importedSongs.find(s=>s.id===place.id);if(song)song.order=place.sortKey;}
     importedSongs.sort((a,b)=>(a.order??0)-(b.order??0));
-    saveSongOrder(places).catch(err=>{toast(t('moveFailed',{msg:errorText(err)}),'error');location.reload();});
+    // Reload restores the server order; a persistent toast would disappear immediately.
+    saveSongOrder(places).catch(()=>location.reload());
   },
   onEnd: () => {
     if (songListStale) {
