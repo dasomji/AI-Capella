@@ -248,7 +248,7 @@ export function AdminDataTable({
                     mono={!!columns.find((c) => c.id === cell.column.id)?.mono}
                     data-label={label(cell.column.id)}
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <span>{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
                   </TableCell>
                 ))}
               </TableRow>

@@ -51,7 +51,7 @@ function SectionTable({ caption, initial, path, columns, empty }: {
                 <TableRow key={row.id ?? i}>
                   {columns.map((c) => (
                     <TableCell key={c.id} mono={c.mono} data-label={c.label}>
-                      {c.cell ? c.cell(row) : (row[c.id] ?? "—")}
+                      <span>{c.cell ? c.cell(row) : (row[c.id] ?? "—")}</span>
                     </TableCell>
                   ))}
                 </TableRow>
