@@ -87,7 +87,10 @@ describe("pure recipes", () => {
       expect(r.buttonRecipe({size})).toContain(size === "compact" ? "tw:min-h-control-height-compact" : "tw:min-h-control-height-touch");
     }
     expect(r.buttonRecipe({size:"full-width"})).toContain("tw:w-full");
-    expect(r.buttonVariants).not.toEqual(expect.arrayContaining(["cta", "pill", "tour", "dense"]));
+    for (const retired of ["cta", "pill", "tour", "dense", "dense-sort", "link", "compact", "job-action", "tour-link", "hint-link", "transcription-link", "hint"]) expect(r.buttonVariants).not.toContain(retired);
+    expect(r.fieldVariants).not.toContain("boxed");
+    expect(r.fieldRecipe().control).toContain("tw:border-0");
+    expect(r.fieldRecipe().control).toContain("tw:border-b-(length:--ds-stroke-thin)");
     expect(r.buttonRecipe({size:"compact",intent:"danger"})).toContain("tw:bg-danger");
   });
   it("defines player appearances in token-backed utilities and reserves CSS for native parts", () => {
