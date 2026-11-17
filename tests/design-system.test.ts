@@ -106,9 +106,7 @@ describe('theme source contracts M1/M2/M6/M7 and m1/m3/m4/m6/N2', () => {
     const paper = fs.readFileSync('src/paper.ts','utf8');
     expect(paper).toContain("setProperty('--ds-material-fibre-live'");
     expect(paper).not.toContain('notifyThemeMaterialChange();');
-    const components = fs.readFileSync('src/design-system/legacy-components.css','utf8');
-    expect(components).toContain('.fb-item.kind-wish');
-    expect(components).toMatch(/\.admin-detail[\s\S]*font-family:var\(--ds-font-auth-body\)/);
+    expect(fs.existsSync('src/design-system/legacy-components.css')).toBe(false);
   });
   it('M2 derives every alias/storage/compatibility mapping from the registry', async () => {
     const { themeRegistry } = await import('../src/design-system/theme/bootstrap');
