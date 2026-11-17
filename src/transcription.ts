@@ -55,7 +55,7 @@ function button(
 function updateButton(button: HTMLButtonElement, options: Parameters<typeof updatePrimitiveButton>[1]) {
   const hooks = [...button.classList].filter(name => name.startsWith("tx-"));
   updatePrimitiveButton(button, options);
-  button.classList.add(...hooks);
+  button.classList.add(...shellRecipe(hooks.join(" ")).split(" "));
 }
 function errorText(e: unknown) {
   return tr(e instanceof ApiError ? e.code : "error");
@@ -126,6 +126,7 @@ export function installTranscription(options: {
     permissionNote: HTMLElement | undefined;
   const entry = options.entry,
     host = options.jobs;
+  host.classList.add(...shellRecipe("", "transcription-jobs").split(" "));
   const socket = options.socket;
   const jobMenus: (() => void)[] = [];
   const base = () => `/ensembles/${scope}`;
@@ -733,7 +734,7 @@ export function installTranscription(options: {
           inline: "center",
         });
         target?.classList.remove("tx-flash");
-        requestAnimationFrame(() => target?.classList.add("tx-flash"));
+        requestAnimationFrame(() => target?.classList.add(...shellRecipe("tx-flash").split(" ")));
         if (item.page) {
           updateSwitch(comparison, {
             variant: "comparison",

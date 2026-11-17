@@ -498,7 +498,7 @@
 @custom-variant shell-0256-0 { & { @slot; } }
 @custom-variant shell-0257-0 { & { @slot; } }
 @custom-variant shell-0258-0 { & h2 { @slot; } }
-@custom-variant shell-0259-0 { & p { @slot; } }
+@custom-variant shell-0259-0 { & p:not(.ds-reset) { @slot; } }
 @custom-variant shell-0260-0 { & { @slot; } }
 @custom-variant shell-0261-0 { & { @slot; } }
 @custom-variant shell-0262-0 { & { @slot; } }
@@ -568,7 +568,7 @@
 @custom-variant shell-0321-0 { & { @slot; } }
 @custom-variant shell-0322-0 { &.warning { @slot; } }
 @custom-variant shell-0323-0 { & { @slot; } }
-@custom-variant shell-0324-0 { & .tx-wash { @slot; } }
+@custom-variant shell-0324-0 { &.tx-flash .tx-wash { @slot; } }
 @custom-variant shell-0325-0 { & [hidden] { @slot; } }
 @custom-variant shell-0325-1 { &[hidden] { @slot; } }
 @custom-variant shell-0325-2 { &[hidden] { @slot; } }
@@ -582,7 +582,7 @@
 @custom-variant shell-0333-0 { @media (max-width:theme(--breakpoint-score)) { & .tx-pencil { @slot; } } }
 @custom-variant shell-0334-0 { @media (max-width:theme(--breakpoint-score)) { & { @slot; } } }
 @custom-variant shell-0335-0 { @media (prefers-reduced-motion:reduce) { &.running { @slot; } } }
-@custom-variant shell-0335-1 { @media (prefers-reduced-motion:reduce) { & .tx-wash { @slot; } } }
+@custom-variant shell-0335-1 { @media (prefers-reduced-motion:reduce) { &.tx-flash .tx-wash { @slot; } } }
 @utility shell-wordmark-font-0010-0 { font: var(--ds-shell-wordmark-font-31); }
 @utility shell-wordmark-letter-spacing-0010-0 { letter-spacing: var(--ds-shell-wordmark-letter-spacing-32); }
 @utility shell-wordmark-background-0011-0 { background: var(--ds-shell-theme-wordmark-aria-label-lightscore-background-3); }
@@ -964,3 +964,6 @@
 @utility shell-tx-language-gap-0334-0 { gap: var(--ds-shell-tx-language-gap-356); }
 @utility shell-tx-segment-animation-0335-0 { animation: none; }
 @utility shell-tx-flash-animation-0335-1 { animation: none; }
+
+/* Shorthand reset also restores border style/color, beyond border-width utilities. */
+@utility shell-border-reset { border: 0; }
