@@ -346,7 +346,7 @@ function switchRecipeStyles({
   return {
     label:
       (variant === "comparison" ? "tw:relative tw:flex" : "tw:relative tw:inline-flex") + " tw:items-center tw:gap-small tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-panel tw:flex-nowrap tw:leading-leading-admin" : variant === "comparison" ? " tw:min-h-toolbar-dense tw:my-section tw:text-label" : ""),
-    input: variant === "capability" || variant === "comparison" ? "tw:absolute tw:opacity-opacity-hidden tw:w-heading tw:h-section tw:m-flush tw:peer" : "tw:sr-only tw:peer",
+    input: variant === "capability" || variant === "comparison" ? "tw:leading-leading-body tw:absolute tw:opacity-opacity-hidden tw:w-heading tw:h-section tw:m-flush tw:peer" : "tw:leading-leading-body tw:sr-only tw:peer",
     root:
       controlBase +
       " " +
