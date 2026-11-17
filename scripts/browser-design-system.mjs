@@ -723,7 +723,9 @@ export async function verifyOwnerComponents() {
     if(getComputedStyle(normal).borderTopWidth!=='0px'||getComputedStyle(normal).borderBottomWidth==='0px') throw Error('Normal forms must use writing lines');
     if(getComputedStyle(boxed).borderTopWidth==='0px') throw Error('Search must use a box');
     const luminance=paint=>{
-      const rgb=paint.match(/[\d.]+/g).slice(0,3).map(Number).map(value=>{value/=255;return value<=0.04045?value/12.92:((value+0.055)/1.055)**2.4;});
+      const channels=paint.match(/[\d.]+/g).map(Number);
+      if(channels.length>3&&channels[3]!==1)throw Error("Switch contrast requires opaque paints: "+paint);
+      const rgb=channels.slice(0,3).map(value=>{value/=255;return value<=0.04045?value/12.92:((value+0.055)/1.055)**2.4;});
       return rgb[0]*0.2126+rgb[1]*0.7152+rgb[2]*0.0722;
     };
     for(const checked of [false,true]) {
