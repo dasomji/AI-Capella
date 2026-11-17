@@ -38,7 +38,7 @@ export const feedbackIntents = [
 ] as const;
 export type FeedbackIntent = (typeof feedbackIntents)[number];
 export interface FeedbackOptions {
-  variant?: "standard" | "admin";
+  variant?: "standard" | "admin" | "account";
   intent?: FeedbackIntent;
 }
 const feedback: Record<FeedbackIntent, string> = {
@@ -64,12 +64,17 @@ export const toggleGroupVariants = [
   "presets",
 ] as const;
 export interface ToggleGroupOptions {
+  /** Optional inline separator preserves text choices without a flex gap. */
+  separator?: string;
   variant?: (typeof toggleGroupVariants)[number];
 }
 function toggleGroupRecipeStyles({
   variant = "segmented",
+  separator,
 }: ToggleGroupOptions = {}) {
   const item = (pressed = false) => {
+    if (variant === "language" && separator !== undefined)
+      return "tw:inline-block tw:box-border tw:m-0 tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4 tw:border-0 tw:rounded-field tw:bg-transparent tw:font-auth-mono tw:text-small tw:font-regular tw:leading-admin tw:cursor-pointer tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-focus tw:focus-visible:outline-offset-4 " + (pressed ? "tw:text-ink" : "tw:text-ink-secondary");
     if (variant === "segmented")
       return (
         "tw:box-border tw:m-0 tw:inline-flex tw:items-center tw:gap-7 tw:h-32 tw:px-12 tw:py-0 tw:rounded-menu tw:border-0 tw:font-control tw:font-label tw:text-body-small tw:whitespace-nowrap tw:cursor-pointer " +
@@ -98,8 +103,9 @@ function toggleGroupRecipeStyles({
     );
   };
   return {
-    root:
-      "tw:inline-flex tw:items-center tw:flex-wrap " +
+    root: variant === "language" && separator !== undefined
+      ? "tw:block tw:font-auth-mono tw:text-small tw:leading-admin tw:text-ink-secondary"
+      : "tw:inline-flex tw:items-center tw:flex-wrap " +
       (variant === "segmented"
         ? "tw:p-3 tw:rounded-segment tw:bg-surface tw:border tw:border-solid tw:border-rule"
         : variant === "transcription"
@@ -112,6 +118,7 @@ function toolbarRecipeStyles() {
   return "tw:flex tw:items-center tw:flex-wrap tw:gap-12 tw:font-body tw:text-ink";
 }
 function statusRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
+  if (variant === "account") return "tw:block tw:my-16 tw:font-auth-body tw:text-body tw:leading-account tw:text-center " + feedback[intent];
   if(variant === "admin")return "tw:block tw:my-16 tw:font-auth-body tw:text-body tw:leading-body tw:text-admin-ink";
   return (
     "tw:m-0 tw:font-body tw:text-body-small tw:leading-field " +
