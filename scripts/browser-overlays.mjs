@@ -46,12 +46,29 @@ try {
    await page.evaluate(()=>panel.close());
   }
   if(!baseline) {
+   // Keyboard surrogate with a distinct visual viewport; retain the focused lower invitation field.
+   const keyboard = await page.evaluate(async () => {
+    const descriptor=Object.getOwnPropertyDescriptor(window,'visualViewport');
+    const viewport=Object.assign(new EventTarget(),{width:innerWidth,height:innerHeight,offsetTop:0,offsetLeft:0});
+    Object.defineProperty(window,'visualViewport',{configurable:true,value:viewport});
+    const content=document.createElement('div');
+    for(let i=0;i<18;i++){const p=document.createElement('p');p.textContent='Ensemble member '+i;content.append(p);}
+    const input=D.createInput({type:'email',value:'invitation@test.com'});content.append(D.createField({label:'Invitation email',control:input}));
+    const dialog=D.createSheet({variant:'domain-sheet',title:'Members & invitations',content});dialog.open();input.focus();
+    viewport.height=Math.round(innerHeight/2);viewport.offsetTop=20;viewport.dispatchEvent(new Event('resize'));
+    await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);
+    const r=input.getBoundingClientRect(),d=dialog.element.getBoundingClientRect();
+    const result={focused:document.activeElement===input,top:r.top,bottom:r.bottom,viewportTop:viewport.offsetTop,viewportBottom:viewport.offsetTop+viewport.height,dialogTop:d.top,dialogBottom:d.bottom};
+    dialog.close();if(descriptor)Object.defineProperty(window,'visualViewport',descriptor);else delete window.visualViewport;
+    return result;
+   });
+   assert.ok(keyboard.focused&&keyboard.top>=keyboard.viewportTop&&keyboard.bottom<=keyboard.viewportBottom,JSON.stringify(keyboard));
    // Last actions of a long menu remain reachable; an already-open dialog keeps identity on rotation.
    await page.evaluate(()=>{const menu=D.createMenu({label:'Ensembles',items:Array.from({length:25},(_,i)=>({label:i===24?'Final ensemble action':`Ensemble ${i+1}`,onSelect(){}}))});window.rotation=D.createSheet({variant:'library-sheet',title:'Ensembles',content:menu.element});rotation.open();window.rotationElement=rotation.element;});
    await page.getByRole('menuitem',{name:'Final ensemble action',exact:true}).click();
    await page.setViewportSize({width:height,height:width});
    await page.evaluate(()=>new Promise(requestAnimationFrame));
-   assert.equal(await page.evaluate(()=>rotation.element===rotationElement&&rotation.element.open),true,'D24 keeps open identity');
+   assert.equal(await page.evaluate(()=>{const r=rotation.element.getBoundingClientRect();return rotation.element===rotationElement&&rotation.element.open&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1;}),true,'D24 keeps open identity and containment');
    await page.evaluate(()=>rotation.close());
    await page.setViewportSize({width,height});
    for(const variant of ['member','job']) {
