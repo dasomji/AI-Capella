@@ -32,7 +32,9 @@ try {
    return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
   });
   await page.routeWebSocket('**',ws=>ws.close());
-  await page.goto(`http://localhost:${server.address().port}${route}`);await page.waitForTimeout(2500);
+  await page.goto(`http://localhost:${server.address().port}${route}`);
+  await page.locator(route==='/'?'form input[type=email]':'#landing-empty').waitFor({state:'attached'});
+  await page.waitForLoadState('networkidle');
   const sizes={route,jsRaw:0,jsGzip:0,cssRaw:0,cssGzip:0,assets:[]};
   for(const asset of [...assets].sort()) {
    const body=await fs.readFile(path.join(build,'client',asset));const type=asset.endsWith('.js')?'js':'css';
