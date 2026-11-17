@@ -11,3 +11,9 @@ it.each(['--ds-widget--gap','--ds-'+('very-long-role-'.repeat(4))+'gap'])('rejec
 it('allows actual scales, references, and unmatched retained geometry',()=>{
  expect(scan(':root{--ds-space-control:12px;--ds-widget-gap:var(--ds-space-control);--ds-retained-height:123.123px}')).toEqual([]);
 });
+it.each(['--ds-widget-padding:0 var(--ds-space-control)','--ds-widget-border-radius:0'])('composes zero geometry in %s',decl=>{
+ expect(scan(`:root{--ds-space-none:0px;${decl}}`).some(r=>r.kind==='uncomposed-scale-length')).toBe(true);
+});
+it('preserves unitless arithmetic zero separately from geometric lengths',()=>{
+ expect(scan(':root{--ds-space-none:0px;--ds-leading-none:0;--ds-library-card-rest:0;--ds-widget-padding:var(--ds-space-none)}')).toEqual([]);
+});

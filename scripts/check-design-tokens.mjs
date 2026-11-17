@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import postcss from 'postcss';
-import {invalidTokenName, lengthAtoms, scaleRole, scaleSteps} from './design-token-policy.mjs';
+import {geometryRole, hasUnitlessZero, invalidTokenName, lengthAtoms, scaleRole, scaleSteps} from './design-token-policy.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const baselinePath = path.join(root, 'scripts/design-token-baseline.json');
@@ -143,6 +143,7 @@ export function scanDesignFile(file, source, options = {}) {
       if (enforceNames && checkSemanticName(decl.prop)) add('value-encoding-name', decl.prop, decl.prop);
       if (tokenSource) {
         if (decl.prop.startsWith('--ds-') && !scaleRole.test(decl.prop)) for (const atom of lengthAtoms(decl.value)) if (steps.has(atom.key)) add('uncomposed-scale-length',decl.prop,atom.raw);
+        if (!scaleRole.test(decl.prop) && geometryRole.test(decl.prop) && steps.has('0px') && hasUnitlessZero(decl.value)) add('uncomposed-scale-length',decl.prop,'0');
         const themed = decl.parent.type === 'rule' && /data-theme\s*=/.test(decl.parent.selector);
         // Print is intentionally independent of the device appearance (D18).
         const fixedPrint = ['--ds-print-paper','--ds-print-ink'].includes(decl.prop);

@@ -677,6 +677,7 @@ export const themeRoleNames = [
   "radius-indicator",
   "radius-media",
   "radius-menu",
+  "radius-none",
   "radius-pill",
   "radius-round",
   "radius-segment",
