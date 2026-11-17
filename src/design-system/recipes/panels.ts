@@ -17,7 +17,7 @@ export const panelInputStyles = {
   "panel-tempo": "ds-panel-field ds-panel-bpm-input bpm-input field " + inherit + " tw:w-panel-tempo tw:h-panel-control tw:rounded-panel-preset tw:border tw:border-solid tw:border-rule-strong tw:bg-surface tw:font-mono tw:font-label tw:text-panel-copy tw:leading-panel-single tw:min-w-0 tw:text-center tw:py-0 tw:px-6 tw:appearance-textfield tw:focus:border-ink-secondary tw:focus:outline-none ",
   "panel-measure": "ds-panel-field ds-panel-measure-input measure-input field " + inherit + " tw:h-control-height tw:rounded-card tw:border tw:border-solid tw:border-rule-strong tw:bg-surface tw:py-0 tw:px-12 tw:text-panel-field tw:min-w-0 tw:focus:border-ink-secondary tw:focus:outline-none ",
   "panel-export": "ds-panel-field field " + inherit + " tw:h-control-height tw:rounded-card tw:border tw:border-solid tw:border-rule-strong tw:bg-surface tw:py-0 tw:px-12 tw:text-panel-field tw:min-w-0 tw:focus:border-ink-secondary tw:focus:outline-none ",
-  "panel-offset": "ds-panel-range " + inherit + " tw:p-0 tw:border-0 tw:bg-transparent tw:rounded-field tw:flex-1 tw:appearance-none tw:h-panel-range tw:m-2 tw:cursor-default tw:select-text " + focus,
+  "panel-offset": "ds-panel-range " + inherit + " tw:p-0 tw:border-0 tw:bg-transparent tw:rounded-field tw:border-none tw:flex-1 tw:appearance-none tw:h-panel-range tw:m-2 tw:cursor-default tw:select-text " + focus,
 };
 export const panelCheckboxStyles = inherit + " tw:p-0 tw:border-0 tw:bg-transparent tw:rounded-field tw:appearance-auto tw:mt-3 tw:mr-3 tw:mb-3 tw:ml-4 " + focus;
 const parts = {
