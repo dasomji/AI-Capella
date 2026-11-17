@@ -172,3 +172,12 @@ it.each(['tw:[transform:translateX(13px)_var(--ds-transform)]','tw:[background:l
 it('permits named element-local writing inputs inside token-backed material expressions', () => {
   expect(scan("const x='tw:[mask-image:linear-gradient(var(--ds-writing-angle),_var(--ds-writing-ink)_calc(var(--written)_-_var(--ds-writing-feather)),_transparent_var(--written))]'")).toEqual([]);
 });
+
+it.each(['const x=<div style={{color:`rgb(${r},${g},${b})`}}/>;', 'Object.assign(el.style,{background:`rgb(${r},${g},${b})`});'])('checks computed object-style sinks %s', source => {
+  expect(scan(source).some(r=>r.kind==='computed-color-at-sink')).toBe(true);
+});
+it('requires a named import layer and checks raw Tailwind media variants', () => {
+  expect(scanDesignFile('src/design-system/app.css','@import "x.css" layer;').some(r=>r.kind==='unlayered-css-import')).toBe(true);
+  expect(scan("const x='tw:[@media_(max-width:_700px)]:hidden'").some(r=>r.kind==='raw-media-query')).toBe(true);
+  expect(scanDesignFile('src/design-system/tokens.css','[data-design=papier]{display:block}').some(r=>r.kind==='legacy-theme-selector')).toBe(true);
+});
