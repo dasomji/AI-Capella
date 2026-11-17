@@ -15,7 +15,7 @@
   width: var(--ds-space-action);
   height: var(--ds-space-action);
   margin-top: var(
-    --ds-panel-input-type-range-vendor-slider-thumb-margin-top
+    --ds-panel-thumb-offset
   );
   border-radius: var(--ds-radius-round);
   background: var(--ds-ink);

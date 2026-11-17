@@ -2690,10 +2690,10 @@ function renderSections() {
     ...sections.map((s, i) => {
       const b = sectionButton(s.label, i);
       const at = Math.max(0, Math.min(1, s.beat / total));
-      b.style.left = `calc(var(--ds-overview-mark-inset) + (100% - var(--ds-overview-mark-gutters)) * ${at})`;
+      b.style.left = `calc(var(--ds-space-content) + (100% - var(--ds-space-panel)) * ${at})`;
       // A mark that is a word ends before the next one (cut short with an ellipsis).
       const room = Math.max(0, Math.min(1, (sections[i + 1]?.beat ?? total) / total) - at);
-      b.style.maxWidth = `max(var(--ds-overview-mark-minimum), calc((100% - var(--ds-overview-mark-gutters)) * ${room} - var(--ds-overview-mark-gap)))`;
+      b.style.maxWidth = `max(var(--ds-space-action), calc((100% - var(--ds-space-panel)) * ${room} - var(--ds-space-tight)))`;
       return b;
     }),
   );

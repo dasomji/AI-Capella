@@ -12,12 +12,12 @@
   width: var(--ds-space-action);
   height: var(--ds-space-action);
   margin-top: var(
-    --ds-player-input-type-range-vendor-slider-thumb-margin-top
+    --ds-volume-thumb-offset
   );
   border-radius: var(--ds-radius-round);
   background: var(--ds-ink);
   box-shadow: var(
-    --ds-player-input-type-range-vendor-slider-thumb-box-shadow
+    --ds-volume-thumb-shadow
   );
 }
 /* Firefox exposes a separate generated volume track with the same authored track roles. */
@@ -45,7 +45,7 @@
 /* Light-material thumb elevation is applied to the native subpart that has no recipe-owned DOM node. */
 :root:root .ds-player-volume::-webkit-slider-thumb {
   box-shadow: var(
-    --ds-player-input-type-range-vendor-slider-thumb-box-shadow-light
+    --ds-volume-thumb-shadow-light
   );
 }
 }

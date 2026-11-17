@@ -296,7 +296,7 @@ it('uses named toast, title intensity and print viewport roles at their consumer
     for(const role of roles)expect(source,`${file}: ${role}`).toContain(`roles['${role}']`);
   }
   const main=readFileSync('src/main.ts','utf8');
-  for(const role of ['overview-mark-inset','overview-mark-gutters','overview-mark-minimum','overview-mark-gap'])
+  for(const role of ['space-content','space-panel','space-action','space-tight'])
     expect(main,role).toContain(`var(--ds-${role})`);
   expect(main).not.toContain('calc(16px + (100% - 32px)');
 });

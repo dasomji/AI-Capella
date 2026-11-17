@@ -38,7 +38,7 @@
 .ds-menu-item::before {
   content:'';position:absolute;inset:var(--ds-menu-glow-inset);z-index:var(--ds-layer-behind);
   border-radius:var(--ds-radius-round);background:var(--ds-component-menu-glow);
-  filter:blur(var(--ds-menu-glow-blur));opacity:0;pointer-events:none;
+  filter:blur(var(--ds-space-segment-dense));opacity:0;pointer-events:none;
   transition:opacity var(--ds-duration-fast);
 }
 /* The generated menu glow must remove its transition for reduced motion. */
