@@ -1,4 +1,3 @@
-// TODO(AICAP-28 role): retain distinct authored light temperatures as roles; using closest warm/hot inputs.
 import { readTheme, subscribeTheme } from './design-system/theme';
 // "Die Bühne" -- the title screen as a stage before the light comes on (design.ts START_STAGE).
 //
@@ -99,9 +98,9 @@ function offscreen(w: number, h: number, dpr: number) {
 function moteSprite(): HTMLCanvasElement {
   const [c, x] = offscreen(32, 32, 1);
   const g = x.createRadialGradient(16, 16, 0, 16, 16, 16);
-  g.addColorStop(0, readTheme().color('material-light-hot').rgba(1));
-  g.addColorStop(0.4, readTheme().color('material-light-warm').rgba(0.35));
-  g.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
+  g.addColorStop(0, readTheme().color('stage-mote-core').rgba(1));
+  g.addColorStop(0.4, readTheme().color('stage-mote-edge').rgba(0.35));
+  g.addColorStop(1, readTheme().color('stage-mote-edge').rgba(0));
   x.fillStyle = g;
   x.fillRect(0, 0, 32, 32);
   return c;
@@ -198,10 +197,10 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
     // passes; many faint layers would round off differently in each colour channel and tint it.
     const [cone, cx] = off();
     const along = cx.createRadialGradient(src.x, src.y, 0, src.x, src.y, reach);
-    along.addColorStop(0, readTheme().color('material-light-warm').rgba(0.55));
-    along.addColorStop(0.3, readTheme().color('material-light-warm').rgba(0.3));
-    along.addColorStop(0.65, readTheme().color('material-light-warm').rgba(0.16));
-    along.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
+    along.addColorStop(0, readTheme().color('stage-beam-core').rgba(0.55));
+    along.addColorStop(0.3, readTheme().color('stage-beam-middle').rgba(0.3));
+    along.addColorStop(0.65, readTheme().color('stage-beam-outer').rgba(0.16));
+    along.addColorStop(1, readTheme().color('stage-beam-edge').rgba(0));
     cx.fillStyle = along;
     cx.fillRect(0, 0, w, h);
     const edge = half * 1.25;
@@ -229,16 +228,16 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
     cx.translate(pool.x, pool.y);
     cx.scale(1, pool.ry / pool.rx);
     const pg = cx.createRadialGradient(0, 0, 0, 0, 0, pool.rx);
-    pg.addColorStop(0, readTheme().color('material-light-warm').rgba(0.12));
-    pg.addColorStop(0.5, readTheme().color('material-light-warm').rgba(0.05));
-    pg.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
+    pg.addColorStop(0, readTheme().color('stage-pool-core').rgba(0.12));
+    pg.addColorStop(0.5, readTheme().color('stage-pool-edge').rgba(0.05));
+    pg.addColorStop(1, readTheme().color('stage-pool-edge').rgba(0));
     cx.fillStyle = pg;
     cx.fillRect(-pool.rx, -pool.rx, pool.rx * 2, pool.rx * 2);
     cx.restore();
     // The haze at the lamp itself.
     const haze = cx.createRadialGradient(src.x, src.y, 0, src.x, src.y, reach * 0.4);
-    haze.addColorStop(0, readTheme().color('material-light-warm').rgba(0.35));
-    haze.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
+    haze.addColorStop(0, readTheme().color('stage-haze-core').rgba(0.35));
+    haze.addColorStop(1, readTheme().color('stage-haze-edge').rgba(0));
     cx.fillStyle = haze;
     cx.fillRect(0, 0, w, h);
 
@@ -251,7 +250,7 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
       const y = rnd() * h;
       const l = 6 + rnd() * 26;
       const tilt = (rnd() - 0.5) * 0.5;
-      gx.strokeStyle = readTheme().color('material-light-warm').rgba(0.05 + rnd() * 0.09);
+      gx.strokeStyle = readTheme().color('stage-grain-strand').rgba(0.05 + rnd() * 0.09);
       gx.lineWidth = 0.4 + rnd() * 0.7;
       gx.beginPath();
       gx.moveTo(x, y);
@@ -259,7 +258,7 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
       gx.stroke();
     }
     for (let i = 0; i < (w * h) / 2600; i++) {
-      gx.fillStyle = readTheme().color('material-light-warm').rgba(0.04 + rnd() * 0.1);
+      gx.fillStyle = readTheme().color('stage-grain-fleck').rgba(0.04 + rnd() * 0.1);
       gx.beginPath();
       gx.arc(rnd() * w, rnd() * h, 0.4 + rnd() * 0.6, 0, Math.PI * 2);
       gx.fill();
@@ -282,9 +281,9 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
       const width = 0.004 + rnd() * 0.01;
       const x = rc[i % 2];
       const grad = x.createRadialGradient(src.x, src.y, 0, src.x, src.y, reach * 0.95);
-      grad.addColorStop(0, readTheme().color('material-light-hot').rgba(0.1));
-      grad.addColorStop(0.6, readTheme().color('material-light-warm').rgba(0.05));
-      grad.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
+      grad.addColorStop(0, readTheme().color('stage-halo-core').rgba(0.1));
+      grad.addColorStop(0.6, readTheme().color('stage-halo-middle').rgba(0.05));
+      grad.addColorStop(1, readTheme().color('stage-halo-edge').rgba(0));
       x.fillStyle = grad;
       x.beginPath();
       x.moveTo(src.x, src.y);
@@ -323,8 +322,8 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
       x.lineCap = 'round';
       const grad = x.createLinearGradient(x0, 0, x1, 0);
       const at = (v: number) => clamp01((v - x0) / (x1 - x0));
-      const lit = (k: number) => readTheme().color('material-light-warm').rgba(Number((0.07 + level * k).toFixed(3)));
-      grad.addColorStop(0, readTheme().color('material-light-warm').rgba(0));
+      const lit = (k: number) => readTheme().color('stage-staff-light').rgba(Number((0.07 + level * k).toFixed(3)));
+      grad.addColorStop(0, readTheme().color('stage-staff-light').rgba(0));
       grad.addColorStop(at(x0 + 40), lit(0.12));
       grad.addColorStop(at(pool.x - pool.rx), lit(0.18));
       grad.addColorStop(at(pool.x), lit(0.34));
@@ -458,7 +457,7 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
         // A glint: a short cross of light at its brightest.
         if (m.glint && tw > 0.93) {
           a *= (tw - 0.93) / 0.07;
-          ctx.strokeStyle = readTheme().color('material-light-hot').rgba(a * 0.8);
+          ctx.strokeStyle = readTheme().color('stage-dust').rgba(a * 0.8);
           ctx.lineWidth = 0.6;
           ctx.beginPath();
           ctx.moveTo(m.x - rr * 5, m.y);
@@ -520,7 +519,7 @@ function litNote(from: number, to: number, y: (x: number) => number, thick: numb
   x.stroke();
   x.shadowBlur = 0;
   x.lineWidth = thick * 0.28;
-  x.strokeStyle = readTheme().color('material-light-hot').rgba(0.55);
+  x.strokeStyle = readTheme().color('stage-note-highlight').rgba(0.55);
   x.beginPath();
   x.moveTo(from + thick * 0.3, y(from + thick * 0.3) - thick * 0.08);
   x.lineTo(to - thick * 0.3, y(to - thick * 0.3) - thick * 0.08);

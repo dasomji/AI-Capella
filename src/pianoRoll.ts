@@ -41,9 +41,8 @@ const LYRIC_STYLE: 'score' | 'plain' = 'score';
 const noteStyle = () => deviceChoice('roll', 'ai-capella-roll', ['lantern', 'gel'] as const, readTheme().material.surface === 'paper' ? 'lantern' : 'gel');
 let LANTERN: boolean, LANTERN_PAPER: string, LANTERN_VOID: string, PAST_SHADE: string;
 subscribeTheme(theme => {
-  LANTERN = noteStyle() === 'lantern'; LANTERN_PAPER = theme.color('page-background').css;
-  // TODO(AICAP-28 role): dedicated lantern cavity color.
-  LANTERN_VOID = theme.color('material-paper-fibre-ink').css;
+  LANTERN = noteStyle() === 'lantern'; LANTERN_PAPER = theme.color('material-paper-ground').css;
+  LANTERN_VOID = theme.color('score-lantern-cavity').css;
   PAST_SHADE = theme.color('score-past').rgba(Number(theme.roles['score-past-alpha']));
 }, { immediate: true });
 // How strongly the lamp shows the paper's inside around the reading line (paper.ts backlight).
@@ -1172,7 +1171,7 @@ export class PianoRoll {
       const pc = ((midi % 12) + 12) % 12;
       const y = this.rowY(midi) - rowHeight;
       if (BLACK_KEY_PITCH_CLASSES.has(pc)) {
-        ctx.fillStyle = readTheme().material.onLight ? readTheme().color('material-paper-fibre-ink').rgba(0.07) : LANTERN ? readTheme().color('backdrop').rgba(0.13) : readTheme().color('backdrop').rgba(0.26);
+        ctx.fillStyle = readTheme().color('score-row-shadow').rgba(readTheme().material.onLight ? 0.07 : LANTERN ? 0.13 : 0.26);
         ctx.fillRect(0, y, widthCss, rowHeight);
       }
       if (pc === 0) {
@@ -1437,7 +1436,7 @@ export class PianoRoll {
     const yBottom = rowTop(this.minMidi) + rowHeight;
     ctx.fillStyle = readTheme().color('score-key-light').css;
     ctx.fillRect(x0, yTop, KEYBOARD_WIDTH_PX, yBottom - yTop);
-    ctx.fillStyle = readTheme().color('score-past').rgba(0.3);
+    ctx.fillStyle = readTheme().color('score-key-separator').rgba(0.3);
     for (let midi = this.minMidi; midi <= this.maxMidi; midi++) {
       const pc = ((midi % 12) + 12) % 12;
       if (BLACK_KEY_PITCH_CLASSES.has(pc)) continue;
@@ -1459,8 +1458,8 @@ export class PianoRoll {
       if (((midi % 12) + 12) % 12 === 0) ctx.fillText(midiName(midi), x0 + KEYBOARD_WIDTH_PX - 19, rowTop(midi) + rowHeight / 2);
     }
     const shadow = ctx.createLinearGradient(x0 + KEYBOARD_WIDTH_PX, 0, x0 + KEYBOARD_WIDTH_PX + 10, 0);
-    shadow.addColorStop(0, readTheme().color('backdrop').rgba(0.45));
-    shadow.addColorStop(1, readTheme().color('backdrop').rgba(0));
+    shadow.addColorStop(0, readTheme().color('score-key-shadow').rgba(0.45));
+    shadow.addColorStop(1, readTheme().color('score-key-shadow').rgba(0));
     ctx.fillStyle = shadow;
     ctx.fillRect(x0 + KEYBOARD_WIDTH_PX, yTop, 10, yBottom - yTop);
   }
@@ -1573,7 +1572,7 @@ function cutHoles(ctx: CanvasRenderingContext2D, pills: [number, number, number]
   ctx.fillStyle = readTheme().print.paper.css; // any opaque colour: it's the coverage that cuts
   ctx.fill(holes);
   ctx.globalCompositeOperation = 'source-over';
-  ctx.strokeStyle = readTheme().material.onLight ? readTheme().color('material-paper-fibre-ink').rgba(0.4) : readTheme().color('material-paper-fibre-ink').rgba(0.35);
+  ctx.strokeStyle = readTheme().material.onLight ? readTheme().color('score-hole-edge').rgba(0.4) : readTheme().color('score-hole-edge').rgba(0.35);
   ctx.lineWidth = 1;
   ctx.stroke(holes);
   ctx.restore();

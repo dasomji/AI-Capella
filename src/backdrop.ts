@@ -7,8 +7,7 @@ import { matchBreakpoint, readTheme, subscribeTheme } from './design-system/them
 // resolution (it's soft anyway) and at most 30 times a second; it stands still in a background tab,
 // when the system asks for reduced motion, and on phones while music plays (battery). On a laptop
 // it only slows down while playing.
-// TODO(AICAP-28 role): six velvet wave shades and the two backdrop grounds.
-const waveRoles = ['score-stage-top', 'score-stage-middle', 'canvas-surface', 'canvas-surface-raised', 'canvas-surface-overlay', 'surface-hover'] as const;
+const waveRoles = ['backdrop-wave-1', 'backdrop-wave-2', 'backdrop-wave-3', 'backdrop-wave-4', 'backdrop-wave-5', 'backdrop-wave-6'] as const;
 const FRAME_MS = 1000 / 30;
 const SCALE = 0.5;
 
@@ -94,8 +93,8 @@ export class WaveBackdrop {
     }
     const ctx = this.ctx;
     const ground = ctx.createLinearGradient(0, 0, 0, h);
-    ground.addColorStop(0, readTheme().color('score-stage-bottom').css);
-    ground.addColorStop(1, readTheme().color('score-stage-top').css);
+    ground.addColorStop(0, readTheme().color('backdrop-ground-top').css);
+    ground.addColorStop(1, readTheme().color('backdrop-ground-bottom').css);
     ctx.fillStyle = ground;
     ctx.fillRect(0, 0, w, h);
     const t = this.t;

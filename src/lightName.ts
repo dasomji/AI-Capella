@@ -1,4 +1,3 @@
-// TODO(AICAP-28 role): retain distinct authored light temperatures as roles; using closest warm/hot inputs.
 import { matchBreakpoint, readTheme, subscribeTheme, getThemeRevision } from './design-system/theme';
 // The title screen's name, LightScore: "Light" moves, "Score" holds. "Score" appears in the middle,
 // in embossed gold; the voice lines of light come in with it, a loose swarm, and as their tips reach
@@ -68,7 +67,7 @@ function renderLight(size: number, dpr: number): LightArt {
   };
   const [core, c] = canvas();
   // (On parchment written in iron-gall ink, the lamp's warmth still around it.)
-  c.fillStyle = readTheme().material.onLight ? readTheme().color('ink').css : readTheme().color('material-light-hot').css;
+  c.fillStyle = readTheme().material.onLight ? readTheme().color('title-name-ink').css : readTheme().color('title-name-ink').css;
   c.fillText('Light', pad, baseline);
   const [full, f] = canvas();
   glow(f, core, dpr, size);
@@ -89,7 +88,7 @@ function glow(ctx: CanvasRenderingContext2D, letters: HTMLCanvasElement, dpr: nu
         [size * 0.18, 0.3],
         [size * 0.06, 0.45],
       ]) {
-    ctx.shadowColor = readTheme().color('material-light-warm').rgba(a);
+    ctx.shadowColor = readTheme().color('title-name-glow').rgba(a);
     ctx.shadowBlur = blur * dpr;
     ctx.drawImage(letters, 0, 0);
   }
@@ -283,12 +282,12 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
       const y = nib.y * dpr;
       const r = art.size * 0.09 * dpr;
       const spot = ctx.createRadialGradient(x, y, 0, x, y, r);
-      spot.addColorStop(0, readTheme().color('material-light-warm').rgba(0.8 * k));
-      spot.addColorStop(0.3, readTheme().color('material-light-warm').rgba(0.25 * k));
-      spot.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
+      spot.addColorStop(0, readTheme().color('title-name-flare-core').rgba(0.8 * k));
+      spot.addColorStop(0.3, readTheme().color('title-name-flare-edge').rgba(0.25 * k));
+      spot.addColorStop(1, readTheme().color('title-name-flare-edge').rgba(0));
       ctx.fillStyle = spot;
       ctx.fillRect(x - r, y - r, r * 2, r * 2);
-      ctx.fillStyle = readTheme().color('material-light-hot').rgba(k);
+      ctx.fillStyle = readTheme().color('title-name-nib').rgba(k);
       ctx.beginPath();
       ctx.arc(x, y, Math.max(1.6, art.size * 0.007) * dpr, 0, Math.PI * 2);
       ctx.fill();

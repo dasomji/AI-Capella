@@ -81,8 +81,7 @@ export function renderInk(canvas: HTMLCanvasElement, text: string, size: number,
   const theme = readTheme();
   const channels = (role: 'material-wordmark-ink' | 'material-wordmark-gold-deep' | 'material-wordmark-gold-mid' | 'material-wordmark-gold-light') => { const c = theme.color(role); return [c.r, c.g, c.b]; };
   const INK = channels('material-wordmark-ink'), GOLD_DEEP = channels('material-wordmark-gold-deep'), GOLD = channels('material-wordmark-gold-mid'), GOLD_LIGHT = channels('material-wordmark-gold-light');
-  // TODO(AICAP-28 role): distinct warm ink rim highlight.
-  const rimLight = theme.color('material-light-hot');
+  const rimLight = theme.color('material-wordmark-rim');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const font = `${weight} ${size}px ${readTheme().fonts.brand}`;
   const measure = document.createElement('canvas').getContext('2d')!;

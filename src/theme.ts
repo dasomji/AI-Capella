@@ -46,9 +46,8 @@ export function towardPaper(color: string, k: number, target = readTheme().color
   const mix = (c: number, p: number) => Math.round(c + (p - c) * k);
   return `rgb(${mix(r, target.r)},${mix(g, target.g)},${mix(b, target.b)})`;
 }
-export function towardInk(color: string, k: number, target = readTheme().color('canvas-surface')): string {
+export function towardInk(color: string, k: number, target = readTheme().color('material-gel-deep')): string {
   const { r, g, b } = normalizeColor(color);
-  // TODO(AICAP-28 role): gel shading target (historically a distinct deep ink).
   const mix = (c: number, p: number) => Math.round(c + (p - c) * k);
   return `rgb(${mix(r, target.r)},${mix(g, target.g)},${mix(b, target.b)})`;
 }
@@ -118,7 +117,7 @@ export function readingStrip(ctx: CanvasRenderingContext2D, x: number, top: numb
   const g = ctx.createLinearGradient(x - reach, 0, x + reach, 0);
   for (let i = 0; i <= 10; i++) {
     const t = i / 10;
-    g.addColorStop(t, readTheme().color('material-paper-lamp').rgba(Number(((readTheme().material.onLight ? 0.16 : 0.1) * Math.exp(-(((t - 0.5) / 0.2) ** 2))).toFixed(4))));
+    g.addColorStop(t, readTheme().color('material-lamp').rgba(Number(((readTheme().material.onLight ? 0.16 : 0.1) * Math.exp(-(((t - 0.5) / 0.2) ** 2))).toFixed(4))));
   }
   ctx.fillStyle = g;
   ctx.fillRect(x - reach, top, reach * 2, height);

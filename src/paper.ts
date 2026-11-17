@@ -325,11 +325,10 @@ function make(k: PaperKind) {
   const lightField = new Float32Array(N * N);
   for (let i = 0; i < lightField.length; i++) lightField[i] = Math.max(0, LIGHT_BASE - (flocs[i] + formation[i] * 0.4) * r.light.formation - tooth[i] * r.light.tooth + laid[i] * r.light.laid + chain[i] * r.light.chain);
   // (On parchment the shades are umber, the light through it amber.)
-  // TODO(AICAP-28 role): separate fibre-strand, warm-fleck and transmitted-light colors.
   const shadow = channels('material-paper-fibre-ink');
   const surface = fieldTile(sum(r.surface), channels('material-paper-fibre-light'), SURFACE_LIGHT * (r.onLight ? 1.2 : 1), SURFACE_DARK, shadow);
-  const light = fieldTile(lightField, channels('material-lamp'), LIGHT_BRIGHT, 0);
-  const darkFibre = theme.color('material-paper-fibre-ink');
+  const light = fieldTile(lightField, channels('material-paper-lamp'), LIGHT_BRIGHT, 0);
+  const darkFibre = theme.color('material-paper-strand-shadow');
 
   const sctx = surface.getContext('2d')!;
   const lctx = light.getContext('2d')!;
@@ -338,7 +337,7 @@ function make(k: PaperKind) {
     wrapped(sctx, f.pts, () => {
       path(sctx, f.pts);
       sctx.lineWidth = f.width;
-      sctx.strokeStyle = f.shade > 0 ? readTheme().color('material-paper-fibre-light').rgba(Number((0.032 * f.shade).toFixed(3))) : darkFibre.rgba(Number((0.06 * -f.shade).toFixed(3)));
+      sctx.strokeStyle = f.shade > 0 ? readTheme().color('material-paper-strand-light').rgba(Number((0.032 * f.shade).toFixed(3))) : darkFibre.rgba(Number((0.06 * -f.shade).toFixed(3)));
       sctx.stroke();
     });
     wrapped(lctx, f.pts, () => {
@@ -360,7 +359,7 @@ function make(k: PaperKind) {
     const draw = (ctx: CanvasRenderingContext2D, alpha: number) => () => {
       ctx.beginPath();
       ctx.ellipse(pts[0][0], pts[0][1], size, size * pick(rnd, 0.5, 1), rnd() * Math.PI, 0, Math.PI * 2);
-      ctx.fillStyle = dark ? (warm ? readTheme().color('material-paper-fibre-ink').rgba(alpha) : darkFibre.rgba(alpha)) : readTheme().color('material-paper-fibre-light').rgba(alpha * 0.6);
+      ctx.fillStyle = dark ? (warm ? readTheme().color('material-paper-warm-fleck').rgba(alpha) : darkFibre.rgba(alpha)) : readTheme().color('material-paper-strand-light').rgba(alpha * 0.6);
       ctx.fill();
     };
     wrapped(sctx, pts, draw(sctx, 0.2));
@@ -557,25 +556,25 @@ export function paintSwatch(canvas: HTMLCanvasElement, of: PaperKind, w: number,
   paintPaper(ctx, 0, 0, w, h, STILL, 'surface', NIGHT_PAPER, of);
   const lamp = Math.round(w * 0.42);
   const glow = ctx.createLinearGradient(lamp - 60, 0, lamp + 140, 0);
-  glow.addColorStop(0, readTheme().color('material-paper-lamp').rgba(0));
-  glow.addColorStop(0.3, readTheme().color('material-paper-lamp').rgba(0.1));
-  glow.addColorStop(1, readTheme().color('material-paper-lamp').rgba(0));
+  glow.addColorStop(0, readTheme().color('material-paper-swatch-glow').rgba(0));
+  glow.addColorStop(0.3, readTheme().color('material-paper-swatch-glow').rgba(0.1));
+  glow.addColorStop(1, readTheme().color('material-paper-swatch-glow').rgba(0));
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, w, h);
   backlight(ctx, lamp, 0, h, STILL, 0.6, undefined, of);
-  ctx.fillStyle = readTheme().color('score-paper').rgba(0.72);
+  ctx.fillStyle = readTheme().color('material-paper-swatch-line').rgba(0.72);
   ctx.fillRect(lamp - 0.5, 0, 1, h);
 }
 
-function channels(role: 'material-paper-fibre-ink' | 'material-paper-fibre-light' | 'material-lamp') {
+function channels(role: 'material-paper-fibre-ink' | 'material-paper-fibre-light' | 'material-paper-lamp') {
   const color = readTheme().color(role); return [color.r, color.g, color.b];
 }
 // Ignore our own generated CSS image notification. Set the input key before publishing, so
 // the nested revision never recursively regenerates the texture or repaints an old theme.
 let materialKey = '';
 subscribeTheme(theme => {
-  NIGHT_PAPER = theme.color('page-background').css;
-  const key = JSON.stringify([theme.material, ['material-paper-fibre-ink', 'material-paper-fibre-light', 'material-lamp'].map(role => theme.color(role as 'material-lamp').css),
+  NIGHT_PAPER = theme.color('material-paper-ground').css;
+  const key = JSON.stringify([theme.material, (['material-paper-fibre-ink', 'material-paper-fibre-light', 'material-paper-lamp', 'material-paper-strand-shadow', 'material-paper-strand-light', 'material-paper-warm-fleck'] as const).map(role => theme.color(role).css),
     ['material-paper-surface-light', 'material-paper-surface-dark', 'material-paper-light-bright', 'material-paper-light-base'].map(role => theme.roles[role])]);
   if (materialKey === key) return;
   materialKey = key;

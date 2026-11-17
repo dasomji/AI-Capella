@@ -27,14 +27,19 @@ exact recognition of Verovio's external stylesheet is unchanged. Print font name
 bundled LiberationSerif/LightScoreEngraving assets; new print families require matching assets.
 A4, margins and engraving defaults remain in `exportPdf.ts`.
 
-## Known role gaps
+## Exact renderer roles
 
-`TODO(AICAP-28 role)` comments identify the closest existing roles used where P1 had no exact
-input. They cover gel deep shading; lantern cavity/through-hole shading and lamp glow;
-individual title/ribbon warm/hot temperatures and the wordmark rim; the velvet cover ground, six wave shades and
-two grounds; separate paper strand, warm fleck and transmitted-light pigments. These preserve
-formulas but have visible color differences. Add the distinct roles centrally before claiming
-pixel parity for those effects. Do not reintroduce local pigment fallbacks.
+The pre-P2 appearance (`46831e3`) is retained by distinct inputs in `tokens.css`: gel deep
+shading, lantern cavity/occlusion/glow, paper strand/light/fleck/transmission, wordmark rim,
+individual name/ribbon/stage/staff temperatures, wave shades/grounds, cover ground, keyboard
+separator/shadow, row/hole-edge shadows and brand tile. Theme-independent inputs live in
+`:root`; only varying inputs appear in every theme block. The concrete registry and generated
+manifest include them; `renderer-theme.test.ts` pins their historical values. Never replace
+these with nearby pigments or merge their purposes without an owner decision.
+
+Visible shadows use opaque roles with the renderer's authored alpha. The DOM `backdrop` role
+already contains alpha; using it here would multiply opacity and change the image. Paper's
+cache key includes every texture input and ignores only its own generated image notification.
 
 ## Guard exceptions
 

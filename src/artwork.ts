@@ -1,4 +1,3 @@
-// TODO(AICAP-28 role): retain distinct authored light temperatures as roles; using closest warm/hot inputs.
 import { readTheme, subscribeTheme } from './design-system/theme';
 import type { Score } from './score';
 import { colorForPart } from './palette';
@@ -136,7 +135,7 @@ export function drawPenRibbons(ctx: CanvasRenderingContext2D, w: number, h: numb
       spot.addColorStop(1, withAlpha(color, 0));
       ctx.fillStyle = spot;
       ctx.fillRect(px - line * 5, py - line * 5, line * 10, line * 10);
-      ctx.fillStyle = readTheme().color('material-light-hot').rgba(0.9);
+      ctx.fillStyle = readTheme().color('artwork-nib').rgba(0.9);
       ctx.beginPath();
       ctx.arc(px, py, Math.max(1.2, line * 0.6), 0, Math.PI * 2);
       ctx.fill();
@@ -171,7 +170,7 @@ export function drawMark(ctx: CanvasRenderingContext2D, size: number, withTile: 
   ctx.clearRect(0, 0, size, size);
   if (withTile) {
     const r = size * 0.24;
-    ctx.fillStyle = readTheme().color('score-key-dark').css;
+    ctx.fillStyle = readTheme().color('brand-mark-tile').css;
     ctx.beginPath();
     ctx.moveTo(r, 0);
     ctx.arcTo(size, 0, size, size, r);
@@ -256,8 +255,7 @@ export function drawCover(ctx: CanvasRenderingContext2D, w: number, h: number, d
     return;
   }
   const count = data.contours.length;
-  // TODO(AICAP-28 role): the velvet cover ground was a distinct shade.
-  ctx.fillStyle = readTheme().color('canvas-surface').css;
+  ctx.fillStyle = readTheme().color('artwork-cover-ground').css;
   ctx.fillRect(0, 0, w, h);
   if (!count) return;
   const top = colorForPart(0, count);

@@ -76,13 +76,12 @@ P2/P3 API:
 - `onSystemThemeChange(fn)` maintains a set of disposably registered quiet-moment handlers.
   While main registers its handler (unconditionally), OS, storage and explicit choices defer
   the entire DOM/canvas change to its existing quiet-moment reload. Storage/menu choices consume
-  the initial `?design=` override so it cannot overwrite a newer preference on reload. The showcase without main
-  applies changes live. P2 still must migrate renderer caches before removing that reload.
+  the initial `?design=` override so it cannot overwrite a newer preference on reload. Consumers without that handler, including main and the showcase, apply changes live.
 - Runtime material writers update their distinct live input, then call
   `notifyThemeMaterialChange()` to invalidate the snapshot/revision and notify subscribers.
 
-Reuse one snapshot per drawing frame; never read computed styles per note. Renderer constants
-and caches still migrate in P2; a live showcase swap is not proof of reactive renderer swaps.
+Reuse one snapshot per drawing frame; never read computed styles per note. Renderer caches compare revisions; see `renderer-themes.md`. Verify actual playback swaps as
+well as the showcase.
 
 Only width thresholds occupy `--breakpoint-*` in the static `@theme` block. The landscape height
 is `--viewport-short-landscape-height`, consumed by `theme()` without creating a width variant.

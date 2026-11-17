@@ -62,26 +62,25 @@ const HALO_WEIGHTS = [0.3, 0.32, 0.3];
 const FLARE_HALO_ALPHA = 0.5;
 // How much of that light is added back into the holes it comes from.
 // (Not on parchment: light added to its light inks only pales them.)
-// TODO(AICAP-28 role): through-hole occlusion and dedicated lamp glow temperature.
 const lanternInputs = memoizeByTheme(theme => {
   const throughStops: [number, string][] = theme.material.onLight
   ? [
-      [0, theme.color('page-background').rgba(0)],
-      [0.3, theme.color('page-background').rgba(0)],
-      [0.7, theme.color('page-background').rgba(0.1)],
-      [1, theme.color('page-background').rgba(0.18)],
+      [0, theme.color('material-lantern-occlusion').rgba(0)],
+      [0.3, theme.color('material-lantern-occlusion').rgba(0)],
+      [0.7, theme.color('material-lantern-occlusion').rgba(0.1)],
+      [1, theme.color('material-lantern-occlusion').rgba(0.18)],
     ]
   : [
-      [0, theme.color('material-paper-fibre-ink').rgba(0)],
-      [0.2, theme.color('material-paper-fibre-ink').rgba(0)],
-      [0.5, theme.color('material-paper-fibre-ink').rgba(0.22)],
-      [0.8, theme.color('material-paper-fibre-ink').rgba(0.38)],
-      [1, theme.color('material-paper-fibre-ink').rgba(0.46)],
+      [0, theme.color('material-lantern-occlusion').rgba(0)],
+      [0.2, theme.color('material-lantern-occlusion').rgba(0)],
+      [0.5, theme.color('material-lantern-occlusion').rgba(0.22)],
+      [0.8, theme.color('material-lantern-occlusion').rgba(0.38)],
+      [1, theme.color('material-lantern-occlusion').rgba(0.46)],
     ];
 
   return { THROUGH_STOPS: throughStops, HOT_WHITE: theme.color('material-light-hot'),
     HOT_STOPS: theme.material.onLight ? [0.08, 0.22, 0.11] : [0.3, 0.82, 0.4],
-    PAPER_GLOW_STOPS: bell(theme.color('material-paper-lamp'), theme.material.onLight ? 0.24 : 0.11),
+    PAPER_GLOW_STOPS: bell(theme.color('material-lantern-glow'), theme.material.onLight ? 0.24 : 0.11),
     HOLE_BOOST: theme.material.onLight ? 0 : 1.3 };
 });
 

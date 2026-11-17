@@ -1,4 +1,3 @@
-// TODO(AICAP-28 role): retain distinct authored light temperatures as roles; using closest warm/hot inputs.
 import { readTheme } from './design-system/theme';
 // The title screen's voice lines (design.ts START_DRAFT), written by the pen and then turned into
 // figures of light -- a thin bright core in each voice's colour inside a soft glow that fades out
@@ -128,9 +127,9 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
       if (f.k < 0.01) continue;
       const r = Math.min(90, h * 0.14);
       const flare = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
-      flare.addColorStop(0, readTheme().color('material-light-warm').rgba(0.75 * f.k));
-      flare.addColorStop(0.3, readTheme().color('material-light-warm').rgba(0.22 * f.k));
-      flare.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
+      flare.addColorStop(0, readTheme().color('ribbon-flare-core').rgba(0.75 * f.k));
+      flare.addColorStop(0.3, readTheme().color('ribbon-flare-edge').rgba(0.22 * f.k));
+      flare.addColorStop(1, readTheme().color('ribbon-flare-edge').rgba(0));
       g.fillStyle = flare;
       g.fillRect(f.x - r, f.y - r, r * 2, r * 2);
     }
@@ -157,7 +156,7 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
       const upTo = Math.max(2, Math.round(p * steps));
       ctx.beginPath();
       for (let j = 0; j <= upTo; j++) (j ? ctx.lineTo : ctx.moveTo).call(ctx, pts[j][0], pts[j][1]);
-      ctx.strokeStyle = readTheme().material.onLight ? readTheme().color('material-light-warm').rgba(0.45 * lit) : readTheme().color('material-light-hot').rgba(0.55 * lit);
+      ctx.strokeStyle = readTheme().material.onLight ? readTheme().color('ribbon-highlight').rgba(0.45 * lit) : readTheme().color('ribbon-highlight').rgba(0.55 * lit);
       ctx.lineWidth = Math.max(0.6, line * 0.3);
       ctx.stroke();
     }
@@ -169,7 +168,7 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
       spot.addColorStop(1, withAlpha(color, 0));
       ctx.fillStyle = spot;
       ctx.fillRect(px - line * 7, py - line * 7, line * 14, line * 14);
-      ctx.fillStyle = readTheme().material.onLight ? readTheme().color('material-light-warm').rgba(0.95) : readTheme().color('material-light-hot').rgba(0.95);
+      ctx.fillStyle = readTheme().material.onLight ? readTheme().color('ribbon-nib').rgba(0.95) : readTheme().color('ribbon-nib').rgba(0.95);
       ctx.beginPath();
       ctx.arc(px, py, Math.max(1.3, line * 0.65), 0, Math.PI * 2);
       ctx.fill();
@@ -184,7 +183,7 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
         const a = Math.sin(Math.PI * u) * lit;
         const r = (o.bead ?? 3.2) * (0.6 + 0.4 * a);
         const spark = ctx.createRadialGradient(bx, by, 0, bx, by, r * 3.5);
-        spark.addColorStop(0, readTheme().color('material-light-hot').rgba(0.9 * a));
+        spark.addColorStop(0, readTheme().color('ribbon-spark').rgba(0.9 * a));
         spark.addColorStop(0.3, withAlpha(color, 0.6 * a));
         spark.addColorStop(1, withAlpha(color, 0));
         ctx.fillStyle = spark;
