@@ -13,7 +13,6 @@
 @import '../auth.css' layer(legacy);
 @import '../transcription.css' layer(legacy);
 @import './tokens.css' layer(tokens);
-@import './legacy-components.css' layer(components);
 @import './components.css' layer(components);
 @import './library.css' layer(components);
 @import './account.css' layer(components);
@@ -127,7 +126,7 @@
 @utility appearance-textfield { appearance: textfield; }
 @utility panel-mark-stroke { border-width: var(--ds-panel-stroke-mark); }
 @utility panel-overview-stroke { border-width: var(--ds-panel-section-marks-rmark-border-width-13); }
-@utility panel-offset-columns { grid-template-columns: auto minmax(0, 1fr) auto; }
+@utility panel-offset-columns { grid-template-columns: auto 1fr auto; }
 @utility panel-voice-accent { accent-color: var(--c); }
 @utility font-synthesis-none { font-synthesis: none; }
 @utility panel-toast-transition { transition: var(--ds-panel-toast-transition); }
@@ -321,3 +320,12 @@
 @utility border-bottom-account-input-border-bottom { border-bottom: var(--ds-account-input-border-bottom); }
 @utility font-account-input-font { font: var(--ds-account-input-font); }
 @utility outline-account-body-outline { outline: var(--ds-account-body-outline); }
+
+/* Retain the original inclusive phone-table boundary. */
+@custom-variant panel-record-phone (@media (max-width: theme(--breakpoint-account)));
+@utility font-inherit { font-family: inherit; }
+@utility leading-inherit { line-height: inherit; }
+@utility panel-fibre { background-image: var(--ds-material-fibre); }
+@utility panel-dedication-wait { --ded-wait: var(--ds-duration-dedication); }
+@utility panel-dedication-staff { --ded-wait: var(--ds-duration-dedication-staff); }
+@utility panel-dedication-night { --ded-wait: var(--ds-duration-dedication-night); }
