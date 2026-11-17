@@ -229,7 +229,7 @@ function fieldRecipeStyles(
   if (variant === "account-password") return libraryAccountUtilityRecipe({root:"ds-account-password",label:"ds-account-label",control:"ds-account-input tw:rounded-field",hint:"tw:sr-only",error:"ds-account-error"});
   if (variant === 'library-prompt') {
     const boxed = fieldRecipeStyles({variant:'boxed',invalid},kind);
-    return {...boxed,control:boxed.control.split(' ').filter(c=>!c.startsWith('tw:focus-visible:')).join(' ') + ' tw:outline-none tw:outline-offset-2'};
+    return {...boxed,control:boxed.control.split(' ').filter(c=>!c.startsWith('tw:focus-visible:')).join(' ') + ' tw:outline-none tw:outline-offset-(--ds-space-2)'};
   }
   if (variant === "library-search") return libraryAccountUtilityRecipe({root: "ds-library-search", label: "tw:sr-only", control: "ds-library-search-input tw:rounded-field", hint: "tw:sr-only", error: "tw:sr-only"});
   const admin = variant === "admin";
