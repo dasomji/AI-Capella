@@ -45,3 +45,6 @@
 @media (prefers-reduced-motion:reduce) { .ds-menu-item::before { transition:none; } }
 /* The reset boundary must preserve native hidden regardless of slot display utilities. */
 .ds-reset[hidden] { display:none !important; }
+
+/* Verovio emits literal black fills and page-margin groups; adapt those incoming SVG nodes to the review ink role. */
+.tx-score-page svg [fill="#000000"],.tx-score-page svg g.page-margin { fill:currentColor; }
