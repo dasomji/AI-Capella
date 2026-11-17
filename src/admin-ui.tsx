@@ -103,8 +103,8 @@ function ListScreen({ section, title, query, setQuery }: { section: AdminSection
     <Link to="/admin/$" params={{ _splat: kind + "/" + row.id }} className={ui.rowLink}>{text || "—"}</Link>
   );
   const config = useMemo(() => {
-    const created: AdminColumn = { id: "created_at", label: t.created, sort: "created", cell: (r) => <Instant value={r.created_at} /> };
-    const idColumn: AdminColumn = { id: "id", label: t.id, sort: "id", mono: true, cell: (r) => <Identifier value={r.id} /> };
+    const created: AdminColumn = { id: "created_at", label: t.created, sort: "created", wide: section !== "audit", cell: (r) => <Instant value={r.created_at} /> };
+    const idColumn: AdminColumn = { id: "id", label: t.id, sort: "id", mono: true, wide: true, cell: (r) => <Identifier value={r.id} /> };
     switch (section) {
       case "users":
         return {

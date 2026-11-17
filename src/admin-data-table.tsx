@@ -19,6 +19,8 @@ export type AdminColumn = {
   /** Server sort key; the column header becomes a sort button. */
   sort?: string;
   mono?: boolean;
+  /** Lower-priority column: shown from the panel breakpoint up, always on the detail page. */
+  wide?: boolean;
   cell?: (row: AdminRow) => ReactNode;
 };
 const features = tableFeatures({
@@ -195,6 +197,7 @@ export function AdminDataTable({
                     <TableHeader
                       key={header.id}
                       scope="col"
+                      layout={columns.find((c) => c.id === header.column.id)?.wide ? "tw:max-panel:hidden" : undefined}
                       aria-sort={
                         !header.column.getCanSort()
                           ? undefined
@@ -246,6 +249,7 @@ export function AdminDataTable({
                   <TableCell
                     key={cell.id}
                     mono={!!columns.find((c) => c.id === cell.column.id)?.mono}
+                    layout={columns.find((c) => c.id === cell.column.id)?.wide ? "tw:max-panel:hidden" : undefined}
                     data-label={label(cell.column.id)}
                   >
                     <span>{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>

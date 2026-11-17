@@ -37,7 +37,9 @@ export function vocabulary(key: string | null | undefined, language: Lang) {
 export function Instant({ value }: { value: string | null | undefined }) {
   const { zone, language } = useAdmin();
   if (!value) return <>—</>;
-  return <time dateTime={value} title={new Date(value).toISOString()}>{adminInstant(value, zone, language)}</time>;
+  // Date and time stay on one line; the date part may wrap from the time on narrow records.
+  const [date, time] = adminInstant(value, zone, language).split(", ");
+  return <time dateTime={value} title={new Date(value).toISOString()}><span className={ui.nowrap}>{date},</span> <span className={ui.nowrap}>{time}</span></time>;
 }
 
 export function Count({ value }: { value: number | null | undefined }) {
