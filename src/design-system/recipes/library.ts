@@ -72,7 +72,6 @@ const controls = {
   "ensemble-switch": "ds-library-button ds-navigation-switch ens-switch" + " " + libraryStyles.button + " " + accountStyles.navigationSwitch,
   "ensemble-other": "ds-library-button ds-navigation-other ded-other" + " " + libraryStyles.button + " " + accountStyles.navigationOther,
   "device-link": "ds-library-button ds-library-link" + " " + libraryStyles.button + " " + libraryStyles.link,
-  "account-delete-confirm": "ds-library-button ds-account-delete-confirm" + " " + libraryStyles.button + " " + accountStyles.deleteConfirm,
   "landing-link": "ds-library-button ds-library-link" + " " + libraryStyles.button + " " + libraryStyles.link,
   "landing-aside": "ds-library-button ds-library-link ds-library-landing-aside" + " " + libraryStyles.button + " " + libraryStyles.link + " " + libraryStyles.landingAside,
   "library-open": "ds-library-button ds-library-song-open song-open" + " " + libraryStyles.button + " " + libraryStyles.songOpen,
