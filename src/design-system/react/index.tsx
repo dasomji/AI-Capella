@@ -538,6 +538,7 @@ export function Dialog({
     if (!open || specimen || !ref.current) return;
     const active = openDialog(ref.current, {
       ...latest.current.behavior,
+      motion: variant === "sheet" || variant === "domain-sheet" ? "sheet" : undefined,
       onCancel: (reason) => {
         latest.current.behavior?.onCancel?.(reason);
         latest.current.onCancel?.(reason);
@@ -552,7 +553,7 @@ export function Dialog({
       active.dispose();
       controller.current = undefined;
     };
-  }, [open, specimen]);
+  }, [open, specimen, variant]);
   useEffect(
     () => controller.current?.setBusy(!!behavior?.busy),
     [behavior?.busy],

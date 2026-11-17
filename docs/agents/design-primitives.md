@@ -102,8 +102,10 @@ for user requests (`escape`, `outside`, `button`, `swipe`); `onClose` reports a 
 Controlled `open=false`, unmount and StrictMode replay dispose silently. Use `requestClose()`
 for cancel buttons and `close()` after successful work. Policies: `escape`/`outside` =
 `close | ignore`, `busyCancel` = `block | allow` (block by default). Explicit close always works.
-Legacy sheets/popovers retain the native top layer through `transitionend` or 160ms; reduced
-motion closes immediately. Swipe dismiss uses this same exit path.
+Shared sheet variants slide in/out and reuse the legacy swipe thresholds through
+`behavior/sheet.ts`; cancellation still obeys busy policy. They retain the native top layer
+until the transform transition completes, with a fallback derived from its CSS duration.
+Legacy sheets/popovers retain their existing 160ms fallback. Reduced motion closes immediately.
 
 Menus support ArrowUp/Down, Home/End, Enter/Space, Escape and buffered typeahead. Space continues
 a live typeahead buffer; otherwise it activates. Roving focus survives rerenders. React Menu

@@ -586,3 +586,68 @@ describe("legacy overlay exit transport", () => {
     vi.unstubAllGlobals();
   });
 });
+
+
+describe("shared sheet motion", () => {
+  it("retains the modal and scroll lock through the exit, then restores focus", () => {
+    vi.useFakeTimers();
+    const { dialog, api, opener } = modal({ motion: "sheet" });
+    expect(dialog.dataset.sheetState).toBe("entering");
+    vi.advanceTimersByTime(20);
+    expect(dialog.dataset.sheetState).toBe("open");
+    dialog.style.transitionDuration = "0.22s";
+    api.close();
+    expect(dialog.dataset.sheetState).toBe("closing");
+    expect(dialog.open).toBe(true);
+    expect(document.body.style.overflow).toBe("hidden");
+    const event = new Event("transitionend");
+    Object.defineProperty(event, "propertyName", { value: "transform" });
+    dialog.dispatchEvent(event);
+    expect(dialog.open).toBe(false);
+    expect(document.activeElement).toBe(opener);
+    expect(dialog.hasAttribute("data-sheet-state")).toBe(false);
+  });
+  it("routes swipe dismissal through busy cancellation and releases touch listeners", () => {
+    vi.useFakeTimers();
+    const onCancel = vi.fn();
+    const { dialog, api } = modal({ motion: "sheet", busy: true, onCancel });
+    const touch = (type: string, y: number) => {
+      const event = new Event(type, { cancelable: true });
+      Object.defineProperty(event, "touches", { value: [{ clientY: y }] });
+      dialog.dispatchEvent(event);
+    };
+    vi.advanceTimersByTime(20);
+    touch("touchstart", 100);
+    touch("touchmove", 300);
+    expect(dialog.style.transform).toContain("192px");
+    touch("touchend", 300);
+    vi.advanceTimersByTime(20);
+    expect(dialog.open).toBe(true);
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(dialog.style.transform).toBe("");
+    api.setBusy(false);
+    touch("touchstart", 100);
+    touch("touchmove", 300);
+    touch("touchend", 300);
+    vi.advanceTimersByTime(20);
+    expect(onCancel).toHaveBeenCalledWith("swipe");
+    api.dispose();
+    touch("touchstart", 100);
+    touch("touchmove", 300);
+    expect(dialog.style.transform).toBe("");
+  });
+  it("closes immediately under reduced motion and cancels pending entry on disposal", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    try {
+      const { dialog, api } = modal({ motion: "sheet" });
+      expect(dialog.dataset.sheetState).toBe("open");
+      api.close();
+      expect(dialog.open).toBe(false);
+      const next = modal({ motion: "sheet" });
+      next.api.dispose();
+      vi.runAllTimers();
+      expect(next.dialog.hasAttribute("data-sheet-state")).toBe(false);
+    } finally { vi.unstubAllGlobals(); }
+  });
+});

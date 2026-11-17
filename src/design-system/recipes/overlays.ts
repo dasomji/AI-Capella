@@ -28,7 +28,7 @@ function dialogRecipeStyles({ variant = "dialog" }: DialogOptions = {}) {
     };
   }
   if (variant === "domain-sheet") return {
-    panel: "tw:fixed tw:inset-x-0 tw:bottom-0 tw:m-0 tw:w-full tw:max-w-none tw:max-h-(--ds-max-height-sheet) tw:overflow-auto tw:border-0 tw:border-t tw:border-solid tw:border-rule-strong tw:rounded-t-sheet tw:p-(--ds-sheet-padding) ds-domain-sheet tw:shadow-domain-sheet tw:text-ink tw:font-body tw:leading-body tw:panel:inset-x-auto tw:panel:left-(--ds-left-sheet) tw:panel:bottom-24 tw:panel:w-sheet tw:panel:rounded-transcription-dialog tw:panel:border tw:backdrop:bg-domain-backdrop",
+    panel: "tw:fixed tw:inset-x-0 tw:bottom-0 tw:m-0 tw:w-full tw:max-w-none tw:max-h-(--ds-max-height-sheet) tw:overflow-auto tw:border-0 tw:border-t tw:border-solid tw:border-rule-strong tw:rounded-t-sheet tw:p-(--ds-sheet-padding) ds-domain-sheet ds-sheet-motion tw:shadow-domain-sheet tw:text-ink tw:font-body tw:leading-body tw:panel:inset-x-auto tw:panel:left-(--ds-left-sheet) tw:panel:bottom-24 tw:panel:w-sheet tw:panel:rounded-transcription-dialog tw:panel:border tw:backdrop:bg-domain-backdrop",
     content: "tw:block", header: "tw:relative tw:flex tw:items-center tw:justify-between tw:min-h-50 tw:pt-8",
     title: "tw:m-0 tw:text-section tw:font-body tw:font-strong tw:leading-body", body: "tw:m-0 tw:font-body tw:text-body tw:leading-body", actions: "tw:flex tw:gap-10",
   };
@@ -42,7 +42,7 @@ function dialogRecipeStyles({ variant = "dialog" }: DialogOptions = {}) {
     confirm:
       "tw:w-dialog tw:max-w-dialog tw:rounded-dialog tw:p-24 tw:shadow-component-overlay",
     sheet:
-      "tw:fixed tw:inset-x-0 tw:bottom-0 tw:m-0 tw:w-full tw:max-w-none tw:max-h-(--ds-max-height-sheet) tw:rounded-t-sheet tw:p-20 tw:panel:inset-x-auto tw:panel:left-(--ds-left-sheet) tw:panel:bottom-24 tw:panel:w-sheet tw:panel:rounded-transcription-dialog",
+      "ds-sheet-motion tw:fixed tw:inset-x-0 tw:bottom-0 tw:m-0 tw:w-full tw:max-w-none tw:max-h-(--ds-max-height-sheet) tw:rounded-t-sheet tw:p-20 tw:panel:inset-x-auto tw:panel:left-(--ds-left-sheet) tw:panel:bottom-24 tw:panel:w-sheet tw:panel:rounded-transcription-dialog",
     drawer:
       "tw:fixed tw:inset-y-0 tw:right-0 tw:m-0 tw:h-full tw:w-drawer tw:max-w-full tw:rounded-field tw:p-28 tw:shadow-admin-detail",
     "admin-confirm": "",

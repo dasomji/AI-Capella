@@ -1,7 +1,10 @@
+import { sheetMotion } from "./sheet";
 /** Native showModal owns background inertness, including later portals and stacked modals. */
 export type CancelReason = "escape" | "outside" | "button" | "swipe";
 export interface DialogBehaviorOptions {
   opener?: Element | null;
+  /** Shared slide and swipe transport for sheet variants. */
+  motion?: "sheet";
   initialFocus?: HTMLElement | (() => HTMLElement | null);
   escape?: "close" | "ignore";
   outside?: "close" | "ignore";
@@ -68,9 +71,12 @@ export function openDialog(
     closing = false,
     busy = options.busy ?? false;
   let closingChildren: DialogController[] | undefined;
+  const motion = options.motion === "sheet"
+    ? sheetMotion(dialog, () => controller.requestClose("swipe")) : undefined;
   const finish = (notify: boolean) => {
     if (closed) return;
     closed = true;
+    motion?.dispose();
     // Layers opened after an exit starts replace the closing layer; they are not its children.
     const index = stack.findIndex((entry) => entry.controller === controller);
     for (const child of (closingChildren ?? stack.slice(index + 1).map(entry => entry.controller)).reverse())
@@ -113,7 +119,8 @@ export function openDialog(
       closing = true;
       const index = stack.findIndex(entry => entry.controller === controller);
       closingChildren = stack.slice(index + 1).map(entry => entry.controller);
-      if (options.exit) options.exit(() => finish(true));
+      if (motion) motion.exit(() => finish(true));
+      else if (options.exit) options.exit(() => finish(true));
       else finish(true);
     },
     dispose() {
@@ -187,6 +194,7 @@ export function openDialog(
   if (!stack.length) previousOverflow = doc.body.style.overflow;
   dialog.showModal();
   stack.push({ dialog, controller });
+  motion?.enter();
   doc.body.style.overflow = "hidden";
   controller.setBusy(busy);
   const initial =

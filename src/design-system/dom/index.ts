@@ -510,6 +510,7 @@ export function createDialog(options: DialogOptions) {
     open: () =>
       (controller = openDialog(dialog, {
         ...options.behavior,
+        motion: options.variant === "sheet" || options.variant === "domain-sheet" ? "sheet" : undefined,
         onClose: () => {
           options.behavior?.onClose?.();
           dialog.remove();
