@@ -379,7 +379,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
   ].join(" "),
   "ds-player-mixer-chip": [
     // .ds-player-mixer-chip
-    "tw:p-player-mixer-chip-padding-66 tw:player-mixer-chip-background tw:border-rule-strong",
+    "tw:p-player-mixer-chip-padding-66 tw:player-mixer-chip-background",
     // .ds-player-mixer-chip .ic
     "tw:[&_.ic]:w-player-utility-native-width-18px tw:[&_.ic]:h-player-utility-native-width-18px",
     // :root[data-theme="parchment"] .ds-player-mixer-chip
