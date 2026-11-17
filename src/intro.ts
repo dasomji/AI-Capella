@@ -143,8 +143,8 @@ const TOURS: Record<TourId, Step[]> = {
       at: ["#mode-seg"],
       title: { de: "Gemeinsam proben", en: "Rehearse together" },
       text: {
-        de: "Wähle »Gemeinsam«: Wer leitet, startet die Musik auf allen Geräten.",
-        en: "Choose “Together”: whoever leads starts the music on every device.",
+        de: "Wähle »Gemeinsam«: Alle steuern die gemeinsame Wiedergabe auf allen Geräten.",
+        en: "Choose “Together”: everyone controls shared playback on every device.",
       },
     },
   ],
@@ -233,10 +233,10 @@ const TOURS: Record<TourId, Step[]> = {
     },
     {
       at: ["#mode-badge"],
-      title: { de: "Probe leiten", en: "Lead the rehearsal" },
+      title: { de: "Gemeinsam steuern", en: "Shared playback" },
       text: {
-        de: "In der gemeinsamen Probe übernimmst du hier die Leitung – alle Geräte folgen dann dir.",
-        en: "In a shared rehearsal, take the lead here – every device then follows you.",
+        de: "In »Gemeinsam« steuern alle die gemeinsame Wiedergabe. Änderungen gelten auf allen Geräten.",
+        en: "In Together, everyone controls shared playback. Changes apply on every device.",
       },
     },
     {
@@ -339,17 +339,17 @@ export function startIntro(id: TourId, onClose?: () => void) {
   asides.className = tourRecipe().asides;
   const button = (
     label: string,
-    variant: ButtonOptions["variant"],
+    variant: "standard" | "quiet",
     action: () => void,
     intent: ButtonOptions["intent"] = "secondary",
-  ) => createButton({ text: label, variant, intent, onClick: action });
-  const skip = button(t("introSkip"), "tour-link", () => close("later"));
-  const never = button(t("introNever"), "tour-link", () => close("never"));
+  ) => createButton({ text: label, variant: "standard", size: variant === "quiet" ? "compact" : "standard", intent: variant === "quiet" ? "quiet" : intent, onClick: action });
+  const skip = button(t("introSkip"), "quiet", () => close("later"));
+  const never = button(t("introNever"), "quiet", () => close("never"));
   asides.append(skip, never);
-  const back = button(t("introBack"), "tour", () => go(index - 1));
+  const back = button(t("introBack"), "standard", () => go(index - 1));
   const next = button(
     t("introNext"),
-    "tour",
+    "standard",
     () => (index === steps.length - 1 ? close("done") : go(index + 1)),
     "primary",
   );
