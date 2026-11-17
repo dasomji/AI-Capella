@@ -84,14 +84,14 @@ it('normalizes minified named CSS pigments on the snapshot cold path and rejects
 
 // Historical renderer inputs from immutable 46831e3. Keep these expected values independent
 // of the authored palette: a near-color substitution or inherited alpha is a regression.
-it('preserves every pre-P2 renderer pigment across all three themes', async () => {
+it('preserves renderer materials while D02 unifies cover and brand paper layers', async () => {
   const { readFileSync } = await import('node:fs');
   const { default: postcss } = await import('postcss');
   const css = postcss.parse(readFileSync('src/design-system/tokens.css', 'utf8'));
   const expected: Record<string, readonly string[]> = {
     'canvas-mask': ['#ffffff', '#ffffff', '#ffffff'],
     'material-gel-gloss-color': ['#ffffff', '#ffffff', '#ffffff'],
-    'material-paper-ground': ['#1b1621', '#e8d8b6', '#1b1621'],
+    'material-paper-ground': ['#1b1621', '#e8d8b6', '#0c0a14'],
     'title-name-ink': ['rgb(255,252,244)', 'rgb(46,32,22)', 'rgb(255,252,244)'],
     'title-name-glow': ['rgb(255,190,112)', 'rgb(226,150,52)', 'rgb(255,190,112)'],
     'title-name-flare-core': ['rgb(255,236,200)', 'rgb(255,236,200)', 'rgb(255,236,200)'],
@@ -142,8 +142,8 @@ it('preserves every pre-P2 renderer pigment across all three themes', async () =
     'material-paper-strand-shadow': ['rgb(4,2,8)', 'rgb(96,62,28)', 'rgb(4,2,8)'],
     'material-paper-strand-light': ['rgb(255,244,228)', 'rgb(255,244,228)', 'rgb(255,244,228)'],
     'material-paper-warm-fleck': ['rgb(70,40,20)', 'rgb(70,40,20)', 'rgb(70,40,20)'],
-    'artwork-cover-ground': ['#15131f', '#15131f', '#15131f'],
-    'brand-mark-tile': ['#17151f', '#17151f', '#17151f'],
+    'artwork-cover-ground': ['#15111a', '#e3d2ae', '#0d0c16'],
+    'brand-mark-tile': ['#1b1621', '#e8d8b6', '#13121e'],
     'backdrop-wave-1': ['#110d1b', '#110d1b', '#110d1b'],
     'backdrop-wave-2': ['#141020', '#141020', '#141020'],
     'backdrop-wave-3': ['#181326', '#181326', '#181326'],

@@ -1,6 +1,9 @@
 /** Runs inside the page. Record the complete matrix, then classify browser initial paints. */
 export async function probeThemePaints({baseline, theme}) {
   const api=await import('/src/design-system/theme/index.ts');
+  // This probes paint propagation independently of D05's production rehearsal boundary.
+  const inPlayer=document.querySelector('#app')?.classList.contains('mode-player');
+  api.setAppearanceRehearsing(false);
   const elements=[...document.querySelectorAll('*')];
   const properties=['color','background-color','background-image','border-top-color','border-right-color','border-bottom-color','border-left-color','outline-color','column-rule-color','box-shadow','text-shadow','fill','stroke','filter','backdrop-filter','caret-color','accent-color','text-decoration-color','-webkit-text-fill-color','-webkit-text-stroke-color','flood-color','lighting-color','stop-color'];
   const pseudos=[null,'::before','::after'];
@@ -10,6 +13,7 @@ export async function probeThemePaints({baseline, theme}) {
   }));
   api.setThemePreference(baseline);await new Promise(r=>setTimeout(r,40));const before=sample();
   api.setThemePreference(theme);await new Promise(r=>setTimeout(r,40));const after=sample();
+  if(inPlayer)api.setAppearanceRehearsing(true);
   // CSS initial paints are not authored UI colors. Keep this list property/element-specific.
   function browserDefault(paint) {
     if(paint.pseudo&&['none','normal'].includes(paint.contentBefore)&&['none','normal'].includes(paint.contentAfter))return 'CSS initial pseudo-element without a generated box';
