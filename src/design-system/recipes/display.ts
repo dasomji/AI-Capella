@@ -124,7 +124,7 @@ function toolbarRecipeStyles() {
 function statusRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
   if (variant === "account-delete") return accountErrorRecipe();
   if (variant === "account") return "tw:block tw:my-content tw:font-auth-body tw:text-body tw:leading-leading-account tw:text-center " + feedback[intent];
-  if(variant === "admin")return "tw:block tw:my-content tw:font-auth-body tw:text-body tw:leading-leading-body tw:text-admin-ink";
+  if(variant === "admin")return "tw:normal-nums tw:block tw:my-content tw:font-auth-body tw:text-body tw:leading-leading-body tw:text-admin-ink";
   return (
     "tw:m-flush tw:font-body tw:text-body-small tw:leading-leading-field " +
     feedback[intent]
