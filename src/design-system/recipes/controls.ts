@@ -1,3 +1,4 @@
+import { panelButtonStyles, panelSectionMarkStyles, panelInputStyles, panelCheckboxStyles, panelPartRecipe } from "./panels";
 import { playerUtilityClasses } from "./player";
 import { normalizeRecipe } from "./normalize";
 /** Pure, literal Tailwind recipes. Each property owns disjoint CSS properties. */
@@ -110,8 +111,8 @@ function buttonRecipeStyles({
   pressed = false,
   playing = false,
 }: ButtonOptions = {}): string {
-  if (variant === "scan-mark-go" || variant === "scan-mark-ok") return [...new Set((buttonRecipeStyles({variant:'standard',intent,pressed}).split(' ').filter(c=>variant!=='scan-mark-ok'||!['tw:border-rule-strong','tw:text-ink','tw:border-ink','tw:border-danger'].includes(c)).join(' ') + ' ds-panel-scan-button' + (variant === 'scan-mark-ok' ? ' ds-panel-scan-quiet tw:border-transparent tw:text-ink-secondary' : '')).split(' '))].join(' ');
-  if (variant in panelButtons) return panelButtons[variant as keyof typeof panelButtons];
+  if (variant === "scan-mark-go" || variant === "scan-mark-ok") return [...new Set((buttonRecipeStyles({variant:'standard',intent,pressed}).split(' ').filter(c=>variant!=='scan-mark-ok'||!['tw:border-rule-strong','tw:text-ink','tw:border-ink','tw:border-danger'].includes(c)).join(' ') + ' ds-panel-scan-button tw:flex-1 tw:text-center tw:disabled:opacity-(--ds-opacity-disabled-action) tw:disabled:pointer-events-none' + (variant === 'scan-mark-ok' ? ' ds-panel-scan-quiet tw:border-transparent tw:text-ink-secondary' : '')).split(' '))].join(' ');
+  if (variant in panelButtons) return variant === "section-mark" || variant === "section-word" ? panelSectionMarkStyles(variant === "section-word") : panelButtonStyles[variant as keyof typeof panelButtonStyles];
   if (variant in playerButtonShapes) return playerUtilityClasses(playerButtonShapes[variant as keyof typeof playerButtonShapes]) + (variant === "player-play" && playing ? " playing" : "");
   if (variant === 'landing-create') return buttonRecipeStyles({variant:'standard',intent,pressed}).replace('tw:text-button','tw:text-body-small').replace('tw:inline-flex','tw:block').replace('tw:m-0','') + ' tw:mx-auto tw:mt-18 tw:text-center';
   if (variant === 'library-action' || variant === 'offline-update') {
@@ -172,7 +173,7 @@ export interface IconButtonOptions {
 function iconButtonRecipeStyles({
   variant = "standard",
 }: IconButtonOptions = {}) {
-  if (variant === "section-add") return playerUtilityClasses("ds-player-button ds-player-icon ds-player-icon-small ds-panel-section-add icon-btn small");
+  if (variant === "section-add") return playerUtilityClasses("ds-player-button ds-player-icon ds-player-icon-small ds-panel-section-add icon-btn small") + " tw:absolute tw:right-4 tw:top-1/2 tw:-translate-y-1/2 tw:bg-surface tw:max-panel:hidden!";
   if (["player", "player-landscape", "player-zoom", "player-follow", "voice-more"].includes(variant)) return playerUtilityClasses("ds-player-button ds-player-icon icon-btn" + ({player:"", "player-landscape":" ds-player-landscape-only landscape-only", "player-zoom":"", "player-follow":" ds-player-follow-btn follow-btn", "voice-more":" ds-player-voice-more voice-more ds-player-icon-small small"} as Record<string,string>)[variant]);
   if (variant === "library-more") return "ds-library-button ds-library-song-more song-more tw:inline-grid tw:place-items-center tw:flex-none tw:size-40 tw:rounded-icon";
   const shapes: Record<NonNullable<IconButtonOptions["variant"]>, string> = {
@@ -221,8 +222,7 @@ function fieldRecipeStyles(
   kind: "input" | "select" | "textarea" = "input",
 ): Record<'root'|'label'|'control'|'hint'|'error', string> {
   if (variant.startsWith("panel-")) {
-    const controls = {"panel-tempo":"ds-panel-field ds-panel-bpm-input bpm-input field", "panel-measure":"ds-panel-field ds-panel-measure-input measure-input field", "panel-export":"ds-panel-field field", "panel-offset":"ds-panel-range"};
-    return {root:"ds-panel-part ds-panel-field-group",label:"ds-panel-label label",control:"ds-panel-input " + controls[variant as keyof typeof controls],hint:"tw:sr-only",error:"tw:sr-only"};
+    return {root:"ds-panel-part ds-panel-field-group tw:panel-inherit tw:select-text tw:grid",label:panelPartRecipe("label"),control:"ds-panel-input " + panelInputStyles[variant as keyof typeof panelInputStyles],hint:"tw:sr-only",error:"tw:sr-only"};
   }
   if (variant === "player-volume") return {root:playerUtilityClasses("ds-player-duck-row"),label:playerUtilityClasses("ds-player-label label"),control:playerUtilityClasses("ds-player-input ds-player-volume duck-range"),hint:"tw:sr-only",error:"tw:sr-only"};
   if (variant === "account-password") return {root:"ds-account-password",label:"ds-account-label",control:"ds-account-input tw:rounded-field",hint:"tw:sr-only",error:"ds-account-error"};
@@ -285,7 +285,7 @@ export interface CheckboxOptions {
   variant?: (typeof checkboxVariants)[number];
 }
 function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
-  if (variant === "export-voice") return {root:"ds-panel-part",control:"ds-panel-input ds-panel-export-check"};
+  if (variant === "export-voice") return {root:"ds-panel-part tw:panel-inherit tw:select-text",control:"ds-panel-input ds-panel-export-check " + panelCheckboxStyles};
   return {
     root: "tw:inline-flex tw:items-center tw:gap-8 tw:font-auth-body tw:text-label tw:leading-body " + (variant === "permission" ? "tw:text-admin-ink" : "tw:text-ink"),
     control:
