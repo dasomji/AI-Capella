@@ -16,7 +16,7 @@ export function adminRecipe() {
     bar: "tw:flex tw:flex-wrap tw:items-center tw:gap-x-control tw:gap-y-compact tw:pb-small",
     brand:
       "tw:inline-flex tw:items-baseline tw:gap-small tw:min-w-flush tw:rounded-field tw:no-underline tw:text-ink " + focus,
-    wordmark: "tw:font-display tw:text-section tw:font-weight-medium tw:leading-leading-body tw:text-accent",
+    wordmark: "tw:font-brand tw:text-section tw:font-weight-medium tw:leading-leading-body tw:text-accent",
     area: "tw:font-control tw:text-body-small tw:text-ink-secondary",
     barEnd: "tw:ml-auto tw:flex tw:items-center tw:gap-control",
     back:
