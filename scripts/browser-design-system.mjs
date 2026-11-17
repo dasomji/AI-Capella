@@ -28,9 +28,11 @@ export async function verifyDesignSystemPage({ specimens } = {}) {
     if (!record || getComputedStyle(record).cursor === "pointer")
       throw Error("Static record row has command appearance: " + renderer);
     record.tabIndex = 0;
+    record.dataset.href = "/example";
     if (getComputedStyle(record).cursor !== "pointer")
       throw Error("Openable record row missing command appearance: " + renderer);
     record.removeAttribute("tabindex");
+    record.removeAttribute("data-href");
   }
   let elements = 0,
     properties = 0,
@@ -667,4 +669,46 @@ export async function verifyP3ReducedMotion() {
   if (dialog.open || dialog.isConnected)
     throw Error("Reduced motion exit must be immediate");
   return { reducedMotionImmediate: true };
+}
+
+
+/** D08–D11/D15/D17: real emitted sizes and feedback in both adapters. */
+export async function verifyOwnerComponents() {
+  const records=[];
+  const touch=matchMedia('(any-pointer: coarse)').matches || window.innerWidth <= parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-panel'));
+  for(const renderer of ['react','dom']) {
+    for(const size of ['standard','compact','full-width','touch']) {
+      const button=document.querySelector(`[data-specimen="button-size/${size}/primary/default"] [data-renderer="${renderer}"] button`);
+      if(!button) throw Error('Missing decided button size '+size);
+      const rect=button.getBoundingClientRect(), css=getComputedStyle(button);
+      const expected=size==='compact'&&!touch?32:44;
+      if(rect.height<expected || rect.width<expected) throw Error(`${renderer} ${size} target ${rect.width}×${rect.height} below ${expected}`);
+      if(size==='full-width' && Math.abs(rect.width-button.parentElement.getBoundingClientRect().width)>1) throw Error('Full-width size does not fill its container');
+      records.push({renderer,size,width:rect.width,height:rect.height,radius:css.borderRadius});
+    }
+    for(const density of ['standard','compact','touch']) {
+      for(const kind of ['field','checkbox','switch','icon-button']) {
+        const root=document.querySelector(`[data-specimen="${kind}-size/${density}"] [data-renderer="${renderer}"]`);
+        const target=kind==='field'?root.querySelector('input'):kind==='checkbox'?root.querySelector('label'):root.querySelector('button');
+        const rect=target.getBoundingClientRect();
+        const expected=density==='compact'&&!touch?32:44;
+        if(rect.height<expected || rect.width<expected) throw Error(`${renderer} ${kind} ${density} target ${rect.width}×${rect.height} below ${expected}`);
+        if(kind==='field') {
+          const error=root.querySelector('[role=alert]');
+          if(!error || !target.getAttribute('aria-describedby')?.split(' ').includes(error.id) || target.getAttribute('aria-invalid')!=='true') throw Error('Field feedback association lost');
+          if(getComputedStyle(error).textAlign==='center') throw Error('Field error is detached from writing line');
+          if(error.getBoundingClientRect().top < rect.bottom-1) throw Error('Error must follow field');
+        }
+      }
+    }
+    const normal=document.querySelector(`[data-specimen="field/ruled/input/normal"] [data-renderer="${renderer}"] input`);
+    const boxed=document.querySelector(`[data-specimen="field/search/input/normal"] [data-renderer="${renderer}"] input`);
+    if(getComputedStyle(normal).borderTopWidth!=='0px'||getComputedStyle(normal).borderBottomWidth==='0px') throw Error('Normal forms must use writing lines');
+    if(getComputedStyle(boxed).borderTopWidth==='0px') throw Error('Search must use a box');
+    const shared=document.querySelector(`[data-specimen="switch/shared-device/true"] [data-renderer="${renderer}"] [role=switch]`);
+    if(!shared || getComputedStyle(shared).display==='none') throw Error('Immediate shared-device setting must show a switch');
+    const jobs=document.querySelector(`[data-specimen="empty/jobs-hidden"] [data-renderer="${renderer}"] section`);
+    if(getComputedStyle(jobs).display!=='none') throw Error('Irrelevant scan work must remain hidden');
+  }
+  return {touch,records};
 }
