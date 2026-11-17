@@ -15,6 +15,7 @@ import {
   createInput,
   createSelect,
   createField,
+  createStatus,
   createSwitch,
   createCheckbox,
   updateSwitch,
@@ -125,11 +126,21 @@ function confirmDialog(options: {
     dialog.open();
   });
 }
-async function action(fn: () => Promise<void>) {
+const panelErrors = new WeakMap<HTMLElement, HTMLElement>();
+async function action(panel: HTMLElement, fn: () => Promise<void>) {
   try {
     await fn();
+    panelErrors.get(panel)?.remove();
+    panelErrors.delete(panel);
   } catch (e) {
-    toast(domainError((e as Error).message), "error");
+    let feedback = panelErrors.get(panel);
+    if (!feedback) {
+      feedback = createStatus({intent:"error",text:"",attrs:{role:"alert"}});
+      panelErrors.set(panel, feedback);
+    }
+    feedback.textContent = domainError((e as Error).message);
+    // A failed operation stays beside the active work until a successful retry.
+    if (!panel.contains(feedback)) panel.prepend(feedback);
   }
 }
 export function createEnsembleSheet(done: (id: string) => void, opener?: HTMLElement) {
@@ -156,7 +167,7 @@ export function createEnsembleSheet(done: (id: string) => void, opener?: HTMLEle
     e.preventDefault();
     if (save.getAttribute("aria-disabled") === "true") return;
     updateButton(save, { busy: true });
-    void action(async () => {
+    void action(body, async () => {
       try {
         const result = await api("/ensembles", "POST", {
           name: name.value,
@@ -216,7 +227,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
             details.open = false;
             summary.focus();
             const at = [...body.querySelectorAll(".row-menu summary")].indexOf(summary);
-            void action(async () => {
+            void action(body, async () => {
               if (await item.run() === false) return;
               await render();
               const triggers = body.querySelectorAll<HTMLElement>(".row-menu summary");
@@ -326,7 +337,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
           if (isLead) {
             const input = capabilitySwitch(caps, pt(cap), m.capabilities[cap]);
             input.onchange = () =>
-              void action(async () => {
+              void action(body, async () => {
                 const checked = input.checked;
                 const label = input.parentElement!;
                 updateSwitch(label, {variant:"capability", label:pt(cap), checked, busy:true});
@@ -445,7 +456,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
       e.preventDefault();
       if (send.getAttribute("aria-disabled") === "true") return;
       updateButton(send, { busy: true });
-      void action(async () => {
+      void action(body, async () => {
         try {
           await api(`${base}/invitations`, "POST", {
             email: email.value,
