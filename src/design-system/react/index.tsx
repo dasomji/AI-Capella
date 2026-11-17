@@ -1,4 +1,5 @@
 import {
+  Fragment,
   createContext,
   useContext,
   useEffect,
@@ -115,6 +116,10 @@ export function IconButton({
       }}
     />
   );
+}
+/** Keeps control actions positioned without a screen-owned styling wrapper. */
+export function ControlGroup({ layout, ...props }: Native<HTMLAttributes<HTMLSpanElement>>) {
+  return <span {...props} data-ds="control-group" className={r.withLayout(r.controlGroupRecipe(), layout)} />;
 }
 const FieldVariant = createContext<r.FieldVariant | undefined>(undefined);
 export type InputProps = Native<InputHTMLAttributes<HTMLInputElement>> &
@@ -448,6 +453,7 @@ export function ToggleGroup({
   label,
   items,
   value,
+  separator,
   onChange,
   layout,
   ...props
@@ -457,13 +463,14 @@ export function ToggleGroup({
       {...props}
       role="group"
       aria-label={label}
-      className={r.withLayout(r.toggleGroupRecipe({ variant }).root, layout)}
+      className={r.withLayout(r.toggleGroupRecipe({ variant, separator }).root, layout)}
     >
-      {items.map((item) => (
+      {items.map((item, index) => (
+        <Fragment key={item.value}>
+        {index > 0 && separator !== undefined && <span aria-hidden="true">{separator}</span>}
         <button
-          key={item.value}
           {...p.toggleItemPart(
-            { variant },
+            { variant, separator },
             value === item.value,
             item.disabled,
           )}
@@ -474,6 +481,7 @@ export function ToggleGroup({
         >
           {item.label}
         </button>
+        </Fragment>
       ))}
     </div>
   );
