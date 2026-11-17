@@ -10,6 +10,7 @@ import { chromium } from 'playwright';
 // Mutations are Vite transforms in this disposable harness; never edits to the owner preview.
 const mutant = process.env.P2_MUTANT;
 const mutations = {
+  staff: ['/src/staffView.ts', 'this.shadeRevision !== this.theme.revision', 'false'],
   roll: ['/src/pianoRoll.ts', 'this.themeRevision !== this.theme.revision', 'false'],
   lantern: ['/src/pianoRoll.ts', 'if (LANTERN) this.lantern ??= new Lantern();\n    else this.lantern = null;', '/* construction-only Lantern */'],
   paper: ['/src/paper.ts', 'made.clear(); composed.clear(); patterns = new WeakMap();', '/* stale paper tiles */'],
@@ -21,7 +22,7 @@ const mutations = {
   gelcache: ['/src/theme.ts', 'gelShades.clear();', '/* stale gel shades */'],
   ribbon: ['/src/artwork.ts', "const current = readTheme().titleDraft === 'current';", 'const current = START_DRAFT;'],
 };
-const mutantMode = { roll: 'roll', lantern: 'roll', paper: 'paper', overview: 'overview', stage: 'stage-fill', gelcache: 'gel', ribbon: 'ribbons' };
+const mutantMode = { staff: 'staff', roll: 'roll', lantern: 'roll', paper: 'paper', overview: 'overview', stage: 'stage-fill', gelcache: 'gel', ribbon: 'ribbons' };
 if (mutant && !mutations[mutant]) throw Error('Unknown P2_MUTANT ' + mutant);
 let mutated = false;
 const evidence = path.resolve(process.env.BROWSER_EVIDENCE || '.review-evidence/renderer-themes');

@@ -1,15 +1,16 @@
-/** Full tour-step parity against the source revision recorded at the original P4c capture. */
+/** Tour-step captures; set PARITY_BASE_REF to compare any local source revision. */
 import {chromium} from 'playwright';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import ts from 'typescript';
-const base=process.env.BASE_URL??'https://lightscore-main-app-59737521.tailf5ea68.ts.net';
-const root='/tmp/aicap-design/evidence/p4c';const ref=process.env.P4C_BEFORE_REF??'7133269e89395906a6baf63b6cea314686546569';
+const base=process.env.BASE_URL??'http://localhost:3000';
+const root=process.env.BROWSER_EVIDENCE??'.review-evidence/tour-parity';const ref=process.env.PARITY_BASE_REF;
+for(const version of ref?['before','after']:['after'])fs.mkdirSync(`${root}/${version}`,{recursive:true});
 const old=file=>execFileSync('git',['show',`${ref}:${file}`],{encoding:'utf8'});
-const legacy=(old('src/style.css')+'\n'+old('src/parchment.css')).replace(/theme\(--breakpoint-([\w-]+)\)/g,(_,name)=>({'panel':'900px','score':'700px','account':'640px'}[name]??'900px'));
-const source=ts.transpileModule(old('src/intro.ts'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText.replace(/from ['"]\.\/(design|i18n)['"]/g,(_,name)=>`from '/src/${name}.ts'`);
+const legacy=ref?(old('src/style.css')+'\n'+old('src/parchment.css')).replace(/theme\(--breakpoint-([\w-]+)\)/g,(_,name)=>({'panel':'900px','score':'700px','account':'640px'}[name]??'900px')):'';
+const source=ref?ts.transpileModule(old('src/intro.ts'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText.replace(/from ['"]\.\/(design|i18n)['"]/g,(_,name)=>`from '/src/${name}.ts'`):'';
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
-try{for(const version of ['before','after'])for(const theme of ['night-paper','parchment'])for(const [width,height] of [[1440,900],[768,1024],[390,844]]){
+try{for(const version of ref?['before','after']:['after'])for(const theme of ['night-paper','parchment'])for(const [width,height] of [[1440,900],[768,1024],[390,844]]){
  const context=await browser.newContext({viewport:{width,height},colorScheme:'dark'}),page=await context.newPage();await page.addInitScript(()=>{localStorage.setItem('ai-capella-lang','en');localStorage.setItem('ai-capella-intro-off','1');});
  if(version==='before')await page.route('**/src/intro.ts',route=>route.fulfill({contentType:'application/javascript',body:source}));
  await page.goto(base+'/dev/design-system');await page.locator('.ds-specimens').waitFor();await page.evaluate(()=>document.fonts.ready);const styles=await page.locator('style,link[rel=stylesheet]').evaluateAll(nodes=>nodes.map(n=>n.outerHTML).join(''));await page.goto(base+'/healthz');await page.setContent('<!doctype html><html><head>'+styles+'</head><body></body></html>');
