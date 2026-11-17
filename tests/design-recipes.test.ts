@@ -63,18 +63,10 @@ describe("pure recipes", () => {
           expect(new Set(classes).size).toBe(classes.length);
           continue;
         }
-        if (["ensemble-switch", "ensemble-other", "account-delete-confirm", "device-link"].includes(variant)) {
-          const source = readFileSync("src/design-system/account.css", "utf8") + readFileSync("src/design-system/library.css", "utf8");
-          const slot = classes.find(c => /^(ds-navigation-|ds-account-delete-confirm|ds-library-link)/.test(c))!;
-          expect(source).toContain("." + slot);
-          expect(new Set(classes).size).toBe(classes.length);
-          continue;
-        }
-        // Content-rich library controls own material/geometry slots in the shared CSS recipe.
-        // They deliberately retain the historical shapes, rather than the generic button shape.
-        if (["landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update"].includes(variant)) {
-          const slot = classes.find(c => c.startsWith('ds-library-') && c !== 'ds-library-button')!;
-          expect(readFileSync('src/design-system/library.css','utf8')).toContain('.'+slot);
+        // Domain appearances share token utilities across React and DOM adapters.
+        if (["ensemble-switch", "ensemble-other", "account-delete-confirm", "device-link", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update"].includes(variant)) {
+          expect(classes.some(c => c.startsWith("tw:"))).toBe(true);
+          expect(classes.some(c => /^(ds-navigation-|ds-account-|ds-library-)/.test(c))).toBe(true);
           expect(new Set(classes).size).toBe(classes.length);
           continue;
         }
@@ -112,6 +104,20 @@ describe("pure recipes", () => {
     expect(selectors.length).toBeGreaterThan(0);
     for (const selector of selectors) expect(selector).toContain("::");
     expect(r.playerGlyphRecipe("treble")).toContain("tw:font-font-music");
+  });
+  it("defines library/account appearance in utilities and keeps only generated decorations in CSS", () => {
+    for (const part of r.libraryParts) expect(r.libraryPartRecipe(part)).toMatch(/(?:^|\s)tw:/);
+    for (const part of r.accountParts) expect(r.accountPartRecipe(part)).toMatch(/(?:^|\s)tw:/);
+    for (const variant of ["library-prompt", "library-sheet", "library-popover"] as const)
+      for (const slot of Object.values(r.dialogRecipe({ variant }))) expect(slot).toMatch(/(?:^|\s)tw:/);
+    for (const slot of Object.values(r.menuRecipe({ variant: "library" }))) expect(slot).toMatch(/(?:^|\s)tw:/);
+    for (const file of ["library", "account"]) {
+      const css = readFileSync(`src/design-system/${file}.css`, "utf8");
+      expect(css).not.toMatch(/(?<![\w-])\d+(?:px|ms)\b|#[a-f\d]{3,8}\b/i);
+      const selectors = [...css.matchAll(/(?:^|})\s*(?:\/\*[\s\S]*?\*\/\s*)?([^{}]+)\{/g)]
+        .map(match => match[1].trim()).filter(selector => !selector.startsWith("@"));
+      for (const selector of selectors) expect(selector).toContain("::");
+    }
   });
   it("makes ruled and boxed properties exclusive and exposes stable slots", () => {
     for (const variant of r.fieldVariants) {
