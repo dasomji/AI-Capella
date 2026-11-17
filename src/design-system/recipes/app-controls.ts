@@ -1,6 +1,6 @@
 import { createControlRecipes, actionRecipe } from "./controls";
 import { libraryControlRecipe, libraryMoreRecipe, librarySearchRecipe, offlineUpdateRecipe, type LibraryControl } from "./library";
-import { accountFieldRecipe, sharedDeviceRecipe } from "./account";
+import { accountFieldRecipe } from "./account";
 import { panelButtonStyles, panelSectionMarkStyles, panelInputStyles, panelCheckboxStyles, panelPartRecipe } from "./panels";
 import { playerControlRecipe, type PlayerControl } from "./player";
 const playerButtonShapes = {"player-back": "ds-player-button ds-player-back-btn back-btn", "player-mode": "ds-player-button ds-player-badge badge", "player-info": "ds-player-button ds-player-info-row info-row", "player-position": "ds-player-button ds-player-pos pos", "player-transport": "ds-player-button ds-player-t-btn t-btn", "player-stop-left": "ds-player-button ds-player-t-btn ds-player-t-stop-left t-btn t-stop-left", "player-stop-mid": "ds-player-button ds-player-t-btn ds-player-t-stop-mid t-btn t-stop-mid", "player-play": "ds-player-button ds-player-play-btn play-btn", "player-toggle": "ds-player-button ds-player-t-btn ds-player-toggle t-btn toggle", "player-preference": "ds-player-button ds-player-t-btn ds-player-toggle ds-player-t-metro t-btn toggle t-metro", "player-save": "ds-player-button ds-player-t-btn ds-player-t-save t-btn t-save", "player-voice-name": "ds-player-button ds-player-voice-name voice-name", "player-voice-name-long": "ds-player-button ds-player-voice-name ds-player-long voice-name long", "player-mute": "ds-player-button ds-player-mix-btn ds-player-mute-btn mix-btn mute-btn", "player-solo": "ds-player-button ds-player-mix-btn ds-player-solo-btn mix-btn solo-btn", "player-chip": "ds-player-button ds-player-chip chip", "player-mixer-chip": "ds-player-button ds-player-chip ds-player-mixer-chip chip mixer-chip", "player-segmented": "ds-player-button ds-player-seg-item seg-item", "player-reset": "ds-player-button ds-player-reset player-reset"} as const;
@@ -27,7 +27,7 @@ const composed = /* @__PURE__ */ createControlRecipes({
   if (variant === "library-more") return libraryMoreRecipe();
   return undefined;
  },
- field({variant = "boxed", invalid = false}, kind) {
+ field({variant = "ruled", invalid = false}, kind) {
   if (variant.startsWith("panel-")) {
     return {root:"ds-panel-part ds-panel-field-group tw:font-inherit tw:font-family-inherit tw:text-inherit tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:select-text tw:grid",label:panelPartRecipe("label"),control:"ds-panel-input " + panelInputStyles[variant as keyof typeof panelInputStyles],hint:"tw:sr-only",error:"tw:sr-only"};
   }
@@ -37,16 +37,15 @@ const composed = /* @__PURE__ */ createControlRecipes({
   return undefined;
  },
  checkbox({variant = "standard"}) {
-  if (variant === "export-voice") return {root:"ds-panel-part tw:font-inherit tw:font-family-inherit tw:text-inherit tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:select-text",control:"ds-panel-input ds-panel-export-check " + panelCheckboxStyles};
+  if (variant === "export-voice") return {root:"ds-panel-part tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:inline-flex tw:items-center tw:font-inherit tw:font-family-inherit tw:text-inherit tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:select-text",control:"ds-panel-input ds-panel-export-check " + panelCheckboxStyles};
   return undefined;
  },
  switch({variant = "player", checked = false}) {
   if (variant === "player-preference") return {label:"ds-player-switch-label",input:"tw:sr-only",root:playerControlRecipe("preference-switch"),thumb:"tw:hidden"};
-  // D11: the offline policy retains its native checkbox, rather than a drawn track.
-  if (variant === "shared-device") return sharedDeviceRecipe();
+  // D11: the immediately applied shared-device preference uses the ordinary switch.
   return undefined;
  },
 });
-export { createControlRecipes, buttonVariants, iconButtonVariants, fieldVariants, checkboxVariants, switchVariants, controlBase, disabledRecipe, actionRecipe, controlGroupRecipe } from "./controls";
-export type { ButtonOptions, ButtonVariant, ButtonIntent, IconButtonOptions, FieldOptions, FieldVariant, CheckboxOptions, SwitchOptions } from "./controls";
+export { createControlRecipes, buttonVariants, buttonSizes, iconButtonVariants, fieldVariants, checkboxVariants, switchVariants, controlBase, disabledRecipe, actionRecipe, controlGroupRecipe } from "./controls";
+export type { ButtonOptions, ButtonVariant, ButtonIntent, ControlDensity, IconButtonOptions, FieldOptions, FieldVariant, CheckboxOptions, SwitchOptions } from "./controls";
 export const { buttonRecipe, iconButtonRecipe, fieldRecipe, inputRecipe, selectRecipe, textareaRecipe, checkboxRecipe, switchRecipe } = composed;
