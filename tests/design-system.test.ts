@@ -287,7 +287,7 @@ it('keeps ongoing guides and reusable scripts independent of phase evidence and 
 it('runs acceptance and adapter parity with reusable keyboard, auth and admin checks in CI', async () => {
   const { readFileSync } = await import('node:fs');
   const workflow=readFileSync('.github/workflows/deploy.yml','utf8');
-  for(const command of ['test:browser:theme-extension','test:browser:design-system','test:browser:keyboard','test:browser:admin-parity','test:browser:auth-flows'])expect(workflow).toContain(`npm run ${command}`);
+  for(const command of ['test:browser:theme-extension','test:browser:design-system','test:browser:keyboard','test:browser:admin-parity','test:browser:auth-flows','check:design-utilities'])expect(workflow).toContain(`npm run ${command}`);
 });
 it('uses named toast, title intensity and print viewport roles at their consumers', async () => {
   const { readFileSync } = await import('node:fs');

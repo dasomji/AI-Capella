@@ -47,6 +47,7 @@ try {
           contexts = await page.evaluate(verifyDesignSystemContexts);
         assert.deepEqual(comparison.mismatches, []);
         assert.deepEqual(contexts.mismatches, []);
+        await page.keyboard.press("Tab"); // Trusted keyboard modality for computed :focus-visible checks.
         const behavior = await page.evaluate(verifyDesignSystemBehavior),
           fixes = await page.evaluate(verifyP3ReviewFixes);
         // Actual browser-generated Tab events, in addition to the boundary handler assertions.
