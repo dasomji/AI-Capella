@@ -139,13 +139,13 @@ export async function verifyDesignSystemPage({ specimens } = {}) {
   const buttons = [...normal.querySelectorAll("button")],
     previous = buttons.map((e) => getComputedStyle(e).minHeight);
   const original = document.documentElement.style.getPropertyValue(
-    "--ds-control-height",
+    "--ds-control-height-touch",
   );
-  document.documentElement.style.setProperty("--ds-control-height", "57px");
+  document.documentElement.style.setProperty("--ds-control-height-touch", "57px");
   const after = buttons.map((e) => getComputedStyle(e).minHeight);
   if (original)
-    document.documentElement.style.setProperty("--ds-control-height", original);
-  else document.documentElement.style.removeProperty("--ds-control-height");
+    document.documentElement.style.setProperty("--ds-control-height-touch", original);
+  else document.documentElement.style.removeProperty("--ds-control-height-touch");
   if (
     after.length !== 2 ||
     !after.every((value) => value === "57px") ||
