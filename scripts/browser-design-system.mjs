@@ -708,6 +708,16 @@ export async function verifyOwnerComponents() {
         }
       }
     }
+    const accountPassword=document.querySelector(`[data-specimen="field/account-password/input/normal"] [data-renderer="${renderer}"] input`);
+    if(accountPassword.getBoundingClientRect().height<44) throw Error('Account password must use shared target height');
+    for(const variant of ['standard','small','transcription','admin-close','admin-copy','library-menu']) {
+      const icon=document.querySelector(`[data-specimen="icon-button/${variant}"] [data-renderer="${renderer}"] button`);
+      const r=icon.getBoundingClientRect();if(r.width<44||r.height<44)throw Error(`${renderer} ${variant} icon target below 44`);
+    }
+    if(touch)for(const variant of ['domain-language','transcription-language','review-item','account-link','password-toggle']) {
+      const action=document.querySelector(`[data-specimen="button/${variant}/secondary/default"] [data-renderer="${renderer}"] button`);
+      const r=action.getBoundingClientRect();if(r.width<44||r.height<44)throw Error(`${renderer} ${variant} touch target below 44`);
+    }
     const normal=document.querySelector(`[data-specimen="field/ruled/input/normal"] [data-renderer="${renderer}"] input`);
     const boxed=document.querySelector(`[data-specimen="field/search/input/normal"] [data-renderer="${renderer}"] input`);
     if(getComputedStyle(normal).borderTopWidth!=='0px'||getComputedStyle(normal).borderBottomWidth==='0px') throw Error('Normal forms must use writing lines');
