@@ -326,7 +326,7 @@ export function installTranscription(options: {
         node.parentElement!.classList.add("tx-field");
         node.previousElementSibling!.classList.add("tx-label");
       } else {
-        const wrap = createFieldGroup({ variant: "transcription", layout: "tw:my-24", label: tr(label), content: node });
+        const wrap = createFieldGroup({ variant: "transcription", labelId: `${node.id}-label`, layout: "tw:my-24", label: tr(label), content: node });
         wrap.classList.add("tx-field");
         wrap.firstElementChild!.classList.add("tx-label");
         d.append(wrap);

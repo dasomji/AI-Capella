@@ -30,6 +30,7 @@ export async function verifyP4cKeyboard(page, theme) {
   await page.evaluate(async()=>{const entry=document.createElement('button');entry.id='transcription-entry';entry.textContent='Read a score';const jobs=document.createElement('div');document.body.append(entry,jobs);window.tx=(await import('/src/transcription.ts')).installTranscription({beforeListen:()=>true,reviewCleanup:()=>()=>{},socket:{on(){},off(){},emit(){}},ensemble:()=> 'fixture',entry,jobs,open:async()=>{}});});
   await page.locator('.tx-job').waitFor();const jobSummary=page.locator('.tx-job summary');await jobSummary.focus();await page.keyboard.press('ArrowDown');assert.ok(await active(page.getByRole('menuitem').last()));await page.keyboard.press('Escape');assert.ok(await active(jobSummary));
   await page.locator('#transcription-entry').click();await wrap(page.getByRole('dialog'));
+  assert.equal(await page.locator('#tx-language').getAttribute('aria-labelledby'),'tx-language-label');
   const choose=page.getByRole('button',{name:/Choose PDF/});await choose.scrollIntoViewIfNeeded();await choose.focus();const chooser=page.waitForEvent('filechooser');await choose.press('Space');await (await chooser).setFiles([]);
   await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});assert.ok(await active(page.locator('#transcription-entry')));
   const review=page.getByRole('button',{name:'Review',exact:true});await review.click();await page.locator('.tx-score svg').first().waitFor();await wrap(page.getByRole('dialog'));
