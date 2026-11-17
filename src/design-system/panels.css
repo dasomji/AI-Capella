@@ -578,3 +578,6 @@ p.ds-panel-ctl-note {
   text-align: center;
 }
 .ds-panel-scan-mark {list-style:none;}
+
+/* Field wrappers avoid native select inline-baseline differences after DOM insertion. */
+.ds-panel-field-group {display:grid;}

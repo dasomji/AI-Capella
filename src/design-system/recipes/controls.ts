@@ -221,7 +221,7 @@ function fieldRecipeStyles(
 ): Record<'root'|'label'|'control'|'hint'|'error', string> {
   if (variant.startsWith("panel-")) {
     const controls = {"panel-tempo":"ds-panel-field ds-panel-bpm-input bpm-input field", "panel-measure":"ds-panel-field ds-panel-measure-input measure-input field", "panel-export":"ds-panel-field field", "panel-offset":"ds-panel-range"};
-    return {root:"ds-panel-part",label:"ds-panel-label label",control:"ds-panel-input " + controls[variant as keyof typeof controls],hint:"tw:sr-only",error:"tw:sr-only"};
+    return {root:"ds-panel-part ds-panel-field-group",label:"ds-panel-label label",control:"ds-panel-input " + controls[variant as keyof typeof controls],hint:"tw:sr-only",error:"tw:sr-only"};
   }
   if (variant === "player-volume") return {root:"ds-player-duck-row",label:"ds-player-label label",control:"ds-player-input ds-player-volume duck-range",hint:"tw:sr-only",error:"tw:sr-only"};
   if (variant === "account-password") return {root:"ds-account-password",label:"ds-account-label",control:"ds-account-input tw:rounded-field",hint:"tw:sr-only",error:"ds-account-error"};
