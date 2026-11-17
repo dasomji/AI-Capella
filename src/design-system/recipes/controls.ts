@@ -136,7 +136,7 @@ function fieldRecipeStyles(
   const admin = variant === "admin";
   const ruled = variant !== "boxed";
   return {
-    root: variant === "ruled-account" ? "tw:block tw:my-20 tw:min-w-0 tw:font-auth-body" : admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body tw:tabular-nums" : "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
+    root: variant === "ruled-account" ? "tw:block tw:mt-20 tw:min-w-0 tw:font-auth-body " + (invalid ? "tw:mb-16" : "tw:mb-20") : admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body tw:tabular-nums" : "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
     label:
       ruled && !admin
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary"
@@ -168,7 +168,7 @@ function fieldRecipeStyles(
       admin ? "" : "tw:focus:outline-none",
     ].join(" "),
     hint: "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
-    error: variant === "ruled-account" ? "tw:block tw:my-16 tw:text-body tw:font-auth-body tw:leading-account tw:text-center tw:text-danger" : "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-danger",
+    error: variant === "ruled-account" ? "tw:block tw:mt-20 tw:mb-16 tw:text-body tw:font-auth-body tw:leading-account tw:text-center tw:text-danger" : "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-danger",
   };
 }
 function inputRecipeStyles(options: FieldOptions = {}) {
