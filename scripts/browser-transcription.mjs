@@ -27,6 +27,7 @@ try{
  await page.getByRole('button',{name:'Start reading',exact:true}).click();await page.locator('.tx-job').first().waitFor();await shot('jobs-running');
  await page.getByRole('button',{name:'Review',exact:true}).first().waitFor({timeout:30000});await review();assert.ok(await page.locator('.tx-mark').count()>=2);
  await page.locator('.tx-review-item').first().click();await page.locator('.tx-original img').waitFor({timeout:30000});
+ await page.locator('.tx-original img').evaluate(img=>img.decode());
  assert.equal(await page.getByRole('switch').getAttribute('aria-checked'),'true');
  assert.ok(await page.locator('.tx-original img').evaluate(img=>img.complete&&img.naturalWidth>0),'Review finding opens a decoded original image');
  assert.deepEqual(errors,[],'Review finding navigation must not throw before opening its original');
