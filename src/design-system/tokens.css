@@ -278,6 +278,24 @@
   --ds-font-brand: var(--ds-font-canvas-display);
   --ds-font-script: "Italianno", cursive;
   --ds-material-grain-strength: .065;
+  --ds-type-library-heading-font-size: clamp(var(--ds-control-height-tour), 5vw, 54px);
+  --ds-type-library-heading-line-height: 1;
+  --ds-type-library-heading-letter-spacing: normal;
+  --ds-type-tour-title-font-size: var(--ds-size-song);
+  --ds-type-tour-title-line-height: var(--ds-leading-label);
+  --ds-type-tour-title-letter-spacing: normal;
+  --ds-type-library-song-font-size: var(--ds-size-position);
+  --ds-type-library-song-line-height: var(--ds-leading-song-player);
+  --ds-type-library-song-letter-spacing: normal;
+  --ds-type-library-meta-font-size: var(--ds-size-note);
+  --ds-type-library-prompt-font-size: var(--ds-size-transcription-title-phone);
+  --ds-type-library-prompt-line-height: var(--ds-leading-label);
+  --ds-type-library-prompt-letter-spacing: normal;
+  --ds-type-player-song-font-size: var(--ds-size-auth-title);
+  --ds-type-player-song-line-height: 1.1;
+  --ds-type-player-song-letter-spacing: normal;
+  --ds-type-library-song-phone-size: var(--ds-size-section);
+  --ds-type-player-song-phone-size: var(--ds-size-position);
 }
 
 /* Theme-independent roles, authored once. */
@@ -1906,6 +1924,24 @@
   --ds-type-section-mark-font-synthesis: none;
   --ds-font-mark: "Baltimore Bold 1832", var(--ds-font-canvas-display);
   --ds-font-brand: "Baltimore Black Slope 1832", var(--ds-font-canvas-display);
+  --ds-type-library-heading-font-size: var(--ds-size-library-title);
+  --ds-type-library-heading-line-height: var(--ds-leading-heading);
+  --ds-type-library-heading-letter-spacing: var(--ds-tracking-heading);
+  --ds-type-tour-title-font-size: var(--ds-size-tour-title);
+  --ds-type-tour-title-line-height: var(--ds-leading-dialog);
+  --ds-type-tour-title-letter-spacing: var(--ds-tracking-heading);
+  --ds-type-library-song-font-size: var(--ds-size-song);
+  --ds-type-library-song-line-height: var(--ds-leading-label);
+  --ds-type-library-song-letter-spacing: var(--ds-tracking-song);
+  --ds-type-library-meta-font-size: var(--ds-size-small);
+  --ds-type-library-prompt-font-size: var(--ds-size-dialog);
+  --ds-type-library-prompt-line-height: var(--ds-leading-dialog);
+  --ds-type-library-prompt-letter-spacing: var(--ds-tracking-heading);
+  --ds-type-player-song-font-size: var(--ds-size-song-player);
+  --ds-type-player-song-line-height: var(--ds-leading-song-player);
+  --ds-type-player-song-letter-spacing: var(--ds-tracking-song);
+  --ds-type-library-song-phone-size: var(--ds-size-song);
+  --ds-type-player-song-phone-size: var(--ds-size-song-player);
 }
 
 /* Component dimensions retain legacy roles pending D08–D17. */
@@ -2628,7 +2664,6 @@
   --leading-panel-leading-overview-phone: var(--ds-panel-leading-overview-phone);
   --leading-panel-leading-scan: var(--ds-panel-leading-scan);
   --leading-panel-leading-single: var(--ds-panel-leading-single);
-  --leading-flush: var(--ds-space-none);
   --leading-player-voice-name-line-height: var(--ds-player-voice-name-line-height);
   --leading-power-hint-p-line-height: var(--ds-power-hint-p-line-height);
   --leading-transcription-error-line-height: var(--ds-transcription-error-line-height);
