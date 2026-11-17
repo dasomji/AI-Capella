@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 export async function verifyP4cKeyboard(page, theme) {
   const active = locator => locator.evaluate(node => node === document.activeElement);
   const wrap = async dialog => {
+    await dialog.waitFor({state:"visible"});
     const focusable = dialog.locator('button:not(:disabled),input:not(:disabled),select:not(:disabled),summary');
     const visible=[];for(const node of await focusable.all())if(await node.isVisible()&&await node.evaluate(e=>e.tabIndex>=0))visible.push(node);
     const first=visible[0],last=visible.at(-1);assert.ok(first&&last);
