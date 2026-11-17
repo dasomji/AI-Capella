@@ -40,6 +40,8 @@ describe('owner foundation decisions', () => {
       for (const role of ['ink','ink-secondary','ink-muted','accent','success','danger','warning']) expect(contrast(value(role),value(surface)), `${theme} ${role} on ${surface}`).toBeGreaterThanOrEqual(4.5);
       expect(contrast(value('focus'),value(surface))).toBeGreaterThanOrEqual(3);
     }
+    expect(contrast(value('on-danger'),value('danger')), `${theme} destructive button lettering`).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(value('on-accent'),value('accent')), `${theme} primary button lettering`).toBeGreaterThanOrEqual(4.5);
     expect(value('print-paper')).toBe('#ffffff'); expect(value('print-ink')).toBe('#000000');
     expect(value('control-target-touch')).toBe('44px'); expect(value('control-height-compact')).toBe('32px');
   });

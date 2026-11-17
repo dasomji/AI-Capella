@@ -454,7 +454,7 @@
   --ds-accent: var(--pigment-accent);
   --ds-warning: var(--pigment-warning);
   --ds-on-accent: var(--pigment-surface-sunken);
-  --ds-on-danger: var(--pigment-ink);
+  --ds-on-danger: var(--ds-surface-sunken);
   --ds-material-family: paper;
   --ds-material-strategy: light;
   --ds-color-scheme: dark;
@@ -1442,7 +1442,7 @@
   --ds-accent: var(--pigment-accent);
   --ds-warning: var(--pigment-warning);
   --ds-on-accent: var(--pigment-surface-sunken);
-  --ds-on-danger: var(--pigment-ink);
+  --ds-on-danger: var(--ds-surface-sunken);
   --ds-material-family: waves;
   --ds-material-strategy: light;
   --ds-color-scheme: dark;
