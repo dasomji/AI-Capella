@@ -16,7 +16,7 @@ export const buttonVariants = [
   "link",
   "account-link",
   "password-toggle",
-  "tile", "compact", "review-item", "transcription-link", "transcription-language", "tour-link", "hint-link", "hint",
+  "tile", "compact", "review-item", "transcription-link", "transcription-language", "tour-link", "hint-link", "hint", "domain-language",
 ] as const;
 export type ButtonVariant = (typeof buttonVariants)[number];
 /** tour: danger=primary, quiet=secondary (D17); dense: primary/quiet=secondary (D10). */
@@ -27,6 +27,7 @@ export interface ButtonOptions {
   pressed?: boolean;
 }
 const parityButtonShapes = {
+  "domain-language": "tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4 tw:rounded-card tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-label tw:text-small tw:leading-admin tw:text-center",
   tile: "tw:flex-1 tw:min-w-0 tw:min-h-upload-tile tw:max-score:min-h-upload-tile-phone tw:flex-col tw:px-10 tw:py-18 tw:whitespace-normal tw:rounded-transcription-tile tw:bg-surface tw:text-ink tw:border-rule-strong tw:text-button tw:font-label tw:font-auth-body tw:leading-body",
   compact: "tw:min-h-36 tw:p-6 tw:rounded-card tw:border-rule-strong tw:bg-transparent tw:text-ink tw:text-small tw:font-label tw:font-auth-body tw:leading-body",
   "review-item": "tw:min-h-control-height tw:w-full tw:mb-4 tw:justify-start tw:items-baseline tw:text-left tw:whitespace-normal tw:py-12 tw:px-0 tw:border-0 tw:border-b tw:rounded-field tw:border-rule-strong tw:bg-transparent tw:text-ink tw:font-auth-body tw:font-regular tw:text-body-small tw:leading-field",
@@ -77,7 +78,7 @@ function buttonRecipeStyles({
   if (variant in parityButtonShapes) {
     const shape = parityButtonShapes[variant as keyof typeof parityButtonShapes];
     return [controlBase, disabledRecipe, "tw:inline-flex tw:gap-8 tw:cursor-pointer", variant === "review-item" ? "tw:border-solid" : "tw:items-center tw:justify-center " + (["tile","compact","hint"].includes(variant) ? "tw:border tw:border-solid" : ""), shape,
-      variant === "transcription-language" ? pressed ? "tw:text-ink" : "tw:text-ink-secondary" : "",
+      (variant === "transcription-language" || variant === "domain-language") ? pressed ? "tw:text-ink" : "tw:text-ink-secondary" : "",
       variant === "tile" && pressed ? "tw:border-transcription-accent tw:shadow-transcription-selected" : ""].join(" ");
   }
   const color =
@@ -155,7 +156,7 @@ function fieldRecipeStyles(
   const domain = variant === "domain" || variant === "domain-create";
   const ruled = variant !== "boxed";
   return {
-    root: variant === "ruled-account" ? "tw:block tw:mt-20 tw:min-w-0 tw:font-auth-body " + (invalid ? "tw:mb-16" : "tw:mb-20") : admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body tw:tabular-nums" : "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
+    root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-0" : variant === "ruled-account" ? "tw:block tw:mt-20 tw:min-w-0 tw:font-auth-body " + (invalid ? "tw:mb-16" : "tw:mb-20") : admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body tw:tabular-nums" : "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
     label:
       variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-body tw:text-ink" : ruled && !admin
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary"
@@ -216,7 +217,7 @@ function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
         : "tw:size-18 tw:accent-accent"),
   };
 }
-export const switchVariants = ["player", "admin", "capability"] as const;
+export const switchVariants = ["player", "admin", "capability", "comparison"] as const;
 export interface SwitchOptions {
   variant?: (typeof switchVariants)[number];
   checked?: boolean;
@@ -229,16 +230,18 @@ function switchRecipeStyles({
     player: "tw:w-52 tw:h-32 tw:p-4",
     admin: "tw:w-48 tw:h-26 tw:p-0",
     capability: "tw:w-28 tw:h-16 tw:p-2",
+    comparison: "tw:w-28 tw:h-16 tw:p-2",
   };
   const thumbs = {
     player: "tw:size-24",
     admin: "tw:size-18",
     capability: "tw:size-10",
+    comparison: "tw:size-10",
   };
   return {
     label:
-      "tw:relative tw:inline-flex tw:items-center tw:gap-8 tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-32 tw:flex-nowrap" : ""),
-    input: variant === "capability" ? "tw:absolute tw:opacity-0 tw:w-28 tw:h-24 tw:m-0 tw:peer" : "tw:sr-only tw:peer",
+      "tw:relative tw:inline-flex tw:items-center tw:gap-8 tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-32 tw:flex-nowrap" : variant === "comparison" ? " tw:min-h-36 tw:my-24 tw:text-label" : ""),
+    input: variant === "capability" || variant === "comparison" ? "tw:absolute tw:opacity-0 tw:w-28 tw:h-24 tw:m-0 tw:peer" : "tw:sr-only tw:peer",
     root:
       controlBase +
       " " +
@@ -265,6 +268,7 @@ function switchRecipeStyles({
             player: "tw:translate-x-20",
             admin: "tw:translate-x-switch-admin",
             capability: "tw:translate-x-12",
+            comparison: "tw:translate-x-12",
           }[variant]
         : variant === "player"
           ? "tw:bg-ink-secondary"
