@@ -87,6 +87,7 @@ try {
    await page.evaluate(()=>{window.toastModal=D.createDialog({title:'Active operation',content:D.createInput({})});toastModal.open();B.toast('The operation failed. Retry when ready.','error');B.toast('A later saved notice');});
    await page.waitForTimeout(6600);
    assert.equal(await page.evaluate(()=>B.getToast().kind),'error','D15 errors persist beyond former timeout');
+   assert.equal(await page.locator('#toast button').evaluate(el=>getComputedStyle(el).color===getComputedStyle(el.parentElement).color),true,'Toast actions inherit the notification contrast foreground');
    await page.screenshot({path:`${out}/${theme}-${width}x${height}-persistent-error.png`});
    await page.locator('#toast button').click();
    assert.equal(await page.evaluate(()=>B.getToast().text),'A later saved notice');
