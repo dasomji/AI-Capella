@@ -22,6 +22,12 @@ function duration(role: string) {
 let message: ToastMessage | null = null;
 let sequence = 0;
 const pending: ToastMessage[] = [];
+// A persistent error must not accumulate an unbounded backlog of recurring notices.
+const maxPending = 10;
+function identical(a: ToastMessage, b: ToastMessage) {
+  return a.text === b.text && a.kind === b.kind && !!a.persistent === !!b.persistent
+    && a.action?.label === b.action?.label && a.action?.onSelect === b.action?.onSelect;
+}
 let timer: ReturnType<typeof setTimeout> | undefined;
 let fadeTimer: ReturnType<typeof setTimeout> | undefined;
 const listeners = new Set<() => void>();
@@ -85,7 +91,10 @@ function render() {
   transportHost();
   for (const [key, value] of Object.entries(toastPart(message.kind)))
     host.setAttribute(key, String(value));
-  host.textContent = message.text;
+  const text = document.createElement("span");
+  text.className = "tw:min-w-flush tw:flex-1 tw:whitespace-normal tw:wrap-anywhere tw:max-panel:basis-full";
+  text.textContent = message.text;
+  host.replaceChildren(text);
   if (message.action) {
     const action = document.createElement("button");
     action.type = "button";
@@ -136,9 +145,11 @@ export function toast(
   kind: ToastMessage["kind"] = "info",
   options: Pick<ToastMessage, "action" | "persistent"> = {},
 ) {
-  clearTimeout(fadeTimer);
   const next = { text, kind, ...options, id: ++sequence };
+  if ((message && identical(message, next)) || pending.some(value => identical(value, next))) return;
+  clearTimeout(fadeTimer);
   if (message && persistent(message)) {
+    if (pending.length === maxPending) pending.shift();
     pending.push(next);
     return;
   }
