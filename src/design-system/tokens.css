@@ -558,6 +558,8 @@
   --ds-voice-7: var(--pigment-voice-7);
   --ds-voice-8: var(--pigment-feedback-survey);
   --ds-component-action-hover: var(--ds-action-hover);
+  --ds-domain-backdrop: rgb(8 6 14 / 0.45);
+  --ds-domain-sheet-shadow: var(--ds-shadow-material-highlight), 0 30px 70px -20px rgb(0 0 0 / 0.8);
   --ds-note-secondary: rgb(21 17 26 / 0.55);
   --ds-hint-secondary: rgb(20 18 28 / 0.6);
   --ds-note-shadow: 0 18px 50px rgb(0 0 0 / 0.55);
@@ -672,6 +674,8 @@
   --ds-voice-7: var(--pigment-voice-7-2);
   --ds-voice-8: var(--pigment-feedback-survey-2);
   --ds-component-action-hover: var(--ds-surface-hover);
+  --ds-domain-backdrop: rgb(60 40 20 / 0.28);
+  --ds-domain-sheet-shadow: var(--ds-shadow-material-highlight), 0 30px 70px -20px rgb(90 60 25 / 0.45);
   --ds-note-secondary: rgb(243 233 211 / 0.62);
   --ds-hint-secondary: rgb(243 233 211 / 0.62);
   --ds-note-shadow: var(--ds-component-toast-shadow);
@@ -786,6 +790,8 @@
   --ds-voice-7: var(--pigment-voice-7);
   --ds-voice-8: var(--pigment-feedback-survey);
   --ds-component-action-hover: var(--ds-action-hover);
+  --ds-domain-backdrop: rgb(8 6 14 / 0.45);
+  --ds-domain-sheet-shadow: var(--ds-shadow-material-highlight), 0 30px 70px -20px rgb(0 0 0 / 0.8);
   --ds-note-secondary: rgb(21 17 26 / 0.55);
   --ds-hint-secondary: rgb(20 18 28 / 0.6);
   --ds-note-shadow: 0 18px 50px rgb(0 0 0 / 0.55);
@@ -1222,4 +1228,12 @@
   --spacing-upload-tile-phone: var(--ds-upload-tile-phone-height);
   --spacing-menu-member: var(--ds-menu-member-width);
   --spacing-menu-job: var(--ds-menu-job-width);
+}
+
+:root { --ds-overlay-blur: 5px; --ds-space-50: 50px; }
+@theme inline {
+  --color-domain-backdrop: var(--ds-domain-backdrop);
+  --shadow-domain-sheet: var(--ds-domain-sheet-shadow);
+  --color-material-vellum-strong: var(--ds-material-vellum-strong);
+  --spacing-50: var(--ds-space-50);
 }
