@@ -7,6 +7,7 @@ import type { Color } from './color';
 export type { ThemeId, ThemePreference, Color };
 
 export const colorRoles = [
+  'gold-ink-deep', 'gold-ink', 'gold-ink-light',
   'canvas-mask', 'material-gel-gloss-color', 'score-overview-past',
   'material-paper-ground',
   'material-paper-swatch-glow', 'material-paper-swatch-line', 'title-name-ink', 'title-name-glow',
