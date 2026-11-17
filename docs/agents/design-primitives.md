@@ -244,3 +244,12 @@ Voice colors arrive through `colorForPart` from the theme snapshot and set only 
 `createPlayerGlyph` builds trusted SMuFL text Nodes for the shared native player/voice menus.
 The unprefixed class hooks remain for delegation, introduction targets and state queries;
 `player.css` owns appearance. Tempo/key/goto/sections/export panels remain P5 slice 4.
+
+Per-voice CSS expressions must resolve at the row/chip that owns `--c`. A compound custom
+property declared on `:root` resolves there, so a root material containing `var(--c)` loses
+its later row value. Keep `color-mix`/gradient/shadow expressions at the recipe consumer and
+reference shared pigment/material inputs from tokens; only the voice assignment is dynamic.
+Player global shortcuts ignore open native dialogs as well as retained legacy overlays,
+preserving the previous modal command boundary. Do not copy an initial `aria-pressed` into
+builder `attrs`: pass `pressed`, then update it through `updateButton`. Play labels update
+through the same state API so construction-time attributes cannot restore an old label.

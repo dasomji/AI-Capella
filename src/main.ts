@@ -483,14 +483,14 @@ for (const [selector, variant] of [
  ['.panel-head [data-action="mix-reset"]',"player-reset"],[".seg button","player-segmented"],
 ] as const) {
  for(const prior of app.querySelectorAll<HTMLButtonElement>(selector)) {
-  const attrs=Object.fromEntries([...prior.attributes].filter(a=>a.name!=="class"&&a.name!=="type").map(a=>[a.name,a.value]));
-  const next=createButton({text:"",variant,attrs});next.append(...prior.childNodes);prior.replaceWith(next);
+  const attrs=Object.fromEntries([...prior.attributes].filter(a=>a.name!=="class"&&a.name!=="type"&&a.name!=="aria-pressed").map(a=>[a.name,a.value]));
+  const next=createButton({text:"",variant,pressed:prior.hasAttribute("aria-pressed")?prior.getAttribute("aria-pressed")==="true":undefined,attrs});next.append(...prior.childNodes);prior.replaceWith(next);
  }
 }
 for(const [selector,variant] of [["#player-menu-btn","player"],[".landscape-only","player-landscape"],['.zoom [data-action="follow"]',"player-follow"],[".zoom .icon-btn:not(.follow-btn)","player-zoom"]] as const) {
  for(const prior of app.querySelectorAll<HTMLButtonElement>(selector)) {
-  const attrs=Object.fromEntries([...prior.attributes].filter(a=>a.name!=="class"&&a.name!=="type"&&a.name!=="aria-label").map(a=>[a.name,a.value]));
-  const next=createIconButton({variant,label:prior.getAttribute("aria-label")??"",attrs});next.append(...prior.childNodes);prior.replaceWith(next);
+  const attrs=Object.fromEntries([...prior.attributes].filter(a=>a.name!=="class"&&a.name!=="type"&&a.name!=="aria-label"&&a.name!=="aria-pressed").map(a=>[a.name,a.value]));
+  const next=createIconButton({variant,label:prior.getAttribute("aria-label")??"",pressed:prior.hasAttribute("aria-pressed")?prior.getAttribute("aria-pressed")==="true":undefined,attrs});next.append(...prior.childNodes);prior.replaceWith(next);
  }
 }
 const oldTransport=app.querySelector('.transport')!;
@@ -798,8 +798,9 @@ function renderModeControls() {
     updateButton(b,{pressed:b.dataset.mode===sessionMode});
   });
   document.querySelector<HTMLElement>('#mode-seg')!.hidden = !serverLibraryEnabled || inPublicFolder();
-  if (sessionMode === 'solo') modeBadge.innerHTML = `${icon('user')}<span>${modeName('solo')}</span>`;
-  else modeBadge.innerHTML = `${icon('users')}<span>${modeName('ensemble')}</span><i class="live-dot" aria-hidden="true"></i>`;
+  const label=document.createElement('span');label.textContent=modeName(sessionMode);
+  modeBadge.replaceChildren(libraryIcon(sessionMode==='solo'?'user':'users'),label);
+  if(sessionMode==='ensemble')modeBadge.append(createPlayerPart('i','live-dot',{attrs:{'aria-hidden':true}}));
   modeBadge.hidden = !serverLibraryEnabled || inPublicFolder();
   fillBindings(modeBadge);
 }
@@ -2145,7 +2146,7 @@ function syncPlayButtons(playing: boolean) {
   document.querySelectorAll<HTMLButtonElement>('[data-action="play"]').forEach((b) => {
     b.innerHTML = icon(playing ? 'pause' : 'play');
     b.setAttribute('aria-label', playing ? t('pause') : t('play'));
-    updateButton(b,{playing,disabled:b.disabled});
+    updateButton(b,{playing,disabled:b.disabled,attrs:{'aria-label':playing?t('pause'):t('play')}});
   });
   if (playing) void requestWakeLock();
   else releaseWakeLock();
@@ -3154,7 +3155,7 @@ voiceListEl.addEventListener('dblclick', (e) => {
 songTitleEl.addEventListener('dblclick', () => currentSong?.imported && editable() && void renameSong(currentSong));
 
 window.addEventListener('keydown', (e) => {
-  if (!app.classList.contains('mode-player') || document.querySelector('.overlay')) return;
+  if (!app.classList.contains('mode-player') || document.querySelector('dialog[open], .overlay')) return;
   const tag = (e.target as HTMLElement | null)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.code === 'Space') {

@@ -1555,11 +1555,8 @@
     --ds-player-voice-row-transition-29: opacity var(--ds-duration-fast);
     --ds-player-voice-more-opacity-30: 0.6;
     --ds-player-voice-row-is-muted-light-opacity-31: 0.2;
-    --ds-player-light-border-32: 1.5px solid var(--c);
     --ds-player-light-opacity-33: 0.5;
     --ds-player-light-transition-34: background var(--ds-duration-fast), box-shadow var(--ds-duration-fast), opacity var(--ds-duration-fast);
-    --ds-player-light-on-background-35: var(--c);
-    --ds-player-light-on-box-shadow-36: 0 0 12px var(--c);
     --ds-player-voice-name-font-size-37: 16px;
     --ds-player-voice-name-padding-38: 8px 4px;
     --ds-player-voice-name-long-font-size-39: 13.5px;
@@ -1568,9 +1565,6 @@
     --ds-player-mix-btn-border-radius-42: 9px;
     --ds-player-mix-btn-font-43: 700 13px/1 var(--ds-font-body);
     --ds-player-mix-btn-transition-44: background var(--ds-duration-fast), color var(--ds-duration-fast), border-color var(--ds-duration-fast);
-    --ds-player-solo-btn-aria-pressed-true-color-45: var(--c);
-    --ds-player-solo-btn-aria-pressed-true-border-color-46: var(--c);
-    --ds-player-solo-btn-aria-pressed-true-background-47: color-mix(in oklab, var(--c) 18%, transparent);
     --ds-player-duck-padding-48: 16px 20px 20px;
     --ds-player-duck-border-top-49: 1px solid var(--ds-rule);
     --ds-player-duck-row-gap-50: 12px;
@@ -1583,8 +1577,6 @@
     --ds-player-chips-padding-57: 0 72px 0 14px;
     --ds-player-chip-padding-58: 0 14px 0 12px;
     --ds-player-chip-transition-59: background var(--ds-duration-fast), border-color var(--ds-duration-fast), color var(--ds-duration-fast);
-    --ds-player-chip-is-solo-background-60: color-mix(in oklab, var(--c) 20%, var(--ds-surface));
-    --ds-player-chip-is-solo-box-shadow-61: 0 0 18px -4px var(--c);
     --ds-player-chip-is-dimmed-i-opacity-62: 0.45;
     --ds-player-chip-is-muted-i-opacity-63: 0.25;
     --ds-player-chips-mixer-padding-64: 0 14px 0 28px;
@@ -1639,7 +1631,6 @@
     --ds-player-seg-button-aria-pressed-true-box-shadow-113: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 2px 8px rgb(0 0 0 / 0.35);
     --ds-player-voice-row-hover-background-114: rgb(255 246 235 / 0.05);
     --ds-player-chip-background-115: linear-gradient(180deg, rgb(255 246 235 / 0.07), rgb(255 246 235 / 0.02)), rgb(22 18 33 / 0.66);
-    --ds-player-chip-is-solo-background-116: color-mix(in oklab, var(--c) 22%, rgb(22 18 33 / 0.7));
     --ds-player-mixer-chip-background-117: linear-gradient(180deg, rgb(255 246 235 / 0.1), rgb(255 246 235 / 0.04)), rgb(30 25 44 / 0.7);
     --ds-player-chips-mixer-background-118: linear-gradient(90deg, rgb(12 10 20 / 0), rgb(12 10 20 / 0.85) 45%);
     --ds-player-zoom-sep-margin-119: 0 3px;
@@ -1660,9 +1651,7 @@
     0 0 34px rgb(255 228 205 / 0.3);
     --ds-player-t-btn-toggle-aria-pressed-true-border-color-127: rgb(255 226 196 / 0.22);
     --ds-player-t-btn-toggle-aria-pressed-true-box-shadow-128: inset 0 1px 0 rgb(255 255 255 / 0.14), 0 0 16px rgb(255 214 170 / 0.18);
-    --ds-player-solo-btn-aria-pressed-true-box-shadow-129: 0 0 12px -2px var(--c);
     --ds-player-mute-btn-aria-pressed-true-box-shadow-130: inset 0 1px 0 rgb(255 255 255 / 0.6);
-    --ds-player-chip-i-box-shadow-131: 0 0 8px color-mix(in oklab, var(--c) 70%, transparent);
     --ds-player-badge-is-leading-border-color-132: rgb(255 214 150 / 0.45);
     --ds-player-badge-is-leading-background-133: linear-gradient(180deg, rgb(255 214 150 / 0.14), rgb(255 214 150 / 0.05));
     --ds-player-badge-is-leading-box-shadow-134: 0 0 18px rgb(255 200 130 / 0.18);
@@ -1672,13 +1661,8 @@
     --ds-player-chip-border-color-138: rgb(255 244 228 / 0.07);
     --ds-player-chip-box-shadow-139: inset 0 1px 0 rgb(255 244 228 / 0.07), 0 1px 2px rgb(0 0 0 / 0.5);
     --ds-player-chip-i-border-radius-140: 5px;
-    --ds-player-chip-i-background-141: radial-gradient(60% 90% at 50% 50%, #fffaf2 0%, var(--c) 72%);
-    --ds-player-chip-i-box-shadow-142: 0 0 9px color-mix(in oklab, var(--c) 65%, transparent), inset 0 0 0 1px rgb(6 4 10 / 0.35);
-    --ds-player-chip-is-solo-border-color-143: color-mix(in oklab, var(--c) 55%, transparent);
-    --ds-player-chip-is-solo-background-144: var(--ds-material-fibre), color-mix(in oklab, var(--c) 14%, #221c29);
     --ds-player-chip-is-dimmed-i-background-145: #07050b;
     --ds-player-chip-is-dimmed-i-box-shadow-146: inset 0 1px 2px rgb(0 0 0 / 0.8), inset 0 0 0 1px rgb(255 244 228 / 0.07);
-    --ds-player-chip-is-dimmed-i-background-147: radial-gradient(60% 90% at 50% 50%, color-mix(in oklab, var(--c) 45%, #07050b) 0%, #07050b 80%);
     --ds-player-label-font-148: 600 11px/1.2 var(--ds-font-mono);
     --ds-player-label-letter-spacing-149: 0.08em;
     --ds-player-ctl-block-padding-150: 14px 0 16px;
@@ -1690,12 +1674,8 @@
     --ds-player-input-type-range-webkit-slider-thumb-box-shadow-156: 0 2px 6px rgb(90 60 25 / 0.35);
     --ds-player-chip-border-color-157: rgb(70 46 20 / 0.12);
     --ds-player-chip-box-shadow-158: inset 0 1px 0 rgb(255 255 250 / 0.6), 0 1px 2px rgb(90 60 25 / 0.25);
-    --ds-player-chip-i-background-159: radial-gradient(60% 90% at 50% 50%, color-mix(in oklab, var(--c) 55%, #fff6dc) 0%, var(--c) 72%);
-    --ds-player-chip-i-box-shadow-160: 0 0 8px color-mix(in oklab, var(--c) 45%, transparent), inset 0 0 0 1px rgb(70 45 20 / 0.35);
-    --ds-player-chip-is-solo-background-161: var(--ds-material-fibre), color-mix(in oklab, var(--c) 14%, #eee2c6);
     --ds-player-chip-is-dimmed-i-background-162: #d6c29a;
     --ds-player-chip-is-dimmed-i-box-shadow-163: inset 0 1px 2px rgb(90 60 25 / 0.35), inset 0 0 0 1px rgb(70 45 20 / 0.2);
-    --ds-player-chip-is-dimmed-i-background-164: radial-gradient(60% 90% at 50% 50%, color-mix(in oklab, var(--c) 40%, #d6c29a) 0%, #d6c29a 80%);
     --ds-player-chips-mixer-background-165: linear-gradient(90deg, rgb(232 216 182 / 0), rgb(232 216 182 / 0.9) 45%);
     --ds-player-p-top-box-shadow-166: inset 0 -1px 0 rgb(90 60 25 / 0.14);
     --ds-player-badge-is-leading-border-color-167: rgb(156 109 26 / 0.45);
@@ -1704,4 +1684,15 @@
     --ds-player-song-title-font-weight-170: 400;
     --ds-player-song-title-letter-spacing-171: 0.01em;
     --ds-player-song-title-font-size-172: 27px
+}
+:root {
+  --ds-player-voice-material-1: rgb(22 18 33 / 0.7);
+  --ds-player-voice-material-2: #fffaf2;
+  --ds-player-voice-material-3: rgb(6 4 10 / 0.35);
+  --ds-player-voice-material-4: #221c29;
+  --ds-player-voice-material-5: #07050b;
+  --ds-player-voice-material-6: #fff6dc;
+  --ds-player-voice-material-7: rgb(70 45 20 / 0.35);
+  --ds-player-voice-material-8: #eee2c6;
+  --ds-player-voice-material-9: #d6c29a;
 }
