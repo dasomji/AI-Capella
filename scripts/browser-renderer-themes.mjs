@@ -15,7 +15,13 @@ const mutations = {
   paper: ['/src/paper.ts', 'made.clear(); composed.clear(); patterns = new WeakMap();', '/* stale paper tiles */'],
   overview: ['/src/overview.ts', 'this.themeRevision !== theme.revision', 'false'],
   stage: ['/src/theme.ts', ' && stageCache.revision === theme.revision', ''],
+  print: ['/src/exportPdf.ts', 'Object.freeze({ ...(req.print ?? readTheme().print) })', 'new Proxy({ ...(req.print ?? readTheme().print) }, { get: (_target, key) => readTheme().print[key] })'],
+  gloss: ['/src/theme.ts', "shine: theme.color('material-gel-gloss-color')", 'shine: theme.print.paper'],
+  idle: ['/src/paper.ts', 'if (job !== textureJob || revision !== getThemeRevision()) return;', '/* late texture may apply */'],
+  gelcache: ['/src/theme.ts', 'gelShades.clear();', '/* stale gel shades */'],
+  ribbon: ['/src/artwork.ts', "const current = readTheme().titleDraft === 'current';", 'const current = START_DRAFT;'],
 };
+const mutantMode = { roll: 'roll', lantern: 'roll', paper: 'paper', overview: 'overview', stage: 'stage-fill', gelcache: 'gel', ribbon: 'ribbons' };
 if (mutant && !mutations[mutant]) throw Error('Unknown P2_MUTANT ' + mutant);
 let mutated = false;
 const evidence = path.resolve(process.env.BROWSER_EVIDENCE || '.review-evidence/renderer-themes');
@@ -42,7 +48,7 @@ const server = await createServer({
         assert.ok(constructor.test(changed), 'Lantern constructor mutant target changed');
         return changed.replace(constructor, 'lantern = LANTERN ? new Lantern() : null;');
       }
-      return changed;
+      return mutant === 'ribbon' ? changed.replace('LOGO_DRAFT, type LogoDraft', 'LOGO_DRAFT, START_DRAFT, type LogoDraft') : changed;
     },
   }],
   server: { host: '127.0.0.1', port: 0, hmr: false, watch: null,
@@ -96,7 +102,7 @@ try {
   for (const from of themes) for (const to of themes) {
     if (from === to) continue;
     for (const mode of modes) {
-      if (mutant && mode !== ({ roll: 'roll', lantern: 'roll', paper: 'paper', overview: 'overview', stage: 'stage-fill' })[mutant]) continue;
+      if (mutant && mode !== mutantMode[mutant]) continue;
       const actual = await pageFor(from), fresh = await pageFor(to);
       try {
         await actual.evaluate(mode => checks.draw(mode), mode);
@@ -114,7 +120,7 @@ try {
     ['gel', { 'material-gel-gloss': '0.1', 'material-gel-deep': 'rgb(50,80,100)' }],
     ['stage-fill', { 'score-stage-top': 'rgb(50,80,100)' }],
   ]) {
-    if (mutant && mode !== ({ paper: 'paper', stage: 'stage-fill' })[mutant]) continue;
+    if (mutant && mode !== mutantMode[mutant]) continue;
     const actual = await pageFor('night-paper'), fresh = await pageFor('night-paper', overrides);
     try {
       await actual.evaluate(mode => checks.draw(mode), mode);
@@ -123,7 +129,7 @@ try {
       await equalImages(actual, fresh, `${mode}-input-edit`);
     } finally { await actual.close(); await fresh.close(); }
   }
-  if (!mutant) {
+  if (!mutant || ['print', 'gloss', 'idle'].includes(mutant)) {
     const page = await pageFor('night-paper');
     try { results.push(await page.evaluate(() => checks.verifyLifecycle())); }
     finally { await page.close(); }
