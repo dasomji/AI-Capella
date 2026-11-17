@@ -230,3 +230,17 @@ in their existing storage/library modules.
 Update builder controls with `updateButton`. When screen code changes a native attribute
 also present in the builder's initial `attrs` (for example transcription entry `hidden`),
 pass its current value in the update so initial construction state is not reapplied.
+
+### Player toolbar and mixer parity (P5 slice 3)
+
+`createVoiceRow`, `createVoiceChip` and `createMixerVolume` compose native controls from shared
+Button/IconButton/Input primitives. Player slots and Transport recipes own header, footer,
+mode/view groups and zoom chrome. `player-*` button appearances retain stop-left/stop-mid,
+phone/short-landscape sizing, the pearl/embossed play material, mix/name/chip states and reset.
+`player-volume` is the native ducking range; its min/max/step and input event remain screen-owned.
+`player-preference` Switch retains the historical track/thumb and delegates commands to main.ts.
+Update pressed/playing state using `updateButton`, and checked state using `updateSwitch`.
+Voice colors arrive through `colorForPart` from the theme snapshot and set only `--c`.
+`createPlayerGlyph` builds trusted SMuFL text Nodes for the shared native player/voice menus.
+The unprefixed class hooks remain for delegation, introduction targets and state queries;
+`player.css` owns appearance. Tempo/key/goto/sections/export panels remain P5 slice 4.

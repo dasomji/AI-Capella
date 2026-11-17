@@ -804,3 +804,5 @@ export function createAccountPart<K extends keyof HTMLElementTagNameMap>(
 ) {
   return element(tag, r.accountPartRecipe(part), options.text, options);
 }
+
+export { createTransport, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph } from "./player";

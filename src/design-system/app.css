@@ -17,6 +17,7 @@
 @import './components.css' layer(components);
 @import './library.css' layer(components);
 @import './account.css' layer(components);
+@import './player.css' layer(components);
 @import 'tailwindcss/utilities.css' layer(utilities) prefix(tw) source(none);
 @source '../';
 

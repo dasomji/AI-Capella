@@ -8,6 +8,26 @@ const actionDisabled = "tw:disabled:opacity-(--ds-opacity-disabled-action) tw:ar
 const denseDisabled =
   "tw:disabled:opacity-(--ds-opacity-disabled-admin) tw:aria-disabled:opacity-(--ds-opacity-disabled-admin)";
 export const buttonVariants = [
+  "player-back",
+  "player-mode",
+  "player-info",
+  "player-position",
+  "player-transport",
+  "player-stop-left",
+  "player-stop-mid",
+  "player-play",
+  "player-toggle",
+  "player-preference",
+  "player-save",
+  "player-voice-name",
+  "player-voice-name-long",
+  "player-mute",
+  "player-solo",
+  "player-chip",
+  "player-mixer-chip",
+  "player-segmented",
+  "player-reset",
+
   "ensemble-switch", "ensemble-other", "device-link", "account-delete-confirm",
   "landing-create", "library-action", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update",
   "standard",
@@ -28,8 +48,11 @@ export interface ButtonOptions {
   variant?: ButtonVariant;
   intent?: ButtonIntent;
   pressed?: boolean;
+  playing?: boolean;
 }
+const playerButtonShapes = {"player-back": "ds-player-button ds-player-back-btn back-btn", "player-mode": "ds-player-button ds-player-badge badge", "player-info": "ds-player-button ds-player-info-row info-row", "player-position": "ds-player-button ds-player-pos pos", "player-transport": "ds-player-button ds-player-t-btn t-btn", "player-stop-left": "ds-player-button ds-player-t-btn ds-player-t-stop-left t-btn t-stop-left", "player-stop-mid": "ds-player-button ds-player-t-btn ds-player-t-stop-mid t-btn t-stop-mid", "player-play": "ds-player-button ds-player-play-btn play-btn", "player-toggle": "ds-player-button ds-player-t-btn ds-player-toggle t-btn toggle", "player-preference": "ds-player-button ds-player-t-btn ds-player-toggle ds-player-t-metro t-btn toggle t-metro", "player-save": "ds-player-button ds-player-t-btn ds-player-t-save t-btn t-save", "player-voice-name": "ds-player-button ds-player-voice-name voice-name", "player-voice-name-long": "ds-player-button ds-player-voice-name ds-player-long voice-name long", "player-mute": "ds-player-button ds-player-mix-btn ds-player-mute-btn mix-btn mute-btn", "player-solo": "ds-player-button ds-player-mix-btn ds-player-solo-btn mix-btn solo-btn", "player-chip": "ds-player-button ds-player-chip chip", "player-mixer-chip": "ds-player-button ds-player-chip ds-player-mixer-chip chip mixer-chip", "player-segmented": "ds-player-button ds-player-seg-item seg-item", "player-reset": "ds-player-button ds-player-reset player-reset"} as const;
 const parityButtonShapes = {
+  ...playerButtonShapes,
   "ensemble-switch": "ds-navigation-switch ens-switch",
   "ensemble-other": "ds-navigation-other ded-other",
   "device-link": "ds-library-link",
@@ -79,7 +102,9 @@ function buttonRecipeStyles({
   variant = "standard",
   intent = "secondary",
   pressed = false,
+  playing = false,
 }: ButtonOptions = {}): string {
+  if (variant in playerButtonShapes) return playerButtonShapes[variant as keyof typeof playerButtonShapes] + (variant === "player-play" && playing ? " playing" : "");
   if (variant === 'landing-create') return buttonRecipeStyles({variant:'standard',intent,pressed}).replace('tw:text-button','tw:text-body-small').replace('tw:inline-flex','tw:block').replace('tw:m-0','') + ' tw:mx-auto tw:mt-18 tw:text-center';
   if (variant === 'library-action' || variant === 'offline-update') {
     const standard = buttonRecipeStyles({variant:'standard',intent,pressed});
@@ -125,6 +150,7 @@ function buttonRecipeStyles({
   ].join(" ");
 }
 export const iconButtonVariants = [
+  "player", "player-landscape", "player-zoom", "player-follow", "voice-more",
   "standard",
   "small",
   "library-more",
@@ -138,8 +164,10 @@ export interface IconButtonOptions {
 function iconButtonRecipeStyles({
   variant = "standard",
 }: IconButtonOptions = {}) {
+  if (["player", "player-landscape", "player-zoom", "player-follow", "voice-more"].includes(variant)) return "ds-player-button ds-player-icon icon-btn" + ({player:"", "player-landscape":" ds-player-landscape-only landscape-only", "player-zoom":"", "player-follow":" ds-player-follow-btn follow-btn", "voice-more":" ds-player-voice-more voice-more ds-player-icon-small small"} as Record<string,string>)[variant];
   if (variant === "library-more") return "ds-library-button ds-library-song-more song-more tw:inline-grid tw:place-items-center tw:flex-none tw:size-40 tw:rounded-icon";
   const shapes: Record<NonNullable<IconButtonOptions["variant"]>, string> = {
+    player:"", "player-landscape":"", "player-zoom":"", "player-follow":"", "voice-more":"",
     "library-more": "ds-library-song-more song-more tw:min-h-0 tw:size-40 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:hover:bg-surface-overlay tw:hover:text-ink",
     standard:
       "tw:min-h-0 tw:size-40 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
@@ -161,6 +189,7 @@ function iconButtonRecipeStyles({
 }
 /** ruled/transcription intentionally preserve identical looks pending D09/D10. */
 export const fieldVariants = [
+  "player-volume",
   "account-password",
   "library-prompt",
   "library-search",
@@ -181,6 +210,7 @@ function fieldRecipeStyles(
   { variant = "boxed", invalid = false }: FieldOptions = {},
   kind: "input" | "select" | "textarea" = "input",
 ): Record<'root'|'label'|'control'|'hint'|'error', string> {
+  if (variant === "player-volume") return {root:"ds-player-duck-row",label:"ds-player-label label",control:"ds-player-input ds-player-volume duck-range",hint:"tw:sr-only",error:"tw:sr-only"};
   if (variant === "account-password") return {root:"ds-account-password",label:"ds-account-label",control:"ds-account-input tw:rounded-field",hint:"tw:sr-only",error:"ds-account-error"};
   if (variant === 'library-prompt') {
     const boxed = fieldRecipeStyles({variant:'boxed',invalid},kind);
@@ -253,7 +283,7 @@ function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
         : "tw:size-18 tw:accent-accent"),
   };
 }
-export const switchVariants = ["player", "admin", "capability", "comparison", "shared-device"] as const;
+export const switchVariants = ["player", "player-preference", "admin", "capability", "comparison", "shared-device"] as const;
 export interface SwitchOptions {
   variant?: (typeof switchVariants)[number];
   checked?: boolean;
@@ -262,6 +292,7 @@ function switchRecipeStyles({
   variant = "player",
   checked = false,
 }: SwitchOptions = {}) {
+  if (variant === "player-preference") return {label:"ds-player-switch-label",input:"tw:sr-only",root:"ds-player-button ds-player-switch switch",thumb:"tw:hidden"};
   // D11: the offline policy retains its native checkbox, rather than a drawn track.
   if (variant === "shared-device") return {label:"ds-account-shared",input:"ds-account-shared-input",root:"tw:hidden",thumb:"tw:hidden"};
   const sizes = {

@@ -1,4 +1,4 @@
-import { createButton, updateButton, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
+import { createTransport, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
 import { matchBreakpoint } from './design-system/theme';
 import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
@@ -98,7 +98,7 @@ function openLibraryMenu(
   ): Parameters<typeof createMenu>[0]["items"] =>
     items.map((item) => ({
       ...item,
-      icon: libraryIcon(item.icon),
+      icon: item.glyph ? createPlayerGlyph(item.glyph.text, item.glyph.kind ?? "") : libraryIcon(item.icon),
       disclosureIcon: libraryIcon("chevronDown"),
       radio: true,
       options: item.options ? convert(item.options) : undefined,
@@ -458,6 +458,46 @@ for (const [id, part] of [
   prior.replaceWith(next);
 }
 
+// Player domain compositions retain the original tree and delegation hooks. Slice 4 owns
+// tempo/key/goto/section/export panels; the chrome around those slots is shared here.
+for (const [selector, part] of [
+ [".p-top","header"],[".p-title","title"],[".p-top-r","header-actions"],
+ ["#song-title","song-title"],["#song-meta","song-meta"],[".voices-panel","voices-panel"],
+ [".panel-head","panel-head"],["#voice-list","voice-list"],["#voice-chips","chips"],
+ [".chips-mixer","chips-mixer"],[".t-sep","transport-separator"],[".info-metro","info-indicator"],
+ [".zoom","zoom"],[".zoom-sep","zoom-separator"],["#zoom-value","zoom-value"],
+ ["#mode-seg","mode-group"],["#view-seg","view-group"],[".live-dot","live-dot"],
+ [".voices-panel .label","label"],
+] as const) {
+ for (const prior of app.querySelectorAll<HTMLElement>(selector)) {
+  const next=createPlayerPart(prior.tagName.toLowerCase() as keyof HTMLElementTagNameMap,part,{attrs:Object.fromEntries([...prior.attributes].filter(a=>a.name!=="class").map(a=>[a.name,a.value]))});
+  next.append(...prior.childNodes);prior.replaceWith(next);
+ }
+}
+for (const [selector, variant] of [
+ ["#library-back-btn","player-back"],["#mode-badge","player-mode"],[".info-row","player-info"],
+ [".transport .pos","player-position"],[".t-stop-left","player-stop-left"],[".t-stop-mid","player-stop-mid"],
+ [".play-btn","player-play"],[".t-btn[data-hold]","player-transport"],
+ ['.t-btn[data-action="loop"]',"player-toggle"],[".t-metro","player-preference"],
+ [".t-save","player-save"],[".mixer-chip","player-mixer-chip"],
+ ['.panel-head [data-action="mix-reset"]',"player-reset"],[".seg button","player-segmented"],
+] as const) {
+ for(const prior of app.querySelectorAll<HTMLButtonElement>(selector)) {
+  const attrs=Object.fromEntries([...prior.attributes].filter(a=>a.name!=="class"&&a.name!=="type").map(a=>[a.name,a.value]));
+  const next=createButton({text:"",variant,attrs});next.append(...prior.childNodes);prior.replaceWith(next);
+ }
+}
+for(const [selector,variant] of [["#player-menu-btn","player"],[".landscape-only","player-landscape"],['.zoom [data-action="follow"]',"player-follow"],[".zoom .icon-btn:not(.follow-btn)","player-zoom"]] as const) {
+ for(const prior of app.querySelectorAll<HTMLButtonElement>(selector)) {
+  const attrs=Object.fromEntries([...prior.attributes].filter(a=>a.name!=="class"&&a.name!=="type"&&a.name!=="aria-label").map(a=>[a.name,a.value]));
+  const next=createIconButton({variant,label:prior.getAttribute("aria-label")??"",attrs});next.append(...prior.childNodes);prior.replaceWith(next);
+ }
+}
+const oldTransport=app.querySelector('.transport')!;
+oldTransport.replaceWith(createTransport({position:oldTransport.querySelector('.pos')!,commands:oldTransport.querySelector('.t-center')!.childNodes,controls:oldTransport.querySelector('.t-right')!.childNodes}));
+const sideVolume=app.querySelector(".voices-panel .duck")!;
+sideVolume.replaceWith(createMixerVolume({id:"duck-range-side",label:t("othersWhileSoloing")}));
+
 const libraryEl = document.querySelector<HTMLElement>('#library')!;
 const songGridEl = document.querySelector<HTMLUListElement>('#song-grid')!;
 const libCountEl = document.querySelector<HTMLParagraphElement>('#lib-count')!;
@@ -755,7 +795,7 @@ function syncEnabled(): boolean {
 
 function renderModeControls() {
   document.querySelectorAll<HTMLButtonElement>('#mode-seg [data-mode]').forEach((b) => {
-    b.setAttribute('aria-pressed', String(b.dataset.mode === sessionMode));
+    updateButton(b,{pressed:b.dataset.mode===sessionMode});
   });
   document.querySelector<HTMLElement>('#mode-seg')!.hidden = !serverLibraryEnabled || inPublicFolder();
   if (sessionMode === 'solo') modeBadge.innerHTML = `${icon('user')}<span>${modeName('solo')}</span>`;
@@ -770,13 +810,13 @@ function renderModeControls() {
 const narrowQuery = matchBreakpoint('panel', 'below');
 const FOLLOW_KEY = 'ai-capella-follow';
 let followPref = localStorage.getItem(FOLLOW_KEY) !== '0';
-document.querySelectorAll<HTMLElement>('[data-action="follow"]').forEach((b) => b.setAttribute('aria-pressed', String(followPref)));
+document.querySelectorAll<HTMLButtonElement>('[data-action="follow"]').forEach((b) => updateButton(b,{pressed:followPref}));
 function followActive(): boolean {
   return followPref;
 }
 function applyAutoFit() {
   pianoRoll?.setAutoFit(followActive());
-  document.querySelectorAll<HTMLElement>('[data-action="follow"]').forEach((b) => b.setAttribute('aria-pressed', String(followPref)));
+  document.querySelectorAll<HTMLButtonElement>('[data-action="follow"]').forEach((b) => updateButton(b,{pressed:followPref}));
   requestAnimationFrame(resizeCanvases);
 }
 function setFollow(on: boolean) {
@@ -793,7 +833,7 @@ function zoomRowsByHand(factor: number, y: number) {
     pianoRoll.freezeAutoFit();
     followPref = false;
     localStorage.setItem(FOLLOW_KEY, '0');
-    document.querySelectorAll<HTMLElement>('[data-action="follow"]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+    document.querySelectorAll<HTMLButtonElement>('[data-action="follow"]').forEach((b) => updateButton(b,{pressed:false}));
     toast(t('followOff'));
   }
   pianoRoll.zoomRows(factor, y);
@@ -820,12 +860,12 @@ async function requestModeSwitch(mode: 'solo' | 'ensemble') {
 const MODE_SWITCH_KEY = 'ai-capella-mode-switch';
 modeBadge.addEventListener('click', () => {
   if (sessionMode === 'solo') {
-    openMenu(modeBadge, [{ label: isOffline() ? off('together') : t('rehearseTogether'), disabled:isOffline(), icon: 'users', onSelect: () => void requestModeSwitch('ensemble') }], t('mode'));
+    openLibraryMenu(modeBadge, [{ label: isOffline() ? off('together') : t('rehearseTogether'), disabled:isOffline(), icon: 'users', onSelect: () => void requestModeSwitch('ensemble') }], t('mode'));
     return;
   }
   const items: Parameters<typeof openMenu>[1] = [];
   items.push({ label: t('practiseAlone'), icon: 'user', onSelect: () => void requestModeSwitch('solo') });
-  openMenu(modeBadge, items, modeName('ensemble'));
+  openLibraryMenu(modeBadge, items, modeName('ensemble'));
 });
 
 function chooseMode(mode: 'solo' | 'ensemble') {
@@ -2078,12 +2118,14 @@ function refreshBindings() {
     if (document.activeElement !== input || syncEnabled()) input.value = String(bpm);
   });
   document.querySelectorAll<HTMLElement>('[data-action="metronome"]').forEach((el) => {
-    el.setAttribute(el.getAttribute('role') === 'switch' ? 'aria-checked' : 'aria-pressed', String(metronomeOn));
+    if(el.getAttribute('role')==='switch')updateSwitch(el,{variant:'player-preference',label:t('metronome'),checked:metronomeOn});
+    else updateButton(el as HTMLButtonElement,{pressed:metronomeOn,disabled:(el as HTMLButtonElement).disabled});
   });
   document.querySelectorAll<HTMLElement>('[data-bind-metro]').forEach((el) => el.classList.toggle('on', metronomeOn));
   document.querySelectorAll<HTMLElement>('[data-bind-tones]').forEach((el) => el.classList.toggle('on', startTonesOn));
   document.querySelectorAll<HTMLElement>('[data-action="start-tones"]').forEach((el) => {
-    el.setAttribute(el.getAttribute('role') === 'switch' ? 'aria-checked' : 'aria-pressed', String(startTonesOn));
+    if(el.getAttribute('role')==='switch')updateSwitch(el,{variant:'player-preference',label:t('startTones'),checked:startTonesOn});
+    else updateButton(el as HTMLButtonElement,{pressed:startTonesOn,disabled:(el as HTMLButtonElement).disabled});
   });
   let loopTitle: string;
   if (loopEnabled) loopTitle = t('stopLooping');
@@ -2093,7 +2135,7 @@ function refreshBindings() {
     loopTitle = t('loopRegion', { from, to });
   } else loopTitle = t('loopWhole');
   document.querySelectorAll<HTMLElement>('[data-action="loop"]').forEach((el) => {
-    el.setAttribute('aria-pressed', String(loopEnabled));
+    updateButton(el as HTMLButtonElement,{pressed:loopEnabled,disabled:(el as HTMLButtonElement).disabled});
     el.setAttribute('aria-label', loopTitle);
     el.title = loopTitle;
   });
@@ -2103,7 +2145,7 @@ function syncPlayButtons(playing: boolean) {
   document.querySelectorAll<HTMLButtonElement>('[data-action="play"]').forEach((b) => {
     b.innerHTML = icon(playing ? 'pause' : 'play');
     b.setAttribute('aria-label', playing ? t('pause') : t('play'));
-    b.classList.toggle('playing', playing);
+    updateButton(b,{playing,disabled:b.disabled});
   });
   if (playing) void requestWakeLock();
   else releaseWakeLock();
@@ -2136,62 +2178,13 @@ document.addEventListener('visibilitychange', () => {
 // ---------------------------------------------------------------------------------------------
 
 function voiceRow(partId: string, name: string, color: string): HTMLLIElement {
-  const li = document.createElement('li');
-  li.className = 'voice-row';
-  li.dataset.part = partId;
-  li.style.setProperty('--c', color);
-  const light = document.createElement('i');
-  light.className = 'light';
-  light.dataset.part = partId;
-  light.setAttribute('aria-hidden', 'true');
-  const nameBtn = document.createElement('button');
-  nameBtn.type = 'button';
-  nameBtn.className = 'voice-name';
-  nameBtn.textContent = name;
-  // A long name (a role and its singer, "Tillie Synthesizer Patricia (oben)") takes two lines.
-  nameBtn.classList.toggle('long', name.length > 13);
-  nameBtn.title = t('onlyVoice', { name });
-  li.append(light, nameBtn);
-  for (const [mix, letter, label] of [
-    ['muted', 'M', t('mute', { name })],
-    ['solo', 'S', t('soloVoice', { name })],
-  ] as const) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = `mix-btn ${mix === 'muted' ? 'mute-btn' : 'solo-btn'}`;
-    b.dataset.mix = mix;
-    b.textContent = letter;
-    b.setAttribute('aria-label', label);
-    b.title = label;
-    b.setAttribute('aria-pressed', 'false');
-    li.appendChild(b);
-  }
-  if (currentSong?.imported && editable()) {
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = 'icon-btn small voice-more';
-    more.setAttribute('aria-label', t('voiceMenu', { name }));
-    more.title = t('voiceMenu', { name });
-    more.innerHTML = icon('more');
-    li.appendChild(more);
-  }
-  return li;
+  return createVoiceRow({partId,name,color,onlyHint:t('onlyVoice',{name}),muteLabel:t('mute',{name}),soloLabel:t('soloVoice',{name}),
+    moreLabel:currentSong?.imported && editable()?t('voiceMenu',{name}):undefined,moreIcon:libraryIcon('more')});
 }
 
 function buildVoiceControls(score: Score) {
   voiceListEl.replaceChildren(...score.parts.map((p, i) => voiceRow(p.id, p.name, colorForPart(i, score.parts.length))));
-  const chips = score.parts.map((p, i) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'chip';
-    chip.dataset.part = p.id;
-    chip.style.setProperty('--c', colorForPart(i, score.parts.length));
-    chip.innerHTML = '<i aria-hidden="true"></i>';
-    chip.append(document.createTextNode(p.name));
-    chip.title = t('onlyVoice', { name: p.name });
-    return chip;
-  });
-  chipsEl.replaceChildren(...chips);
+  chipsEl.replaceChildren(...score.parts.map((p,i)=>createVoiceChip({partId:p.id,name:p.name,color:colorForPart(i,score.parts.length),title:t('onlyVoice',{name:p.name})})));
   renderChipTitles();
 }
 
@@ -2212,8 +2205,9 @@ function applyMixToViews() {
     row.classList.toggle('is-muted', state === 'muted');
     row.classList.toggle('is-solo', state === 'solo');
     row.classList.toggle('is-dimmed', dimmed.has(row.dataset.part!));
-    row.querySelector('.mute-btn')?.setAttribute('aria-pressed', String(state === 'muted'));
-    row.querySelector('.solo-btn')?.setAttribute('aria-pressed', String(state === 'solo'));
+    const mute=row.querySelector<HTMLButtonElement>('.mute-btn'),solo=row.querySelector<HTMLButtonElement>('.solo-btn');
+    if(mute)updateButton(mute,{pressed:state==='muted'});
+    if(solo)updateButton(solo,{pressed:state==='solo'});
   });
   document.querySelectorAll<HTMLElement>('.chip[data-part]').forEach((chip) => {
     const state = partMix.get(chip.dataset.part!) ?? 'normal';
@@ -2302,7 +2296,7 @@ async function renameVoice(partId: string) {
     part.name = name;
     document.querySelectorAll<HTMLElement>(`.voice-row[data-part="${CSS.escape(partId)}"] .voice-name`).forEach((el) => {
       el.textContent = name;
-      el.classList.toggle('long', name.length > 13);
+      updateButton(el as HTMLButtonElement,{variant:name.length>13?'player-voice-name-long':'player-voice-name'});
     });
     document.querySelectorAll<HTMLElement>(`.chip[data-part="${CSS.escape(partId)}"]`).forEach((chip) => {
       chip.replaceChildren(chip.firstChild!, document.createTextNode(name));
@@ -2436,7 +2430,7 @@ function openVoiceMenu(anchor: HTMLElement, partId: string) {
     items.push({ label: t(staves === 2 ? 'joinHands' : 'joinStaves'), icon: 'join', onSelect: () => void setSplitParts(split.filter((id) => id !== source)) });
   }
   items.push({ label: t('removeVoice'), icon: 'trash', danger: true, onSelect: () => void confirmRemoveVoice(partId) });
-  openMenu(anchor, items, part.name);
+  openLibraryMenu(anchor, items, part.name);
 }
 
 /** Writes which parts' staves are voices of their own, for everyone, and reloads the open song. */
@@ -2553,24 +2547,11 @@ function rebuildStaffView() {
 
 function openMixerSheet(opener: HTMLElement) {
   if (!currentScore) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'sheet-body';
-  const list = document.createElement('ul');
-  list.className = 'voice-list';
-  currentScore.parts.forEach((p, i) => {
-    list.appendChild(voiceRow(p.id, p.name, colorForPart(i, currentScore!.parts.length)));
-  });
-  const duck = document.createElement('div');
-  duck.className = 'duck';
-  duck.innerHTML = `<label class="label" for="duck-range-sheet"></label><div class="duck-row"><input type="range" class="duck-range" id="duck-range-sheet" min="0" max="0.75" step="0.05" /><output class="duck-value"></output></div>`;
-  duck.querySelector('label')!.textContent = t('othersWhileSoloing');
-  const reset = document.createElement('button');
-  reset.type = 'button';
-  reset.className = 'btn wide';
-  reset.dataset.action = 'mix-reset';
-  reset.textContent = t('reset');
-  wrap.append(list, duck, reset);
-  openSheet(t('voices'), wrap, opener);
+  const wrap=createPlayerPart('div','mixer-body');
+  const list=createPlayerPart('ul','voice-list');
+  currentScore.parts.forEach((p,i)=>list.append(voiceRow(p.id,p.name,colorForPart(i,currentScore!.parts.length))));
+  wrap.append(list,createMixerVolume({id:'duck-range-sheet',label:t('othersWhileSoloing')}),createButton({text:t('reset'),variant:'library-action',layout:'tw:w-full',attrs:{'data-action':'mix-reset'}}));
+  openLibrarySheet(t('voices'),wrap,opener);
   applyMixToViews();
 }
 
@@ -2667,19 +2648,15 @@ function sectionsBlock(): HTMLElement | null {
   return block;
 }
 
-function metronomeBlock(): HTMLElement {
-  const block = document.createElement('div');
-  block.className = 'ctl-block switch-row';
-  block.innerHTML = `<span><b>${t('metronome')}</b><span class="ctl-note">${t('countInHint')}</span></span><button type="button" class="switch" role="switch" data-action="metronome" aria-checked="false" aria-label="${t('metronome')}"></button>`;
+function playerPreferenceBlock(action:'metronome'|'start-tones',label:string,hint:string):HTMLElement {
+  const block=createPlayerPart('div','switch-block'),copy=createPlayerPart('span','switch-copy');
+  const name=document.createElement('b');name.textContent=label;
+  copy.append(name,createPlayerPart('span','note',{text:hint}));
+  block.append(copy,createSwitch({variant:'player-preference',label,checked:false,attrs:{'data-action':action}}));
   return block;
 }
-
-function startTonesBlock(): HTMLElement {
-  const block = document.createElement('div');
-  block.className = 'ctl-block switch-row';
-  block.innerHTML = `<span><b>${t('startTones')}</b><span class="ctl-note">${t('startTonesHint')}</span></span><button type="button" class="switch" role="switch" data-action="start-tones" aria-checked="false" aria-label="${t('startTones')}"></button>`;
-  return block;
-}
+function metronomeBlock(): HTMLElement { return playerPreferenceBlock('metronome',t('metronome'),t('countInHint')); }
+function startTonesBlock(): HTMLElement { return playerPreferenceBlock('start-tones',t('startTones'),t('startTonesHint')); }
 
 function openControlsSheet(opener: HTMLElement) {
   const body = document.createElement('div');
@@ -3031,7 +3008,7 @@ function openPlayerMenu(anchor: HTMLElement) {
   if (currentSong && currentSong.format !== 'score') items.push({ label: t('exportItem'), icon: 'file', onSelect: () => openExportSheet(anchor) });
   items.push({ label: t('settings'), icon: 'gear', onSelect: () => openSettingsMenu(anchor) }, ...languageItems(), ...introItems('player'));
   items.push({ label: t('accountArea'), icon: 'users', onSelect: () => { void openAccountArea(anchor); } });
-  openMenu(anchor, items, t('menu'));
+  openLibraryMenu(anchor, items, t('menu'));
 }
 
 /** The player's settings, a menu of their own: swing, light and sound, paper. */
@@ -3044,7 +3021,7 @@ function openSettingsMenu(anchor: HTMLElement) {
     items.push({ label: t('swingItem'), icon: 'quarter', checked: on, onSelect: () => void setSwing(!on) });
   }
   items.push({label:t('outputLatency'),icon:'metronome',onSelect:()=>openOutputLatencySheet(anchor)}, { label: t('lightOffset'), icon: 'metronome', onSelect: () => openLightOffsetSheet(anchor) }, ...appearanceItems(), ...paperItems(anchor));
-  openMenu(anchor, items, t('settings'));
+  openLibraryMenu(anchor, items, t('settings'));
 }
 
 function saveDefaults() {
@@ -3853,7 +3830,7 @@ function setActiveView(view: 'roll' | 'staff') {
   zoomValueEl.textContent = `${Math.round(zoomOf[view] * 100)}%`;
   canvas.hidden = activeView !== 'roll';
   staffCanvas.hidden = activeView !== 'staff';
-  document.querySelectorAll<HTMLButtonElement>('#view-seg [data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+  document.querySelectorAll<HTMLButtonElement>('#view-seg [data-view]').forEach((b) => updateButton(b,{pressed:b.dataset.view===view}));
   // The just-shown canvas may not have had a correct backing-store size while hidden (hidden
   // elements report a zero layout box), so resize before rendering into it.
   resizeCanvases();

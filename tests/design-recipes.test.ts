@@ -49,6 +49,12 @@ describe("pure recipes", () => {
         "quiet",
       ] as const) {
         const classes = r.buttonRecipe({ variant, intent }).split(/\s+/);
+        if (variant.startsWith("player-")) {
+          const slot=classes.find(c=>c.startsWith("ds-player-")&&c!=="ds-player-button")!;
+          expect(readFileSync("src/design-system/player.css","utf8")).toContain("."+slot);
+          expect(new Set(classes).size).toBe(classes.length);
+          continue;
+        }
         if (["ensemble-switch", "ensemble-other", "account-delete-confirm", "device-link"].includes(variant)) {
           const source = readFileSync("src/design-system/account.css", "utf8") + readFileSync("src/design-system/library.css", "utf8");
           const slot = classes.find(c => /^(ds-navigation-|ds-account-delete-confirm|ds-library-link)/.test(c))!;
@@ -96,7 +102,7 @@ describe("pure recipes", () => {
         variant === "boxed" || variant === "library-prompt",
       );
       expect(slots.control.includes("tw:rounded-field")).toBe(
-        variant !== "boxed" && variant !== "library-prompt",
+        variant !== "boxed" && variant !== "library-prompt" && variant !== "player-volume",
       );
     }
   });

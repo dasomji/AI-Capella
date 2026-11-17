@@ -550,120 +550,8 @@
     {
       "file": "src/parchment.css",
       "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .badge.is-leading, :root[data-ground='pergament'] #app.sing-along .badge / background",
-      "value": "rgb(214 160 70 / 0.06)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .badge.is-leading, :root[data-ground='pergament'] #app.sing-along .badge / background",
-      "value": "rgb(214 160 70 / 0.16)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .badge.is-leading, :root[data-ground='pergament'] #app.sing-along .badge / border-color",
-      "value": "rgb(156 109 26 / 0.45)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .badge.is-leading, :root[data-ground='pergament'] #app.sing-along .badge / color",
-      "value": "#7a5414",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
       "context": ":root[data-ground='pergament'] .btn.primary:hover / background",
       "value": "#3d2e22",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chip / border-color",
-      "value": "rgb(70 46 20 / 0.12)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chip / box-shadow",
-      "value": "rgb(255 255 250 / 0.6)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chip / box-shadow",
-      "value": "rgb(90 60 25 / 0.25)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chip i / background",
-      "value": "#fff6dc",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chip i / box-shadow",
-      "value": "rgb(70 45 20 / 0.35)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chip.is-dimmed i / background",
-      "value": "#d6c29a",
-      "count": 2
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chip.is-dimmed i, :root[data-ground='pergament'] .chip.is-muted i / background",
-      "value": "#d6c29a",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chip.is-dimmed i, :root[data-ground='pergament'] .chip.is-muted i / box-shadow",
-      "value": "rgb(70 45 20 / 0.2)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chip.is-dimmed i, :root[data-ground='pergament'] .chip.is-muted i / box-shadow",
-      "value": "rgb(90 60 25 / 0.35)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chip.is-solo / background",
-      "value": "#eee2c6",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chips-mixer / background",
-      "value": "rgb(232 216 182 / 0.9)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .chips-mixer / background",
-      "value": "rgb(232 216 182 / 0)",
       "count": 1
     },
     {
@@ -816,13 +704,6 @@
     {
       "file": "src/parchment.css",
       "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .lib-top, :root[data-ground='pergament'] .p-top / box-shadow",
-      "value": "rgb(90 60 25 / 0.14)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
       "context": ":root[data-ground='pergament'] .ls-l / color",
       "value": "#2e2016",
       "count": 1
@@ -874,20 +755,6 @@
       "kind": "raw-color",
       "context": ":root[data-ground='pergament'] .menu-item[aria-checked='true'] .menu-check / color",
       "value": "#9c6d1a",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .play-btn .ic / filter",
-      "value": "rgb(255 255 250 / 0.6)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .play-btn, :root[data-ground='pergament'] .play-btn:hover / background",
-      "value": "#efe3c7",
       "count": 1
     },
     {
@@ -1005,20 +872,6 @@
     {
       "file": "src/parchment.css",
       "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .t-btn.toggle[aria-pressed='true'], :root[data-ground='pergament'] .zoom .follow-btn[aria-pressed='true'], :root[data-ground='pergament'] .seg button[aria-pressed='true'] / background",
-      "value": "rgb(110 75 35 / 0.1)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .voice-row:hover / background",
-      "value": "rgb(110 75 35 / 0.06)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
       "context": ":root[data-ground='pergament'] .wordmark[aria-label='LightScore'] / background",
       "value": "#6b4912",
       "count": 2
@@ -1033,29 +886,8 @@
     {
       "file": "src/parchment.css",
       "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .zoom / background",
-      "value": "rgb(241 232 210 / 0.92)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] input[type='range']::-webkit-slider-thumb / box-shadow",
-      "value": "rgb(90 60 25 / 0.35)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
       "context": ":root[data-ground='pergament'], :root[data-ground='pergament'] body / background",
       "value": "#e8d8b6",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "screen-control-selector",
-      "context": ":root[data-ground='pergament'] .t-btn.toggle[aria-pressed='true'], :root[data-ground='pergament'] .zoom .follow-btn[aria-pressed='true'], :root[data-ground='pergament'] .seg button[aria-pressed='true']",
-      "value": ":root[data-ground='pergament'] .t-btn.toggle[aria-pressed='true'], :root[data-ground='pergament'] .zoom .follow-btn[aria-pressed='true'], :root[data-ground='pergament'] .seg button[aria-pressed='true']",
       "count": 1
     },
     {
@@ -1089,99 +921,8 @@
     {
       "file": "src/style.css",
       "kind": "raw-color",
-      "context": ":root[data-design='papier'] .chip / border-color",
-      "value": "rgb(255 244 228 / 0.07)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .chip / box-shadow",
-      "value": "rgb(0 0 0 / 0.5)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .chip / box-shadow",
-      "value": "rgb(255 244 228 / 0.07)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .chip i / background",
-      "value": "#fffaf2",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .chip i / box-shadow",
-      "value": "rgb(6 4 10 / 0.35)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .chip.is-dimmed i / background",
-      "value": "#07050b",
-      "count": 2
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .chip.is-dimmed i, :root[data-design='papier'] .chip.is-muted i / background",
-      "value": "#07050b",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .chip.is-dimmed i, :root[data-design='papier'] .chip.is-muted i / box-shadow",
-      "value": "rgb(0 0 0 / 0.8)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .chip.is-dimmed i, :root[data-design='papier'] .chip.is-muted i / box-shadow",
-      "value": "rgb(255 244 228 / 0.07)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .chip.is-solo / background",
-      "value": "#221c29",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .play-btn .ic / filter",
-      "value": "rgb(0 0 0 / 0.5)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .play-btn, :root[data-design='papier'] .play-btn:hover / background",
-      "value": "#2c2535",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
       "context": ":root[data-design='papier'] .stage / background",
       "value": "#1b1621",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ":root[data-design='papier'] .t-btn.toggle[aria-pressed='true'], :root[data-design='papier'] .zoom .follow-btn[aria-pressed='true'], :root[data-design='papier'] .seg button[aria-pressed='true'] / background",
-      "value": "rgb(0 0 0 / 0.2)",
       "count": 1
     },
     {
@@ -1271,92 +1012,8 @@
     {
       "file": "src/style.css",
       "kind": "raw-color",
-      "context": ".badge.is-leading / background",
-      "value": "rgb(255 214 150 / 0.05)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".badge.is-leading / background",
-      "value": "rgb(255 214 150 / 0.14)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".badge.is-leading / border-color",
-      "value": "rgb(255 214 150 / 0.45)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".badge.is-leading / box-shadow",
-      "value": "rgb(255 200 130 / 0.18)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".badge.is-leading / color",
-      "value": "#ffe4b8",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
       "context": ".btn.primary:hover / background",
       "value": "#fff8ee",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".chip / background",
-      "value": "rgb(22 18 33 / 0.66)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".chip / background",
-      "value": "rgb(255 246 235 / 0.02)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".chip / background",
-      "value": "rgb(255 246 235 / 0.07)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".chip.is-solo / background",
-      "value": "rgb(22 18 33 / 0.7)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".chips-mixer / background",
-      "value": "rgb(12 10 20 / 0.85)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".chips-mixer / background",
-      "value": "rgb(12 10 20 / 0)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".chips-mixer / background",
-      "value": "rgba(13, 12, 22, 0)",
       "count": 1
     },
     {
@@ -1530,13 +1187,6 @@
     {
       "file": "src/style.css",
       "kind": "raw-color",
-      "context": ".lib-top, .p-top / box-shadow",
-      "value": "rgb(0 0 0 / 0.25)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
       "context": ".ls-l / color",
       "value": "#fff6e6",
       "count": 1
@@ -1600,174 +1250,6 @@
     {
       "file": "src/style.css",
       "kind": "raw-color",
-      "context": ".mixer-chip / background",
-      "value": "rgb(255 246 235 / 0.04)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".mixer-chip / background",
-      "value": "rgb(255 246 235 / 0.1)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".mixer-chip / background",
-      "value": "rgb(30 25 44 / 0.7)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".mute-btn[aria-pressed='true'] / box-shadow",
-      "value": "rgb(255 255 255 / 0.6)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / background",
-      "value": "#e3e8f5",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / background",
-      "value": "#e9f1e2",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / background",
-      "value": "#f3e8da",
-      "count": 2
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / background",
-      "value": "#f6e6d3",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / background",
-      "value": "#f7e1e8",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / background",
-      "value": "rgb(190 170 220 / 0.28)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / background",
-      "value": "rgb(190 170 220 / 0)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / background",
-      "value": "rgb(255 255 255 / 0.85)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / background",
-      "value": "rgb(255 255 255 / 0)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / box-shadow",
-      "value": "rgb(0 0 0 / 0.75)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / box-shadow",
-      "value": "rgb(110 80 110 / 0.28)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / box-shadow",
-      "value": "rgb(255 228 205 / 0.2)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / box-shadow",
-      "value": "rgb(255 255 255 / 0.55)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / box-shadow",
-      "value": "rgba(239, 231, 218, 0.07)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn / color",
-      "value": "#231b2c",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn:hover / box-shadow",
-      "value": "rgb(0 0 0 / 0.75)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn:hover / box-shadow",
-      "value": "rgb(110 80 110 / 0.28)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn:hover / box-shadow",
-      "value": "rgb(255 228 205 / 0.3)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn:hover / box-shadow",
-      "value": "rgb(255 255 255 / 0.55)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".play-btn:hover / box-shadow",
-      "value": "rgba(239, 231, 218, 0.1)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
       "context": ".popover / box-shadow",
       "value": "rgba(0, 0, 0, 0.55)",
       "count": 1
@@ -1784,34 +1266,6 @@
       "kind": "raw-color",
       "context": ".scan-mark-img / background",
       "value": "#f4f1ea",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".seg button[aria-pressed='true'] / background",
-      "value": "rgb(255 246 235 / 0.07)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".seg button[aria-pressed='true'] / background",
-      "value": "rgb(255 246 235 / 0.17)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".seg button[aria-pressed='true'] / box-shadow",
-      "value": "rgb(0 0 0 / 0.35)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".seg button[aria-pressed='true'] / box-shadow",
-      "value": "rgb(255 255 255 / 0.18)",
       "count": 1
     },
     {
@@ -1866,48 +1320,6 @@
     {
       "file": "src/style.css",
       "kind": "raw-color",
-      "context": ".t-btn.toggle[aria-pressed='true'] .ic, .info-metro.on .ic / filter",
-      "value": "rgb(255 220 180 / 0.6)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".t-btn.toggle[aria-pressed='true'] / background",
-      "value": "rgb(255 236 214 / 0.09)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".t-btn.toggle[aria-pressed='true'] / border-color",
-      "value": "rgb(255 226 196 / 0.22)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".t-btn.toggle[aria-pressed='true'] / box-shadow",
-      "value": "rgb(255 214 170 / 0.18)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".t-btn.toggle[aria-pressed='true'] / box-shadow",
-      "value": "rgb(255 255 255 / 0.14)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".voice-row:hover / background",
-      "value": "rgb(255 246 235 / 0.05)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
       "context": ".wordmark[aria-label='LightScore'] / background",
       "value": "#8c6a2e",
       "count": 2
@@ -1917,41 +1329,6 @@
       "kind": "raw-color",
       "context": ".wordmark[aria-label='LightScore'] / background",
       "value": "#c49e54",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".zoom .follow-btn[aria-pressed='true'] .ic / filter",
-      "value": "rgb(255 220 180 / 0.6)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".zoom .follow-btn[aria-pressed='true'] / background",
-      "value": "rgb(255 236 214 / 0.09)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".zoom .follow-btn[aria-pressed='true'] / box-shadow",
-      "value": "rgb(255 214 170 / 0.16)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".zoom .follow-btn[aria-pressed='true'] / box-shadow",
-      "value": "rgb(255 255 255 / 0.12)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".zoom / background",
-      "value": "rgba(19, 18, 30, 0.9)",
       "count": 1
     },
     {
@@ -1992,29 +1369,8 @@
     {
       "file": "src/style.css",
       "kind": "raw-color",
-      "context": "#app.sing-along .badge / border-color",
-      "value": "rgba(255, 214, 150, 0.35)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": "#app.sing-along .badge / color",
-      "value": "#ffe4b8",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
       "context": "html, body / background",
       "value": "#0c0a14",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": "input[type='range']::-webkit-slider-thumb / box-shadow",
-      "value": "rgba(0, 0, 0, 0.5)",
       "count": 1
     },
     {
@@ -2055,29 +1411,8 @@
     {
       "file": "src/style.css",
       "kind": "screen-control-selector",
-      "context": ":root[data-design='papier'] .t-btn.toggle[aria-pressed='true'], :root[data-design='papier'] .zoom .follow-btn[aria-pressed='true'], :root[data-design='papier'] .seg button[aria-pressed='true']",
-      "value": ":root[data-design='papier'] .t-btn.toggle[aria-pressed='true'], :root[data-design='papier'] .zoom .follow-btn[aria-pressed='true'], :root[data-design='papier'] .seg button[aria-pressed='true']",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".back-btn span, .seg button span, #song-meta, .badge span",
-      "value": ".back-btn span, .seg button span, #song-meta, .badge span",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
       "context": ".export-voice-list input[type='checkbox']",
       "value": ".export-voice-list input[type='checkbox']",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".lib-top .seg button span",
-      "value": ".lib-top .seg button span",
       "count": 1
     },
     {
@@ -2086,27 +1421,6 @@
       "context": ".offset-row input",
       "value": ".offset-row input",
       "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".seg button .ic",
-      "value": ".seg button .ic",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".seg button",
-      "value": ".seg button",
-      "count": 2
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".seg button[aria-pressed='true']",
-      "value": ".seg button[aria-pressed='true']",
-      "count": 2
     },
     {
       "file": "src/style.css",

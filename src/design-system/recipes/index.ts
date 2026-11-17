@@ -49,3 +49,5 @@ export * from './workspace';
 export * from './library';
 
 export * from "./account";
+
+export * from "./player";

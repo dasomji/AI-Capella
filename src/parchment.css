@@ -62,44 +62,9 @@
   background: #3d2e22;
 }
 
-:root[data-ground='pergament'] .play-btn,
-:root[data-ground='pergament'] .play-btn:hover {
-  color: var(--paper);
-  background: var(--fibre), #efe3c7;
-  box-shadow: var(--emboss-raised);
-}
-
-:root[data-ground='pergament'] .play-btn:active {
-  box-shadow: var(--emboss-pressed);
-}
-
-:root[data-ground='pergament'] .play-btn .ic {
-  filter: drop-shadow(1px 1px 0 rgb(255 255 250 / 0.6));
-}
-
-:root[data-ground='pergament'] .t-btn.toggle[aria-pressed='true'],
-:root[data-ground='pergament'] .zoom .follow-btn[aria-pressed='true'],
-:root[data-ground='pergament'] .seg button[aria-pressed='true'] {
-  background: rgb(110 75 35 / 0.1);
-  border-color: transparent;
-  box-shadow: var(--emboss-pressed);
-}
-
 :root[data-ground='pergament'] .stepper {
   background: rgb(110 75 35 / 0.07);
   box-shadow: inset 0 1px 2px rgb(90 60 25 / 0.2);
-}
-
-:root[data-ground='pergament'] .voice-row:hover {
-  background: rgb(110 75 35 / 0.06);
-}
-
-:root[data-ground='pergament'] .zoom {
-  background: rgb(241 232 210 / 0.92);
-}
-
-:root[data-ground='pergament'] input[type='range']::-webkit-slider-thumb {
-  box-shadow: 0 2px 6px rgb(90 60 25 / 0.35);
 }
 
 :root[data-ground='pergament'] .menu-item::before {
@@ -118,39 +83,6 @@
 
 /* ---- A voice: a tab with a window of coloured glass, covered when switched off ------------ */
 
-:root[data-ground='pergament'] .chip {
-  border-color: rgb(70 46 20 / 0.12);
-  box-shadow: inset 0 1px 0 rgb(255 255 250 / 0.6), 0 1px 2px rgb(90 60 25 / 0.25);
-}
-
-:root[data-ground='pergament'] .chip i {
-  background: radial-gradient(60% 90% at 50% 50%, color-mix(in oklab, var(--c) 55%, #fff6dc) 0%, var(--c) 72%);
-  box-shadow: 0 0 8px color-mix(in oklab, var(--c) 45%, transparent), inset 0 0 0 1px rgb(70 45 20 / 0.35);
-}
-
-:root[data-ground='pergament'] .chip.is-solo {
-  border-color: color-mix(in oklab, var(--c) 55%, transparent);
-  background: var(--fibre), color-mix(in oklab, var(--c) 14%, #eee2c6);
-}
-
-:root[data-ground='pergament'] .chip.is-dimmed i,
-:root[data-ground='pergament'] .chip.is-muted i {
-  background: #d6c29a;
-  box-shadow: inset 0 1px 2px rgb(90 60 25 / 0.35), inset 0 0 0 1px rgb(70 45 20 / 0.2);
-}
-
-:root[data-ground='pergament'] .chip.is-dimmed i {
-  background: radial-gradient(60% 90% at 50% 50%, color-mix(in oklab, var(--c) 40%, #d6c29a) 0%, #d6c29a 80%);
-}
-
-:root[data-ground='pergament'] .chips-mixer {
-  background: linear-gradient(90deg, rgb(232 216 182 / 0), rgb(232 216 182 / 0.9) 45%);
-}
-
-:root[data-ground='pergament'] .mixer-chip {
-  background: var(--sheet-bg);
-}
-
 /* ---- Repertoire: sheets lying in a stack -------------------------------------------------- */
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
@@ -166,9 +98,8 @@
 
 /* ---- Bars, overlays, notes ---------------------------------------------------------------- */
 
-:root[data-ground='pergament'] .lib-top,
-:root[data-ground='pergament'] .p-top {
-  box-shadow: inset 0 -1px 0 rgb(90 60 25 / 0.14);
+:root[data-ground='pergament'] .lib-top {
+  box-shadow: var(--ds-player-p-top-box-shadow-166);
 }
 
 :root[data-ground='pergament'] .sheet-root.open,
@@ -192,14 +123,6 @@
     0 0 0 1.5px rgb(156 109 26 / 0.65),
     0 0 26px 4px rgb(214 150 60 / 0.3),
     0 0 0 200vmax rgb(60 40 20 / 0.42);
-}
-
-:root[data-ground='pergament'] .badge.is-leading,
-:root[data-ground='pergament'] #app.sing-along .badge {
-  border-color: rgb(156 109 26 / 0.45);
-  color: #7a5414;
-  background: linear-gradient(180deg, rgb(214 160 70 / 0.16), rgb(214 160 70 / 0.06));
-  box-shadow: none;
 }
 
 :root[data-ground='pergament'] .fb-count {

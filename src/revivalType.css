@@ -34,17 +34,6 @@
   line-height: 1.25;
 }
 
-:root[data-type='revival'] #song-title {
-  font-family: var(--f-title);
-  font-weight: 400;
-  font-synthesis: none;
-  letter-spacing: 0.01em;
-}
-:root[data-type='revival'] #song-title {
-  font-size: 27px;
-  line-height: 1.15;
-}
-
 :root[data-type='revival'] .rmark {
   font-family: 'Baltimore Bold 1832', var(--f-display);
   font-weight: 400;
