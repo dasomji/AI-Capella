@@ -74,7 +74,7 @@ jobs:
           if-no-files-found: ignore
   integration-browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     services:
       mailpit:
         image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
@@ -112,6 +112,9 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser:theme-extension
+      - run: npm run test:browser:design-system
+      - run: npm run test:browser:keyboard
       - run: npm run test:browser:renderer-themes
       - name: Start local S3 service
         run: docker run -d --name ci-seaweedfs -p 127.0.0.1:28333:8333 -v "$PWD/scripts/s3-local.json:/etc/seaweedfs/s3.json:ro" -v "$PWD/scripts/s3-local-master.toml:/etc/seaweedfs/master.toml:ro" chrislusf/seaweedfs:4.06@sha256:a064c6923daf4451c943cec2f437a67523d7792ee589089bc4d4c27a61d78dea server -master.volumeSizeLimitMB=64 -s3 -s3.config=/etc/seaweedfs/s3.json
@@ -132,6 +135,8 @@ jobs:
       - run: mkdir -p .review-evidence && npm run test:browser 2>&1 | tee .review-evidence/test-browser.log
         env:
           NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+      - run: npm run test:browser:admin-parity
+      - run: npm run test:browser:auth-flows
       - run: mkdir -p .review-evidence && npm run test:browser:transcription 2>&1 | tee .review-evidence/test-browser-transcription.log
         env:
           NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
