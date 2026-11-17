@@ -49,7 +49,7 @@ describe("DOM and React adapter contracts", () => {
     expect(button.getAttribute("aria-disabled")).toBe("true");
     expect(document.activeElement).toBe(button);
     expect(onClick).not.toHaveBeenCalled();
-    D.updateButton(button, { busy: false, variant: "pill" });
+    D.updateButton(button, { busy: false, size: "compact" });
     button.click();
     expect(onClick).toHaveBeenCalledOnce();
     expect(button.dataset.action).toBe("save");
@@ -439,11 +439,12 @@ describe("P3 review regression contracts", () => {
   it("updates buttons and icon buttons without losing named layout or icon appearance", () => {
     const button = D.createButton({
       text: "Save",
-      variant: "pill",
+      size: "compact",
       layout: "tw:ml-auto",
     });
     D.updateButton(button, { busy: true });
-    expect(button.className).toContain("tw:rounded-pill");
+    expect(button.className).toContain("tw:rounded-card");
+    expect(button.className).toContain("tw:min-h-control-height-compact");
     expect(button.className).toContain("tw:ml-auto");
     const icon = D.createIconButton({
       label: "Close",
