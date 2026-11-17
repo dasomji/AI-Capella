@@ -350,3 +350,7 @@
 
 /* Background shorthands clear images as well as color; @theme colors cannot express this. */
 @utility background-library-clear { background: none; }
+
+/* Direct shadows preserve the authored effect without Tailwind's transparent ring layers. */
+@utility panel-stepper-shadow { box-shadow: var(--ds-panel-stepper-box-shadow-55); }
+@utility panel-stepper-parchment-shadow { box-shadow: var(--ds-panel-stepper-box-shadow-62); }
