@@ -81,3 +81,95 @@ it('normalizes minified named CSS pigments on the snapshot cold path and rejects
     expect(() => api.readTheme()).toThrow('Unsupported concrete theme color');
   } finally { create.mockRestore(); }
 });
+
+// Historical renderer inputs from immutable 46831e3. Keep these expected values independent
+// of the authored palette: a near-color substitution or inherited alpha is a regression.
+it('preserves every pre-P2 renderer pigment across all three themes', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { default: postcss } = await import('postcss');
+  const css = postcss.parse(readFileSync('src/design-system/tokens.css', 'utf8'));
+  const expected: Record<string, readonly string[]> = {
+    'material-paper-ground': ['#1b1621', '#e8d8b6', '#1b1621'],
+    'title-name-ink': ['rgb(255,252,244)', 'rgb(46,32,22)', 'rgb(255,252,244)'],
+    'title-name-glow': ['rgb(255,190,112)', 'rgb(226,150,52)', 'rgb(255,190,112)'],
+    'title-name-flare-core': ['rgb(255,236,200)', 'rgb(255,236,200)', 'rgb(255,236,200)'],
+    'title-name-flare-edge': ['rgb(255,200,140)', 'rgb(255,200,140)', 'rgb(255,200,140)'],
+    'title-name-nib': ['rgb(255,253,246)', 'rgb(255,253,246)', 'rgb(255,253,246)'],
+    'ribbon-flare-core': ['rgb(255,226,186)', 'rgb(255,226,186)', 'rgb(255,226,186)'],
+    'ribbon-flare-edge': ['rgb(255,200,150)', 'rgb(255,200,150)', 'rgb(255,200,150)'],
+    'ribbon-highlight': ['rgb(255,250,242)', 'rgb(255,236,190)', 'rgb(255,250,242)'],
+    'ribbon-nib': ['rgb(255,250,242)', 'rgb(255,228,160)', 'rgb(255,250,242)'],
+    'ribbon-spark': ['rgb(255,250,242)', 'rgb(255,250,242)', 'rgb(255,250,242)'],
+    'stage-mote-core': ['rgb(255,246,228)', 'rgb(255,246,228)', 'rgb(255,246,228)'],
+    'stage-mote-edge': ['rgb(255,222,170)', 'rgb(255,222,170)', 'rgb(255,222,170)'],
+    'stage-beam-core': ['rgb(255,236,200)', 'rgb(255,236,200)', 'rgb(255,236,200)'],
+    'stage-beam-middle': ['rgb(255,214,150)', 'rgb(255,214,150)', 'rgb(255,214,150)'],
+    'stage-beam-outer': ['rgb(250,196,120)', 'rgb(250,196,120)', 'rgb(250,196,120)'],
+    'stage-beam-edge': ['rgb(255,200,140)', 'rgb(255,200,140)', 'rgb(255,200,140)'],
+    'stage-pool-core': ['rgb(255,214,160)', 'rgb(255,214,160)', 'rgb(255,214,160)'],
+    'stage-pool-edge': ['rgb(255,200,140)', 'rgb(255,200,140)', 'rgb(255,200,140)'],
+    'stage-haze-core': ['rgb(255,240,214)', 'rgb(255,240,214)', 'rgb(255,240,214)'],
+    'stage-haze-edge': ['rgb(255,220,170)', 'rgb(255,220,170)', 'rgb(255,220,170)'],
+    'stage-grain-strand': ['rgb(255,232,200)', 'rgb(255,232,200)', 'rgb(255,232,200)'],
+    'stage-grain-fleck': ['rgb(255,236,210)', 'rgb(255,236,210)', 'rgb(255,236,210)'],
+    'stage-halo-core': ['rgb(255,244,222)', 'rgb(255,244,222)', 'rgb(255,244,222)'],
+    'stage-halo-middle': ['rgb(255,226,180)', 'rgb(255,226,180)', 'rgb(255,226,180)'],
+    'stage-halo-edge': ['rgb(255,220,170)', 'rgb(255,220,170)', 'rgb(255,220,170)'],
+    'stage-staff-light': ['rgb(239,228,210)', 'rgb(239,228,210)', 'rgb(239,228,210)'],
+    'stage-dust': ['rgb(255,248,232)', 'rgb(255,248,232)', 'rgb(255,248,232)'],
+    'stage-note-highlight': ['rgb(255,250,240)', 'rgb(255,250,240)', 'rgb(255,250,240)'],
+    'title-staff-lamp-core': ['rgb(255,214,166)', 'rgb(255,214,166)', 'rgb(255,214,166)'],
+    'title-staff-lamp-edge': ['rgb(255,200,150)', 'rgb(255,200,150)', 'rgb(255,200,150)'],
+    'title-staff-reading-line': ['rgb(255,240,214)', 'rgb(255,240,214)', 'rgb(255,240,214)'],
+    'title-staff-note-highlight': ['rgb(255,250,240)', 'rgb(255,250,240)', 'rgb(255,250,240)'],
+    'title-staff-ink': ['rgb(239,231,218)', 'rgb(239,231,218)', 'rgb(239,231,218)'],
+    'title-staff-afterglow': ['rgb(255,232,200)', 'rgb(255,232,200)', 'rgb(255,232,200)'],
+    'title-staff-nib': ['rgb(255,246,230)', 'rgb(255,246,230)', 'rgb(255,246,230)'],
+    'title-staff-flare-core': ['rgb(255,244,224)', 'rgb(255,244,224)', 'rgb(255,244,224)'],
+    'title-staff-flare-edge': ['rgb(255,230,190)', 'rgb(255,230,190)', 'rgb(255,230,190)'],
+    'artwork-nib': ['rgb(255,250,242)', 'rgb(255,250,242)', 'rgb(255,250,242)'],
+    'material-gel-deep': ['rgb(20,12,30)', 'rgb(20,12,30)', 'rgb(20,12,30)'],
+    'material-wordmark-rim': ['rgb(255,252,246)', 'rgb(255,252,246)', 'rgb(255,252,246)'],
+    'score-lantern-cavity': ['#08060c', '#6b5236', '#08060c'],
+    'score-row-shadow': ['rgb(0,0,0)', 'rgb(90,60,25)', 'rgb(0,0,0)'],
+    'score-hole-edge': ['rgb(6,4,10)', 'rgb(70,45,20)', 'rgb(6,4,10)'],
+    'score-key-separator': ['rgb(13,12,22)', 'rgb(13,12,22)', 'rgb(13,12,22)'],
+    'score-key-shadow': ['rgb(0,0,0)', 'rgb(0,0,0)', 'rgb(0,0,0)'],
+    'material-lantern-occlusion': ['rgb(6,4,12)', 'rgb(232,216,182)', 'rgb(6,4,12)'],
+    'material-lantern-glow': ['rgb(255,208,156)', 'rgb(236,150,52)', 'rgb(255,208,156)'],
+    'material-paper-strand-shadow': ['rgb(4,2,8)', 'rgb(96,62,28)', 'rgb(4,2,8)'],
+    'material-paper-strand-light': ['rgb(255,244,228)', 'rgb(255,244,228)', 'rgb(255,244,228)'],
+    'material-paper-warm-fleck': ['rgb(70,40,20)', 'rgb(70,40,20)', 'rgb(70,40,20)'],
+    'artwork-cover-ground': ['#15131f', '#15131f', '#15131f'],
+    'brand-mark-tile': ['#17151f', '#17151f', '#17151f'],
+    'backdrop-wave-1': ['#110d1b', '#110d1b', '#110d1b'],
+    'backdrop-wave-2': ['#141020', '#141020', '#141020'],
+    'backdrop-wave-3': ['#181326', '#181326', '#181326'],
+    'backdrop-wave-4': ['#1c162d', '#1c162d', '#1c162d'],
+    'backdrop-wave-5': ['#211934', '#211934', '#211934'],
+    'backdrop-wave-6': ['#261c3a', '#261c3a', '#261c3a'],
+    'backdrop-ground-top': ['#0c0a14', '#0c0a14', '#0c0a14'],
+    'backdrop-ground-bottom': ['#120e1c', '#120e1c', '#120e1c'],
+    'material-paper-swatch-glow': ['rgb(255,208,156)', 'rgb(255,208,156)', 'rgb(255,208,156)'],
+    'material-paper-swatch-line': ['rgb(239,231,218)', 'rgb(239,231,218)', 'rgb(239,231,218)'],
+  };
+  const shared = new Map<string, string>();
+  css.walkRules(rule => { if (rule.selector === ':root') rule.walkDecls(d => { shared.set(d.prop, d.value); }); });
+  const { normalizeColor } = await import('../src/design-system/theme/color');
+  for (const [index, theme] of ['night-paper', 'parchment', 'velvet'].entries()) {
+    const values = new Map(shared);
+    css.walkRules(rule => { if (rule.selectors.includes(`:root[data-theme="${theme}"]`)) rule.walkDecls(d => { values.set(d.prop, d.value); }); });
+    const resolve = (key: string): string => {
+      const value = values.get(key);
+      if (!value) throw Error(`Missing ${key} in ${theme}`);
+      return value.replace(/var\((--[\w-]+)\)/g, (_match, name: string) => resolve(name));
+    };
+    for (const [role, colors] of Object.entries(expected)) {
+      expect(colorRoles, `${role} must be available in a concrete snapshot`).toContain(role);
+      expect(themeRoleNames).toContain(role);
+      expect(normalizeColor(resolve('--ds-' + role)).css, `${theme}: ${role}`).toBe(normalizeColor(colors[index]).css);
+      if (new Set(colors).size === 1) expect(shared.has('--ds-' + role)).toBe(true);
+      else expect(shared.has('--ds-' + role)).toBe(false);
+    }
+  }
+});

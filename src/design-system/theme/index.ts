@@ -6,7 +6,41 @@ import { normalizeColor } from './color';
 import type { Color } from './color';
 export type { ThemeId, ThemePreference, Color };
 
-export const colorRoles = ['page-background', 'surface', 'surface-sunken', 'surface-raised', 'surface-overlay', 'surface-hover', 'ink', 'ink-secondary', 'ink-muted', 'rule', 'rule-strong', 'accent', 'focus', 'danger', 'success', 'warning', 'on-accent', 'on-danger', 'backdrop', 'admin-surface', 'admin-ink', 'admin-secondary', 'admin-rule', 'admin-accent', 'admin-danger', 'admin-header-rule', 'admin-system-surface', 'transcription-accent', 'transcription-warning', 'accent-offline', 'accent-invitation', 'feedback-wish', 'feedback-idea', 'feedback-note', 'feedback-survey', 'browser-chrome', 'score-query', 'score-paper', 'score-past', 'score-key-light', 'score-key-dark', 'score-key-light-ink', 'score-key-dark-ink', 'score-lyric', 'score-ruler', 'canvas-surface-sunken', 'canvas-surface', 'canvas-surface-raised', 'canvas-surface-overlay', 'score-stage-top', 'score-stage-middle', 'score-stage-bottom', 'material-gold-deep', 'material-gold-mid', 'material-gold-light', 'material-wordmark-ink', 'material-wordmark-gold-deep', 'material-wordmark-gold-mid', 'material-wordmark-gold-light', 'material-light-warm', 'material-light-hot', 'material-lamp', 'material-paper-fibre-light', 'material-paper-fibre-ink', 'material-paper-lamp'] as const;
+export const colorRoles = [
+  'material-paper-ground',
+  'material-paper-swatch-glow', 'material-paper-swatch-line', 'title-name-ink', 'title-name-glow',
+  'title-name-flare-core', 'title-name-flare-edge', 'title-name-nib', 'ribbon-flare-core',
+  'ribbon-flare-edge', 'ribbon-highlight', 'ribbon-nib', 'ribbon-spark',
+  'stage-mote-core', 'stage-mote-edge', 'stage-beam-core', 'stage-beam-middle',
+  'stage-beam-outer', 'stage-beam-edge', 'stage-pool-core', 'stage-pool-edge',
+  'stage-haze-core', 'stage-haze-edge', 'stage-grain-strand', 'stage-grain-fleck',
+  'stage-halo-core', 'stage-halo-middle', 'stage-halo-edge', 'stage-staff-light',
+  'stage-dust', 'stage-note-highlight', 'title-staff-lamp-core', 'title-staff-lamp-edge',
+  'title-staff-reading-line', 'title-staff-note-highlight', 'title-staff-ink', 'title-staff-afterglow',
+  'title-staff-nib', 'title-staff-flare-core', 'title-staff-flare-edge', 'artwork-nib',
+  'material-gel-deep', 'material-wordmark-rim', 'score-lantern-cavity', 'score-row-shadow',
+  'score-hole-edge', 'score-key-separator', 'score-key-shadow', 'material-lantern-occlusion',
+  'material-lantern-glow', 'material-paper-strand-shadow', 'material-paper-strand-light', 'material-paper-warm-fleck',
+  'artwork-cover-ground', 'brand-mark-tile', 'backdrop-wave-1', 'backdrop-wave-2',
+  'backdrop-wave-3', 'backdrop-wave-4', 'backdrop-wave-5', 'backdrop-wave-6',
+  'backdrop-ground-top', 'backdrop-ground-bottom', 'page-background', 'surface',
+  'surface-sunken', 'surface-raised', 'surface-overlay', 'surface-hover',
+  'ink', 'ink-secondary', 'ink-muted', 'rule',
+  'rule-strong', 'accent', 'focus', 'danger',
+  'success', 'warning', 'on-accent', 'on-danger',
+  'backdrop', 'admin-surface', 'admin-ink', 'admin-secondary',
+  'admin-rule', 'admin-accent', 'admin-danger', 'admin-header-rule',
+  'admin-system-surface', 'transcription-accent', 'transcription-warning', 'accent-offline',
+  'accent-invitation', 'feedback-wish', 'feedback-idea', 'feedback-note',
+  'feedback-survey', 'browser-chrome', 'score-query', 'score-paper',
+  'score-past', 'score-key-light', 'score-key-dark', 'score-key-light-ink',
+  'score-key-dark-ink', 'score-lyric', 'score-ruler', 'canvas-surface-sunken',
+  'canvas-surface', 'canvas-surface-raised', 'canvas-surface-overlay', 'score-stage-top',
+  'score-stage-middle', 'score-stage-bottom', 'material-gold-deep', 'material-gold-mid',
+  'material-gold-light', 'material-wordmark-ink', 'material-wordmark-gold-deep', 'material-wordmark-gold-mid',
+  'material-wordmark-gold-light', 'material-light-warm', 'material-light-hot', 'material-lamp',
+  'material-paper-fibre-light', 'material-paper-fibre-ink', 'material-paper-lamp',
+] as const;
 export const fontRoles = ['body', 'control', 'mono', 'display', 'heading', 'song-title', 'mark', 'brand', 'script', 'music', 'auth-body', 'auth-display', 'auth-mono', 'canvas-text', 'canvas-mono', 'canvas-display'] as const;
 export type ThemeSnapshot = Readonly<{
   revision: number; id: ThemeId; preference: ThemePreference; type: string;
