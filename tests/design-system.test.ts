@@ -294,3 +294,16 @@ it('uses named toast, title intensity and print viewport roles at their consumer
     for(const role of roles)expect(source,`${file}: ${role}`).toContain(`roles['${role}']`);
   }
 });
+
+it('keeps native unbounded size utilities independent of the zero-spacing scale', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { compile } = await import('tailwindcss');
+  const source=readFileSync('src/design-system/tokens.css','utf8').replace('@theme static {','@theme static prefix(tw) {');
+  const compiler=await compile(source+'\n@tailwind utilities;');
+  const generated=compiler.build(['tw:max-w-none','tw:max-h-none']);
+  const css=generated.slice(generated.indexOf('.tw\\:max-h-none'));
+  for(const prop of ['max-width','max-height']) {
+    expect(css).toContain(`${prop}: none`);
+    expect(css,`${prop} must not collapse to the zero-spacing token`).not.toMatch(new RegExp(`${prop}:\\s*var\\(--ds-space-`));
+  }
+});

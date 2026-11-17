@@ -76,14 +76,17 @@ try {
         hint.style.bottom = "auto";
         hint.style.transform = "translate(-50%, -50%)";
         const rect = hint.getBoundingClientRect();
+        const panel = document.querySelector("dialog").getBoundingClientRect();
         return {
           x, y,
+          buttonInsidePanel: button.left >= panel.left && button.right <= panel.right && button.top >= panel.top && button.bottom <= panel.bottom,
           overlap: rect.left < x && x < rect.right && rect.top < y && y < rect.bottom,
           hintPosition: getComputedStyle(hint).position,
           hintOpacity: getComputedStyle(hint).opacity,
           modal: document.querySelector("dialog").matches(":modal"),
         };
       });
+      assert.equal(point.buttonInsidePanel, true, "Sheet must contain its button; native max-size utilities must remain unbounded");
       assert.equal(point.overlap, true, "Fixture must overlap Sign out with the hint");
       assert.equal(point.hintPosition, "fixed", "Fixture must load the hint placement recipe");
       assert.equal(point.hintOpacity, "1", "Fixture must finish the hint entrance");
@@ -93,6 +96,7 @@ try {
         return { hint: !!target?.closest(".power-hint"), button: target?.closest("button")?.textContent };
       }, point);
       assert.equal(hit.hint, false, `${viewport.width}px ${order}: hint intercepted Sign out`);
+      if(hit.button !== "Sign out") console.error('POWER_HINT_HIT_DIAGNOSTIC', JSON.stringify({viewport,order,point,hit,layout:await page.evaluate(()=>[...document.querySelectorAll('dialog,.account-sheet,.account-sheet button')].map(el=>({tag:el.tagName,classes:el.className,rect:el.getBoundingClientRect().toJSON(),pointerEvents:getComputedStyle(el).pointerEvents,transform:getComputedStyle(el).transform,display:getComputedStyle(el).display})))},null,2));
       assert.equal(hit.button, "Sign out");
       await page.getByRole("button", { name: "Sign out", exact: true }).click();
       assert.equal(await page.locator(".account-sheet").getAttribute("data-clicked"), "true");
