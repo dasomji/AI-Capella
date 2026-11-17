@@ -17,7 +17,7 @@ const composed = /* @__PURE__ */ createControlRecipes({
   if (variant === "landing-create") return actionRecipe(intent,pressed,"landing");
   if (variant === "library-action") return actionRecipe(intent,pressed,"library");
   if (variant === "offline-update") return actionRecipe(intent,pressed,"standard") + " " + offlineUpdateRecipe();
-  if (["ensemble-switch", "ensemble-other", "device-link", "account-delete-confirm", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt"].includes(variant))
+  if (["ensemble-switch", "ensemble-other", "device-link", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt"].includes(variant))
     return libraryControlRecipe(variant as LibraryControl);
   return undefined;
  },
