@@ -106,7 +106,7 @@ export function createIconButton(options: IconButtonOptions) {
   });
   buttonState.set(button, {
     options: { ...options, variant: undefined },
-    icon: { variant: options.variant },
+    icon: { variant: options.variant, size: options.size },
   });
   button.className = r.withLayout(r.iconButtonRecipe(options), options.layout);
   button.dataset.ds = "icon-button";
@@ -214,6 +214,7 @@ export function updateField(
   const appearance = {
     ...prior,
     variant: options.variant ?? prior.variant,
+    density: options.density ?? prior.density,
     invalid: !!options.error || !!options.invalid,
   };
   const slots = r.fieldRecipe(appearance);
