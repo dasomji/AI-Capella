@@ -244,9 +244,7 @@
   box-shadow: var(--glass-hi), 0 30px 70px -20px rgb(90 60 25 / 0.45);
 }
 
-:root[data-ground='pergament'] .power-hint,
-:root[data-ground='pergament'] .fb-ask,
-:root[data-ground='pergament'] .intro-card {
+:root[data-ground='pergament'] .fb-ask {
   box-shadow: var(--ds-component-toast-shadow);
 }
 
@@ -317,9 +315,7 @@
 /* ---- Notes that stand out (the tour, the power hint): on parchment they are ink-dark, as on the
    night paper they are paper-light -- their small print turned round with them. ---------------- */
 
-:root[data-ground='pergament'] .intro-count,
-:root[data-ground='pergament'] .intro-card .link-btn,
-:root[data-ground='pergament'] .power-hint .link-btn {
+:root[data-ground='pergament'] .intro-count {
   color: rgb(243 233 211 / 0.62);
 }
 
@@ -331,6 +327,3 @@
   background: #d1a548;
 }
 
-:root[data-ground='pergament'] .intro-card .btn {
-  border-color: rgb(243 233 211 / 0.3);
-}

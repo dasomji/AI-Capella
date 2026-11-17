@@ -3169,11 +3169,6 @@ body:has(#app.mode-landing)::after {
   bottom: calc(96px + var(--safe-b));
   z-index: 800;
   width: min(440px, calc(100vw - 32px));
-  padding: 14px 16px 10px;
-  border-radius: 12px;
-  background: var(--paper);
-  color: var(--ink-0);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
   transform: translate(-50%, 16px);
   opacity: 0;
   transition: opacity var(--t-med), transform var(--t-med) var(--ease);
@@ -3196,12 +3191,6 @@ body:has(#app.mode-landing)::after {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-}
-.power-hint .link-btn {
-  color: rgb(20 18 28 / 0.6);
-}
-.power-hint .link-btn:hover {
-  color: var(--ink-0);
 }
 @media (width < theme(--breakpoint-panel)) {
   .power-hint {
@@ -3246,11 +3235,6 @@ body:has(#app.mode-landing)::after {
   left: 0;
   top: 0;
   width: min(360px, calc(100vw - 20px));
-  padding: 14px 18px 12px;
-  border-radius: 14px;
-  background: var(--paper);
-  color: var(--ink-0);
-  box-shadow: 0 18px 50px rgb(0 0 0 / 0.55);
   opacity: 0;
   transition: opacity 0.17s ease;
 }
@@ -3304,35 +3288,10 @@ body:has(#app.mode-landing)::after {
   display: flex;
   margin-left: -6px;
 }
-.intro-card .link-btn {
-  color: rgb(21 17 26 / 0.55);
-}
-.intro-card .link-btn:hover {
-  color: var(--ink-0);
-}
 .intro-moves {
   display: flex;
   gap: 8px;
   margin-left: auto;
-}
-.intro-card .btn {
-  min-height: 38px;
-  padding: 0 16px;
-  background: transparent;
-  border-color: rgb(21 17 26 / 0.22);
-  color: var(--ink-0);
-  box-shadow: none;
-}
-.intro-card .btn.primary {
-  background: var(--ink-1);
-  border-color: var(--ink-1);
-  color: var(--paper);
-}
-.intro-card .btn.primary:hover {
-  background: var(--ink-3);
-}
-.intro-card .btn[hidden] {
-  display: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .intro-spot {
@@ -3431,23 +3390,14 @@ body:has(#app.mode-landing)::after {
 .domain-sheet form > label { display:grid; gap:6px; color:var(--paper-dim); font:500 11px var(--ds-font-auth-mono); text-transform:uppercase; letter-spacing:.08em; }
 .domain-sheet input:not([type=checkbox]) { width:100%; min-width:0; box-sizing:border-box; border-color:var(--paper-dim); padding:8px 0; font:400 16px var(--ds-font-auth-body); }
 .capability-row { display:flex; flex-wrap:wrap; gap:12px 18px; }
-.domain-sheet .capability-switch { position:relative; display:inline-flex; flex-wrap:nowrap; gap:8px; color:var(--paper-dim); font:400 12px var(--ds-font-auth-body); cursor:pointer; min-height:32px; }
-.capability-switch input { position:absolute; opacity:0; width:28px; height:24px; margin:0; }
-.switch-track { background:transparent; display:inline-block; width:28px; height:16px; border:1px solid var(--paper-dim); border-radius:16px; flex:none; }
-.switch-track::after { content:''; display:block; width:10px; height:10px; margin:2px; border-radius:50%; background:var(--paper); transition:transform .15s; }
-.capability-switch input:checked + .switch-track { border-color:var(--gold, #d4ad65); background:var(--gold, #d4ad65); }
-.capability-switch input:checked + .switch-track::after { transform:translateX(12px); background:var(--ink-0); }
-.capability-switch input:focus-visible + .switch-track { outline:2px solid var(--gold); outline-offset:3px; }
-.row-menu { position:relative; flex:none; }
+.capability-switch input:checked + .capability-switch input:checked + .capability-switch input:focus-visible + .row-menu { position:relative; flex:none; }
 .row-menu summary { list-style:none; cursor:pointer; padding:6px 10px; font-size:22px; color:var(--paper-dim); }
 .row-menu summary::-webkit-details-marker { display:none; }
-.row-menu .menu-list { position:absolute; right:0; top:100%; z-index:3; min-width:200px; background:var(--ink-2); border:1px solid var(--hair-2); box-shadow:0 8px 24px #0003; }
-.row-menu .menu-item { width:100%; }
 .landing-empty { text-align:center; border:0; max-width:360px; margin:auto; }
 .landing-empty > p:first-child { font:500 28px var(--ds-font-auth-display); }
 .landing-empty .btn, .landing-empty .link-btn { display:block; margin:18px auto 0; }
 .no-ensemble .landing-choice { align-items:center; text-align:center; }
-@media (prefers-reduced-motion:reduce) { .switch-track::after { transition:none; } }
+
 :root[data-ground='pergament'] .domain-gold { color:#795315; }
 
 /* With reduced motion the ink-writing animation never runs: expose the dedication. */
