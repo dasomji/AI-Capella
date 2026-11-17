@@ -300,6 +300,7 @@ export const themeRoleNames = [
   "space-28",
   "space-3",
   "space-32",
+  "space-36",
   "space-4",
   "space-40",
   "space-44",
