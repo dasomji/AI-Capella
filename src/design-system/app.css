@@ -354,3 +354,6 @@
 /* Direct shadows preserve the authored effect without Tailwind's transparent ring layers. */
 @utility panel-stepper-shadow { box-shadow: var(--ds-panel-stepper-box-shadow-55); }
 @utility panel-stepper-parchment-shadow { box-shadow: var(--ds-panel-stepper-box-shadow-62); }
+
+/* Player material shadows retain their authored list without synthetic transparent ring layers. */
+@utility player-shadow-* { box-shadow: --value(--shadow-*); }
