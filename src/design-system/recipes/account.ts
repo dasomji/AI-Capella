@@ -49,7 +49,7 @@ const accountSlots = {
     "tw:font-inherit tw:color-inherit",
   "ds-account-input":
     "tw:w-full tw:min-w-0 tw:box-border tw:border-0 tw:border-bottom-account-input-border-bottom " +
-    "tw:p-account-input-padding tw:bg-transparent tw:text-ink tw:font-account-input-font",
+    "tw:p-account-input-padding tw:background-library-clear tw:text-ink tw:font-account-input-font",
   "ds-account-delete-confirm":
     "tw:text-center",
 } as const;

@@ -3,7 +3,7 @@ import { normalizeRecipe } from "./normalize";
 /** Utilities retain hooks for behavior; every authored value resolves through tokens. */
 const librarySlots = {
   "ds-library-button":
-    "tw:font-inherit tw:color-inherit tw:bg-transparent tw:border-0 tw:p-0 tw:cursor-pointer " +
+    "tw:font-inherit tw:color-inherit tw:background-library-clear tw:border-0 tw:p-0 tw:cursor-pointer " +
     "tw:library-button-disabled:cursor-default tw:library-button-disabled:opacity-library-opacity-disabled " +
     "tw:library-button-focus-visible:outline-library-button-outline tw:library-button-focus-visible:outline-offset-2",
   "ds-library-mode-btn":
@@ -54,7 +54,7 @@ const librarySlots = {
     "tw:webkit-backdrop-filter-library-search-webkit-backdrop-filter " +
     "tw:backdrop-filter-library-search-backdrop-filter tw:border-library-search-border-color " +
     "tw:shadow-library-search-box-shadow tw:library-search-input:flex-1 tw:library-search-input:min-w-0 " +
-    "tw:library-search-input:border-0 tw:library-search-input:bg-transparent tw:library-search-input:outline-none " +
+    "tw:library-search-input:border-0 tw:library-search-input:background-library-clear tw:library-search-input:outline-none " +
     "tw:library-search-input:text-library-search-input-color tw:library-search-input:text-button " +
     "tw:library-search-focus-within:border-library-search-focus-within-border-color " +
     "tw:library-search-base-max-compact:w-full tw:library-search-base-opaque:webkit-backdrop-filter-none " +
@@ -68,7 +68,7 @@ const librarySlots = {
     "tw:backdrop-filter-library-banner-backdrop-filter tw:border-library-banner-border-color " +
     "tw:shadow-library-banner-box-shadow tw:library-banner-b:block tw:library-banner-b:text-library-banner-b-color " +
     "tw:library-banner-b:text-button tw:library-banner-b:mb-library-stroke-focus " +
-    "tw:library-banner-muted:bg-transparent tw:library-banner-base-opaque:webkit-backdrop-filter-none " +
+    "tw:library-banner-muted:background-library-clear tw:library-banner-base-opaque:webkit-backdrop-filter-none " +
     "tw:library-banner-base-opaque:backdrop-filter-none " +
     "tw:library-banner-base-opaque:background-library-opaque-banner-background",
   "ds-library-song-grid":
@@ -88,7 +88,7 @@ const librarySlots = {
     "tw:library-song-card-skeleton:background-library-song-card-skeleton-background-2 " +
     "tw:library-song-card-skeleton:animate-library-song-card-skeleton-animation " +
     "tw:library-song-card-base-max-compact:rounded-library-song-card-border-radius " +
-    "tw:library-song-card-base-max-compact:bg-transparent tw:library-song-card-base-max-compact:border-0 " +
+    "tw:library-song-card-base-max-compact:background-library-clear tw:library-song-card-base-max-compact:border-0 " +
     "tw:library-song-card-base-max-compact:border-bottom-library-phone-song-card-border-bottom " +
     "tw:library-song-card-hover-max-compact:transform-none " +
     "tw:library-song-card-ds-library-tag-max-compact:top-library-radius-round " +
@@ -186,7 +186,7 @@ const librarySlots = {
   "ds-library-landing-aside":
     "tw:text-library-radius-transcription-tile",
   "ds-library-landing-empty":
-    "tw:border-top-library-landing-empty-border-top tw:pt-library-landing-empty-padding-top tw:text-center " +
+    "tw:pt-library-landing-empty-padding-top tw:text-center " +
     "tw:border-0 tw:max-w-library-landing-empty-max-width tw:m-auto " +
     "tw:library-landing-empty-p-first-child:font-library-landing-empty-p-first-child-font " +
     "tw:library-landing-empty-btn:block tw:library-landing-empty-btn:m-library-landing-empty-btn-margin " +
@@ -234,7 +234,7 @@ const librarySlots = {
     "tw:flex tw:justify-end tw:gap-10 tw:mt-6",
   "ds-library-popover":
     "tw:fixed tw:m-0 tw:min-w-library-popover-min tw:max-w-library-popover-max tw:p-8 tw:rounded-transcription-tile " +
-    "tw:overflow-visible tw:transition-library-popover-transition tw:library-popover-backdrop:bg-transparent " +
+    "tw:overflow-visible tw:transition-library-popover-transition tw:library-popover-backdrop:background-library-clear " +
     "tw:library-popover-data-panel-state-entering:opacity-0 " +
     "tw:library-popover-data-panel-state-entering:transform-library-popover-enter " +
     "tw:library-popover-data-panel-state-open:opacity-100 tw:library-popover-data-panel-state-open:transform-none " +
@@ -258,7 +258,7 @@ const librarySlots = {
     "tw:grid",
   "ds-library-menu-item":
     "tw:flex tw:items-center tw:gap-control tw:min-h-44 tw:p-library-menu-item-padding tw:border-0 " +
-    "tw:rounded-control tw:font-inherit tw:text-button tw:font-label tw:color-inherit tw:bg-transparent tw:text-left " +
+    "tw:rounded-control tw:font-inherit tw:text-button tw:font-label tw:color-inherit tw:background-library-clear tw:text-left " +
     "tw:cursor-pointer tw:transition-library-menu-item-transition tw:library-menu-item-hover:outline-none " +
     "tw:library-menu-item-focus-visible:outline-none tw:library-menu-item-disabled:cursor-default " +
     "tw:library-menu-item-disabled:opacity-library-opacity-disabled tw:library-menu-item-ic:w-18 " +
