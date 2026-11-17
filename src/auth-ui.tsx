@@ -1,5 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { AccountStage } from "./account-stage";
+import { Button, ControlGroup, Field, Input, Status } from "./design-system/react";
 import { authMessages } from "./i18n";
 import { purgeLandingIdentity, storageUnavailable } from './offline-store';
 export function AuthPage() {
@@ -14,6 +15,8 @@ export function AuthPage() {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmationError, setConfirmationError] = useState(false);
+  const statusId = useId();
   const [maskedEmail, setMaskedEmail] = useState("");
   const [resendAt, setResendAt] = useState(0);
   const [clock, setClock] = useState(Date.now());
@@ -55,12 +58,14 @@ export function AuthPage() {
   }, []);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
+    setConfirmationError(false);
     setBusy(true);
     setStatus("");
     const data = new FormData(event.currentTarget);
     const email = String(data.get("email") ?? "");
     const password = String(data.get("password") ?? "");
-    if(verification && password !== String(data.get("confirm"))){setStatus("error");setBusy(false);return;}
+    if (verification && password !== String(data.get("confirm"))) { setConfirmationError(true); setBusy(false); return; }
     const endpoint = verification ? "verify-email-password" : {
       signin: "sign-in/email",
       signup: "sign-up/email",
@@ -115,7 +120,7 @@ export function AuthPage() {
       setBusy(false);
     }
   }
-  function changeMode(next: typeof mode) { setMode(next); setVerification(false); setToken(null); setStatus(""); setShowPassword(false); }
+  function changeMode(next: typeof mode) { setMode(next); setVerification(false); setToken(null); setStatus(""); setShowPassword(false); setConfirmationError(false); }
   async function resend() {
     if (busy || Date.now() < resendAt) return;
     setBusy(true);
@@ -133,25 +138,36 @@ export function AuthPage() {
   return <AccountStage language={language} onLanguage={setLanguage}>
     <h2>{checking ? m.checkTitle : result ? m.resultTitle : verification ? m.confirmPassword : m[mode]}</h2>
     {checking || result ? <>
-      <p role="status">{m[status as keyof typeof m]}</p>
+      <Status variant="account">{m[status as keyof typeof m]}</Status>
       {checking && <p className="account-email">{email}</p>}
       <nav className="account-links">
-        {checking ? <><button type="button" disabled={busy || clock < resendAt} onClick={() => void resend()}>{m.resend}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)} s)` : ""}</button><span aria-hidden="true"> · </span><button type="button" onClick={() => setStatus("")}>{m.otherEmail}</button></> : <button type="button" onClick={() => changeMode(status === "invalid" ? "forgot" : "signin")}>{status === "invalid" ? m.forgot : m.signin}</button>}
+        {checking ? <><Button variant="account-link" busy={busy} disabled={clock < resendAt} onClick={() => void resend()}>{m.resend}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)} s)` : ""}</Button><span aria-hidden="true"> · </span><Button variant="account-link" onClick={() => setStatus("")}>{m.otherEmail}</Button></> : <Button variant="account-link" onClick={() => changeMode(status === "invalid" ? "forgot" : "signin")}>{status === "invalid" ? m.forgot : m.signin}</Button>}
       </nav>
     </> : <>
       {mode === "signup" && maskedEmail && <p className="account-hint">{m.inviteHint.replace('{email}', maskedEmail)}</p>}
       <form onSubmit={submit}>
-        {mode === "signup" && <label>{m.name}<input name="name" autoComplete="name" required /></label>}
-        {mode !== "reset" && <label>{m.email}<input type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required /></label>}
-        {mode !== "forgot" && <label>{m.password}<span className="password-line"><input aria-label={m.password} name="password" type={showPassword ? "text" : "password"} minLength={8} maxLength={128} autoComplete={mode === "signin" || verification ? "current-password" : "new-password"} required /><button className="password-toggle" type="button" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? m.hide : m.show}</button></span></label>}
-        {verification && <><p>{m.verificationHelp}</p><label>{m.repeatPassword}<input name="confirm" type="password" autoComplete="current-password" required /></label></>}
-        <p role="status" className={status && !['signedout', 'expired'].includes(status) ? 'account-error' : ''}>{m[status as keyof typeof m] ?? ""}</p>
-        <button className="btn primary" type="submit" disabled={busy}>{verification ? m.verifyEmail : m[mode]}</button>
+        {mode === "signup" && <Field label={m.name} variant="ruled-account">
+          {association => <Input {...association} name="name" autoComplete="name" required />}
+        </Field>}
+        {mode !== "reset" && <Field label={m.email} variant="ruled-account" describedBy={status === "error" ? statusId : undefined}>
+          {association => <Input {...association} type="email" name="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />}
+        </Field>}
+        {mode !== "forgot" && <Field label={m.password} variant="ruled-account" describedBy={status === "error" ? statusId : undefined}>
+          {association => <ControlGroup>
+            <Input {...association} aria-label={m.password} name="password" type={showPassword ? "text" : "password"} minLength={8} maxLength={128} autoComplete={mode === "signin" || verification ? "current-password" : "new-password"} layout="tw:pr-76" required />
+            <Button variant="password-toggle" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? m.hide : m.show}</Button>
+          </ControlGroup>}
+        </Field>}
+        {verification && <><p>{m.verificationHelp}</p><Field label={m.repeatPassword} variant="ruled-account" error={confirmationError ? m.error : undefined}>
+          {association => <Input {...association} name="confirm" type="password" autoComplete="current-password" onChange={() => setConfirmationError(false)} required />}
+        </Field></>}
+        <Status id={statusId} variant="account" intent={status && !['signedout', 'expired'].includes(status) ? 'error' : 'neutral'}>{m[status as keyof typeof m] ?? ""}</Status>
+        <Button variant="cta" intent="primary" layout="tw:mt-10" type="submit" busy={busy}>{verification ? m.verifyEmail : m[mode]}</Button>
       </form>
-      {status === "unverified" && <nav className="account-links"><button type="button" disabled={busy || clock < resendAt} onClick={() => void resend()}>{m.resend}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)} s)` : ""}</button></nav>}
+      {status === "unverified" && <nav className="account-links"><Button variant="account-link" busy={busy} disabled={clock < resendAt} onClick={() => void resend()}>{m.resend}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)} s)` : ""}</Button></nav>}
       <nav className="account-links">
-        {verification && <><button type="button" onClick={() => changeMode('forgot')}>{m.forgot}</button><span aria-hidden="true"> · </span></>}
-        {mode === "signin" ? <><button type="button" onClick={() => changeMode('signup')}>{m.signup}</button><span aria-hidden="true"> · </span><button type="button" onClick={() => changeMode('forgot')}>{m.forgot}</button></> : <button type="button" onClick={() => changeMode('signin')}>{mode === "signup" ? m.haveAccount + ' ' : ''}{m.signin}</button>}
+        {verification && <><Button variant="account-link" onClick={() => changeMode('forgot')}>{m.forgot}</Button><span aria-hidden="true"> · </span></>}
+        {mode === "signin" ? <><Button variant="account-link" onClick={() => changeMode('signup')}>{m.signup}</Button><span aria-hidden="true"> · </span><Button variant="account-link" onClick={() => changeMode('forgot')}>{m.forgot}</Button></> : <Button variant="account-link" onClick={() => changeMode('signin')}>{mode === "signup" ? m.haveAccount + ' ' : ''}{m.signin}</Button>}
       </nav>
     </>}
   </AccountStage>;
