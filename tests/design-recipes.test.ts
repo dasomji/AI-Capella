@@ -4,6 +4,13 @@ import { readFileSync, readdirSync } from 'node:fs';
 import * as r from '../src/design-system/recipes';
 import { scanDesignFile } from '../scripts/check-design-tokens.mjs';
 describe('pure recipes', () => {
+ it('preserves close typography and native domain select treatment',()=>{
+ expect(r.iconButtonRecipe({variant:'transcription'})).toContain('tw:text-close');
+ expect(r.iconButtonRecipe({variant:'admin-close'})).toContain('tw:text-admin-close');
+ expect(r.selectRecipe({variant:'domain'})).toContain('tw:px-8');
+ expect(r.inputRecipe({variant:'domain'})).toContain('tw:px-0');
+ expect(r.cardRecipe({variant:'tour'})).toContain('tw:py-14');
+ });
     it('keeps the legacy notifier on its established CSS during screen migration', () => { expect(r.toastRecipe({ variant: 'legacy' })).not.toContain('ds-reset'); expect(r.toastRecipe()).toContain('ds-reset'); });
     it('have zero guard violations, forbidden imports or runtime dependencies', () => {
         for (const file of readdirSync('src/design-system/recipes')) {

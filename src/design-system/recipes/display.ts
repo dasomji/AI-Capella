@@ -6,7 +6,7 @@ export interface CardOptions {
 }
 function cardRecipeStyles({ variant = 'surface' }: CardOptions = {}) {
     const appearances = { surface: 'tw:bg-surface tw:text-ink tw:border-rule-strong tw:rounded-card', raised: 'tw:bg-surface-raised tw:text-ink tw:border-rule-strong tw:rounded-card', material: 'tw:bg-material-card tw:text-ink tw:border-rule-strong tw:rounded-card tw:shadow-material-lift', admin: 'tw:bg-admin-surface tw:text-admin-ink tw:border-admin-rule tw:rounded-field', tour: 'tw:bg-ink tw:text-surface-sunken tw:border-transparent tw:rounded-transcription-tile' };
-    return 'tw:box-border tw:m-0 tw:p-18 tw:border tw:border-solid tw:font-body tw:leading-body ' + appearances[variant];
+    return 'tw:box-border tw:m-0 '+(variant==='tour'?'tw:px-18 tw:py-14':'tw:p-18')+' tw:border tw:border-solid tw:font-body tw:leading-body ' + appearances[variant];
 }
 export const surfaceRecipe = cardRecipe;
 export const feedbackIntents = ['neutral', 'success', 'warning', 'error', 'accent'] as const;
@@ -25,7 +25,7 @@ function toggleGroupRecipeStyles({ variant = 'segmented' }: ToggleGroupOptions =
         if (variant === 'segmented')
             return 'tw:box-border tw:m-0 tw:inline-flex tw:items-center tw:gap-7 tw:h-32 tw:px-12 tw:py-0 tw:rounded-menu tw:border-0 tw:font-control tw:font-label tw:text-body-small tw:whitespace-nowrap tw:cursor-pointer ' + (pressed ? 'tw:bg-surface-hover tw:text-ink' : 'tw:bg-transparent tw:text-ink-secondary');
         const metric = variant === 'language' ? 'tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4' : variant === 'transcription' ? 'tw:min-h-36 tw:px-0 tw:py-4' : 'tw:min-h-44 tw:px-2 tw:py-4';
-        return 'tw:box-border tw:m-0 tw:inline-flex tw:items-center tw:justify-center tw:border-0 tw:rounded-field tw:bg-transparent tw:font-auth-mono tw:font-regular tw:text-small tw:leading-field tw:cursor-pointer tw:disabled:opacity-(--ds-opacity-disabled) tw:focus-visible:outline-2 tw:focus-visible:outline-focus ' + metric + ' ' + (pressed ? 'tw:text-ink' : 'tw:text-ink-secondary') + (variant === 'admin' && pressed ? ' tw:underline tw:underline-offset-4' : '');
+        return 'tw:box-border tw:m-0 tw:inline-flex tw:items-center tw:justify-center tw:border-0 tw:rounded-field tw:bg-transparent '+(variant==='admin'||variant==='presets'?'tw:font-auth-body tw:text-body-small tw:leading-body':'tw:font-auth-mono tw:text-small tw:leading-field')+' tw:font-regular tw:cursor-pointer tw:disabled:opacity-(--ds-opacity-disabled) tw:focus-visible:outline-2 tw:focus-visible:outline-focus ' + metric + ' ' + (pressed ? 'tw:text-ink' : 'tw:text-ink-secondary') + (variant === 'admin' && pressed ? ' tw:underline tw:underline-offset-4' : '');
     };
     return { root: 'tw:inline-flex tw:items-center tw:flex-wrap ' + (variant === 'segmented' ? 'tw:p-3 tw:rounded-segment tw:bg-surface tw:border tw:border-solid tw:border-rule' : variant === 'transcription' ? 'tw:gap-10' : 'tw:gap-4'), item };
 }

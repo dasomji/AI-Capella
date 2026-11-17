@@ -34,8 +34,14 @@ export interface IconButtonOptions {
     variant?: typeof iconButtonVariants[number];
 }
 function iconButtonRecipeStyles({ variant = 'standard' }: IconButtonOptions = {}) {
-    return [controlBase, disabledRecipe, 'tw:min-h-0 tw:leading-body tw:font-control tw:inline-grid tw:place-items-center tw:flex-none tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:p-0 tw:cursor-pointer tw:hover:bg-surface-overlay tw:hover:text-ink',
-        variant === 'small' || variant === 'admin-copy' ? 'tw:size-32' : 'tw:size-40', variant.startsWith('admin') ? 'tw:rounded-admin-control' : 'tw:rounded-icon'].join(' ');
+    const shapes:Record<NonNullable<IconButtonOptions['variant']>,string>={
+      standard:'tw:min-h-0 tw:size-40 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink',
+      small:'tw:min-h-0 tw:size-32 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink',
+      transcription:'tw:min-h-0 tw:size-40 tw:rounded-field tw:p-0 tw:font-close tw:font-close-light tw:text-close tw:leading-close tw:text-ink-secondary tw:hover:text-ink',
+      'admin-close':'tw:min-h-44 tw:w-auto tw:h-auto tw:rounded-admin-control tw:px-12 tw:py-4 tw:font-close tw:text-admin-close tw:leading-admin tw:text-admin-ink',
+      'admin-copy':'tw:min-h-32 tw:w-auto tw:h-auto tw:rounded-admin-control tw:p-4 tw:font-auth-mono tw:text-body-small tw:leading-admin tw:text-admin-ink',
+    };
+    return [controlBase,variant.startsWith('admin')?denseDisabled:disabledRecipe,'tw:inline-grid tw:place-items-center tw:flex-none tw:border-0 tw:bg-transparent tw:cursor-pointer',shapes[variant]].join(' ');
 }
 export const fieldVariants = ['boxed', 'ruled', 'domain', 'transcription', 'admin'] as const;
 export type FieldVariant = typeof fieldVariants[number];
@@ -51,14 +57,15 @@ function fieldRecipeStyles({ variant = 'boxed', invalid = false }: FieldOptions 
         label: ruled && !admin ? 'tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary' : 'tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary',
         control: [controlBase, disabledRecipe, 'tw:block tw:w-full tw:min-w-0 tw:font-regular tw:disabled:cursor-default',
             kind === 'textarea' && admin ? 'tw:h-auto tw:min-h-textarea tw:resize-y tw:border tw:border-solid tw:rounded-field tw:p-10 tw:font-auth-body tw:text-body tw:leading-admin tw:bg-admin-surface tw:text-admin-ink' :
-                ruled ? `tw:rounded-field tw:border-0 tw:border-b tw:border-solid ${variant === 'domain' ? 'tw:py-8' : 'tw:py-10'} tw:leading-field ${admin ? 'tw:px-2 tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-body' : variant === 'domain' ? 'tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body' : 'tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input'}` : (kind === 'textarea' ? 'tw:h-auto tw:min-h-textarea tw:resize-y tw:p-10' : 'tw:h-control-height tw:px-12 tw:py-0') + ' tw:rounded-card tw:border tw:border-solid tw:bg-surface tw:text-ink tw:font-control tw:text-body tw:leading-body',
-            invalid ? 'tw:border-danger' : admin ? 'tw:border-admin-rule tw:focus:border-focus' : ruled ? 'tw:border-ink-secondary tw:focus:border-focus' : 'tw:border-rule-strong tw:focus:border-ink-secondary', ruled ? 'tw:focus:shadow-focus' : '', 'tw:focus:outline-none'].join(' '),
+                variant==='domain' && kind==='select' ? 'tw:rounded-field tw:border-0 tw:border-b tw:border-solid tw:px-8 tw:py-8 tw:leading-body tw:bg-transparent tw:text-ink tw:font-control tw:text-body' :
+                ruled ? `tw:rounded-field tw:border-0 tw:border-b tw:border-solid ${variant === 'domain' ? 'tw:py-8 tw:leading-admin' : admin?'tw:py-10 tw:leading-body':'tw:py-10 tw:leading-field'} ${admin ? 'tw:px-2 tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-body' : variant === 'domain' ? 'tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body' : 'tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input'}` : (kind === 'textarea' ? 'tw:h-auto tw:min-h-textarea tw:resize-y tw:p-10' : 'tw:h-control-height tw:px-12 tw:py-0') + ' tw:rounded-card tw:border tw:border-solid tw:bg-surface tw:text-ink tw:font-control tw:text-body tw:leading-body',
+            invalid ? 'tw:border-danger' : admin ? 'tw:border-admin-rule tw:focus:border-focus' : variant==='domain'&&kind==='select'?'tw:border-rule-strong tw:focus:border-focus': ruled ? 'tw:border-ink-secondary tw:focus:border-focus' : 'tw:border-rule-strong tw:focus:border-ink-secondary', ruled ? 'tw:focus:shadow-focus' : '', 'tw:focus:outline-none'].join(' '),
         hint: 'tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary',
         error: 'tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-danger',
     };
 }
 function inputRecipeStyles(options: FieldOptions = {}) { return fieldRecipe(options).control; }
-function selectRecipeStyles(options: FieldOptions = {}) { return fieldRecipe(options).control; }
+function selectRecipeStyles(options: FieldOptions = {}) { return fieldRecipe(options,'select').control; }
 function textareaRecipeStyles(options: FieldOptions = {}) { return fieldRecipe(options, 'textarea').control; }
 export const checkboxVariants = ['standard', 'permission', 'export'] as const;
 export interface CheckboxOptions {

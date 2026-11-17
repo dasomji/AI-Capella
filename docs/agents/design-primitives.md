@@ -87,7 +87,7 @@ screen migration or legacy stylesheet deletion belongs to P3.
 | --- | --- | --- |
 | button | standard (42px, radius 12), cta (full width, 44px), pill (44px, round), tour (inverted, 38px), dense (44px, radius 3, admin mono), link | D08; dense/link D10; tour D17 |
 | button intent | secondary, primary, danger, quiet; admin danger remains outlined | D08 / D14 |
-| icon-button | standard (40), small (32), transcription (40), admin-close (40), admin-copy (32) | D08 / D10 |
+| icon-button | standard (40), small (32), transcription (40), admin-close (28px system close glyph, min-height 44), admin-copy (min-height 32) | D08 / D10 |
 | field/input/select/textarea | boxed, ruled (account), domain, transcription, admin; label/control/hint/error slots | D09 / D10 |
 | checkbox | standard, permission (20), export (18) | D11 / D10 |
 | switch | player (52×32), admin (48×26), capability (28×16); button or native checkbox semantics | D11 / D10 |

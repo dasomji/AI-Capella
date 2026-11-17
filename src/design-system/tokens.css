@@ -663,6 +663,11 @@
   --ds-space-26: 26px;
   --ds-space-52: 52px;
   --ds-space-21: 21px;
+  --ds-font-close: sans-serif;
+  --ds-weight-close-light: 300;
+  --ds-size-close: 27px;
+  --ds-size-admin-close: 28px;
+  --ds-leading-close: 1;
   --ds-size-button: 15px;
   --ds-size-toast: 14.5px;
   --ds-leading-field: 1.5;
@@ -692,6 +697,11 @@
 
 /* Tailwind adapter. No default pigment/font/size/radius/shadow vocabulary. */
 @theme inline {
+  --font-close: var(--ds-font-close);
+  --font-weight-close-light: var(--ds-weight-close-light);
+  --text-close: var(--ds-size-close);
+  --text-admin-close: var(--ds-size-admin-close);
+  --leading-close: var(--ds-leading-close);
   --animate-loading: var(--ds-animation-loading);
   --font-weight-regular: var(--ds-weight-body);
   --font-weight-emphasis: var(--ds-weight-medium);

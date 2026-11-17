@@ -283,13 +283,13 @@ export function createMenu(options: MenuOptions) { const slots = r.menuRecipe(op
 export function createToast(options: r.ToastOptions & {
     text: string;
 }) { return element('div', r.toastRecipe(options), options.text, { attrs: { role: 'status', 'aria-live': 'polite' } }); }
-export function createTable(options: r.TableOptions = {}) { return element('table', r.tableRecipe(options).root); }
-export function createTableHeader(text: string, options: r.TableOptions = {}) { return element('th', r.tableRecipe(options).header, text); }
-export function createTableCell(text: string, options: r.TableOptions = {}) { return element('td', r.tableRecipe(options).cell, text); }
-export function createTableRow(options: r.TableOptions = {}) { return element('tr', r.tableRecipe(options).row); }
-export function createTableEmpty(text: string, options: r.TableOptions = {}) { return element('td', r.tableRecipe(options).empty, text); }
-export function createTablePagination(options: r.TableOptions = {}) { return element('div', r.tableRecipe(options).pagination); }
-export function createTableWrap(options: r.TableOptions = {}) { return element('div', r.tableRecipe(options).wrap); }
+export function createTable(options: r.TableOptions & ElementOptions = {}) { return element('table', r.tableRecipe(options).root, undefined, options); }
+export function createTableHeader(text: string, options: r.TableOptions & ElementOptions = {}) { return element('th', r.tableRecipe(options).header, text, options); }
+export function createTableCell(text: string, options: r.TableOptions & ElementOptions = {}) { return element('td', r.tableRecipe(options).cell, text, options); }
+export function createTableRow(options: r.TableOptions & ElementOptions = {}) { return element('tr', r.tableRecipe(options).row, undefined, options); }
+export function createTableEmpty(text: string, options: r.TableOptions & ElementOptions = {}) { return element('td', r.tableRecipe(options).empty, text, options); }
+export function createTablePagination(options: r.TableOptions & ElementOptions = {}) { return element('div', r.tableRecipe(options).pagination, undefined, options); }
+export function createTableWrap(options: r.TableOptions & ElementOptions = {}) { return element('div', r.tableRecipe(options).wrap, undefined, options); }
 /** Apply controlled state without rebuilding the control or replacing delegation hooks. */
 export function updateSwitch(root: HTMLElement, options: SwitchOptions) {
     const slots = r.switchRecipe(options), input = root.querySelector<HTMLInputElement>('input[role="switch"]');
