@@ -249,12 +249,13 @@ export function updateField(
 /** A caption for a composite field, without pretending the group is one native input. */
 export function createFieldGroup(options: r.FieldOptions & ElementOptions & {
   label: string;
+  labelId?: string;
   content: HTMLElement;
 }) {
   const slots = r.fieldRecipe(options);
   const root = element("div", slots.root, undefined, options);
   const caption = element("span", slots.label, options.label);
-  caption.id = `ds-field-group-${++fieldId}`;
+  caption.id = options.labelId ?? `ds-field-group-${++fieldId}`;
   options.content.setAttribute("role", "group");
   options.content.setAttribute("aria-labelledby", caption.id);
   root.append(caption, options.content);

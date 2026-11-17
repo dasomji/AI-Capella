@@ -250,10 +250,11 @@ export function Field({
   );
 }
 /** Composite-field caption shares the native Field appearance. */
-export function FieldGroup({ variant, invalid, label, children, layout, ...props }:
-  Native<HTMLAttributes<HTMLDivElement>> & r.FieldOptions & {label: ReactNode}) {
+export function FieldGroup({ variant, invalid, label, labelId: explicitLabelId, children, layout, ...props }:
+  Native<HTMLAttributes<HTMLDivElement>> & r.FieldOptions & {label: ReactNode; labelId?: string}) {
   const slots = r.fieldRecipe({variant, invalid});
-  const labelId = useId();
+  const generatedLabelId = useId();
+  const labelId = explicitLabelId ?? generatedLabelId;
   return <div {...props} className={r.withLayout(slots.root, layout)}>
     <span id={labelId} className={slots.label}>{label}</span>
     <div role="group" aria-labelledby={labelId}>{children}</div>
