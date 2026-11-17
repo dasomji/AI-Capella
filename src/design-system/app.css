@@ -33,7 +33,7 @@
 /* Player shorthands and consumer-local voice materials. */
 @custom-variant player-short-landscape { @media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) { @slot; } }
 @custom-variant player-reduced-transparency { @media (prefers-reduced-transparency: reduce) { @slot; } }
-@utility player-part-font { font: inherit; }
+@utility player-part-font { --tw-sort: font-family; font: inherit; }
 @utility player-part--webkit-font-smoothing { -webkit-font-smoothing: inherit; }
 @utility player-part--webkit-locale { -webkit-locale: inherit; }
 @utility player-part--webkit-tap-highlight-color { -webkit-tap-highlight-color: inherit; }
@@ -42,22 +42,22 @@
 @utility player-icon-transition { transition: var(--ds-player-utility-icon-transition); }
 @utility player-icon-background { background: var(--ds-surface-overlay); }
 @utility player-seg-background { background: var(--ds-material-vellum); }
-@utility player-seg-border { border: var(--ds-player-seg-border-3); }
+@utility player-seg-border { --tw-sort: border-width; border: var(--ds-player-seg-border-3); }
 @utility player-seg-background-2 { background: var(--ds-player-seg-button-aria-pressed-true-background-112); }
 @utility player-live-dot-background { background: var(--ds-success); }
 @utility player-p-top-grid-area { grid-area: var(--ds-player-utility-p-top-grid-area); }
 @utility player-p-top-border-bottom { border-bottom: var(--ds-player-p-top-border-bottom-13); }
-@utility player-song-title-font { font: var(--ds-player-song-title-font-19); }
-@utility player-badge-border { border: var(--ds-player-badge-border-23); }
+@utility player-song-title-font { --tw-sort: font-family; font: var(--ds-player-song-title-font-19); }
+@utility player-badge-border { --tw-sort: border-width; border: var(--ds-player-badge-border-23); }
 @utility player-voices-panel-grid-area { grid-area: var(--ds-player-utility-voices-panel-grid-area); }
 @utility player-voices-panel-border-right { border-right: var(--ds-player-voices-panel-border-right-24); }
 @utility player-voice-row-transition { transition: var(--ds-player-voice-row-transition-29); }
 @utility player-voice-row-background { background: var(--ds-player-voice-row-hover-background-114); }
-@utility player-light-border { border: var(--ds-player-utility-light-border-part-1) solid var(--c); }
+@utility player-light-border { --tw-sort: border-width; border: var(--ds-player-utility-light-border-part-1) solid var(--c); }
 @utility player-light-transition { transition: var(--ds-player-light-transition-34); }
 @utility player-light-background { background: var(--c); }
 @utility player-light-box-shadow { box-shadow: 0 0 var(--ds-player-utility-light-width) var(--c); }
-@utility player-mix-btn-font { font: var(--ds-player-mix-btn-font-43); }
+@utility player-mix-btn-font { --tw-sort: font-family; font: var(--ds-player-mix-btn-font-43); }
 @utility player-mix-btn-transition { transition: var(--ds-player-mix-btn-transition-44); }
 @utility player-mute-btn-background { background: var(--ds-ink); }
 @utility player-solo-btn-color { color: var(--c); }
@@ -65,7 +65,7 @@
 @utility player-solo-btn-background { background: color-mix(in oklab, var(--c) var(--ds-player-utility-solo-btn-background-part-1), transparent); }
 @utility player-solo-btn-box-shadow { box-shadow: 0 0 var(--ds-player-utility-light-width) var(--ds-player-utility-solo-btn-box-shadow-part-2) var(--c); }
 @utility player-duck-border-top { border-top: var(--ds-player-duck-border-top-49); }
-@utility player-duck-value-font { font: var(--ds-player-duck-value-font-52); }
+@utility player-duck-value-font { --tw-sort: font-family; font: var(--ds-player-duck-value-font-52); }
 @utility player-chips-grid-area { grid-area: var(--ds-player-utility-chips-grid-area); }
 @utility player-chip-background { background: var(--ds-player-chip-background-115); }
 @utility player-chip-transition { transition: var(--ds-player-chip-transition-59); }
@@ -76,13 +76,13 @@
 @utility player-chips-mixer-background { background: var(--ds-player-chips-mixer-background-118); }
 @utility player-mixer-chip-background { background: var(--ds-player-mixer-chip-background-117); }
 @utility player-zoom-background { background: var(--ds-material-vellum-strong); }
-@utility player-zoom-font { font: var(--ds-player-zoom-font-70); }
+@utility player-zoom-font { --tw-sort: font-family; font: var(--ds-player-zoom-font-70); }
 @utility player-info-row-grid-area { grid-area: var(--ds-player-utility-info-row-grid-area); }
 @utility player-transport-grid-area { grid-area: var(--ds-player-utility-transport-grid-area); }
 @utility player-pos-background { background: var(--ds-surface-raised); }
-@utility player-pos-font { font: var(--ds-player-pos-b-font-77); }
-@utility player-pos-font-2 { font: var(--ds-player-pos-span-font-78); }
-@utility player-t-btn-border { border: var(--ds-player-t-btn-border-79); }
+@utility player-pos-font { --tw-sort: font-family; font: var(--ds-player-pos-b-font-77); }
+@utility player-pos-font-2 { --tw-sort: font-family; font: var(--ds-player-pos-span-font-78); }
+@utility player-t-btn-border { --tw-sort: border-width; border: var(--ds-player-t-btn-border-79); }
 @utility player-t-btn-transition { transition: var(--ds-player-t-btn-transition-80); }
 @utility player-t-btn-background-2 { background: var(--ds-player-zoom-follow-btn-aria-pressed-true-background-120); }
 @utility player-t-btn-border-color { border-color: var(--ds-player-utility-t-btn-border-color); }
@@ -92,7 +92,7 @@
 @utility player-switch-background { background: var(--ds-surface-hover); }
 @utility player-switch-transition { transition: var(--ds-player-switch-transition-100); }
 @utility player-badge-background { background: var(--ds-player-badge-is-leading-background-133); }
-@utility player-badge-font { font: var(--ds-player-badge-follow-pos-font-104); }
+@utility player-badge-font { --tw-sort: font-family; font: var(--ds-player-badge-follow-pos-font-104); }
 @utility player-chips-background { background: var(--ds-surface); }
 @utility player-play-btn-background-2 { background: var(--ds-player-play-btn-background-135); }
 @utility player-t-btn-background-3 { background: var(--ds-player-t-btn-toggle-aria-pressed-true-background-137); }
@@ -103,7 +103,7 @@
 @utility player-chip-background-7 { background: var(--ds-material-fibre), color-mix(in oklab, var(--c) var(--ds-player-utility-chip-background-7-part-1), var(--ds-player-voice-material-4)); }
 @utility player-chip-background-8 { background: radial-gradient( var(--ds-player-utility-chip-background-6-part-1) var(--ds-player-utility-chip-background-6-part-2) at var(--ds-player-utility-chip-background-6-part-3) var(--ds-player-utility-chip-background-6-part-3), color-mix(in oklab, var(--c) var(--ds-player-utility-chip-background-8-part-5), var(--ds-player-voice-material-5)) var(--ds-player-utility-chip-background-6-part-5), var(--ds-player-voice-material-5) var(--ds-player-utility-chip-background-8-part-7) ); }
 @utility player-chip-background-9 { background: var(--ds-player-chip-is-dimmed-i-background-145); }
-@utility player-label-font { font: var(--ds-player-label-font-148); }
+@utility player-label-font { --tw-sort: font-family; font: var(--ds-player-label-font-148); }
 @utility player-play-btn-background-3 { background: var(--ds-player-play-btn-background-151); }
 @utility player-t-btn-background-4 { background: var(--ds-player-t-btn-toggle-aria-pressed-true-background-153); }
 @utility player-voice-row-background-2 { background: var(--ds-player-voice-row-hover-background-154); }
