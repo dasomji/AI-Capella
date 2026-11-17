@@ -275,7 +275,7 @@ const librarySlots = {
   "ds-library-menu-sub":
     "tw:grid",
   "ds-library-menu-option":
-    "tw:min-h-40 tw:font-emphasis",
+    "tw:min-h-40! tw:font-emphasis!",
   "ds-library-menu-danger":
     "tw:text-danger tw:library-menu-danger-ic:text-danger",
   "ds-library-offline-update":
