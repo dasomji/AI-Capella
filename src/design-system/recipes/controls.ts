@@ -29,7 +29,7 @@ export interface ButtonOptions {
 const parityButtonShapes = {
   tile: "tw:flex-1 tw:min-w-0 tw:min-h-upload-tile tw:max-score:min-h-upload-tile-phone tw:flex-col tw:px-10 tw:py-18 tw:whitespace-normal tw:rounded-transcription-tile tw:bg-surface tw:text-ink tw:border-rule-strong tw:text-button tw:font-label tw:font-auth-body tw:leading-body",
   compact: "tw:min-h-36 tw:p-6 tw:rounded-card tw:border-rule-strong tw:bg-transparent tw:text-ink tw:text-small tw:font-label tw:font-auth-body tw:leading-body",
-  "review-item": "tw:w-full tw:mb-4 tw:justify-start tw:items-baseline tw:text-left tw:whitespace-normal tw:py-12 tw:px-0 tw:border-0 tw:border-b tw:rounded-field tw:border-rule-strong tw:bg-transparent tw:text-ink tw:font-auth-body tw:font-regular tw:text-body-small tw:leading-field",
+  "review-item": "tw:min-h-control-height tw:w-full tw:mb-4 tw:justify-start tw:items-baseline tw:text-left tw:whitespace-normal tw:py-12 tw:px-0 tw:border-0 tw:border-b tw:rounded-field tw:border-rule-strong tw:bg-transparent tw:text-ink tw:font-auth-body tw:font-regular tw:text-body-small tw:leading-field",
   "transcription-link": "tw:min-h-0 tw:rounded-field tw:px-0 tw:py-8 tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:hover:text-ink tw:hover:underline tw:font-auth-body tw:font-regular tw:text-label tw:leading-field",
   "transcription-language": "tw:min-h-36 tw:rounded-field tw:px-0 tw:py-4 tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-regular tw:text-small tw:leading-field",
   "tour-link": "tw:min-h-0 tw:rounded-control tw:px-6 tw:py-4 tw:border-0 tw:bg-transparent tw:text-note-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-label tw:leading-body",
@@ -76,7 +76,7 @@ function buttonRecipeStyles({
     ].join(" ");
   if (variant in parityButtonShapes) {
     const shape = parityButtonShapes[variant as keyof typeof parityButtonShapes];
-    return [controlBase, disabledRecipe, "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 tw:border tw:border-solid tw:cursor-pointer", shape,
+    return [controlBase, disabledRecipe, "tw:inline-flex tw:gap-8 tw:cursor-pointer", variant === "review-item" ? "tw:border-solid" : "tw:items-center tw:justify-center " + (["tile","compact","hint"].includes(variant) ? "tw:border tw:border-solid" : ""), shape,
       variant === "transcription-language" ? pressed ? "tw:text-ink" : "tw:text-ink-secondary" : "",
       variant === "tile" && pressed ? "tw:border-transcription-accent tw:shadow-transcription-selected" : ""].join(" ");
   }
