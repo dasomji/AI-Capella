@@ -4,11 +4,12 @@ import fs from 'node:fs/promises';
 import {chromium} from 'playwright';
 const out=process.env.EVIDENCE_DIR??process.env.BROWSER_EVIDENCE;
 const baseline=!!process.env.OVERLAY_BASELINE;
+const toastOnly=!!process.env.OVERLAY_TOAST_ONLY;
 await fs.mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 const records=[];
 try {
- for(const theme of ['night-paper','parchment']) for(const [width,height] of [[1440,900],[768,1024],[390,844],[844,390]]) {
+ for(const theme of ['night-paper','parchment']) for(const [width,height] of [[1440,900],[768,1024],[390,844],[360,800],[844,390]]) {
   const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce'});
   console.log('Overlay viewport',theme,width,height);
   await page.goto(process.env.BASE_URL+'/healthz');
@@ -19,7 +20,7 @@ try {
    document.body.replaceChildren();
    window.trigger=document.createElement('button');trigger.textContent='Open settings';document.body.append(trigger);trigger.focus();
   },theme);
-  for(const variant of ['dialog','sheet','domain-sheet','library-sheet','library-popover','library-prompt','admin-detail','transcription','transcription-review']) {
+  if(!toastOnly) for(const variant of ['dialog','sheet','domain-sheet','library-sheet','library-popover','library-prompt','admin-detail','transcription','transcription-review']) {
    if(baseline&&variant==='admin-detail')continue;
    await page.evaluate(({variant,baseline})=>{
     const content=document.createElement('div');
@@ -45,7 +46,7 @@ try {
    records.push({theme,width,height,variant,...geometry});
    await page.evaluate(()=>panel.close());
   }
-  if(!baseline) {
+  if(!baseline&&!toastOnly) {
    // Keyboard surrogate with a distinct visual viewport; retain the focused lower invitation field.
    const keyboard = await page.evaluate(async () => {
     const descriptor=Object.getOwnPropertyDescriptor(window,'visualViewport');
@@ -96,6 +97,39 @@ try {
    assert.equal(await page.locator('#toast').evaluate(el=>el.parentElement===document.body),true,'Notifier survives modal removal');
    await page.evaluate(()=>B.dismissToast());
   }
+  // F1/F4: real player shell, long DE message, action and close at phone/desktop widths.
+  await page.evaluate(async()=>{
+   const {createMainScreen}=await import('/src/design-system/dom/main-screen.ts');
+   const {appShellRecipe}=await import('/src/design-system/recipes/shell.ts');
+   const {t}=await import('/src/i18n.ts');
+   const app=document.createElement('div');app.id='app';app.className=appShellRecipe().root+' mode-player';
+   app.append(createMainScreen({t,pt:key=>key,tr:key=>key,modeName:key=>key,icon:()=>document.createTextNode('♪')}));
+   document.body.replaceChildren(app);
+   for(const [key,text] of [['pos-bar','Takt 12'],['pos-beat-short','· 1'],['bpm','120'],['transpose','C']])
+    document.querySelectorAll(`[data-bind="${key}"]`).forEach(el=>el.textContent=text);
+   B.toast('Die Änderungen konnten nicht gespeichert werden. Bitte überprüfe deine Verbindung und versuche es erneut.','error',{action:{label:'Erneut versuchen',onSelect(){window.retried=true;}}});
+  });
+  await page.evaluate(()=>document.fonts.ready);
+  await page.waitForTimeout(350);
+  const toast=await page.locator('#toast').evaluate(el=>{
+   const rect=node=>{const r=node.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+   return {host:rect(el),message:el.querySelector('span')?rect(el.querySelector('span')):null,
+    buttons:[...el.querySelectorAll('button')].map(rect),controls:[...document.querySelectorAll('.info-row,.transport')].filter(el=>el.getClientRects().length).map(rect),scroll:el.scrollWidth,client:el.clientWidth};
+  });
+  records.push({theme,width,height,variant:'player-action-toast',...toast});
+  await page.screenshot({path:`${out}/${theme}-${width}x${height}-player-action-toast.png`});
+  if(!baseline) {
+   assert.ok(Math.abs(toast.host.width-Math.min(520,width-32))<2,`F1 token width and gutters: ${JSON.stringify(toast)}`);
+   assert.ok(toast.host.left>=15&&toast.host.right<=width-15,'Toast has viewport gutters');
+   assert.ok(toast.message&&toast.message.width>=(width<900?toast.host.width-50:150),'Message retains readable wrapping width beside actions');
+   assert.ok(toast.scroll<=toast.client+1,'Toast has no horizontal overflow');
+   assert.ok(toast.host.top>=0&&toast.host.bottom<=height,'Toast is inside the viewport');
+   for(const button of toast.buttons)assert.ok(button.left>=toast.host.left&&button.right<=toast.host.right&&button.top>=toast.host.top&&button.bottom<=toast.host.bottom,'Action and close remain contained');
+   for(const controls of toast.controls)assert.ok(toast.host.bottom<=controls.top,`F4 toast clears player controls: ${JSON.stringify(toast)}`);
+   await page.locator('#toast button').first().click();
+   assert.equal(await page.evaluate(()=>window.retried),true,'Action remains operable');
+  }
+  await page.evaluate(()=>{do{B.dismissToast()}while(B.getToast());});
   console.log('Overlay captured',theme,width,height);
   await page.close();
  }

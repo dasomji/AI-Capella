@@ -370,3 +370,16 @@ Admin layout roles remain; the retired admin paint aliases no longer form a seco
 The historic cross-revision pixel-parity script is retired; see
 [the parity decision](../out-of-scope/pre-decision-parity.md). Current React/DOM adapter parity,
 keyboard, theme-extension, renderer and admin browser journeys remain the regression contracts.
+
+
+### Review regression journeys
+
+`DESIGN_BROWSER_SCRIPT=scripts/browser-overlays.mjs node scripts/browser-design-dev.mjs`
+checks dialog/menu geometry and persistent actionable toasts at 1440, 768, 390, 360 and 844px
+widths in both supported themes, including no overlap with the real player controls.
+`node scripts/browser-review-visuals.mjs` captures the actual player tour, the landing appearance
+release and Velvet title; set `BROWSER_EVIDENCE` to an external directory. Its optional
+`REVIEW_BASELINE_REF` reads tracked source through a test-only Vite transform for comparison,
+without changing the checkout. The standard isolated `npm run test:browser` also runs
+`browser-review-routes.mjs`: localized 404 language/recovery and revoked-sysadmin in-app
+navigation, against a disposable database only.
