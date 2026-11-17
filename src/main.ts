@@ -3965,9 +3965,11 @@ async function openAccountArea(anchor: HTMLElement) {
   remove.onclick = async () => {
     const plan = await api("/account/deletion");
     const sheet = createAccountPart("div", "body");
-    const note = createAccountPart("p", "note");
-    note.textContent = t("accountDeleteEnsembles");
-    sheet.append(note);
+    if (plan.deleteEnsembles.length) {
+      const note = createAccountPart("p", "note");
+      note.textContent = t("accountDeleteEnsembles");
+      sheet.append(note);
+    }
     for (const e of plan.deleteEnsembles) {
       const row = createAccountPart("p", "note");
       row.textContent = e.name;
@@ -3984,7 +3986,7 @@ async function openAccountArea(anchor: HTMLElement) {
     // The error belongs to the deletion sheet, outside the auth shell's selector scope.
     const inlineError = createStatus({variant:"account-delete",intent:"error",text:"",attrs:{role:"alert"}});
     sheet.append(inlineError);
-    const confirm = createButton({variant:"account-delete-confirm",text:t("accountDeleteConfirm"),disabled:!!plan.lastLead.length});
+    const confirm = createButton({variant:"standard",intent:"danger",text:t("accountDeleteConfirm"),disabled:!!plan.lastLead.length});
     confirm.onclick = async () => {
       if(leavingAccount)return;
       inlineError.textContent="";
