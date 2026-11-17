@@ -3163,20 +3163,6 @@ body:has(#app.mode-landing)::after {
 /* The hint when an energy saver caps the frames at 30 a second (powerHint.ts): a note on paper,
    where the toasts appear, that stays until it's answered. Keep it below overlays (900) so it
    cannot cover account actions or other modal controls. */
-.power-hint {
-  position: fixed;
-  left: 50%;
-  bottom: calc(96px + var(--safe-b));
-  z-index: 800;
-  width: min(440px, calc(100vw - 32px));
-  transform: translate(-50%, 16px);
-  opacity: 0;
-  transition: opacity var(--t-med), transform var(--t-med) var(--ease);
-}
-.power-hint.show {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
 .power-hint b {
   display: block;
   font-size: 15px;
@@ -3191,11 +3177,6 @@ body:has(#app.mode-landing)::after {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-}
-@media (width < theme(--breakpoint-panel)) {
-  .power-hint {
-    bottom: calc(150px + var(--safe-b));
-  }
 }
 
 /* The introduction (intro.ts): the page goes dark, and a light moves from control to control with a
@@ -3229,18 +3210,6 @@ body:has(#app.mode-landing)::after {
 }
 .intro.open .intro-spot {
   opacity: 1;
-}
-.intro-card {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: min(360px, calc(100vw - 20px));
-  opacity: 0;
-  transition: opacity 0.17s ease;
-}
-.intro-card.shown {
-  opacity: 1;
-  transition-duration: 0.3s;
 }
 .intro-head {
   display: flex;
