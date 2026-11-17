@@ -22,7 +22,7 @@ const evidence = path.resolve(process.env.BROWSER_EVIDENCE || '.review-evidence/
 await fs.mkdir(evidence, { recursive: true });
 const fixture = await fs.readFile(new URL('./renderer-theme-fixture.js', import.meta.url), 'utf8');
 const server = await createServer({
-  root: process.cwd(), configFile: false,
+  root: process.cwd(), configFile: false, cacheDir: path.join(evidence, 'vite-cache'),
   plugins: [tailwind(), {
     name: 'renderer-regression', enforce: 'pre',
     configureServer(server) {
@@ -45,7 +45,8 @@ const server = await createServer({
       return changed;
     },
   }],
-  server: { host: '127.0.0.1', port: 0, hmr: false, watch: null },
+  server: { host: '127.0.0.1', port: 0, hmr: false, watch: null,
+    fs: { allow: [process.cwd(), await fs.realpath(path.join(process.cwd(), 'node_modules')), evidence] } },
 });
 let browser;
 const results = [];
