@@ -131,7 +131,7 @@ const librarySlots = {
     "tw:grid tw:gap-library-radius-menu tw:p-library-song-body-padding tw:text-left " +
     "tw:library-song-body-base-max-compact:p-0 tw:library-song-body-base-max-compact:gap-6",
   "ds-library-song-title":
-    "tw:font-library-song-title-font tw:wrap-anywhere tw:text-inherit " +
+    "tw:font-library-song-title-font tw:wrap-anywhere tw:text-align-inherit " +
     "tw:library-song-title-base-max-compact:text-section tw:library-song-title-base-max-compact:p-0 " +
     "tw:library-song-title-root-data-type-revival:font-library-revival--song-title-font-family " +
     "tw:library-song-title-root-data-type-revival:font-regular " +
@@ -141,7 +141,7 @@ const librarySlots = {
     "tw:library-song-title-root-data-type-revival:leading-label",
   "ds-library-song-meta":
     "tw:flex tw:items-center tw:flex-wrap tw:gap-library-song-meta-gap tw:min-h-library-song-meta-min-height " +
-    "tw:text-library-song-meta-color tw:text-library-song-meta-font-size tw:text-inherit " +
+    "tw:text-library-song-meta-color tw:text-library-song-meta-font-size tw:text-align-inherit " +
     "tw:library-song-meta-root-data-type-revival:text-library-radius-card " +
     "tw:library-song-meta-root-data-type-revival:white-space-library-revival-song-meta-white-space",
   "ds-library-vdots":
