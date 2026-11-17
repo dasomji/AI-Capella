@@ -178,7 +178,8 @@ function buttonRecipeStyles({
     const shape = parityButtonShapes[variant as keyof typeof parityButtonShapes];
     return [controlBase, ["tile", "review-item", "domain-language"].includes(variant) ? actionDisabled : disabledRecipe, "tw:inline-flex tw:gap-small tw:cursor-pointer", variant === "review-item" ? "tw:border-solid" : "tw:items-center tw:justify-center " + (["tile"].includes(variant) ? "tw:border-(length:--ds-stroke-thin) tw:border-solid" : ""), shape,
       (variant === "transcription-language" || variant === "domain-language") ? pressed ? "tw:text-ink" : "tw:text-ink-secondary" : "",
-      variant === "tile" && pressed ? "tw:border-transcription-accent tw:shadow-transcription-selected" : ""].join(" ");
+      variant === "tile" && pressed ? "tw:border-transcription-accent tw:shadow-transcription-selected" : "",
+      ["review-item", "transcription-language", "domain-language"].includes(variant) ? "tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch" : ""].join(" ");
   }
   if (variant !== "standard") missingArea(variant);
   return [controlBase, actionDisabled,
