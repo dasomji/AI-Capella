@@ -65,9 +65,9 @@ describe('concrete theme colors and >8 voice helpers', () => {
   });
   it.each([1, 4, 8, 9, 12])('applies alpha and mixing to a %i-voice spectrum', count => {
     const color = count > 8 ? 'hsl(94, 70%, 72%)' : '#F4879B';
-    expect(withAlpha(color, .3)).toMatch(/^rgba\(.+,0.3\)$/);
-    expect(towardPaper(color, 1)).toBe('rgb(239,231,218)');
-    expect(towardInk(color, 1)).toBe('rgb(20,12,30)');
+    expect(withAlpha(color, .3)).toMatch(/^rgba\(.+, 0.3\)$/);
+    expect(towardPaper(color, 1, normalizeColor('#efe7da'))).toBe('rgb(239,231,218)');
+    expect(towardInk(color, 1, normalizeColor('#140c1e'))).toBe('rgb(20,12,30)');
   });
 });
 
