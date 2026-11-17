@@ -51,7 +51,7 @@ describe("pure recipes", () => {
         const classes = r.buttonRecipe({ variant, intent }).split(/\s+/);
         // Content-rich library controls own material/geometry slots in the shared CSS recipe.
         // They deliberately retain the historical shapes, rather than the generic button shape.
-        if (["library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update"].includes(variant)) {
+        if (["landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update"].includes(variant)) {
           const slot = classes.find(c => c.startsWith('ds-library-') && c !== 'ds-library-button')!;
           expect(readFileSync('src/design-system/library.css','utf8')).toContain('.'+slot);
           expect(new Set(classes).size).toBe(classes.length);
@@ -86,10 +86,10 @@ describe("pure recipes", () => {
         "error",
       ]);
       expect(slots.control.includes("tw:rounded-card")).toBe(
-        variant === "boxed",
+        variant === "boxed" || variant === "library-prompt",
       );
       expect(slots.control.includes("tw:rounded-field")).toBe(
-        variant !== "boxed",
+        variant !== "boxed" && variant !== "library-prompt",
       );
     }
   });

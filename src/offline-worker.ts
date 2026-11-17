@@ -6,7 +6,7 @@ export async function registerOfflineWorker() {
   const show = () => {
     if (!registration.waiting) {document.querySelector('#offline-update')?.remove();return;}
     if (!registration.active || document.querySelector('#offline-update')) return;
-    const notice = createButton({text:off('update'),attrs:{id:'offline-update'},layout:['tw:fixed','tw:bottom-18','tw:right-18','tw:z-menu']});
+    const notice = createButton({text:off('update'),variant:'offline-update',attrs:{id:'offline-update'}});
     notice.onclick = () => { navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {once:true}); registration.waiting?.postMessage('ACTIVATE_UPDATE'); };
     document.body.append(notice);
   };

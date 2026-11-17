@@ -1,4 +1,4 @@
-import { createButton, updateButton, createIconButton, createInput, createField, createCard, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
+import { createButton, updateButton, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
 import { matchBreakpoint } from './design-system/theme';
 import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
@@ -56,49 +56,149 @@ import type { PlaybackState } from './sync';
 
 /** Trusted application icon markup only; user labels always go through textContent. */
 function libraryIcon(name?: Parameters<typeof icon>[0]): Node {
-  const template = document.createElement('template');
+  const template = document.createElement("template");
   template.innerHTML = name ? icon(name) : '<span class="ic"></span>';
   return template.content.firstChild!;
 }
-function openLibrarySheet(title: string, content: HTMLElement, opener?: Element | null, onClose?: () => void) {
-  const sheet = createSheet({variant:'library-sheet',title,content,behavior:{opener,onClose}});
-  const head = sheet.element.querySelector('header')!;
-  const grab = document.createElement('span');grab.className='ds-library-sheet-grab';grab.setAttribute('aria-hidden','true');head.prepend(grab);
-  head.append(createIconButton({label:t('close'),icon:libraryIcon('close'),onClick:()=>sheet.requestClose()}));
-  sheet.open();return sheet;
+function openLibrarySheet(
+  title: string,
+  content: HTMLElement,
+  opener?: Element | null,
+  onClose?: () => void,
+) {
+  const sheet = createSheet({
+    variant: "library-sheet",
+    title,
+    content,
+    behavior: { opener, onClose },
+  });
+  const head = sheet.element.querySelector("header")!;
+  const grab = document.createElement("span");
+  grab.className = "ds-library-sheet-grab";
+  grab.setAttribute("aria-hidden", "true");
+  head.prepend(grab);
+  head.append(
+    createIconButton({
+      label: t("close"),
+      icon: libraryIcon("close"),
+      onClick: () => sheet.requestClose(),
+    }),
+  );
+  sheet.open();
+  return sheet;
 }
-function openLibraryMenu(anchor: HTMLElement, items: Parameters<typeof openMenu>[1], title = '') {
+function openLibraryMenu(
+  anchor: HTMLElement,
+  items: Parameters<typeof openMenu>[1],
+  title = "",
+) {
   let overlay: ReturnType<typeof createDialog>;
-  const convert = (items: Parameters<typeof openMenu>[1]): Parameters<typeof createMenu>[0]['items'] => items.map(item=>({
-    ...item, icon:libraryIcon(item.icon),radio:true,
-    options:item.options ? convert(item.options) : undefined,
-    onSelect:()=>{overlay.close();item.onSelect();},
-  }));
-  const menu = createMenu({variant:'library',label:title,items:convert(items),onEscape:()=>overlay.requestClose()});
-  const behavior={opener:anchor,initialFocus:()=>menu.element.querySelector<HTMLElement>('[role^="menuitem"]'),onClose:()=>menu.dispose()};
-  if(isNarrow()) {
-    overlay=openLibrarySheet(title,menu.element,anchor,()=>menu.dispose());
-    menu.element.querySelector<HTMLElement>('[role^="menuitem"]')?.focus({preventScroll:true});
+  const convert = (
+    items: Parameters<typeof openMenu>[1],
+  ): Parameters<typeof createMenu>[0]["items"] =>
+    items.map((item) => ({
+      ...item,
+      icon: libraryIcon(item.icon),
+      disclosureIcon: libraryIcon("chevronDown"),
+      radio: true,
+      options: item.options ? convert(item.options) : undefined,
+      onSelect: () => {
+        overlay.close();
+        item.onSelect();
+      },
+    }));
+  const menu = createMenu({
+    variant: "library",
+    label: title,
+    items: convert(items),
+    onEscape: () => overlay.requestClose(),
+  });
+  const behavior = {
+    opener: anchor,
+    initialFocus: () =>
+      menu.element.querySelector<HTMLElement>('[role^="menuitem"]'),
+    onClose: () => menu.dispose(),
+  };
+  if (isNarrow()) {
+    overlay = openLibrarySheet(title, menu.element, anchor, () =>
+      menu.dispose(),
+    );
+    menu.element
+      .querySelector<HTMLElement>('[role^="menuitem"]')
+      ?.focus({ preventScroll: true });
   } else {
-    overlay=createDialog({variant:'library-popover',title,content:menu.element,behavior});
+    overlay = createDialog({
+      variant: "library-popover",
+      title,
+      content: menu.element,
+      behavior,
+    });
     overlay.open();
-    const place=()=>{const a=anchor.getBoundingClientRect(),p=overlay.element.getBoundingClientRect();overlay.element.style.left=`${Math.max(8,Math.min(window.innerWidth-p.width-8,a.right-p.width))}px`;overlay.element.style.top=`${Math.max(8,a.bottom+8+p.height>window.innerHeight-8?a.top-p.height-8:a.bottom+8)}px`;};
-    place();requestAnimationFrame(place);
+    const place = () => {
+      const a = anchor.getBoundingClientRect(),
+        p = overlay.element.getBoundingClientRect();
+      overlay.element.style.left = `${Math.max(8, Math.min(window.innerWidth - p.width - 8, a.right - p.width))}px`;
+      overlay.element.style.top = `${Math.max(8, a.bottom + 8 + p.height > window.innerHeight - 8 ? a.top - p.height - 8 : a.bottom + 8)}px`;
+    };
+    place();
+    requestAnimationFrame(place);
   }
 }
-function libraryPrompt(options: {title:string;body?:string;value?:string;confirmLabel:string;danger?:boolean}): Promise<string|null> {
-  return new Promise(resolve=>{
-    let result: string|null=null;
-    const form=document.createElement('form');form.id='library-prompt-form';
-    const input=options.value === undefined ? undefined : createInput({value:options.value,attrs:{'aria-label':options.title,autofocus:true}});
-    if(input)form.append(input);
-    const actions=document.createDocumentFragment();
-    const cancel=createButton({text:t('cancel'),onClick:()=>dialog.requestClose()});
-    const submit=createButton({text:options.confirmLabel,intent:options.danger?'danger':'primary',type:'submit',attrs:{form:form.id,autofocus:input?undefined:true}});
-    actions.append(cancel,submit);
-    const dialog=createDialog({variant:'library-prompt',title:options.title,body:options.body,content:form,actions,attrs:{role:'alertdialog'},behavior:{opener:document.activeElement,initialFocus:input??submit,onClose:()=>resolve(result)}});
-    form.addEventListener('submit',e=>{e.preventDefault();const value=input?.value.trim();result=input?value&&value!==options.value?value:null:'ok';dialog.close();});
-    dialog.open();requestAnimationFrame(()=>input?.select());
+function libraryPrompt(options: {
+  title: string;
+  body?: string;
+  value?: string;
+  confirmLabel: string;
+  danger?: boolean;
+  opener?: Element | null;
+}): Promise<string | null> {
+  return new Promise((resolve) => {
+    let result: string | null = null;
+    const form = document.createElement("form");
+    form.id = "library-prompt-form";
+    const input =
+      options.value === undefined
+        ? undefined
+        : createInput({
+            variant: "library-prompt",
+            value: options.value,
+            attrs: { "aria-label": options.title, autofocus: true },
+          });
+    if (input) form.append(input);
+    const actions = document.createDocumentFragment();
+    const cancel = createButton({
+      text: t("cancel"),
+      onClick: () => dialog.requestClose(),
+    });
+    const submit = createButton({
+      text: options.confirmLabel,
+      variant: "library-action",
+      intent: options.danger ? "danger" : "primary",
+      type: "submit",
+      attrs: { form: form.id, autofocus: input ? undefined : true },
+    });
+    actions.append(cancel, submit);
+    const dialog = createDialog({
+      variant: "library-prompt",
+      title: options.title,
+      body: options.body,
+      content: form,
+      actions,
+      attrs: { role: "alertdialog" },
+      behavior: {
+        opener: options.opener ?? document.activeElement,
+        initialFocus: input ?? submit,
+        onClose: () => resolve(result),
+      },
+    });
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const value = input?.value.trim();
+      result = input ? (value && value !== options.value ? value : null) : "ok";
+      dialog.close();
+    });
+    dialog.open();
+    requestAnimationFrame(() => input?.select());
   });
 }
 
@@ -297,28 +397,67 @@ app.innerHTML = `
 
 // Build migrated controls before capturing the existing ID/delegation hooks.
 for (const [id, variant, intent] of [
-  ['mode-solo-btn', 'landing-mode', 'secondary'], ['mode-ensemble-btn', 'landing-mode', 'secondary'],
-  ['landing-create', 'link', 'secondary'], ['landing-samples', 'link', 'secondary'],
-  ['import-btn', 'standard', 'primary'], ['transcription-entry', 'standard', 'secondary'],
+  ["mode-solo-btn", "landing-mode", "secondary"],
+  ["mode-ensemble-btn", "landing-mode", "secondary"],
+  ["landing-create", "landing-aside", "secondary"],
+  ["landing-samples", "landing-link", "secondary"],
+  ["import-btn", "library-action", "primary"],
+  ["transcription-entry", "library-action", "secondary"],
 ] as const) {
   const prior = document.getElementById(id)!;
-  const button = createButton({text: '', variant, intent, attrs: {id, hidden: prior.hidden || undefined}});
+  const button = createButton({
+    text: "",
+    variant,
+    intent,
+    layout:
+      id === "import-btn" || id === "transcription-entry"
+        ? "tw:max-compact:flex-1"
+        : undefined,
+    attrs: { id, hidden: prior.hidden || undefined },
+  });
   button.append(...prior.childNodes);
-  if (id === 'landing-create') button.classList.add('ds-library-landing-aside');
+  if (id === "landing-create") button.classList.add("ds-library-landing-aside");
   prior.replaceWith(button);
 }
-const oldMenu = document.getElementById('lib-menu-btn')!;
-const libMenu = createIconButton({label:t('menu'), attrs:{id:'lib-menu-btn'}});
-libMenu.append(...oldMenu.childNodes);oldMenu.replaceWith(libMenu);
-const oldSearch = document.getElementById('lib-search-wrap')!;
-const searchControl = createInput({variant:'library-search', type:'search', id:'lib-search', attrs:{placeholder:t('searchTitles'), 'aria-label':t('searchTitles')}});
-const searchField = createField({variant:'library-search',label:t('searchTitles'),control:searchControl,attrs:{id:'lib-search-wrap',hidden:true}});
-searchField.prepend(oldSearch.firstChild!);oldSearch.replaceWith(searchField);
-for (const [id, part] of [['song-grid','song-grid'], ['lib-banner','banner'], ['landing-empty','landing-empty']] as const) {
+const oldMenu = document.getElementById("lib-menu-btn")!;
+const libMenu = createIconButton({
+  label: t("menu"),
+  attrs: { id: "lib-menu-btn" },
+});
+libMenu.append(...oldMenu.childNodes);
+oldMenu.replaceWith(libMenu);
+const oldSearch = document.getElementById("lib-search-wrap")!;
+const searchControl = createInput({
+  variant: "library-search",
+  type: "search",
+  id: "lib-search",
+  attrs: { placeholder: t("searchTitles"), "aria-label": t("searchTitles") },
+});
+const searchField = createField({
+  variant: "library-search",
+  label: t("searchTitles"),
+  control: searchControl,
+  attrs: { id: "lib-search-wrap", hidden: true },
+});
+searchField.prepend(oldSearch.firstChild!);
+oldSearch.replaceWith(searchField);
+for (const [id, part] of [
+  ["song-grid", "song-grid"],
+  ["lib-banner", "banner"],
+  ["landing-empty", "landing-empty"],
+] as const) {
   const prior = document.getElementById(id)!;
-  const next = createLibraryPart(id === 'song-grid' ? 'ul' : 'div',part,{attrs:{id,hidden:prior.hidden || undefined,...(id==='lib-banner'?{role:'status'}:{})}});
-  next.append(...prior.childNodes);prior.replaceWith(next);
+  const next = createLibraryPart(id === "song-grid" ? "ul" : "div", part, {
+    attrs: {
+      id,
+      hidden: prior.hidden || undefined,
+      ...(id === "lib-banner" ? { role: "status" } : {}),
+    },
+  });
+  next.append(...prior.childNodes);
+  prior.replaceWith(next);
 }
+
 const libraryEl = document.querySelector<HTMLElement>('#library')!;
 const songGridEl = document.querySelector<HTMLUListElement>('#song-grid')!;
 const libCountEl = document.querySelector<HTMLParagraphElement>('#lib-count')!;
@@ -718,7 +857,7 @@ function renderLanding(_now=false) {
  const empty=!unlockedEnsembles().length && chosen!==PUBLIC_ID;
  document.querySelector<HTMLElement>('#landing-empty')!.hidden=!empty;
  document.querySelector('#landing')!.classList.toggle('no-ensemble',empty);
- const create=document.querySelector<HTMLElement>('#landing-create')!;create.className=empty?'btn primary landing-aside':'link-btn landing-aside';
+ const create=document.querySelector<HTMLButtonElement>('#landing-create')!;updateButton(create,{variant:empty?'landing-create':'landing-aside',intent:empty?'primary':'secondary'});
  if(empty)document.querySelector('#landing-empty')!.insertBefore(create,document.querySelector('#landing-samples'));else document.querySelector('.landing-choice')!.append(create);
  landingModesEl.hidden=empty;dedicationEl.hidden=empty;
  dedicationEl.replaceChildren();
@@ -1291,16 +1430,14 @@ function songCard(song: SongEntry): HTMLLIElement {
     const mark=document.createElement('span');mark.className='offline-mark';mark.style.color='var(--ds-accent-offline)';mark.title=off('available');mark.setAttribute('aria-label',off('available'));
     mark.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25"><path d="M7 17H6a4 4 0 0 1-1-8 6 6 0 0 1 11-2 5 5 0 0 1 2 10h-1M9 16l2 2 4-5"/></svg>';li.append(mark);
   }
-  if(song.imported && isOffline() && !isPrepared(song.id)){open.disabled=true;li.style.opacity='.45';open.title=off('unavailable');meta.textContent=off('unavailable');}
+  if(song.imported && isOffline() && !isPrepared(song.id)){open.disabled=true;li.style.opacity='var(--ds-opacity-disabled-offline)';open.title=off('unavailable');meta.textContent=off('unavailable');}
   if (song.imported) {
     const more = createIconButton({variant:'library-more',label:t('moreFor', { title: song.title })});
     more.setAttribute('aria-label', t('moreFor', { title: song.title }));
     more.innerHTML = icon('more');
     li.appendChild(more);
   } else if(!song.imported) {
-    const tag = document.createElement('span');
-    tag.className = 'tag';
-    tag.textContent = song.localOnly ? pt('privatePractice') : t('sample');
+    const tag = createBadge({variant:'library',text:song.localOnly ? pt('privatePractice') : t('sample')});
     li.appendChild(tag);
   }
   if (!isOffline() || !song.imported || isPrepared(song.id)) void songMeta(song).then((m) => {
@@ -1388,9 +1525,9 @@ songGridEl.addEventListener('click', (e) => {
       [
         {label: isPrepared(song.id)?off('remove'):off('prepare'),icon:'file',disabled:isOffline()&&!isPrepared(song.id),onSelect:()=>void (isPrepared(song.id)?unpreparePiece(song.id):preparePiece(song.id)).catch(e=>toast(errorText(e),'error'))},
         ...(editable() ? [
-        { label: t('rename'), icon: 'pencil' as const, onSelect: () => void renameSong(song) },
+        { label: t('rename'), icon: 'pencil' as const, onSelect: () => void renameSong(song, more) },
         ...moveItems(song),
-        { label: t('delete'), icon: 'trash' as const, danger: true, onSelect: () => void confirmDelete(song) },
+        { label: t('delete'), icon: 'trash' as const, danger: true, onSelect: () => void confirmDelete(song, more) },
         ] : []),
       ],
       song.title,
@@ -1400,12 +1537,12 @@ songGridEl.addEventListener('click', (e) => {
   if (target.closest('.song-open')) void selectSong(song);
 });
 
-async function confirmDelete(song: SongEntry) {
+async function confirmDelete(song: SongEntry, opener?:Element|null) {
   // A shared-library delete removes the song for everyone, not just this device -- worth a
   // deliberate confirmation step (unlike this app's usual "any device can change shared state
   // immediately" trust model for renames/playback) since it's the one destructive, unrecoverable
   // action in the whole library.
-  const ok = await libraryPrompt({ title: t('deleteTitle', { title: song.title }), body: t('deleteBody'), confirmLabel: t('delete'), danger: true });
+  const ok = await libraryPrompt({ title: t('deleteTitle', { title: song.title }), body: t('deleteBody'), confirmLabel: t('delete'), danger: true, opener });
   if (!ok) return;
   // No optimistic local removal: the shared onSnapshot listener updates `importedSongs` and
   // re-renders for every device (including this one) once Firestore reflects the delete.
@@ -1416,8 +1553,8 @@ async function confirmDelete(song: SongEntry) {
   }
 }
 
-async function renameSong(song: SongEntry) {
-  const value = await libraryPrompt({title:t('renameSong'), value:song.title, confirmLabel:t('save')});
+async function renameSong(song: SongEntry, opener?:Element|null) {
+  const value = await libraryPrompt({title:t('renameSong'), value:song.title, confirmLabel:t('save'), opener});
   if (!value) return;
   applySongTitle(song.id, value, song.title);
 }

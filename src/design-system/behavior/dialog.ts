@@ -1,10 +1,11 @@
+import { popoverMotion } from "./popover";
 import { sheetMotion } from "./sheet";
 /** Native showModal owns background inertness, including later portals and stacked modals. */
 export type CancelReason = "escape" | "outside" | "button" | "swipe";
 export interface DialogBehaviorOptions {
   opener?: Element | null;
   /** Shared slide and swipe transport for sheet variants. */
-  motion?: "sheet";
+  motion?: "sheet" | "popover";
   initialFocus?: HTMLElement | (() => HTMLElement | null);
   escape?: "close" | "ignore";
   outside?: "close" | "ignore";
@@ -71,15 +72,21 @@ export function openDialog(
     closing = false,
     busy = options.busy ?? false;
   let closingChildren: DialogController[] | undefined;
-  const motion = options.motion === "sheet"
-    ? sheetMotion(dialog, () => controller.requestClose("swipe")) : undefined;
+  const motion =
+    options.motion === "sheet"
+      ? sheetMotion(dialog, () => controller.requestClose("swipe"))
+      : options.motion === "popover"
+        ? popoverMotion(dialog)
+        : undefined;
   const finish = (notify: boolean) => {
     if (closed) return;
     closed = true;
     motion?.dispose();
     // Layers opened after an exit starts replace the closing layer; they are not its children.
     const index = stack.findIndex((entry) => entry.controller === controller);
-    for (const child of (closingChildren ?? stack.slice(index + 1).map(entry => entry.controller)).reverse())
+    for (const child of (
+      closingChildren ?? stack.slice(index + 1).map((entry) => entry.controller)
+    ).reverse())
       child.dispose();
     dialog.removeEventListener("cancel", onCancel);
     dialog.removeEventListener("close", onNativeClose);
@@ -117,8 +124,8 @@ export function openDialog(
     close() {
       if (closed || closing) return;
       closing = true;
-      const index = stack.findIndex(entry => entry.controller === controller);
-      closingChildren = stack.slice(index + 1).map(entry => entry.controller);
+      const index = stack.findIndex((entry) => entry.controller === controller);
+      closingChildren = stack.slice(index + 1).map((entry) => entry.controller);
       if (motion) motion.exit(() => finish(true));
       else if (options.exit) options.exit(() => finish(true));
       else finish(true);

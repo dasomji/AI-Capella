@@ -247,11 +247,14 @@ export function updateField(
   else control.removeAttribute("aria-describedby");
 }
 /** A caption for a composite field, without pretending the group is one native input. */
-export function createFieldGroup(options: r.FieldOptions & ElementOptions & {
-  label: string;
-  labelId?: string;
-  content: HTMLElement;
-}) {
+export function createFieldGroup(
+  options: r.FieldOptions &
+    ElementOptions & {
+      label: string;
+      labelId?: string;
+      content: HTMLElement;
+    },
+) {
   const slots = r.fieldRecipe(options);
   const root = element("div", slots.root, undefined, options);
   const caption = element("span", slots.label, options.label);
@@ -419,10 +422,17 @@ export function createEmptyState(
   }
   return root;
 }
-export function createControlGroup(options: ElementOptions & { content?: Node | readonly Node[] } = {}) {
+export function createControlGroup(
+  options: ElementOptions & { content?: Node | readonly Node[] } = {},
+) {
   const group = element("span", r.controlGroupRecipe(), undefined, options);
   group.dataset.ds = "control-group";
-  if (options.content) group.append(...(Array.isArray(options.content) ? options.content : [options.content]) as Node[]);
+  if (options.content)
+    group.append(
+      ...((Array.isArray(options.content)
+        ? options.content
+        : [options.content]) as Node[]),
+    );
   return group;
 }
 export interface ToggleGroupOptions
@@ -480,7 +490,9 @@ export function createDialog(options: DialogOptions) {
   dialog.setAttribute(
     "role",
     (options.attrs?.role as string) ??
-      (options.variant === "confirm" || options.variant === "admin-confirm" || options.variant === "admin-reason"
+      (options.variant === "confirm" ||
+      options.variant === "admin-confirm" ||
+      options.variant === "admin-reason"
         ? "alertdialog"
         : "dialog"),
   );
@@ -510,7 +522,14 @@ export function createDialog(options: DialogOptions) {
     open: () =>
       (controller = openDialog(dialog, {
         ...options.behavior,
-        motion: options.variant === "sheet" || options.variant === "domain-sheet" || options.variant === "library-sheet" ? "sheet" : undefined,
+        motion:
+          options.variant === "sheet" ||
+          options.variant === "domain-sheet" ||
+          options.variant === "library-sheet"
+            ? "sheet"
+            : options.variant === "library-popover"
+              ? "popover"
+              : undefined,
         onClose: () => {
           options.behavior?.onClose?.();
           dialog.remove();
@@ -521,15 +540,23 @@ export function createDialog(options: DialogOptions) {
     setBusy: (value: boolean) => controller?.setBusy(value),
   };
 }
-export const createSheet = ({variant="sheet", ...options}: Omit<DialogOptions, "variant"> & {variant?: "sheet"|"domain-sheet"|"library-sheet"}) =>
-  createDialog({ ...options, variant });
+export const createSheet = ({
+  variant = "sheet",
+  ...options
+}: Omit<DialogOptions, "variant"> & {
+  variant?: "sheet" | "domain-sheet" | "library-sheet";
+}) => createDialog({ ...options, variant });
 export const createDrawer = (options: Omit<DialogOptions, "variant">) =>
   createDialog({ ...options, variant: "drawer" });
-export const createConfirmDialog = (options: Omit<DialogOptions, "variant"> & {variant?: "confirm"|"admin-confirm"|"admin-reason"}) =>
-  createDialog({ ...options, variant: options.variant ?? "confirm" });
+export const createConfirmDialog = (
+  options: Omit<DialogOptions, "variant"> & {
+    variant?: "confirm" | "admin-confirm" | "admin-reason";
+  },
+) => createDialog({ ...options, variant: options.variant ?? "confirm" });
 export interface MenuItem {
   label: string;
   icon?: Node;
+  disclosureIcon?: Node;
   options?: readonly MenuItem[];
   value?: string;
   radio?: boolean;
@@ -551,42 +578,70 @@ export function createMenu(options: MenuOptions) {
       attrs: { ...options.attrs, role: "menu", "aria-label": options.label },
     });
   if (!root.id) root.id = `ds-menu-${++fieldId}`;
-  const appendItems = (parent: HTMLElement, items: readonly MenuItem[], nested = false) => {
-  for (const item of items) {
-    const button = createButton({
-      text: "",
-      disabled: item.disabled,
-      busy: item.busy,
-      onClick: item.options ? undefined : item.onSelect,
-      attrs: {
-        role: item.checked === undefined ? "menuitem" : "menuitemcheckbox",
-        ...(item.checked === undefined
-          ? {}
-          : { "aria-checked": String(item.checked) }),
-      },
-    });
-    applyPart(button, p.menuItemPart(options, item));
-    if (item.radio && item.checked !== undefined) button.setAttribute('role', 'menuitemradio');
-    if (item.icon) button.append(item.icon);
-    const label = element('span', '', item.label);button.append(label);
-    if (nested && options.variant === 'library') button.classList.add('ds-library-menu-option');
-    if (item.checked) {
-      const check = element("span", slots.check, "✓");
-      check.setAttribute("aria-hidden", "true");
-      button.append(check);
+  const appendItems = (
+    parent: HTMLElement,
+    items: readonly MenuItem[],
+    nested = false,
+  ) => {
+    for (const item of items) {
+      const button = createButton({
+        text: "",
+        disabled: item.disabled,
+        busy: item.busy,
+        onClick: item.options ? undefined : item.onSelect,
+        attrs: {
+          role: item.checked === undefined ? "menuitem" : "menuitemcheckbox",
+          ...(item.checked === undefined
+            ? {}
+            : { "aria-checked": String(item.checked) }),
+        },
+      });
+      applyPart(button, p.menuItemPart(options, item));
+      if (item.radio && item.checked !== undefined)
+        button.setAttribute("role", "menuitemradio");
+      if (item.icon) button.append(item.icon);
+      button.append(document.createTextNode(item.label));
+      if (nested && options.variant === "library")
+        button.classList.add("ds-library-menu-option");
+      if (item.checked) {
+        const check = element("span", slots.check, "✓");
+        check.setAttribute("aria-hidden", "true");
+        button.append(check);
+      }
+      parent.append(button);
+      if (item.options) {
+        const value = element(
+          "span",
+          "ds-library-menu-value",
+          item.value ?? "",
+        );
+        button.append(value);
+        const chevron = item.disclosureIcon ?? element("span", "", "⌄");
+        if (chevron instanceof Element) {
+          chevron.classList.add("ds-library-menu-chevron");
+          chevron.setAttribute("aria-hidden", "true");
+        }
+        button.append(chevron);
+        const sub = element("div", "ds-library-menu-sub");
+        sub.hidden = true;
+        sub.setAttribute("role", "group");
+        sub.setAttribute("aria-label", item.label);
+        button.setAttribute("aria-expanded", "false");
+        button.setAttribute("aria-haspopup", "true");
+        appendItems(sub, item.options, true);
+        parent.append(sub);
+        button.addEventListener("click", () => {
+          sub.hidden = !sub.hidden;
+          button.setAttribute("aria-expanded", String(!sub.hidden));
+          if (!sub.hidden)
+            sub
+              .querySelector<HTMLElement>('[aria-checked="true"]')
+              ?.focus({ preventScroll: true });
+        });
+      }
     }
-    parent.append(button);
-    if (item.options) {
-      const value = element('span', 'ds-library-menu-value', item.value ?? '');button.append(value);
-      const chevron = element('span', 'ds-library-menu-chevron', '⌄');chevron.setAttribute('aria-hidden','true');button.append(chevron);
-      const sub = element('div', 'ds-library-menu-sub');sub.hidden=true;sub.setAttribute('role','group');sub.setAttribute('aria-label',item.label);
-      button.setAttribute('aria-expanded','false');button.setAttribute('aria-haspopup','true');
-      appendItems(sub,item.options,true);parent.append(sub);
-      button.addEventListener('click',()=>{sub.hidden=!sub.hidden;button.setAttribute('aria-expanded',String(!sub.hidden));if(!sub.hidden)sub.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({preventScroll:true});});
-    }
-  }
   };
-  appendItems(root,options.items);
+  appendItems(root, options.items);
   const dispose = bindMenu(root, options.onEscape);
   return { element: root, dispose };
 }
@@ -675,22 +730,69 @@ export function createTableParts(
   };
 }
 
-export function createWorkspace<K extends keyof HTMLElementTagNameMap = 'div'>(options: ElementOptions & {as?:K;part:r.WorkspacePart;text?:string;content?:Node}) {
-  const node=element(options.as??'div',r.workspaceRecipe(options.part),options.text,options);
-  if(options.content)node.append(options.content);
+export function createWorkspace<K extends keyof HTMLElementTagNameMap = "div">(
+  options: ElementOptions & {
+    as?: K;
+    part: r.WorkspacePart;
+    text?: string;
+    content?: Node;
+  },
+) {
+  const node = element(
+    options.as ?? "div",
+    r.workspaceRecipe(options.part),
+    options.text,
+    options,
+  );
+  if (options.content) node.append(options.content);
   return node;
 }
-export function createNavigationTabs(options: ElementOptions & r.NavigationOptions & {label:string;items:readonly {value:string;label:string;href:string}[];value:string;onNavigate?:(value:string)=>void}) {
-  const slots=r.navigationRecipe(options),nav=element('nav',slots.root,undefined,options);
-  nav.setAttribute('aria-label',options.label);
-  for(const item of options.items){const link=element('a',slots.item(item.value===options.value),item.label);link.href=item.href;if(item.value===options.value)link.setAttribute('aria-current','page');link.addEventListener('click',event=>{if(options.onNavigate&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey&&event.button===0){event.preventDefault();options.onNavigate(item.value);}});nav.append(link);}
+export function createNavigationTabs(
+  options: ElementOptions &
+    r.NavigationOptions & {
+      label: string;
+      items: readonly { value: string; label: string; href: string }[];
+      value: string;
+      onNavigate?: (value: string) => void;
+    },
+) {
+  const slots = r.navigationRecipe(options),
+    nav = element("nav", slots.root, undefined, options);
+  nav.setAttribute("aria-label", options.label);
+  for (const item of options.items) {
+    const link = element(
+      "a",
+      slots.item(item.value === options.value),
+      item.label,
+    );
+    link.href = item.href;
+    if (item.value === options.value) link.setAttribute("aria-current", "page");
+    link.addEventListener("click", (event) => {
+      if (
+        options.onNavigate &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.button === 0
+      ) {
+        event.preventDefault();
+        options.onNavigate(item.value);
+      }
+    });
+    nav.append(link);
+  }
   return nav;
 }
 
 /** Library composition slots share the same token/recipe boundary as controls. */
-export function createLibraryPart<K extends keyof HTMLElementTagNameMap>(tag: K, part: r.LibraryPart, options: ElementOptions & {text?: string} = {}) {
+export function createLibraryPart<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  part: r.LibraryPart,
+  options: ElementOptions & { text?: string } = {},
+) {
   return element(tag, r.libraryPartRecipe(part), options.text, options);
 }
 export function updateLibraryBanner(banner: HTMLElement, muted: boolean) {
-  banner.className = r.libraryPartRecipe('banner') + (muted ? ' muted' : '');
+  banner.className = r.libraryPartRecipe("banner") + (muted ? " muted" : "");
 }

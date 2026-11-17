@@ -192,3 +192,18 @@ mutate/restore one role to prove both adapters react to a token-only edit. The c
 neutralizes only the two host shells' layout dimensions; component appearance still competes
 with the actual auth/admin legacy selectors. Evidence stays outside git under
 `/tmp/aicap-design/evidence/p3-fix/` (review fixes) and `p3/` (original baseline).
+
+### Library parity (P5 slice 1)
+
+`library-open` / `library-more`, `landing-mode`, `landing-link` / `landing-aside` /
+`landing-create`, `library-action`, `paper-choice`, `sound-prompt` and `offline-update`
+retain the main screen's authored controls. Fields add `library-search` and `library-prompt`;
+Card/Badge add `library`; overlays add `library-prompt`, `library-sheet` and `library-popover`;
+Menu adds `library`. Their material and responsive slots live in the shared `library.css`
+recipe stylesheet and read `tokens.css`. `createLibraryPart` owns typed composition slots;
+`updateLibraryBanner` retains its hooks during state changes. These names preserve parity,
+including the historical night-paper loading card and parchment phone menu-button ground.
+
+DOM Menu items may supply an icon Node, radio semantics and nested `options` with a current
+`value`. Labels remain text, disabled commands stay guarded, and the menu owner disposes the
+binding on close. Popovers share native modal focus and measured entrance/fade transport.

@@ -457,6 +457,7 @@
 
 :root,
 :root[data-theme="night-paper"] {
+  --ds-library-overlay-backdrop: rgb(8 6 14 / 0.45);
   /* Renderer intensity inputs; retain the historical light/dark appearance exactly. */
   --ds-material-lantern-through-stops: 0 0, .2 0, .5 .22, .8 .38, 1 .46;
   --ds-material-lantern-hot-stops: .3 .82 .4;
@@ -588,16 +589,18 @@
   --ds-library-mode-btn-hover-box-shadow: var(--ds-library-mode-btn-box-shadow);
   --ds-library-mode-btn-last-used-box-shadow: var(--ds-library-mode-btn-box-shadow);
   --ds-library-song-card-hover-border-color-2: rgb(255 244 230 / 0.2);
-  --ds-library-song-card-skeleton-background-2: linear-gradient(100deg, rgb(29 22 41 / 0.7) 30%, rgb(40 32 56 / 0.7) 50%, rgb(29 22 41 / 0.7) 70%) 0 0 / 300% 100%;
+  --ds-library-song-card-skeleton-background-2: var(--ds-material-sheet);
   --ds-library-song-card-lifted-box-shadow: 0 22px 48px rgb(0 0 0 / 0.55);
   --ds-library-song-more-background: rgba(13, 12, 22, 0.72);
   --ds-library-song-card-tag-background: rgba(13, 12, 22, 0.72);
   --ds-library-cover-background-2: transparent;
   --ds-library-sound-prompt-box-shadow: 0 0 0 6px rgba(200, 161, 90, 0.25), 0 16px 40px rgba(0, 0, 0, 0.5);
   --ds-library-card-spotlight: rgb(255 250 240 / 0.13);
+  --ds-library-phone-more-background: none;
 }
 
 :root[data-theme="parchment"] {
+  --ds-library-overlay-backdrop: rgb(60 40 20 / 0.28);
   /* Renderer intensity inputs; retain the historical light/dark appearance exactly. */
   --ds-material-lantern-through-stops: 0 0, .3 0, .7 .1, 1 .18;
   --ds-material-lantern-hot-stops: .08 .22 .11;
@@ -738,9 +741,11 @@
   --ds-library-cover-background-2: #e8d8b6;
   --ds-library-sound-prompt-box-shadow: 0 0 0 6px rgb(180 120 40 / 0.25), 0 16px 40px rgb(90 60 25 / 0.3);
   --ds-library-card-spotlight: rgb(255 252 240 / 0.35);
+  --ds-library-phone-more-background: var(--ds-library-song-more-background);
 }
 
 :root[data-theme="velvet"] {
+  --ds-library-overlay-backdrop: rgb(8 6 14 / 0.45);
   /* Renderer intensity inputs; retain the historical light/dark appearance exactly. */
   --ds-material-lantern-through-stops: 0 0, .2 0, .5 .22, .8 .38, 1 .46;
   --ds-material-lantern-hot-stops: .3 .82 .4;
@@ -874,6 +879,7 @@
   --ds-library-cover-background-2: transparent;
   --ds-library-sound-prompt-box-shadow: 0 0 0 6px rgba(200, 161, 90, 0.25), 0 16px 40px rgba(0, 0, 0, 0.5);
   --ds-library-card-spotlight: rgb(255 250 240 / 0.13);
+  --ds-library-phone-more-background: none;
 }
 
 /* Additional renderer pigments retained separately from UI ink (P2 inputs). */
@@ -1468,3 +1474,8 @@
   --ds-library-card-tilt-negative: -4deg;
   --ds-library-card-lift: -3px;
 }
+
+:root { --ds-library-update-layer: 40; }
+
+:root { --ds-library-tag-font: 600 11px/1 var(--ds-font-mono); --ds-library-tag-tracking:.06em; }
+:root { --ds-library-popover-enter: translateY(-4px) scale(.98); }

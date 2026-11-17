@@ -176,7 +176,7 @@ try {
   await q.locator(".song-more").waitFor();
   await q.locator(".song-more").click();
   await q.getByText("Rename", { exact: true }).click();
-  await q.locator(".dialog input").fill("Renamed piece");
+  await q.getByRole("alertdialog").getByRole("textbox").fill("Renamed piece");
   await q.getByRole("button", { name: "Save", exact: true }).click();
   await p.keyboard.press("Escape");
   await p.getByText("Renamed piece", { exact: true }).first().waitFor();
@@ -198,7 +198,7 @@ try {
   });
   await q.locator(".song-more").click();
   await q.getByText("Rename", { exact: true }).click();
-  await q.locator(".dialog input").fill("Conflict name");
+  await q.getByRole("alertdialog").getByRole("textbox").fill("Conflict name");
   await q.getByRole("button", { name: "Save", exact: true }).click();
   await q
     .getByText("Someone else just changed this – reloaded.", { exact: true })

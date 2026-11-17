@@ -209,6 +209,52 @@ describe("one native dialog lifecycle", () => {
   });
 });
 describe("menu keyboard and shared notifier", () => {
+  it("expands text-safe radio choices without selecting the parent and guards disabled nested commands", () => {
+    const parent = vi.fn(),
+      selected = vi.fn(),
+      disabled = vi.fn();
+    const menu = D.createMenu({
+      variant: "library",
+      label: "Appearance",
+      items: [
+        {
+          label: "<img src=x onerror=x>",
+          value: "Night paper",
+          onSelect: parent,
+          options: [
+            {
+              label: "Night paper",
+              checked: true,
+              radio: true,
+              onSelect: selected,
+            },
+            {
+              label: "Unavailable",
+              disabled: true,
+              radio: true,
+              checked: false,
+              onSelect: disabled,
+            },
+          ],
+        },
+      ],
+    });
+    document.body.append(menu.element);
+    const buttons = menu.element.querySelectorAll("button");
+    expect(menu.element.querySelector("img")).toBeNull();
+    expect(buttons[0].textContent).toContain("<img src=x onerror=x>");
+    buttons[0].click();
+    expect(parent).not.toHaveBeenCalled();
+    expect(buttons[0].getAttribute("aria-expanded")).toBe("true");
+    expect(buttons[1].getAttribute("role")).toBe("menuitemradio");
+    expect(document.activeElement).toBe(buttons[1]);
+    buttons[2].click();
+    expect(disabled).not.toHaveBeenCalled();
+    buttons[1].click();
+    expect(selected).toHaveBeenCalledTimes(1);
+    menu.dispose();
+  });
+
   it("skips disabled and collapsed items, wraps, Home/End, typeahead and activation", () => {
     const selected = vi.fn();
     const { element, dispose } = D.createMenu({
@@ -548,7 +594,11 @@ describe("P3 review regression contracts", () => {
 describe("legacy overlay exit transport", () => {
   it("keeps a replacement sheet alive when the opening menu finishes closing", () => {
     let finishExit!: () => void;
-    const menu = modal({ exit: finish => { finishExit = finish; } });
+    const menu = modal({
+      exit: (finish) => {
+        finishExit = finish;
+      },
+    });
     menu.api.close();
     const account = modal();
     const focused = document.activeElement;
@@ -586,7 +636,6 @@ describe("legacy overlay exit transport", () => {
     vi.unstubAllGlobals();
   });
 });
-
 
 describe("shared sheet motion", () => {
   it("retains the modal and scroll lock through the exit, then restores focus", () => {
@@ -648,6 +697,8 @@ describe("shared sheet motion", () => {
       next.api.dispose();
       vi.runAllTimers();
       expect(next.dialog.hasAttribute("data-sheet-state")).toBe(false);
-    } finally { vi.unstubAllGlobals(); }
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

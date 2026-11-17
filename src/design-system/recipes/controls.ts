@@ -8,7 +8,7 @@ const actionDisabled = "tw:disabled:opacity-(--ds-opacity-disabled-action) tw:ar
 const denseDisabled =
   "tw:disabled:opacity-(--ds-opacity-disabled-admin) tw:aria-disabled:opacity-(--ds-opacity-disabled-admin)";
 export const buttonVariants = [
-  "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update",
+  "landing-create", "library-action", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update",
   "standard",
   "cta",
   "pill",
@@ -29,6 +29,10 @@ export interface ButtonOptions {
   pressed?: boolean;
 }
 const parityButtonShapes = {
+  "landing-create": "",
+  "library-action": "",
+  "landing-link": "ds-library-link",
+  "landing-aside": "ds-library-link ds-library-landing-aside",
   "library-open": "ds-library-song-open song-open",
   "landing-mode": "ds-library-mode-btn mode-btn",
   "paper-choice": "ds-library-paper-option",
@@ -70,8 +74,13 @@ function buttonRecipeStyles({
   variant = "standard",
   intent = "secondary",
   pressed = false,
-}: ButtonOptions = {}) {
-  if (["library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update"].includes(variant))
+}: ButtonOptions = {}): string {
+  if (variant === 'landing-create') return buttonRecipeStyles({variant:'standard',intent,pressed}).replace('tw:text-button','tw:text-body-small').replace('tw:inline-flex','tw:block').replace('tw:m-0','') + ' tw:mx-auto tw:mt-18 tw:text-center';
+  if (variant === 'library-action' || variant === 'offline-update') {
+    const standard = buttonRecipeStyles({variant:'standard',intent,pressed});
+    return variant === 'offline-update' ? standard + ' ds-library-offline-update' : standard.replace('tw:text-on-danger','tw:text-surface-sunken') + ' tw:text-center';
+  }
+  if (["landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt"].includes(variant))
     return "ds-library-button " + parityButtonShapes[variant as keyof typeof parityButtonShapes];
   // D08/D10: retain account navigation and password reveal typography separately.
   if (variant === "account-link" || variant === "password-toggle")
@@ -147,6 +156,7 @@ function iconButtonRecipeStyles({
 }
 /** ruled/transcription intentionally preserve identical looks pending D09/D10. */
 export const fieldVariants = [
+  "library-prompt",
   "library-search",
   "boxed",
   "ruled",
@@ -164,7 +174,11 @@ export interface FieldOptions {
 function fieldRecipeStyles(
   { variant = "boxed", invalid = false }: FieldOptions = {},
   kind: "input" | "select" | "textarea" = "input",
-) {
+): Record<'root'|'label'|'control'|'hint'|'error', string> {
+  if (variant === 'library-prompt') {
+    const boxed = fieldRecipeStyles({variant:'boxed',invalid},kind);
+    return {...boxed,control:boxed.control.split(' ').filter(c=>!c.startsWith('tw:focus-visible:')).join(' ') + ' tw:outline-none tw:outline-offset-2'};
+  }
   if (variant === "library-search") return {root: "ds-library-search", label: "tw:sr-only", control: "ds-library-search-input tw:rounded-field", hint: "tw:sr-only", error: "tw:sr-only"};
   const admin = variant === "admin";
   const domain = variant === "domain" || variant === "domain-create";
