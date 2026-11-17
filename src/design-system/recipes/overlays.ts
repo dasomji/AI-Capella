@@ -81,7 +81,7 @@ function toastRecipeStyles({
   font = "body",
 }: ToastOptions = {}) {
   return (
-    "tw:box-border tw:m-flush tw:border-0 tw:px-content tw:py-control tw:rounded-card tw:text-toast tw:font-weight-label tw:leading-leading-body tw:shadow-component-toast-shadow " +
+    "tw:box-border tw:m-flush tw:border-0 tw:px-content tw:py-control tw:rounded-card tw:text-toast tw:font-weight-label tw:leading-leading-body tw:shadow-component-toast-shadow tw:[&_button]:text-inherit tw:[&_button]:border-current tw:[&_button:hover]:border-current tw:[&_button:focus-visible]:outline-current " +
     (font === "auth" ? "tw:font-auth-body " : "tw:font-body ") +
     (kind === "error"
       ? "tw:bg-danger tw:text-surface-sunken"
