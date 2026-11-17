@@ -77,7 +77,7 @@ export interface ControlOptions extends r.FieldOptions, ElementOptions {
     name?: string;
     onInput?: (event: Event) => void;
 }
-function control<T extends HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(el: T, options: ControlOptions): T { if (options.id)
+function control<T extends HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(el: T, options: ControlOptions): T { el.dataset.fieldVariant=options.variant??'boxed'; if (options.id)
     el.id = options.id; if (options.name)
     el.name = options.name; if (options.value !== undefined)
     el.value = options.value; el.disabled = !!options.disabled; el.required = !!options.required; if (options.invalid)
@@ -124,8 +124,11 @@ export function createField(options: FieldOptions) {
             root.append(part);
             described.push(part.id);
         }
-    if (options.error || options.invalid)
+    if (options.error || options.invalid) {
         options.control.setAttribute('aria-invalid', 'true');
+        const appearance={variant:options.variant??options.control.dataset.fieldVariant as r.FieldVariant,invalid:true};
+        options.control.className=options.control.tagName==='TEXTAREA'?r.textareaRecipe(appearance):options.control.tagName==='SELECT'?r.selectRecipe(appearance):r.inputRecipe(appearance);
+    }
     const ids = described.filter(Boolean).join(' ');
     if (ids)
         options.control.setAttribute('aria-describedby', ids);

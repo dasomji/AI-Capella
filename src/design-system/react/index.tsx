@@ -28,15 +28,15 @@ export function IconButton({ variant, label, layout, busy = false, type = 'butto
 export type InputProps = Native<InputHTMLAttributes<HTMLInputElement>> & r.FieldOptions & {
     ref?: Ref<HTMLInputElement>;
 };
-export function Input({ variant, invalid, layout, ...props }: InputProps) { return <input {...props} data-ds="input" aria-invalid={invalid || props['aria-invalid'] || undefined} className={r.withLayout(r.inputRecipe({ variant, invalid }), layout)}/>; }
+export function Input({ variant, invalid, layout, ...props }: InputProps) { invalid=invalid??(props['aria-invalid']===true||props['aria-invalid']==='true'||props['aria-invalid']==='grammar'||props['aria-invalid']==='spelling'); return <input {...props} data-ds="input" aria-invalid={invalid || props['aria-invalid'] || undefined} className={r.withLayout(r.inputRecipe({ variant, invalid }), layout)}/>; }
 export type SelectProps = Native<SelectHTMLAttributes<HTMLSelectElement>> & r.FieldOptions & {
     ref?: Ref<HTMLSelectElement>;
 };
-export function Select({ variant, invalid, layout, ...props }: SelectProps) { return <select {...props} data-ds="select" aria-invalid={invalid || props['aria-invalid'] || undefined} className={r.withLayout(r.selectRecipe({ variant, invalid }), layout)}/>; }
+export function Select({ variant, invalid, layout, ...props }: SelectProps) { invalid=invalid??(props['aria-invalid']===true||props['aria-invalid']==='true'||props['aria-invalid']==='grammar'||props['aria-invalid']==='spelling'); return <select {...props} data-ds="select" aria-invalid={invalid || props['aria-invalid'] || undefined} className={r.withLayout(r.selectRecipe({ variant, invalid }), layout)}/>; }
 export type TextareaProps = Native<TextareaHTMLAttributes<HTMLTextAreaElement>> & r.FieldOptions & {
     ref?: Ref<HTMLTextAreaElement>;
 };
-export function Textarea({ variant, invalid, layout, ...props }: TextareaProps) { return <textarea {...props} data-ds="textarea" aria-invalid={invalid || props['aria-invalid'] || undefined} className={r.withLayout(r.textareaRecipe({ variant, invalid }), layout)}/>; }
+export function Textarea({ variant, invalid, layout, ...props }: TextareaProps) { invalid=invalid??(props['aria-invalid']===true||props['aria-invalid']==='true'||props['aria-invalid']==='grammar'||props['aria-invalid']==='spelling'); return <textarea {...props} data-ds="textarea" aria-invalid={invalid || props['aria-invalid'] || undefined} className={r.withLayout(r.textareaRecipe({ variant, invalid }), layout)}/>; }
 export interface FieldControlProps {
     id: string;
     'aria-describedby'?: string;
