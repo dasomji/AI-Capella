@@ -35,7 +35,7 @@
 @utility frame-top-* { --tw-sort:border-top-width; border-top: --value(--frame-top-*); }
 @utility frame-bottom-* { --tw-sort:border-bottom-width; border-bottom: --value(--frame-bottom-*); }
 @utility frame-right-* { --tw-sort:border-right-width; border-right: --value(--frame-right-*); }
-@utility surface-* { background: --value(--surface-*); }
+@utility surface-* { --tw-sort:background-color; background: --value(--surface-*); }
 @utility motion-* { transition: --value(--motion-*); }
 @utility elevation-* { box-shadow: --value(--elevation-*); }
 @custom-variant material-paper { @container style(--ds-material-family: paper) { @slot; } }
