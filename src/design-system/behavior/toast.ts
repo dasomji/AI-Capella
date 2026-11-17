@@ -6,6 +6,7 @@ import {
 import { buttonRecipe } from "../recipes/controls";
 import { t } from "../../i18n";
 import { readTheme } from "../theme";
+import { getActiveDialog, subscribeDialogStack } from "./dialog";
 import { toastPart } from "../parts-common";
 export interface ToastMessage {
   text: string;
@@ -47,6 +48,8 @@ export function dismissToast() {
     typeof document === "undefined" ? null : document.getElementById("toast");
   if (host) {
     host.classList.remove("show");
+    host.dataset.toastHidden = "true";
+    host.inert = true;
     // Keep the announcement and visible text during the complete exit fade.
     fadeTimer = setTimeout(() => {
       host.hidePopover?.();
@@ -55,7 +58,21 @@ export function dismissToast() {
   }
   listeners.forEach((fn) => fn());
 }
-/** One body-owned top-layer notifier; survives every overlay transport's removal. */
+/** One notifier: a modal owns its active controls, then stack changes return it to body. */
+function transportHost() {
+  if (typeof document === "undefined") return;
+  const host = document.getElementById("toast");
+  if (!host) return;
+  const parent = getActiveDialog() ?? document.body;
+  if (host.parentElement !== parent) {
+    const focused = host.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
+    host.hidePopover?.();
+    parent.append(host);
+    if (host.textContent) host.showPopover?.();
+    focused?.focus({preventScroll:true});
+  }
+}
+subscribeDialogStack(transportHost);
 function render() {
   if (typeof document === "undefined" || !message) return;
   let host = document.getElementById("toast");
@@ -65,7 +82,7 @@ function render() {
     host.setAttribute("popover", "manual");
     document.body.append(host);
   }
-  if (host.parentElement !== document.body) document.body.append(host);
+  transportHost();
   for (const [key, value] of Object.entries(toastPart(message.kind)))
     host.setAttribute(key, String(value));
   host.textContent = message.text;
@@ -100,6 +117,7 @@ function render() {
     " " +
     toastPlacementRecipe();
   host.inert = false;
+  delete host.dataset.toastHidden;
   host.showPopover?.();
   // Commit the hidden pose before transitioning the replacement into view.
   host.getBoundingClientRect();
