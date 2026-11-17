@@ -25,7 +25,7 @@ function mappedScale(utility) {
   const [, , prop, value] = match;
   const namespace = /^(?:p[xysetblr]?|m[xysetblr]?|gap(?:-[xy])?|space-[xy]|inset(?:-[xy])?|top|right|bottom|left|start|end|w|h|size|min-[wh]|max-[wh]|basis|translate-[xy])$/.test(prop) ? 'spacing' : ({duration:'duration',delay:'delay',z:'z-index',border:'border-width',rounded:'radius',opacity:'opacity',text:'text',leading:'leading',tracking:'tracking',blur:'blur',outline:'outline-width',ring:'ring-width',font:'font-weight'})[prop];
   // Grid counts, flex ratios, order and percentages describe structural layout.
-  return !namespace || adapterTokens.has(`--${namespace}-${value}`) || (value === '0' && !['font','text'].includes(prop)) || (value === 'full' && namespace === 'spacing');
+  return /^(?:grid-cols|grid-rows|col-span|row-span|col-start|col-end|row-start|row-end|flex|shrink|grow|order|line-clamp)$/.test(prop) || adapterTokens.has(`--${namespace ?? prop}-${value}`) || (value === '0' && !['font','text'].includes(prop)) || (value === 'full' && namespace === 'spacing');
 }
 
 /** Named, structural exceptions for data that is not a theme value. */
@@ -59,6 +59,7 @@ function namedTokens(value) {
 }
 function tokenFont(value) {
   if (/^(?:inherit|initial)$/.test(value.trim())) return true;
+  if (/^--value\(--type-\*\)$/.test(value.trim())) return true;
   const normalized = value.replace(/var\(\s*--[\w-]+(?:,\s*(?:inherit|initial))?\s*\)/g, 'TOKEN').replace(/(?:clamp|min|max|calc)\([^)]*\)/g, '1px').trim();
   return /^(?:(?:normal|italic|oblique|bold|[\d.]+(?:px|rem|em|%|pt)?)(?:\/[\d.]+(?:px|rem|em|%|pt)?)?\s+)*TOKEN$/.test(normalized);
 }
@@ -92,6 +93,14 @@ export function scanDesignFile(file, source, options = {}) {
       for (const word of namedTokens(text)) add('named-color', context, word);
     }
   }
+  function semanticArbitrary(utility) {
+    if (/(?:-(?:\((?:[a-z-]+:)?--ds-[\w-]+\)|\[(?:[a-z-]+:)?var\(--ds-[\w-]+\)\])|^\[[a-z-]+:var\(--ds-[\w-]+\)\])$/.test(utility)) return true;
+    // Native cascade keywords select inheritance/structure, not authored design values.
+    if (/^\[-?[a-z-]+:(?:inherit|revert|initial|unset|none)\]$/.test(utility)) return true;
+    const variables = [...utility.matchAll(/(?:var\(\s*|[:(])(--[\w-]+)/g)].map(m=>m[1]);
+    // --c is the runtime voice color; --rx/--ry are measured pointer tilt coordinates.
+    return variables.length > 0 && namedTokens(utility.replace(/_/g, ' ')).length === 0 && variables.every(v=>v.startsWith('--ds-') || ['--c','--rx','--ry'].includes(v)) && !/(?:#[\da-f]{3,8}\b|\d+(?:px|rem|em|ms|s|deg|%)\b|rgba?\(|hsla?\()/i.test(utility);
+  }
   function classes(text, context) {
     for (const match of text.matchAll(paletteClass)) add('palette-utility', context, match[0]);
     for (const word of text.match(/tw:[^\s\"'`]+/g) ?? []) {
@@ -104,7 +113,7 @@ export function scanDesignFile(file, source, options = {}) {
         if (word[i] === ':' && depth === 0) lastColon = i;
       }
       const utility = word.slice(lastColon + 1).replace(/!$/, '');
-      if ((/-\[[^]*\]$|^-?\[[^]*\]$|^-?[\w-]+-\([^]*\)$/.test(utility)) && !/(?:-(?:\((?:[a-z-]+:)?--ds-[\w-]+\)|\[(?:[a-z-]+:)?var\(--ds-[\w-]+\)\])|^\[[a-z-]+:var\(--ds-[\w-]+\)\])$/.test(utility) && utility !== 'content-[attr(data-label)]') add('arbitrary-aesthetic', context, word);
+      if ((/-\[[^]*\]$|^-?\[[^]*\]$|^-?[\w-]+-\([^]*\)$/.test(utility)) && !semanticArbitrary(utility) && utility !== 'content-[attr(data-label)]') add('arbitrary-aesthetic', context, word);
       if (!mappedScale(utility)) add('unmapped-scale-utility', context, word);
       if (enforceNames && checkSemanticName(word)) add('value-encoding-name', context, word);
     }
@@ -118,7 +127,7 @@ export function scanDesignFile(file, source, options = {}) {
         const themed = decl.parent.type === 'rule' && /data-theme\s*=/.test(decl.parent.selector);
         // Print is intentionally independent of the device appearance (D18).
         const fixedPrint = ['--ds-print-paper','--ds-print-ink'].includes(decl.prop);
-        if (decl.prop.startsWith('--ds-') && !themed && !fixedPrint && (/(?:#[\da-f]{3,8}\b|(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)\(|var\(\s*--pigment-)/i.test(decl.value) || namedColors.has(decl.value.trim()))) add('shared-screen-color', decl.prop, decl.value);
+        if (decl.prop.startsWith('--') && !decl.prop.startsWith('--pigment-') && !themed && !fixedPrint && (/(?:#[\da-f]{3,8}\b|(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)\(|var\(\s*--pigment-)/i.test(decl.value) || namedColors.has(decl.value.trim()))) add('shared-screen-color', decl.prop, decl.value);
         return;
       }
       const ancestry = []; let node = decl.parent;
@@ -136,7 +145,7 @@ export function scanDesignFile(file, source, options = {}) {
     });
     tree.walkAtRules(rule => {
       if (rule.name === 'import' && !/\blayer(?:\s*\(|\s*;|$)/.test(rule.params)) add('unlayered-css-import', '@import', rule.params);
-      if (['media', 'custom-variant'].includes(rule.name) && /\b(?:width|height)\s*[:<>=][^)]*\d+(?:px|rem|em)\b/.test(rule.params)) add('raw-media-query', '@' + rule.name, rule.params);
+      if (['media', 'custom-variant'].includes(rule.name) && /(?:\b(?:width|height)\s*[:<>=][^)]*\d+(?:px|rem|em)\b|\d+(?:px|rem|em)\s*[<>=]+\s*(?:width|height)\b)/.test(rule.params)) add('raw-media-query', '@' + rule.name, rule.params);
       if (enforceNames && ['utility', 'custom-variant'].includes(rule.name) && checkSemanticName(rule.params.split(/[\s({]/)[0])) add('value-encoding-name', '@' + rule.name, rule.params);
     });
     tree.walkRules(rule => {
@@ -181,10 +190,10 @@ export function scanDesignFile(file, source, options = {}) {
     }
   }
   function checkSink(node) {
-    function computed(n) {
-      if (ts.isIdentifier(n) && declarations.has(n.text)) return;
+    function computed(n, seen = new Set()) {
+      if (ts.isIdentifier(n) && declarations.has(n.text)) { if(!seen.has(n.text)) { const next = new Set([...seen,n.text]); computed(declarations.get(n.text), next); } return; }
       if (ts.isTemplateExpression(n) && /(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)\(/i.test(n.head.text)) add('computed-color-at-sink', context(node), n.getText(ast));
-      ts.forEachChild(n, computed);
+      ts.forEachChild(n, child => computed(child, seen));
     }
     computed(node);
     for (const id of references(node)) if (declarations.has(id)) computed(declarations.get(id));

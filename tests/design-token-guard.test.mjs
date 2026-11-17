@@ -87,7 +87,7 @@ describe('review guard regressions M3–M6 / N1', () => {
     expect(scan(`const cls='tw:hover:${value}';`).some(row => row.kind === 'arbitrary-aesthetic')).toBe(true);
   });
   it('M6 permits semantic arbitrary variables and semantic scales', () => {
-    expect(scan("const cls='tw:p-(--ds-space-12) tw:z-[var(--ds-layer-menu)] tw:max-panel:w-control tw:p-control';")).toEqual([]);
+    expect(scan("const cls='tw:p-(--ds-space-control) tw:z-[var(--ds-layer-menu)] tw:max-panel:w-control tw:p-control';")).toEqual([]);
   });
   it('cannot revive the retired baseline mechanism through upgraded rules', () => {
     const row = {file:'src/old.ts',kind:'raw-color',context:'old',value:'#123456',count:1};
@@ -134,7 +134,7 @@ describe('final review guard evasions', () => {
   it('rejects rule-index and value-encoding names without rejecting semantic spacing scales', async () => {
     const {checkSemanticName} = await import('../scripts/check-design-tokens.mjs');
     for (const name of ['--ds-panel-bpm-radius-39','shell-0031-0','player-native-height-4px']) expect(checkSemanticName(name),name).toBe(true);
-    for (const name of ['--ds-space-12','--spacing-24','--ds-radius-card','tw:p-24']) expect(checkSemanticName(name.replace(/^(--ds-space|--spacing|tw:p)-\d+$/, 'semantic-scale')),name).toBe(false);
+    for (const name of ['--ds-space-control','--spacing-content','--ds-radius-card','tw:p-control']) expect(checkSemanticName(name),name).toBe(false);
   });
 });
 
@@ -152,4 +152,19 @@ it.each([
 
 it.each(['tw:[transform:var(--ds-panel-specimen-transform)]', 'tw:focus-visible:[outline-color:var(--ds-admin-accent)]', 'tw:border-(length:--ds-stroke-thin)', 'tw:w-[length:var(--ds-control-height)]'])('accepts semantic arbitrary property and typed token utility %s', cls => {
   expect(scan(`const x='${cls}'`)).toEqual([]);
+});
+
+it.each(['scale-110','rotate-45','brightness-125','underline-offset-2'])('rejects other unmapped numeric design scales %s', cls => {
+  expect(scan(`const x='tw:${cls}'`).some(r=>r.kind==='unmapped-scale-utility')).toBe(true);
+});
+it('checks reversed raw media ranges and aliased computed colors', () => {
+  expect(scanDesignFile('src/design-system/native.css','@media (700px >= width){x{display:none}}').some(r=>r.kind==='raw-media-query')).toBe(true);
+  expect(scan('const a=`rgb(${r},${g},${b})`;const b=a;ctx.fillStyle=b').some(r=>r.kind==='computed-color-at-sink')).toBe(true);
+});
+
+it.each(['tw:[line-height:inherit]','tw:[background:var(--c)]','tw:[transform:perspective(var(--ds-perspective))_rotateX(calc(var(--ry,_var(--ds-rest))_*_var(--ds-tilt)))]'])('permits token expressions and named structural inputs %s', cls => {
+  expect(scan(`const x='${cls}'`)).toEqual([]);
+});
+it.each(['tw:[transform:translateX(13px)_var(--ds-transform)]','tw:[background:linear-gradient(red,_var(--ds-ground))]','tw:[color:var(--legacy-color)]'])('still rejects aesthetic fragments around semantic variables %s', cls => {
+  expect(scan(`const x='${cls}'`).some(r=>r.kind==='arbitrary-aesthetic'||r.kind==='named-color')).toBe(true);
 });
