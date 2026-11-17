@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import postcss from 'postcss';
+import {invalidTokenName, lengthAtoms, scaleRole, scaleSteps} from './design-token-policy.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const baselinePath = path.join(root, 'scripts/design-token-baseline.json');
@@ -17,6 +18,7 @@ const numberedName = /(?:-\d{4}-\d+|-\d{2,}|-\d+(?:px|rem|em|ms))(?:$|[^\w-])/;
 // The semantic migration is complete: generated/value-encoding names cannot return.
 export const enforceSemanticNames = true;
 export function checkSemanticName(name) { return numberedName.test(name); }
+const authoredScale = scaleSteps(postcss.parse(fs.readFileSync(path.join(root, 'src/design-system/tokens.css'), 'utf8')));
 const adapterTokens = new Set([...fs.readFileSync(path.join(root, 'src/design-system/tokens.css'), 'utf8').matchAll(/(--[\w-]+)\s*:\s*var\(--ds-/g)].map(m => m[1]));
 function mappedScale(utility) {
   // A named color/type role can itself end in a numeral; verify the complete
@@ -125,9 +127,12 @@ export function scanDesignFile(file, source, options = {}) {
   }
   if (file.endsWith('.css')) {
     const tree = postcss.parse(source);
+    const steps = new Set([...authoredScale,...scaleSteps(tree)]);
     tree.walkDecls(decl => {
+      if (invalidTokenName(decl.prop)) add('token-name-shape', decl.prop, decl.prop);
       if (enforceNames && checkSemanticName(decl.prop)) add('value-encoding-name', decl.prop, decl.prop);
       if (tokenSource) {
+        if (decl.prop.startsWith('--ds-') && !scaleRole.test(decl.prop)) for (const atom of lengthAtoms(decl.value)) if (steps.has(atom.key)) add('uncomposed-scale-length',decl.prop,atom.raw);
         const themed = decl.parent.type === 'rule' && /data-theme\s*=/.test(decl.parent.selector);
         // Print is intentionally independent of the device appearance (D18).
         const fixedPrint = ['--ds-print-paper','--ds-print-ink'].includes(decl.prop);

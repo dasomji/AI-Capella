@@ -22,7 +22,16 @@ flowchart LR
    `--ds-layer-dialog`. Rule numbers, selector indices, and values in names are forbidden.
    Equal values serving the same role are one token. Preserve different values under distinct
    names while an owner decision is pending; never normalize appearance as part of a rename.
-2. The core spacing scale is `none`, `hairline`, `micro`, `compact`, `snug`, `small`, `control`,
+2. Component tokens compose spacing, radius, size/type, leading, tracking and stroke scales.
+   A raw length is forbidden when an equal scale step exists (including inside shorthands,
+   shadows, transforms and theme paints). Preserve units: rem/em roles retain their relative
+   behavior. Equal element metrics with the same purpose share a role; zero geometry uses
+   `space-none` / `flush`, while zero line height uses unitless `leading-none`.
+   Custom-property names are at most 48 characters including `--` and never contain another
+   `--`. Short role names replace selector paths; numeric ordinals are not component roles.
+   `design-token-policy.mjs` and the guard enforce these constraints.
+
+   The core spacing scale is `none`, `hairline`, `micro`, `compact`, `snug`, `small`, `control`,
    `content`, `section`, `panel`, `page`, `stage`. Existing density roles such as `tight`,
    `inline`, `row`, `action`, and `heading` compose that scale. Zero-spacing utilities use
    `flush` (`tw:p-flush`), leaving native `max-w-none` / `max-h-none` limits intact.

@@ -120,7 +120,7 @@
 /* Verovio creates these SVG label nodes; retain their typography before review getBBox measurement. */
 .tx-score-page svg .label {
   font: var(--ds-player-label-font);
-  letter-spacing: var(--ds-player-label-letter-spacing);
+  letter-spacing: var(--ds-tracking-label);
   text-transform: uppercase;
   color: var(--ds-ink-muted);
 }

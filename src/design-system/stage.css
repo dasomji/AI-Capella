@@ -83,14 +83,14 @@
 @media (width < theme(--breakpoint-panel)) {
     /* Phone sing-along puts the voice chips below the stage before measuring either area. */
     #app.sing-along #player {
-        grid-template-rows: var(--ds-app-sing-along-player-grid-template-rows-phone);
-        grid-template-areas: var(--ds-app-sing-along-player-grid-template-areas-phone)
+        grid-template-rows: var(--ds-sing-along-player-rows-phone);
+        grid-template-areas: var(--ds-sing-along-player-areas-phone)
     }
 }
 @media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) {
     /* Short-landscape sing-along reserves only title and score tracks. */
     #app.sing-along #player {
-        grid-template-rows: var(--ds-app-sing-along-player-grid-template-rows-landscape);
-        grid-template-areas: var(--ds-app-sing-along-player-grid-template-areas-landscape)
+        grid-template-rows: var(--ds-sing-along-player-rows-landscape);
+        grid-template-areas: var(--ds-sing-along-player-areas-landscape)
     }
 }

@@ -86,7 +86,7 @@ body:has(#app.mode-landing)::after {
 /* The stage-title presentation needs one continuous ground across body and landing during its canvas reveal. */
 :root[data-title='buehne'] body:has(#app.mode-landing),
 :root[data-title='buehne'] #landing {
-    background: var(--ds-body-has-app-mode-landing-landing-background)
+    background: var(--ds-landing-ground)
 }
 /* The ensemble disclosure owns a custom ellipsis; WebKit’s native marker must be hidden separately. */
 .row-menu summary::-webkit-details-marker {
