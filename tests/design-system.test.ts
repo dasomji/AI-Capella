@@ -96,10 +96,11 @@ describe('theme source contracts M1/M2/M6/M7 and m1/m3/m4/m6/N2', () => {
     const adapters = css.nodes.filter(n => n.type === 'atrule' && n.name === 'theme' && n.params === 'inline');
     const mappings = new Map<string, string>();
     for (const adapter of adapters) if (adapter.type === 'atrule') adapter.walkDecls(d => { mappings.set(d.prop, d.value); });
-    css.walkDecls(d => {
-      const name = d.prop.replace(/^--ds-space-/, '--spacing-').replace(/^--ds-layer-/, '--z-index-').replace(/^--ds-size-/, '--text-').replace(/^--ds-shadow-/, '--shadow-');
-      if (name !== d.prop) expect(mappings.get(name)).toBe(`var(${d.prop})`);
-    });
+    const authored = new Set<string>(); css.walkDecls(d => { authored.add(d.prop); });
+    // Backing roles used by canvas/native CSS need no unused Tailwind alias. Every
+    // exported adapter reference must still name an authored semantic role.
+    for (const [name,value] of mappings) for (const match of value.matchAll(/var\((--ds-[\w-]+)/g))
+      expect(authored.has(match[1]), name+' references '+match[1]).toBe(true);
     for (const block of blocks) if (block.type === 'rule') block.walkDecls('--ds-material-fibre', d => {
       expect(d.value === 'none' || d.value.startsWith('var(--ds-material-fibre-live,')).toBe(true);
     });
@@ -125,8 +126,8 @@ describe('theme source contracts M1/M2/M6/M7 and m1/m3/m4/m6/N2', () => {
     const { compile } = await import('tailwindcss');
     const source = fs.readFileSync('src/design-system/tokens.css','utf8').replace('@theme static {','@theme static prefix(tw) {');
     const compiler = await compile(source+'\n@tailwind utilities;');
-    const css = compiler.build(['tw:p-2','tw:z-dialog','tw:max-panel:w-24']);
-    expect(css).toContain('padding: var(--ds-space-2)');
+    const css = compiler.build(['tw:p-micro','tw:z-dialog','tw:max-panel:w-section']);
+    expect(css).toContain('padding: var(--ds-space-micro)');
     expect(css).toContain('z-index: var(--ds-layer-dialog)');
     expect(css).toContain('@media (width < 900px)');
     expect(css).not.toContain('--breakpoint-panel-max');
@@ -260,6 +261,7 @@ it('builds a loud fourth theme from every resolved paint alias', async () => {
   const { readFileSync } = await import('node:fs');
   const { loudThemeBlock } = await import('./theme-extension-fixture.mjs');
   const block = loudThemeBlock(readFileSync('src/design-system/tokens.css','utf8'));
+  if(block.type !== 'rule')throw Error('Expected a theme block');
   const paint = new Map<string,string>(); block.walkDecls(d=>{paint.set(d.prop,d.value);});
   expect(paint.get('--ds-accent')).not.toMatch(/var\(--pigment-/);
   expect(paint.get('--ds-ink')).toMatch(/rgba\(/);

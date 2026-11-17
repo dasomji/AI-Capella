@@ -443,7 +443,7 @@ describe("P3 review regression contracts", () => {
       layout: "tw:ml-auto",
     });
     D.updateButton(button, { busy: true });
-    expect(button.className).toContain("tw:rounded-chip");
+    expect(button.className).toContain("tw:rounded-pill");
     expect(button.className).toContain("tw:ml-auto");
     const icon = D.createIconButton({
       label: "Close",
@@ -451,7 +451,7 @@ describe("P3 review regression contracts", () => {
       layout: "tw:self-end",
     });
     D.updateButton(icon, { busy: true });
-    expect(icon.className).toContain("tw:size-32");
+    expect(icon.className).toContain("tw:size-panel");
     expect(icon.className).toContain("tw:self-end");
     expect(icon.dataset.ds).toBe("icon-button");
   });

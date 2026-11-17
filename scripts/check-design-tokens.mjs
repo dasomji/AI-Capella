@@ -20,6 +20,10 @@ export let enforceSemanticNames = false;
 export function checkSemanticName(name) { return numberedName.test(name); }
 const adapterTokens = new Set([...fs.readFileSync(path.join(root, 'src/design-system/tokens.css'), 'utf8').matchAll(/(--[\w-]+)\s*:\s*var\(--ds-/g)].map(m => m[1]));
 function mappedScale(utility) {
+  // A named color/type role can itself end in a numeral; verify the complete
+  // explicitly authored adapter before interpreting a numeric default scale.
+  const named = utility.match(/^(?:bg|text|border|outline|ring|fill|stroke|from|via|to|decoration|accent|caret)-(.+)$/);
+  if (named && adapterTokens.has('--color-'+named[1])) return true;
   const match = utility.match(/^(-?)([a-z][\w-]*?)-(\d+(?:\.\d+)?|full)$/);
   if (!match) return true;
   const [, , prop, value] = match;
