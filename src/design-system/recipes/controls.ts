@@ -40,22 +40,19 @@ export const buttonVariants = [
 
   "ensemble-switch", "ensemble-other", "device-link", "account-delete-confirm",
   "landing-create", "library-action", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update",
-  "standard", "job-action",
-  "cta",
-  "pill",
-  "tour",
-  "dense",
-  "dense-sort",
-  "link",
+  "standard",
   "account-link",
   "password-toggle",
-  "tile", "compact", "review-item", "transcription-link", "transcription-language", "tour-link", "hint-link", "hint", "domain-language",
+  "tile", "review-item", "transcription-language", "domain-language",
 ] as const;
 export type ButtonVariant = (typeof buttonVariants)[number];
-/** tour: danger=primary, quiet=secondary (D17); dense: primary/quiet=secondary (D10). */
+/** D08: ordinary actions share one shape; intent and density are independent. */
+export const buttonSizes = ["standard", "compact", "full-width", "touch"] as const;
+export type ControlDensity = "standard" | "compact" | "touch";
 export type ButtonIntent = "secondary" | "primary" | "danger" | "quiet";
 export interface ButtonOptions {
   variant?: ButtonVariant;
+  size?: (typeof buttonSizes)[number];
   intent?: ButtonIntent;
   pressed?: boolean;
   playing?: boolean;
@@ -71,6 +68,7 @@ export const iconButtonVariants = [
 ] as const;
 export interface IconButtonOptions {
   variant?: (typeof iconButtonVariants)[number];
+  size?: ControlDensity;
 }
 /** ruled/transcription intentionally preserve identical looks pending D09/D10. */
 export const fieldVariants = [
@@ -79,6 +77,7 @@ export const fieldVariants = [
   "account-password",
   "library-prompt",
   "library-search",
+  "search", "numeric", "repeated-name",
   "boxed",
   "ruled",
   "ruled-account",
@@ -90,15 +89,18 @@ export const fieldVariants = [
 export type FieldVariant = (typeof fieldVariants)[number];
 export interface FieldOptions {
   variant?: FieldVariant;
+  density?: ControlDensity;
   invalid?: boolean;
 }
 export const checkboxVariants = ["standard", "permission", "export", "export-voice"] as const;
 export interface CheckboxOptions {
   variant?: (typeof checkboxVariants)[number];
+  density?: ControlDensity;
 }
 export const switchVariants = ["player", "player-preference", "admin", "capability", "comparison", "shared-device"] as const;
 export interface SwitchOptions {
   variant?: (typeof switchVariants)[number];
+  density?: ControlDensity;
   checked?: boolean;
 }
 
@@ -115,28 +117,20 @@ export function createControlRecipes(extensions: {
 const parityButtonShapes = {
   "domain-language": "tw:min-h-panel tw:min-w-heading tw:px-flush tw:py-compact tw:rounded-card tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-weight-body tw:text-small tw:leading-leading-admin tw:text-center",
   tile: "tw:flex-1 tw:min-w-flush tw:min-h-upload-tile-height tw:max-score:min-h-upload-tile-phone-height tw:flex-col tw:px-inline tw:py-action tw:whitespace-normal tw:rounded-tile tw:bg-surface tw:text-ink tw:border-rule-strong tw:text-button tw:font-weight-label tw:font-auth-body tw:leading-leading-body",
-  compact: "tw:min-h-toolbar-dense tw:p-snug tw:rounded-card tw:border-rule-strong tw:bg-transparent tw:text-ink tw:text-small tw:font-weight-label tw:font-auth-body tw:leading-leading-body",
   "review-item": "tw:min-h-control-height tw:w-full tw:mb-compact tw:justify-start tw:items-baseline tw:text-left tw:whitespace-normal tw:py-control tw:px-flush tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:rounded-field tw:border-rule-strong tw:bg-transparent tw:text-ink tw:font-auth-body tw:font-weight-body tw:text-body-small tw:leading-leading-field",
-  "transcription-link": "tw:min-h-flush tw:rounded-field tw:px-flush tw:py-small tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:hover:text-ink tw:hover:underline tw:font-auth-body tw:font-weight-body tw:text-label tw:leading-leading-body",
   "transcription-language": "tx-language-chip tw:min-h-toolbar-dense tw:rounded-field tw:px-flush tw:py-compact tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-weight-body tw:text-small tw:leading-leading-field",
-  "tour-link": "tw:min-h-flush tw:rounded-control tw:px-snug tw:py-compact tw:border-0 tw:bg-transparent tw:text-note-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-weight-label tw:leading-leading-body",
-  "hint-link": "tw:min-h-flush tw:rounded-control tw:px-snug tw:py-compact tw:border-0 tw:bg-transparent tw:text-hint-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-weight-label tw:leading-leading-body",
-  hint: "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-flush tw:text-button tw:font-weight-label tw:font-control tw:leading-leading-body tw:border-rule-strong tw:hover:border-ink-secondary tw:bg-transparent tw:text-surface-sunken",
 } as const;
-const buttonShapes: Partial<Record<ButtonVariant, string>> = {
-  "job-action": "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-flush tw:text-button tw:font-weight-label tw:font-auth-body",
-  standard:
-    "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-flush tw:text-button tw:font-weight-label tw:font-control",
-  cta: "tw:min-h-control-height-touch tw:rounded-card tw:px-action tw:py-flush tw:w-full tw:text-button tw:font-weight-label tw:font-auth-body",
-  pill: "tw:min-h-control-height-touch tw:rounded-pill tw:px-action tw:py-flush tw:text-button tw:font-weight-label tw:font-auth-body",
-  tour: "tw:min-h-control-height-tour tw:rounded-card tw:px-content tw:py-flush tw:text-button tw:font-weight-label tw:font-control",
-  dense:
-    "tw:min-h-control-height-touch tw:rounded-control-dense tw:px-row tw:py-inline tw:text-body-small tw:font-weight-body tw:font-auth-mono",
-  "dense-sort": "tw:min-h-control-height-touch tw:rounded-control-dense tw:px-flush tw:py-flush tw:text-body-small tw:font-weight-body tw:font-auth-mono",
-  "account-link": "tw:min-h-flush tw:rounded-field tw:px-flush tw:py-compact tw:text-body tw:font-weight-body tw:font-auth-body",
-  "password-toggle": "tw:min-h-flush tw:rounded-field tw:px-flush tw:py-compact tw:text-small tw:font-weight-body tw:font-auth-mono",
-  link: "tw:min-h-panel tw:rounded-field tw:px-flush tw:py-compact tw:text-label tw:font-weight-label tw:font-control",
+const buttonShapes = {
+  "account-link": "tw:min-h-control-height-touch tw:min-w-control-target-touch tw:rounded-card tw:px-small tw:py-compact tw:text-body tw:font-weight-body tw:font-control",
+  "password-toggle": "tw:min-h-control-height-touch tw:min-w-control-target-touch tw:rounded-card tw:px-small tw:py-compact tw:text-small tw:font-weight-body tw:font-control",
 };
+/** Compact is desktop density only. Phones, tablets and hybrid touch devices restore targets. */
+function controlSizeRecipe(size: ControlDensity = "standard") {
+  return size === "compact"
+    ? "tw:min-h-control-height-compact tw:min-w-control-height-compact tw:px-control-padding-inline-compact tw:py-control-padding-block-compact tw:gap-control-gap-compact tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:touch:px-control-padding-inline tw:touch:py-control-padding-block tw:touch:gap-control-gap"
+    : "tw:min-h-control-height-touch tw:min-w-control-target-touch tw:px-control-padding-inline tw:py-control-padding-block tw:gap-control-gap";
+}
+const ordinaryShape = "tw:rounded-card tw:font-control tw:text-button tw:font-weight-label";
 const buttonIntents: Record<ButtonIntent, string> = {
   secondary:
     "tw:bg-transparent tw:text-ink tw:border-rule-strong tw:hover:border-ink-secondary",
@@ -156,7 +150,7 @@ function actionRecipe(intent: ButtonIntent, pressed: boolean, variant: "standard
   } : variant === "library" ? {...buttonIntents,danger:"tw:bg-danger tw:text-surface-sunken tw:border-danger"} : buttonIntents;
   return [landing ? controlBehavior + " " + controlFocus.standard : controlBase,
     actionDisabled, "tw:leading-leading-body tw:border-(length:--ds-stroke-thin) tw:border-solid tw:whitespace-nowrap tw:cursor-pointer tw:items-center tw:justify-center tw:gap-small",
-    landing ? "tw:block tw:min-h-control-height tw:rounded-card tw:px-action tw:py-flush tw:text-body-small tw:font-weight-label tw:font-control tw:mx-auto tw:mt-action tw:text-center" : "tw:inline-flex " + buttonShapes.standard,
+    landing ? "tw:block tw:min-h-control-height tw:rounded-card tw:px-action tw:py-flush tw:text-body-small tw:font-weight-label tw:font-control tw:mx-auto tw:mt-action tw:text-center" : "tw:inline-flex " + ordinaryShape + " " + controlSizeRecipe(),
     colors[intent], pressed ? "tw:shadow-emboss-pressed" : "",
     variant === "library" ? "tw:text-center" : variant === "scan-go" || variant === "scan-ok" ? "ds-panel-scan-button tw:flex-1 tw:text-center" + (variant === "scan-ok" ? " ds-panel-scan-quiet" : "") : "",
   ].join(" ");
@@ -164,10 +158,11 @@ function actionRecipe(intent: ButtonIntent, pressed: boolean, variant: "standard
 function buttonRecipeStyles({
   variant = "standard",
   intent = "secondary",
+  size = "standard",
   pressed = false,
   playing = false,
 }: ButtonOptions = {}): string {
-  const custom = extensions.button?.({variant, intent, pressed, playing});
+  const custom = extensions.button?.({variant, intent, size, pressed, playing});
   if (custom !== undefined) return custom;
   // D08/D10: retain account navigation and password reveal typography separately.
   if (variant === "account-link" || variant === "password-toggle")
@@ -182,34 +177,24 @@ function buttonRecipeStyles({
     ].join(" ");
   if (variant in parityButtonShapes) {
     const shape = parityButtonShapes[variant as keyof typeof parityButtonShapes];
-    return [controlBase, ["tile", "compact", "review-item", "hint", "domain-language"].includes(variant) ? actionDisabled : disabledRecipe, "tw:inline-flex tw:gap-small tw:cursor-pointer", variant === "review-item" ? "tw:border-solid" : "tw:items-center tw:justify-center " + (["tile","compact","hint"].includes(variant) ? "tw:border-(length:--ds-stroke-thin) tw:border-solid" : ""), shape,
+    return [controlBase, ["tile", "review-item", "domain-language"].includes(variant) ? actionDisabled : disabledRecipe, "tw:inline-flex tw:gap-small tw:cursor-pointer", variant === "review-item" ? "tw:border-solid" : "tw:items-center tw:justify-center " + (["tile"].includes(variant) ? "tw:border-(length:--ds-stroke-thin) tw:border-solid" : ""), shape,
       (variant === "transcription-language" || variant === "domain-language") ? pressed ? "tw:text-ink" : "tw:text-ink-secondary" : "",
       variant === "tile" && pressed ? "tw:border-transcription-accent tw:shadow-transcription-selected" : ""].join(" ");
   }
-  const color =
-    variant === "tour"
-      ? intent === "secondary" || intent === "quiet"
-        ? "tw:bg-transparent tw:text-surface-sunken tw:border-component-tour-rule"
-        : "tw:bg-surface tw:text-ink tw:border-surface tw:hover:bg-surface-overlay"
-      : variant === "dense-sort" ? "tw:bg-transparent tw:text-admin-accent tw:border-transparent" : variant === "dense"
-        ? intent === "danger"
-          ? "tw:bg-transparent tw:text-admin-danger tw:border-admin-danger"
-          : "tw:bg-transparent tw:text-admin-ink tw:border-admin-rule"
-        : buttonIntents[intent];
-  return [
-    variant.startsWith("dense") ? adminControlBase : controlBase,
-    variant.startsWith("dense") ? denseDisabled : ["standard", "job-action", "pill", "tour"].includes(variant) ? actionDisabled : disabledRecipe,
-    variant.startsWith("dense") ? "tw:leading-leading-admin tw:normal-nums" : "tw:leading-leading-body",
-    (variant.startsWith("dense") ? (variant==="dense-sort"?"tw:inline-block ":"tw:inline-block tw:text-center ") : "tw:inline-flex tw:items-center tw:justify-center tw:gap-small ") + "tw:border-solid tw:whitespace-nowrap tw:cursor-pointer " + (variant === "dense-sort" ? "tw:border-0 tw:text-left" : "tw:border-(length:--ds-stroke-thin)"),
-    buttonShapes[variant as keyof typeof buttonShapes] ?? missingArea(variant),
-    color,
+  if (variant !== "standard") missingArea(variant);
+  return [controlBase, actionDisabled,
+    "tw:inline-flex tw:items-center tw:justify-center tw:border-(length:--ds-stroke-thin) tw:border-solid tw:whitespace-nowrap tw:cursor-pointer tw:leading-leading-body",
+    ordinaryShape, controlSizeRecipe(size === "full-width" ? "standard" : size),
+    size === "full-width" ? "tw:w-full" : "", buttonIntents[intent],
     pressed ? "tw:shadow-emboss-pressed" : "",
   ].join(" ");
 }
+
 function iconButtonRecipeStyles({
   variant = "standard",
+  size = "standard",
 }: IconButtonOptions = {}) {
-  const custom = extensions.iconButton?.({variant});
+  const custom = extensions.iconButton?.({variant, size});
   if (custom !== undefined) return custom;
   const shapes: Partial<Record<NonNullable<IconButtonOptions["variant"]>, string>> = {
     "library-menu": "tw:min-h-flush tw:size-toolbar tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
@@ -229,19 +214,20 @@ function iconButtonRecipeStyles({
     variant.startsWith("admin") ? denseDisabled : disabledRecipe,
     (variant.startsWith("admin") ? "tw:inline-block tw:text-center " : "tw:inline-grid tw:place-items-center tw:flex-none ") + "tw:border-0 tw:bg-transparent tw:cursor-pointer",
     shapes[variant] ?? missingArea(variant),
+    controlSizeRecipe(size),
   ].join(" ");
 }
 function fieldRecipeStyles(
-  { variant = "boxed", invalid = false }: FieldOptions = {},
+  { variant = "ruled", invalid = false, density = "standard" }: FieldOptions = {},
   kind: "input" | "select" | "textarea" = "input",
 ): Record<'root'|'label'|'control'|'hint'|'error', string> {
-  const custom = extensions.field?.({variant, invalid}, kind);
+  const custom = extensions.field?.({variant, invalid, density}, kind);
   if (custom !== undefined) return custom;
   if (variant.startsWith("panel-") || ["player-volume", "account-password", "library-search"].includes(variant)) missingArea(variant);
   const admin = variant === "admin";
   const domain = variant === "domain" || variant === "domain-create";
   const prompt = variant === "library-prompt";
-  const ruled = variant !== "boxed" && !prompt;
+  const ruled = !["boxed", "search", "numeric", "repeated-name"].includes(variant);
   return {
     root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-flush" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-flush tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group") : admin ? "tw:grid tw:gap-snug tw:min-w-flush tw:font-auth-body tw:text-label tw:leading-leading-body tw:normal-case tw:tracking-(--ds-tracking-default) tw:tabular-nums" : "tw:grid tw:gap-snug tw:min-w-flush " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
     label:
@@ -262,7 +248,8 @@ function fieldRecipeStyles(
                 ? "tw:h-auto tw:min-h-control-textarea-height tw:resize-y tw:p-inline"
                 : "tw:h-control-height tw:px-control tw:py-flush") +
               " tw:rounded-card tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-surface tw:text-ink tw:font-control tw:text-body tw:leading-leading-body",
-      invalid && variant !== "ruled-account"
+      kind === "textarea" ? "" : controlSizeRecipe(density),
+      invalid
         ? "tw:border-danger"
         : admin
           ? "tw:border-admin-rule"
@@ -276,7 +263,7 @@ function fieldRecipeStyles(
       admin ? "" : "tw:focus:outline-none",
     ].join(" "),
     hint: "tw:m-flush tw:text-label tw:font-body tw:leading-leading-body tw:text-ink-secondary",
-    error: variant === "ruled-account" ? "tw:block tw:mt-group tw:mb-content tw:text-body tw:font-auth-body tw:leading-leading-account tw:text-center tw:text-danger" : "tw:m-flush tw:text-label tw:font-body tw:leading-leading-body tw:text-danger",
+    error: "tw:m-flush tw:text-label tw:font-control tw:leading-leading-body tw:text-danger",
   };
 }
 function inputRecipeStyles(options: FieldOptions = {}) {
@@ -288,12 +275,12 @@ function selectRecipeStyles(options: FieldOptions = {}) {
 function textareaRecipeStyles(options: FieldOptions = {}) {
   return fieldRecipe(options, "textarea").control;
 }
-function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
-  const custom = extensions.checkbox?.({variant});
+function checkboxRecipeStyles({ variant = "standard", density = "standard" }: CheckboxOptions = {}) {
+  const custom = extensions.checkbox?.({variant, density});
   if (custom !== undefined) return custom;
   if (variant === "export-voice") missingArea(variant);
   return {
-    root: "tw:inline-flex tw:items-center tw:gap-small tw:font-auth-body tw:text-label tw:leading-leading-body " + (variant === "permission" ? "tw:text-admin-ink" : "tw:text-ink"),
+    root: "tw:inline-flex tw:items-center tw:font-control tw:text-label tw:leading-leading-body tw:text-ink tw:cursor-pointer " + controlSizeRecipe(density),
     control:
       controlBase +
       " " +
@@ -307,57 +294,16 @@ function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
 function switchRecipeStyles({
   variant = "player",
   checked = false,
+  density = "standard",
 }: SwitchOptions = {}) {
-  const custom = extensions.switch?.({variant, checked});
+  const custom = extensions.switch?.({variant, checked, density});
   if (custom !== undefined) return custom;
   if (variant === "player-preference" || variant === "shared-device") throw Error("Use app controls for " + variant);
-  const sizes = {
-    player: "tw:w-switch tw:h-panel tw:p-compact",
-    admin: "tw:w-page tw:h-sheet-dense tw:p-flush",
-    capability: "tw:w-heading tw:h-content tw:p-micro",
-    comparison: "tw:w-heading tw:h-content tw:p-micro",
-  };
-  const thumbs = {
-    player: "tw:size-section",
-    admin: "tw:size-action",
-    capability: "tw:size-inline",
-    comparison: "tw:size-inline",
-  };
   return {
-    label:
-      (variant === "comparison" ? "tw:relative tw:flex" : "tw:relative tw:inline-flex") + " tw:items-center tw:gap-small tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-panel tw:flex-nowrap tw:leading-leading-admin" : variant === "comparison" ? " tw:min-h-toolbar-dense tw:my-section tw:text-label" : ""),
-    input: variant === "capability" || variant === "comparison" ? "tw:leading-leading-body tw:absolute tw:opacity-opacity-hidden tw:w-heading tw:h-section tw:m-flush tw:peer" : "tw:leading-leading-body tw:sr-only tw:peer",
-    root:
-      controlBase +
-      " " +
-      (variant === "admin" ? denseDisabled : disabledRecipe) +
-      (variant === "admin" ? " tw:normal-nums tw:min-h-sheet-dense tw:font-auth-mono tw:text-body-small tw:leading-leading-admin tw:relative tw:inline-block tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer " :
-      " tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-(length:--ds-stroke-focus) tw:peer-focus-visible:[outline-color:var(--ds-focus)] tw:peer-focus-visible:outline-offset-(--ds-space-compact) tw:peer-disabled:opacity-(--ds-opacity-disabled) tw:min-h-flush tw:leading-leading-body tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer ") +
-      sizes[variant] +
-      " " +
-      (variant === "player"
-        ? "tw:border-0 " + (checked ? "tw:bg-ink" : "tw:bg-surface-hover")
-        : "tw:border-(length:--ds-stroke-thin) " +
-          (checked
-            ? variant === "admin"
-              ? "tw:bg-admin-accent tw:border-admin-secondary"
-              : "tw:bg-accent tw:border-accent"
-            : "tw:bg-transparent tw:border-ink-secondary")),
-    thumb:
-      (variant === "admin" ? "tw:absolute tw:left-tight tw:top-tight " : "") + "tw:block tw:leading-leading-body tw:rounded-round tw:shrink-0 tw:transition-transform tw:duration-switch tw:motion-reduce:transition-none " +
-      thumbs[variant] +
-      " " +
-      (checked
-        ? "tw:bg-surface-sunken " +
-          {
-            player: "tw:translate-x-group",
-            admin: "tw:translate-x-switch-admin-travel",
-            capability: "tw:translate-x-control",
-            comparison: "tw:translate-x-control",
-          }[variant]
-        : variant === "player"
-          ? "tw:bg-ink-secondary"
-          : "tw:bg-ink"),
+    label: "tw:relative tw:inline-flex tw:items-center tw:font-control tw:text-label tw:leading-leading-body tw:text-ink tw:cursor-pointer " + controlSizeRecipe(density),
+    input: "tw:sr-only tw:peer",
+    root: controlBase + " " + disabledRecipe + " tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:w-switch tw:min-w-control-target-touch tw:min-h-control-target-touch tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:px-compact tw:py-flush tw:cursor-pointer tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-(length:--ds-stroke-focus) tw:peer-focus-visible:outline-focus tw:peer-focus-visible:outline-offset-(--ds-space-compact) tw:peer-disabled:opacity-(--ds-opacity-disabled) " + (checked ? "tw:bg-accent tw:border-accent" : "tw:bg-surface-hover tw:border-rule-strong"),
+    thumb: "tw:block tw:size-section tw:rounded-round tw:shrink-0 tw:bg-surface-sunken tw:transition-transform tw:duration-switch tw:motion-reduce:transition-none " + (checked ? "tw:translate-x-group" : ""),
   };
 }
 function buttonRecipe(
