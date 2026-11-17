@@ -1,4 +1,4 @@
-import { Button, Field, Input, Select, Table, TableWrap, TableHeader, TableCell, TableRow, TablePagination, EmptyState, Loading, Status, Workspace, type ButtonProps } from "./design-system/react";
+import { Button, EmptyState, Field, Loading, Select, Status, Table, TableCell, TableHeader, TablePagination, TableRow, TableWrap } from "./design-system/react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   useTable,
@@ -10,56 +10,73 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { adminRequest, managementError } from "./admin-request";
-import { adminMessages, adminManagementMessages, type Lang } from "./i18n";
-export type AdminRow = Record<string, any>;
+import { adminManagementMessages } from "./i18n";
+import { fill, ui, useAdmin, type AdminRow } from "./admin-format";
+export type { AdminRow } from "./admin-format";
 export type AdminColumn = {
   id: string;
   label: string;
+  /** Server sort key; the column header becomes a sort button. */
   sort?: string;
+  mono?: boolean;
   cell?: (row: AdminRow) => ReactNode;
 };
 const features = tableFeatures({
   rowSortingFeature,
   rowPaginationFeature,
 });
-/** One server page at a time; cursors are scoped to the complete filter/sort/limit query. */
+const interactive = "a,button,input,select,textarea,label,summary,[role=button]";
+/**
+ * One server page at a time; cursors are scoped to the complete filter/sort/limit query.
+ * Pieces, audit, jobs, users, ensembles, memberships and pickers all share this table.
+ */
 export function AdminDataTable({
   path,
   columns,
-  language,
   filters = {},
-  search: externalSearch,
+  search = "",
   onOpen,
   revision = 0,
-  onZone,
   caption,
-  actionLayout,
+  defaultSort,
+  pageSize: initialPageSize = 30,
+  filtered = false,
+  onClear,
+  emptyTitle,
+  onRows,
+  variant = "records",
+  "data-admin": dataAdmin = "data-table",
 }: {
   path: string;
   columns: AdminColumn[];
-  language: Lang;
   filters?: Record<string, string>;
   search?: string;
-  onOpen?: (row: AdminRow, opener: HTMLElement) => void;
+  /** Opens the row's detail; rows keep a real link in their first cell for keyboard users. */
+  onOpen?: (row: AdminRow) => void;
   revision?: number;
-  onZone?: (zone: string) => void;
   caption: string;
-  actionLayout?: ButtonProps["layout"];
+  defaultSort?: { id: string; desc: boolean };
+  pageSize?: number;
+  /** True when the caller has active filters; an empty result then offers Clear filters. */
+  filtered?: boolean;
+  onClear?: () => void;
+  emptyTitle?: string;
+  onRows?: (rows: AdminRow[]) => void;
+  variant?: "records" | "scroll";
+  "data-admin"?: string;
 }) {
-  const d = adminMessages[language],
-    m = adminManagementMessages[language];
+  const { language, t, setZone } = useAdmin();
+  const m = adminManagementMessages[language];
   const [rows, setRows] = useState<AdminRow[]>([]),
-    [search, setSearch] = useState(""),
-    [sorting, setSorting] = useState<SortingState>([]),
-    [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 30 }),
+    [sorting, setSorting] = useState<SortingState>(defaultSort ? [defaultSort] : []),
+    [pagination, setPagination] = useState({ pageIndex: 0, pageSize: initialPageSize }),
     [cursors, setCursors] = useState<(string | undefined)[]>([undefined]),
     [next, setNext] = useState<string | null>(null),
     [busy, setBusy] = useState(true),
     [error, setError] = useState(""),
     [retry, setRetry] = useState(0);
   const generation = useRef(0),
-    filterKey = JSON.stringify(filters),
-    searchValue = externalSearch ?? search;
+    filterKey = JSON.stringify(filters);
   const defs = useMemo<ColumnDef<typeof features, AdminRow>[]>(
     () =>
       columns.map((c) => ({
@@ -87,11 +104,11 @@ export function AdminDataTable({
     onPaginationChange: setPagination,
   });
   const sort = sorting[0],
-    sortKey = sort ? columns.find((c) => c.id === sort.id)?.sort : filters.sort;
+    sortKey = sort ? columns.find((c) => c.id === sort.id)?.sort : undefined;
   const signature = JSON.stringify([
     path,
     filterKey,
-    searchValue,
+    search,
     sortKey,
     sort?.desc,
     pagination.pageSize,
@@ -121,7 +138,7 @@ export function AdminDataTable({
       try {
         const params = new URLSearchParams({
           ...filters,
-          search: searchValue,
+          search,
           limit: String(pagination.pageSize),
           ...(sortKey ? { sort: sortKey } : {}),
           ...(sort ? { direction: sort.desc ? "desc" : "asc" } : {}),
@@ -129,12 +146,14 @@ export function AdminDataTable({
             ? { cursor: cursors[pagination.pageIndex] }
             : {}),
         });
-        const r = await adminRequest(path + "?" + params);
+        for (const [key, value] of [...params]) if (value === "") params.delete(key);
+        const r = await adminRequest(path + (path.includes("?") ? "&" : "?") + params);
         if (current !== generation.current) return;
         loadedPage.current = pageKey;
         setRows(r.items);
+        onRows?.(r.items);
         setNext(r.nextCursor);
-        onZone?.(r.timeZone);
+        if (r.timeZone) setZone(r.timeZone);
       } catch (e) {
         if (current === generation.current) {
           if (!refresh) {
@@ -153,24 +172,18 @@ export function AdminDataTable({
       generation.current++;
     };
   }, [signature, pagination.pageIndex, revision, retry]);
+  const label = (id: string) => columns.find((c) => c.id === id)?.label ?? "";
   return (
-    <Workspace as="section" part="region" data-admin="data-table" aria-label={caption} aria-busy={busy}>
-      {externalSearch === undefined && (
-        <Field variant="admin" label={d.search}>{association => <Input {...association}
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />}</Field>
-      )}
+    <section data-admin={dataAdmin} aria-label={caption} aria-busy={busy}>
       {error && (
-        <div>
-          <Status variant="admin" role="alert">{error}</Status>
-          <Button layout={actionLayout} size="compact" type="button" onClick={() => setRetry((v) => v + 1)}>
-            {m.retry}
+        <div className={ui.actions}>
+          <Status variant="admin" intent="error" role="alert">{error}</Status>
+          <Button size="compact" type="button" onClick={() => setRetry((v) => v + 1)}>
+            {t.retry}
           </Button>
         </div>
       )}
-      <TableWrap variant="records" bounded data-admin="table-wrap" tabIndex={0}>
+      <TableWrap variant={variant} data-admin="table-wrap" tabIndex={0} aria-label={caption}>
         <Table>
           <caption hidden>{caption}</caption>
           <thead>
@@ -193,28 +206,20 @@ export function AdminDataTable({
                       }
                     >
                       {header.column.getCanSort() ? (
-                        <Button layout={actionLayout} size="compact" intent="quiet"
+                        <Button
+                          size="compact"
+                          intent="quiet"
                           type="button"
                           aria-disabled={busy}
                           onClick={() => {
                             if (!busy) header.column.toggleSorting();
                           }}
                         >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                          {sorted === "asc"
-                            ? " ↑"
-                            : sorted === "desc"
-                              ? " ↓"
-                              : ""}
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {sorted === "asc" ? " ↑" : sorted === "desc" ? " ↓" : ""}
                         </Button>
                       ) : (
-                        flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )
+                        flexRender(header.column.columnDef.header, header.getContext())
                       )}
                     </TableHeader>
                   );
@@ -227,25 +232,22 @@ export function AdminDataTable({
               <TableRow
                 key={row.id}
                 data-row-id={row.id}
-                tabIndex={onOpen ? 0 : undefined}
-                onClick={onOpen ? event => onOpen(row.original,event.currentTarget) : undefined}
-                onKeyDown={(e) => {
-                  if (
-                    onOpen &&
-                    e.target === e.currentTarget &&
-                    ["Enter", " "].includes(e.key)
-                  ) {
-                    e.preventDefault();
-                    onOpen(row.original,e.currentTarget);
-                  }
-                }}
+                data-href={onOpen ? "" : undefined}
+                onClick={
+                  onOpen
+                    ? (event) => {
+                        if ((event.target as Element).closest(interactive)) return;
+                        if (getSelection()?.toString()) return;
+                        onOpen(row.original);
+                      }
+                    : undefined
+                }
               >
                 {row.getAllCells().map((cell) => (
                   <TableCell
                     key={cell.id}
-                    data-label={
-                      columns.find((c) => c.id === cell.column.id)?.label
-                    }
+                    mono={!!columns.find((c) => c.id === cell.column.id)?.mono}
+                    data-label={label(cell.column.id)}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
@@ -256,47 +258,59 @@ export function AdminDataTable({
         </Table>
       </TableWrap>
       {busy && <Loading layout="tw:sr-only">{m.loading}</Loading>}
-      {!busy && !error && !rows.length && <EmptyState variant="compact" title={d.empty}/>}
-      <TablePagination data-admin="pagination">
-        <Button layout={actionLayout} size="compact"
-          type="button"
-          aria-disabled={busy || !pagination.pageIndex}
-          onClick={() => {
-            if (!busy && pagination.pageIndex) table.previousPage();
-          }}
-        >
-          {m.previous}
-        </Button>
-        <span aria-live="polite">
-          {m.page} {pagination.pageIndex + 1}
-          {busy ? " · " + m.loading : ""}
-        </span>
-        <Button layout={actionLayout} size="compact"
-          type="button"
-          aria-disabled={busy || !next}
-          onClick={() => {
-            if (busy || !next) return;
-            setCursors((old) => [
-              ...old.slice(0, pagination.pageIndex + 1),
-              next!,
-            ]);
-            table.nextPage();
-          }}
-        >
-          {m.next}
-        </Button>
-        <Field variant="admin" label={m.pageSize} layout="tw:ml-auto">{association => <Select {...association}
-            aria-label={m.pageSize}
-            value={pagination.pageSize}
-            onChange={(e) => table.setPageSize(Number(e.target.value))}
+      {!busy && !error && !rows.length && (
+        <EmptyState
+          variant="compact"
+          title={filtered ? t.emptyFiltered : (emptyTitle ?? t.emptyTitle)}
+          body={filtered ? t.emptyFilteredBody : undefined}
+          action={filtered && onClear ? <Button size="compact" type="button" onClick={onClear}>{t.clear}</Button> : undefined}
+        />
+      )}
+      {(pagination.pageIndex > 0 || next || rows.length > 10) && (
+        <TablePagination data-admin="pagination">
+          <Button
+            size="compact"
+            type="button"
+            aria-disabled={busy || !pagination.pageIndex}
+            onClick={() => {
+              if (!busy && pagination.pageIndex) table.previousPage();
+            }}
           >
-            {[10, 30, 100].map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </Select>}</Field>
-      </TablePagination>
-    </Workspace>
+            {m.previous}
+          </Button>
+          <span aria-live="polite">
+            {fill(t.page, { n: pagination.pageIndex + 1 })}
+            {busy ? " · " + m.loading : ""}
+          </span>
+          <Button
+            size="compact"
+            type="button"
+            aria-disabled={busy || !next}
+            onClick={() => {
+              if (busy || !next) return;
+              setCursors((old) => [...old.slice(0, pagination.pageIndex + 1), next!]);
+              table.nextPage();
+            }}
+          >
+            {m.next}
+          </Button>
+          <Field variant="numeric" density="compact" label={m.pageSize} layout="tw:ml-auto">
+            {(association) => (
+              <Select
+                {...association}
+                value={pagination.pageSize}
+                onChange={(e) => table.setPageSize(Number(e.target.value))}
+              >
+                {[10, 30, 100].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+        </TablePagination>
+      )}
+    </section>
   );
 }

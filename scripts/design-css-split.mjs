@@ -1,7 +1,7 @@
 /** Output boundaries only: tokens.css remains the sole authored design-value source. */
 export const foundationSources = [
   './recipes/controls.ts', './recipes/display.ts', './recipes/overlays.ts',
-  './recipes/layout.ts', './recipes/workspace.ts', './recipes/auth.ts',
+  './recipes/layout.ts', './recipes/workspace.ts', './recipes/auth.ts', './recipes/admin.ts',
   './react/adapter.tsx', '../auth-ui.tsx', '../account-stage.tsx', '../admin-ui.tsx',
   '../routes/__root.tsx', '../routes/index.tsx', '../routes/invite.$token.tsx', '../routes/admin.$.tsx',
 ];
