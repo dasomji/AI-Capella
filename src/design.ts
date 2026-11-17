@@ -42,9 +42,9 @@ export function legacyDesign(id: string): Design {
 export let DESIGN_CHOICE: DesignChoice = !appearance || appearance.preference === 'system' ? 'auto' : legacyDesign(appearance.preference);
 export function systemDesign(): Design { return legacyDesign(systemTheme()); }
 export let DESIGN: Design = appearance ? legacyDesign(appearance.id) : 'papier';
-/** Preferences apply live; retained renderer resources follow the snapshot revision. */
+/** Preferences apply at the repertoire boundary; renderer resources follow snapshot revisions. */
 export function setDesignChoice(next: DesignChoice) {
-  setThemePreference(themePreference(next));
+  return setThemePreference(themePreference(next));
 }
 /** Parchment: the paper design on a light ground (everything of the paper design holds, in light). */
 export let PARCHMENT = DESIGN === 'pergament';
@@ -77,7 +77,7 @@ export const START_STAGE = START_CHOICE === 'buehne';
 /**
  * The faces from Font Revival (assets/fonts/revival), everyone's since October 2026 -- headings in
  * Baltimore Title, song titles in Modern Antique, rehearsal letters in Baltimore Bold, text and
- * controls in Remington, the "Score" of the name in Baltimore Black Slope (tokens.css).
+ * controls in Atkinson Hyperlegible, the "Score" of the name in Baltimore Black Slope (tokens.css).
  * ?schrift=bodoni brings back the earlier ones (Bodoni Moda, Atkinson Hyperlegible) on a device
  * ('heute' as it was called while the new ones were a test), ?schrift=neu the new ones.
  */

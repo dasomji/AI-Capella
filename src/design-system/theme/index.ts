@@ -70,6 +70,24 @@ let revision = 0;
 let initialized = false;
 const listeners = new Set<(theme: ThemeSnapshot) => void>();
 
+// D05: keep all appearance requests at the repertoire boundary, including OS/storage.
+let rehearsing = false;
+const pendingAppearance = new Map<string, () => void>();
+/** Last request per appearance category wins; callers may persist the preference immediately. */
+export function requestAppearanceChange(category: string, apply: () => void): boolean {
+  if (rehearsing) { pendingAppearance.set(category, apply); return true; }
+  apply();
+  return false;
+}
+/** Player entry holds appearance even while stopped/paused; only repertoire entry releases it. */
+export function setAppearanceRehearsing(next: boolean) {
+  rehearsing = next;
+  if (next) return;
+  const changes = [...pendingAppearance.values()];
+  pendingAppearance.clear();
+  for (const apply of changes) apply();
+}
+
 let observedKey = '';
 const attributeKey = () => ['theme', 'type', 'themePreference'].map(key => document.documentElement.dataset[key]).join('|');
 let dispatching = false;
@@ -116,13 +134,14 @@ export function initializeTheme() {
   const media = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: light)') : undefined;
   media?.addEventListener('change', () => {
     if (document.documentElement.dataset.themePreference !== 'system') return;
-    bootstrapTheme('system'); updateChrome(); refresh();
+    requestAppearanceChange('theme', () => { bootstrapTheme('system'); updateChrome(); refresh(); });
   });
   window.addEventListener('storage', event => {
-    if (event.key !== 'ai-capella-design' && event.key !== null) return;
+    if (event.key !== 'ai-capella-design' && event.key !== 'ai-capella-schrift' && event.key !== 'ai-capella-start' && event.key !== null) return;
     forgetInitialThemeQuery();
     // Cross-tab choices use stored values, not this tab's initial URL override.
-    bootstrapTheme(themePreference(event.newValue)); updateChrome(); refresh();
+    const preference = event.key === 'ai-capella-design' || event.key === null ? themePreference(event.newValue) : themePreference(document.documentElement.dataset.themePreference ?? null);
+    requestAppearanceChange('theme', () => { bootstrapTheme(preference); updateChrome(); refresh(); });
   });
   observedKey = attributeKey();
   revision++;
@@ -142,7 +161,7 @@ export function setThemePreference(preference: ThemePreference) {
     else localStorage.setItem('ai-capella-design', themeRegistry.find(theme => theme.id === preference)!.storage);
   } catch { /* This visit can still choose a theme. */ }
   forgetInitialThemeQuery();
-  bootstrapTheme(preference); updateChrome(); refresh();
+  return requestAppearanceChange('theme', () => { bootstrapTheme(preference); updateChrome(); refresh(); });
 }
 
 // Production CSS minification may shorten authored sRGB hex to a named color (e.g. bisque).
