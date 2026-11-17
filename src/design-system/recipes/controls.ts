@@ -119,6 +119,7 @@ function iconButtonRecipeStyles({
 export const fieldVariants = [
   "boxed",
   "ruled",
+  "ruled-account",
   "domain",
   "transcription",
   "admin",
@@ -135,10 +136,10 @@ function fieldRecipeStyles(
   const admin = variant === "admin";
   const ruled = variant !== "boxed";
   return {
-    root: admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body" : "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
+    root: variant === "ruled-account" ? "tw:block tw:my-20 tw:min-w-0 tw:font-auth-body" : admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body" : "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
     label:
       ruled && !admin
-        ? "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary"
+        ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary"
         : admin ? "tw:text-label tw:font-auth-body tw:leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
     control: [
       admin ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : controlBase,
@@ -154,7 +155,7 @@ function fieldRecipeStyles(
                 ? "tw:h-auto tw:min-h-textarea tw:resize-y tw:p-10"
                 : "tw:h-control-height tw:px-12 tw:py-0") +
               " tw:rounded-card tw:border tw:border-solid tw:bg-surface tw:text-ink tw:font-control tw:text-body tw:leading-body",
-      invalid
+      invalid && variant !== "ruled-account"
         ? "tw:border-danger"
         : admin
           ? "tw:border-admin-rule tw:focus:border-focus"
@@ -167,7 +168,7 @@ function fieldRecipeStyles(
       admin ? "" : "tw:focus:outline-none",
     ].join(" "),
     hint: "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
-    error: "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-danger",
+    error: variant === "ruled-account" ? "tw:block tw:my-16 tw:text-body tw:font-auth-body tw:leading-account tw:text-center tw:text-danger" : "tw:m-0 tw:text-label tw:font-body tw:leading-body tw:text-danger",
   };
 }
 function inputRecipeStyles(options: FieldOptions = {}) {
