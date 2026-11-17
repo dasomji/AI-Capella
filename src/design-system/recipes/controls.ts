@@ -196,24 +196,24 @@ function iconButtonRecipeStyles({
   const custom = extensions.iconButton?.({variant, size});
   if (custom !== undefined) return custom;
   const shapes: Partial<Record<NonNullable<IconButtonOptions["variant"]>, string>> = {
-    "library-menu": "tw:min-h-flush tw:size-toolbar tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
+    "library-menu": "tw:size-toolbar tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     standard:
-      "tw:min-h-flush tw:size-toolbar tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
+      "tw:size-toolbar tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     small:
-      "tw:min-h-flush tw:size-panel tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
+      "tw:size-panel tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     transcription:
-      "tw:min-h-flush tw:size-toolbar tw:rounded-field tw:p-flush tw:font-close tw:font-weight-close-light tw:text-close tw:leading-leading-close tw:text-ink-secondary tw:hover:text-ink",
+      "tw:size-toolbar tw:rounded-field tw:p-flush tw:font-close tw:font-weight-close-light tw:text-close tw:leading-leading-close tw:text-ink-secondary tw:hover:text-ink",
     "admin-close":
-      "tw:min-h-touch tw:w-auto tw:h-auto tw:rounded-control-dense tw:px-control tw:py-compact tw:font-close tw:text-admin-close tw:leading-leading-admin tw:text-admin-ink",
+      "tw:w-auto tw:h-auto tw:rounded-control-dense tw:px-control tw:py-compact tw:font-close tw:text-admin-close tw:leading-leading-admin tw:text-admin-ink",
     "admin-copy":
-      "tw:min-h-panel tw:w-auto tw:h-auto tw:rounded-control-dense tw:p-compact tw:font-auth-mono tw:text-body-small tw:leading-leading-admin tw:text-admin-ink",
+      "tw:w-auto tw:h-auto tw:rounded-control-dense tw:p-compact tw:font-auth-mono tw:text-body-small tw:leading-leading-admin tw:text-admin-ink",
   };
   return [
     variant === "library-menu" ? unfocusedControlBase + " " + controlFocus.library : controlBase,
     variant.startsWith("admin") ? denseDisabled : disabledRecipe,
     (variant.startsWith("admin") ? "tw:inline-block tw:text-center " : "tw:inline-grid tw:place-items-center tw:flex-none ") + "tw:border-0 tw:bg-transparent tw:cursor-pointer",
     shapes[variant] ?? missingArea(variant),
-    controlSizeRecipe(size),
+    size === "compact" ? "tw:min-h-control-height-compact tw:min-w-control-height-compact tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch" : "tw:min-h-control-target-touch tw:min-w-control-target-touch",
   ].join(" ");
 }
 function fieldRecipeStyles(
@@ -236,16 +236,11 @@ function fieldRecipeStyles(
     control: [
       admin ? adminControlBase : variant === "ruled" || variant === "transcription" ? unfocusedControlBase : prompt ? unfocusedControlBase + " tw:outline-none tw:outline-offset-(--ds-space-micro)" : controlBase,
       variant === "ruled" || variant === "transcription" ? "" : disabledRecipe,
-      "tw:block tw:w-full tw:min-w-flush tw:font-weight-body tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
-      domain && kind === "select"
-          ? "tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid tw:px-small tw:py-small tw:leading-leading-body tw:bg-transparent tw:text-ink tw:font-control tw:text-body"
-          : ruled
-            ? `tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid ${domain ? "tw:py-small tw:leading-leading-admin" : admin ? "tw:py-inline tw:leading-leading-body" : "tw:py-inline tw:leading-leading-field"} ${admin ? "tw:px-micro tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-label" : domain ? "tw:px-flush tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body" : "tw:px-flush tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input"}`
-            : (kind === "textarea"
-                ? "tw:h-auto tw:min-h-control-textarea-height tw:resize-y tw:p-inline"
-                : "tw:h-control-height tw:px-control tw:py-flush") +
-              " tw:rounded-card tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-surface tw:text-ink tw:font-control tw:text-body tw:leading-leading-body",
-      kind === "textarea" ? "" : controlSizeRecipe(density),
+      "tw:block tw:w-full tw:font-weight-body tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
+      "tw:font-control tw:text-input tw:leading-leading-field tw:text-ink " + (ruled
+        ? "tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent"
+        : "tw:rounded-card tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-surface"),
+      kind === "textarea" ? "tw:h-auto tw:min-h-control-textarea-height tw:resize-y tw:px-control-padding-inline tw:py-control-padding-block" : controlSizeRecipe(density),
       invalid
         ? "tw:border-danger"
         : admin
