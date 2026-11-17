@@ -165,7 +165,7 @@ export function AdminDataTable({
       {error && (
         <div>
           <Status variant="admin" role="alert">{error}</Status>
-          <Button layout={actionLayout} variant="dense" type="button" onClick={() => setRetry((v) => v + 1)}>
+          <Button layout={actionLayout} size="compact" type="button" onClick={() => setRetry((v) => v + 1)}>
             {m.retry}
           </Button>
         </div>
@@ -193,7 +193,7 @@ export function AdminDataTable({
                       }
                     >
                       {header.column.getCanSort() ? (
-                        <Button layout={actionLayout} variant="dense-sort"
+                        <Button layout={actionLayout} size="compact" intent="quiet"
                           type="button"
                           aria-disabled={busy}
                           onClick={() => {
@@ -256,9 +256,9 @@ export function AdminDataTable({
         </Table>
       </TableWrap>
       {busy && <Loading layout="tw:sr-only">{m.loading}</Loading>}
-      {!busy && !error && !rows.length && <EmptyState variant="admin-text" title={d.empty}/>}
+      {!busy && !error && !rows.length && <EmptyState variant="compact" title={d.empty}/>}
       <TablePagination data-admin="pagination">
-        <Button layout={actionLayout} variant="dense"
+        <Button layout={actionLayout} size="compact"
           type="button"
           aria-disabled={busy || !pagination.pageIndex}
           onClick={() => {
@@ -271,7 +271,7 @@ export function AdminDataTable({
           {m.page} {pagination.pageIndex + 1}
           {busy ? " · " + m.loading : ""}
         </span>
-        <Button layout={actionLayout} variant="dense"
+        <Button layout={actionLayout} size="compact"
           type="button"
           aria-disabled={busy || !next}
           onClick={() => {
