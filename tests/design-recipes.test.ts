@@ -2,6 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import * as r from "../src/design-system/recipes";
+import { controlNoteRecipe } from "../src/design-system/recipes/shell";
 import { scanDesignFile } from "../scripts/check-design-tokens.mjs";
 describe("pure recipes", () => {
   it("preserves close typography and native domain select treatment", () => {
@@ -11,9 +12,9 @@ describe("pure recipes", () => {
     expect(r.iconButtonRecipe({ variant: "admin-close" })).toContain(
       "tw:text-admin-close",
     );
-    expect(r.selectRecipe({ variant: "domain" })).toContain("tw:px-8");
-    expect(r.inputRecipe({ variant: "domain" })).toContain("tw:px-0");
-    expect(r.cardRecipe({ variant: "tour" })).toContain("tw:pt-14");
+    expect(r.selectRecipe({ variant: "domain" })).toContain("tw:px-small");
+    expect(r.inputRecipe({ variant: "domain" })).toContain("tw:px-none");
+    expect(r.cardRecipe({ variant: "tour" })).toContain("tw:pt-row");
   });
   it("gives the notifier and specimens one recipe plus a named placement", () => {
     expect(r.toastRecipe()).toContain("ds-reset");
@@ -51,8 +52,8 @@ describe("pure recipes", () => {
         const classes = r.buttonRecipe({ variant, intent }).split(/\s+/);
         if (variant.startsWith("panel-") || variant.startsWith("section-")) {
           expect(classes).toContain("ds-panel-button");
-          expect(classes).toContain("tw:panel-inherit");
-          expect(classes).toContain("tw:focus-visible:outline-ink");
+          expect(classes).toContain("tw:font-family-inherit");
+          expect(classes).toContain("tw:focus-visible:[outline-color:var(--ds-ink)]");
           expect(classes.some(c => c.startsWith("tw:"))).toBe(true);
           expect(new Set(classes).size).toBe(classes.length);
           continue;
@@ -85,7 +86,7 @@ describe("pure recipes", () => {
       "tw:rounded-card",
     );
     expect(r.buttonRecipe({ variant: "dense" })).toContain(
-      "tw:rounded-admin-control",
+      "tw:rounded-control-dense",
     );
   });
   it("defines player appearances in token-backed utilities and reserves CSS for native parts", () => {
@@ -103,14 +104,17 @@ describe("pure recipes", () => {
       .map(match => match[1].trim()).filter(selector => !selector.startsWith("@"));
     expect(selectors.length).toBeGreaterThan(0);
     for (const selector of selectors) expect(selector).toContain("::");
-    expect(r.playerGlyphRecipe("treble")).toContain("tw:font-font-music");
+    expect(r.playerGlyphRecipe("treble")).toContain("tw:font-music");
   });
   it("defines library/account appearance in utilities and keeps only generated decorations in CSS", () => {
     for (const part of r.libraryParts) expect(r.libraryPartRecipe(part)).toMatch(/(?:^|\s)tw:/);
     for (const part of r.accountParts) expect(r.accountPartRecipe(part)).toMatch(/(?:^|\s)tw:/);
     for (const variant of ["library-prompt", "library-sheet", "library-popover"] as const)
       for (const slot of Object.values(r.dialogRecipe({ variant }))) expect(slot).toMatch(/(?:^|\s)tw:/);
-    for (const slot of Object.values(r.menuRecipe({ variant: "library" }))) expect(slot).toMatch(/(?:^|\s)tw:/);
+    for (const [part, slot] of Object.entries(r.menuRecipe({ variant: "library" }))) {
+      if (part === "chevron") expect(slot).toContain("ds-library-menu-chevron"); // Generated decoration is styled by its owning item.
+      else expect(slot).toMatch(/(?:^|\s)tw:/);
+    }
     for (const file of ["library", "account"]) {
       const css = readFileSync(`src/design-system/${file}.css`, "utf8");
       expect(css).not.toMatch(/(?<![\w-])\d+(?:px|ms)\b|#[a-f\d]{3,8}\b/i);
@@ -240,4 +244,12 @@ describe("every recipe property is exclusive within a state and breakpoint", () 
       ]),
     );
   });
+});
+
+it('preserves unselectable landing notes and the library Menu ink focus outline', () => {
+  expect(controlNoteRecipe()).toContain('tw:select-none');
+  expect(controlNoteRecipe()).not.toContain('tw:select-text');
+  const menu=r.iconButtonRecipe({variant:'library-menu'});
+  expect(menu).toContain('tw:focus-visible:outline-ink');
+  expect(menu).not.toContain('tw:focus-visible:outline-focus');
 });

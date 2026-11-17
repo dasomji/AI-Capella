@@ -170,8 +170,8 @@ it('preserves every pre-P2 renderer pigment across all three themes', async () =
       expect(colorRoles, `${role} must be available in a concrete snapshot`).toContain(role);
       expect(themeRoleNames).toContain(role);
       expect(normalizeColor(resolve('--ds-' + role)).css, `${theme}: ${role}`).toBe(normalizeColor(colors[index]).css);
-      if (new Set(colors).size === 1) expect(shared.has('--ds-' + role)).toBe(true);
-      else expect(shared.has('--ds-' + role)).toBe(false);
+      // Even a currently identical screen pigment belongs to each complete theme mapping.
+      expect(shared.has('--ds-' + role)).toBe(false);
     }
   }
 });
