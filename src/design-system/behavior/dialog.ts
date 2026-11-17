@@ -202,12 +202,12 @@ export function openDialog(
     const height = viewport?.height ?? view.innerHeight;
     const left = viewport?.offsetLeft ?? 0;
     const top = viewport?.offsetTop ?? 0;
-    dialog.style.left = `${left + gap}px`;
-    dialog.style.right = `${Math.max(0, view.innerWidth - left - width) + gap}px`;
-    dialog.style.top = `${top + gap}px`;
-    dialog.style.bottom = `${Math.max(0, view.innerHeight - top - height) + gap}px`;
-    dialog.style.maxWidth = `${Math.max(0, width - 2 * gap)}px`;
-    dialog.style.maxHeight = `${Math.max(0, height - 2 * gap)}px`;
+    dialog.style.left = `max(${left + gap}px, env(safe-area-inset-left))`;
+    dialog.style.right = `max(${Math.max(0, view.innerWidth - left - width) + gap}px, env(safe-area-inset-right))`;
+    dialog.style.top = `max(${top + gap}px, env(safe-area-inset-top))`;
+    dialog.style.bottom = `max(${Math.max(0, view.innerHeight - top - height) + gap}px, env(safe-area-inset-bottom))`;
+    dialog.style.maxWidth = `calc(${width}px - max(${gap}px, env(safe-area-inset-left)) - max(${gap}px, env(safe-area-inset-right)))`;
+    dialog.style.maxHeight = `calc(${height}px - max(${gap}px, env(safe-area-inset-top)) - max(${gap}px, env(safe-area-inset-bottom)))`;
     const focused = doc.activeElement;
     if (focused instanceof HTMLElement && dialog.contains(focused) && focused !== dialog)
       focused.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "instant" });
