@@ -40,10 +40,11 @@ bucket gates below. Repository files do not configure Railway or GitHub settings
    `/readyz` must pass, and the deployment status must appear on the PR. This is
    the production-equivalent staging build check, alongside GitHub's test/build
    checks. Confirm failed or superseded deployments cannot satisfy the gate.
-4. Protect GitHub `main`: require the nine CI checks, `checks (typecheck)`,
+4. Protect GitHub `main`: require the ten CI checks, `checks (typecheck)`,
    `checks (unit)`, `checks (build)`, `checks (secrets)`, `checks (eval)`,
-   `checks (migration)`, `checks (backup)`, `checks (docker)` and
-   `integration-browser`, plus the Railway PR deployment status covering both
+   `checks (migration)`, `checks (backup)`, `checks (docker)`,
+   `checks (design-tokens)` and `integration-browser` (the gate over the parallel
+   integration/browser/design jobs; see [DEVELOPMENT.md](DEVELOPMENT.md#ci)), plus the Railway PR deployment status covering both
    services. Select the actual status name(s) emitted by the connected Railway
    integration after the rehearsal; the names and whether it aggregates services
    are unverified. Also enable **Require branches to be up to date before

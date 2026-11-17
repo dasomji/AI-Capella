@@ -84,3 +84,44 @@ The final full-sequence foundation rerun also passed (ten expected signed-out
 Owned service containers, image tags and the short Chromium temporary directory
 were removed; evidence remains in the checkout. Workflow validation was local;
 no GitHub-hosted CI run was triggered.
+
+## GitHub CI speed-up and failure output (2026-11-17)
+
+Layout, failure reading and caches are in [DEVELOPMENT.md](DEVELOPMENT.md#ci). Verified on
+GitHub with `workflow_dispatch` runs of a throwaway branch `ci/speedup` (design-system `d96bae9`
+plus the CI change; deleted afterwards).
+
+| | Before (single `integration-browser`) | After (6 parallel jobs + gate) |
+|---|---|---|
+| Wall clock to all green | 31.3 min (run 44153696043, same base commit); 15.6–22.2 min, median 19.6, before the design suites were added | 7.6 min for the final files (run 44167030276); 6.6 min warm (44161528510, attempt 1); cold ≈ warm + 10–15 s |
+| Critical path | `integration-browser`: every integration/browser/design suite in series | `integration` ≈ 6–6.5 min: test:integration alone takes 5–6 min |
+| `checks (…)` legs | ≤ 3 min, parallel | unchanged, ≤ 3 min |
+| Runner minutes per run | ≈ 42 | ≈ 46 (more jobs, each with ~30–45 s of setup) |
+
+Cold (run 44157436088: every cache missed) and warm (run 44161528510: every cache hit) setup
+differ by only 5–15 s per job. GitHub's network makes `npm ci`, the Chromium download and the
+emulator jars cheap; the rules-test `node_modules` cache saves about 12 s on `checks (migration)`.
+The gain comes from parallelism, not caching.
+
+Findings from the verification runs:
+
+- Without a build, `test:integration` cannot pass. In the old job it passed only because the
+  build of an earlier step happened to have run. The integration job now builds explicitly.
+  Without the build, the hosting tests failed with `kill ESRCH` and then **hung until the job
+  timeout** (cold run). `run-suite.mjs` now reports a suite stopped by a timeout or cancel instead
+  of leaving no summary.
+- `tests/transcription.test.ts:481` ("persistent or hung heartbeat … release before lease expiry",
+  `tick()` must finish in < 5000 ms) failed once and passed on re-run of the same commit. It is a
+  wall-clock flake and should be tracked as a test fix. CI keeps it unchanged.
+- The design-system showcase suite takes ~5 min in its own job against ~4 min inside the old job
+  (same commit, same environment). The cause is unexplained (runner variance is the likely one), and
+  the suite stays inside the critical path set by `integration`.
+
+Deliberate-failure runs (unit, integration and power-hint assertions committed only on the
+throwaway branch): runs 44164113159 and 44165695395. The second one shows the final behaviour: a failed suite no longer stops the independent suites of its job (Phase 2b still ran and passed after the power hint failed), and Vitest's duplicate annotations are gone. Each failure produced one annotation at the
+exact `file:line` (`tests/unit.test.ts:280` for both time zones, `tests/integration.test.ts:72`,
+`scripts/browser-power-hint.mjs:114`). Each annotation contains the assertion diff, the log path,
+the artifact name and the re-run command. The gate's overview listed the four failures,
+`failure-<job>` artifacts held the per-suite log, the Playwright trace and the final screenshot,
+and the green jobs still reported their timing.
+

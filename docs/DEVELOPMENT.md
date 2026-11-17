@@ -105,17 +105,75 @@ services. Development alone may initialize a missing bucket; production never do
 Configured public browser origin must reach S3 for signed downloads. Preserve originals
 indefinitely; cleanup removes transient artifacts and explicitly deleted ensemble data.
 
-CI runs only when a PR is opened, updated, reopened or marked ready (plus manual reruns), never after merge; see docs/DEPLOYMENT.md. It builds app/worker Docker images without pushing and
-has no deployment permissions. It runs typecheck, UTC/non-UTC unit suites, build,
-sentinel scanner, disposable integration + browser suites, fresh migrations/drift,
-eval replay, backup and graceful operations; Phase 6a migration tests are mandatory; missing scripts fail CI. CI installs the
-rules-test dependencies, Java 21 and caches Firebase emulator jars. SeaweedFS is launched by a workflow Docker step because
-GitHub service definitions cannot set its server command; Postgres and Mailpit use service containers. Integration hosting tests require
-Mailpit SMTP on 21025 and API on 28025 (MAILPIT_URL overrides the API URL);
-each browser harness owns its separate mail fixture. No paid APIs or repository secrets. The legacy standalone rules suite is superseded by app authorization tests, but
-the migration suite uses the local Firestore emulator and its rules-test tooling. Legacy files stay
-for migration/retirement evidence. See DEPLOYMENT.md and SYSADMIN.md for operations.
+CI ([layout, failures and caches](#ci)) runs only when a PR is opened, updated, reopened or
+marked ready (plus manual reruns), never after merge; see docs/DEPLOYMENT.md. It builds
+app/worker Docker images without pushing and has no deployment permissions, paid APIs or
+repository secrets. Phase 6a migration tests are mandatory; missing scripts fail CI. The legacy
+standalone rules suite is superseded by app authorization tests, but the migration suite uses the
+local Firestore emulator and its rules-test tooling. Legacy files stay for migration/retirement
+evidence. See DEPLOYMENT.md and SYSADMIN.md for operations.
 
 Migration export/import runs on an operator machine or a dedicated CI job with full
 dependencies. Production images omit firebase-admin, Vite, Vitest, Playwright and drizzle-kit.
 `test:ops` requires `npm run build` first and fails immediately without dist.
+
+## CI
+
+Workflow `.github/workflows/deploy.yml` ("Production CI (no deployment)"). All jobs start
+together. Superseded runs of the same PR are cancelled.
+
+| Job (check name) | What it runs | Fixtures |
+|---|---|---|
+| `checks (typecheck)` … `checks (design-tokens)` (9) | typecheck; unit (runner UTC + `TZ=America/New_York`); build; check:secrets; eval dry run; build + test:migration (Java 21, Firestore emulator); test:backup; docker (web + worker images, ops:canary in each); design token + utility guards | own containers where needed |
+| `integration (…)` | db:migrate on a fresh database, schema drift, build (hosting tests serve `dist/`), test:integration | Postgres + Mailpit services, SeaweedFS |
+| `browser (power hint; accounts …)` | power hint, Phase 2b | harness-owned Postgres/Mailpit/build per script, SeaweedFS |
+| `browser (offline …; Together sync …)` | Phase 5a, Together sync, sync acceptance, then build + test:ops | same; **timing-sensitive sync runs alone on this runner, sequentially** |
+| `browser (admin parity; auth flows; transcription …)` | admin parity, auth flows, transcription | same |
+| `design (design-system showcase; theme extension)` | theme extension, design-system showcase | Vite dev server only |
+| `design (keyboard parity; renderer themes)` | keyboard parity, renderer themes | Vite dev server only |
+| `integration-browser` | gate + run overview + coverage guard | none |
+
+Required checks are the nine `checks (…)` and `integration-browser`. The gate fails when any
+integration/browser/design job fails or is cancelled or skipped, so those jobs need not be required
+individually. Without `BROWSER_SCRIPT`, `npm run test:browser` runs five scripts in one fixture.
+CI runs each one as `BROWSER_SCRIPT=<script> npm run test:browser` with its own fresh fixture;
+every script creates its own accounts. `scripts/ci/check-coverage.mjs` (run by the gate) fails if a
+script is added to that default sequence, or any `test*`/`check:*` npm script exists, that CI
+doesn't run. Documented exceptions are listed in the script. Timeouts are 10 min for checks, 20 min
+for the other jobs and 5 min for the gate, about 3× the observed maximum.
+
+**Reading a failure.** Every suite step runs through `scripts/ci/run-suite.mjs`. It keeps the full
+log and parses node:test TAP, Vitest, tsc and uncaught Node/Playwright errors.
+
+1. The run's **Summary** page starts with the *CI overview* from `integration-browser`. Under
+   "What failed" it names the job, the suite, the first assertion with `file:line`, and the
+   artifact.
+2. The failed job's own section on the same page gives the command, the command to re-run it
+   locally, each parsed failure (test name, assertion, location), the last 40 log lines and the
+   evidence count.
+3. `::error` annotations (max. 5 per suite) appear on the run page and at `file:line` in the PR's
+   *Files changed* view.
+4. Artifact **`failure-<job>`** (14 days) holds per-suite logs in `.review-evidence/ci/logs/<suite>.log`,
+   screenshots, Playwright traces in `.review-evidence/playwright/*.zip` (open with
+   `npx playwright show-trace <zip>`) and `seaweedfs.log`. All browser-isolated suites record traces.
+   The Vite design suites keep their own screenshots/JSON evidence.
+
+A green run shows only the overview table: per job its duration, setup time outside suites,
+per-suite time and cache hit/miss. Outside Actions the runner works the same way, for example
+`node scripts/ci/run-suite.mjs --id x --title X -- npm test`, writing to `.review-evidence/ci/`.
+
+**Caches.** These caches are exact-key; a miss re-downloads and saves:
+
+- npm download cache via setup-node, keyed on `package-lock.json`. `npm ci` still installs clean.
+- Playwright Chromium in `~/.cache/ms-playwright`, keyed on the installed Playwright version
+  rather than the lockfile.
+- Firebase emulator jars, keyed on `rules-test/package-lock.json`.
+- `rules-test/node_modules`, keyed on Node version + `rules-test/package-lock.json`. On a hit,
+  `npm ci --prefix rules-test` is skipped.
+
+GitHub scopes caches per branch. A PR reads its own caches and those of `main`, but CI never runs on
+`main`, so the first run of a new PR is cold (see the cold/warm numbers in
+CI_HARNESS_VERIFICATION.md). App `node_modules`, Docker layers and apt packages are deliberately
+not cached. `scripts/ci/install-system-deps.sh` skips `apt-get update` unless the cached package
+index fails.
+
