@@ -310,6 +310,8 @@ it('keeps canvas alpha and pigment mixing strengths in numeric theme roles', asy
         const alpha=callee.endsWith('.rgba') || callee==='paper' ? node.arguments[0] : ['withAlpha','towardPaper','towardInk'].includes(callee) ? node.arguments[1] : undefined;
         if(alpha) {
           function strength(child: import('typescript').Node) {
+            // Gaussian sample coordinates shape a mask; they are renderer geometry, not paint strength.
+            if(ts.isCallExpression(child) && child.expression.getText(ast)==='Math.exp')return;
             if(ts.isNumericLiteral(child) && +child.text>0 && +child.text<1)
               throw Error(`${name}: raw canvas paint strength ${child.getText(ast)} in ${node.getText(ast)}`);
             ts.forEachChild(child,strength);

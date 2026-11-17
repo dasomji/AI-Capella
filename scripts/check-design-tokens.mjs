@@ -14,9 +14,8 @@ const paletteClass = /(?:^|\s)tw:(?:[\w-]+:)*(?:bg|text|border|outline|ring|fill
 // Every arbitrary-valued utility is covered, including nested selector variants.
 const arbitraryAesthetic = /tw:(?:[^\s"'`]*:)?-?[a-z][\w-]*-(?:\[[^\]]+\]|\([^)]*\))|tw:(?:[^\s"'`]*:)?\[[^\]]+\]/g;
 const numberedName = /(?:-\d{4}-\d+|-\d{2,}|-\d+(?:px|rem|em|ms))(?:$|[^\w-])/;
-// Enabled after the semantic migration. Exporting the rule separately makes its contract
-// testable while the concurrent conversion is in flight.
-export let enforceSemanticNames = false;
+// The semantic migration is complete: generated/value-encoding names cannot return.
+export const enforceSemanticNames = true;
 export function checkSemanticName(name) { return numberedName.test(name); }
 const adapterTokens = new Set([...fs.readFileSync(path.join(root, 'src/design-system/tokens.css'), 'utf8').matchAll(/(--[\w-]+)\s*:\s*var\(--ds-/g)].map(m => m[1]));
 function mappedScale(utility) {
