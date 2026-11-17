@@ -53,7 +53,7 @@ function PermissionFields({
   const d = adminManagementMessages[language];
   return (
     <Workspace part="permissions">
-      {value.isLead && !invitation && <Workspace as="p" part="paragraph">{d.leadHint}</Workspace>}
+      {value.isLead && !invitation && <p>{d.leadHint}</p>}
       {permissionKeys
         .filter((k) => !invitation || k !== "isLead")
         .map((k) => (
