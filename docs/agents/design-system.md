@@ -3,16 +3,16 @@
 `src/design-system/tokens.css` is the authored design-value source. It defines primitive
 pigments, shared theme-independent roles and complete varying semantic mappings for `night-paper`, `parchment`, and `velvet`, the
 orthogonal Revival type preset and Tailwind's semantic adapter.
-P1 preserves the existing appearance; owner decisions in AICAP-28 remain pending.
+The system preserves the existing appearance; owner decisions in AICAP-28 remain pending.
 
 ```mermaid
 flowchart LR
   T[tokens.css: primitives → semantic roles] --> U["@theme inline: tw: utilities"]
-  U --> R[Pure typed recipes: P3]
-  R --> C[React and DOM adapters: P3]
+  U --> R[Pure typed recipes]
+  R --> C[React and DOM adapters]
   C --> S[Screens]
   T --> A[Immutable theme snapshot]
-  A --> D[Canvas / SVG / PDF inputs: P2]
+  A --> D[Canvas / SVG / PDF inputs]
 ```
 
 ## Add a token
@@ -69,7 +69,7 @@ SSR-safe. It reads each role with `getPropertyValue` using `theme/roles.generate
 from `tokens.css` by the Vite build/watch plugin; the regression test checks exact equality.
 It never relies on CSSStyleDeclaration custom-property enumeration. Load the eager CSS first.
 
-P2/P3 API:
+Theme API:
 
 - `subscribeTheme(fn, { immediate: true })` delivers the current snapshot and subsequent revisions;
   dispose the returned function. Without `immediate`, delivery starts on the next change.
@@ -195,7 +195,7 @@ The guard is local AST analysis with the limitations above, not an interprocedur
 | Radii | Legacy control/card/dialog, square field, admin control, transcription tile/card/dialog, sheet/menu/chip/round |
 | State | Disabled base/admin/auth/offline and dimmed-voice opacities remain separate |
 | Effects / motion | Material emboss vs menu/admin/focus shadows; switch/fast/normal/slow and transcription/dedication timings; distinct stacking contexts |
-| Display / print | Display ink/fonts versus stable print paper/ink and LiberationSerif / LightScoreEngraving asset identities; engraving is unchanged in P1 |
+| Display / print | Display ink/fonts versus stable print paper/ink and LiberationSerif / LightScoreEngraving asset identities; engraving is unchanged |
 
 The old offline marker fallback is explicitly mapped to `accent-offline`, so introducing a
 complete default accent fixes focus without recoloring that marker. `paper.ts` writes its
@@ -205,14 +205,14 @@ Material recipes and the renderer accessor consume the chosen semantic role dire
 
 ## Verification
 
-Run the ticket's `typecheck`, `test`, `build`, and `check:design-tokens` commands. P1's external
-evidence lives under `/tmp/aicap-design/evidence/p1/`. Production-built screenshots and computed
-styles cover auth, library, roll, staff, ensemble sheet, transcription dialog and admin in both
-main themes at desktop/mobile sizes; offline, SSR asset, theme contract and dev HMR checks
-complement that matrix. The repository currently has no ladder `docs/agents/verify.md` or
-`check:fast`/`check:full`/`verify:app` contract; do not label these commands as those rungs.
+Run `npm run typecheck`, `npm test`, `npm run build`, `npm run check:design-tokens`,
+`npm run test:browser:design-system`, `npm run test:browser:theme-extension`,
+`npm run test:browser:renderer-themes`, and the isolated authentication/admin browser suites.
+Set `BROWSER_EVIDENCE` to an external evidence directory when collecting captures. CI runs the
+reusable contracts. Production-built browser checks cover auth, library, roll, staff, ensemble
+and account sheets, transcription and admin; renderer checks also compare live token edits
+against fresh instances. The repository currently has no ladder `docs/agents/verify.md` or
+`check:fast`/`check:full`/`verify:app` contract; these commands do not claim those rungs.
 
-P1 review-fix evidence and per-finding receipts: `/tmp/aicap-design/evidence/p1-fix/report.md`.
-
-P3 primitives, parity decisions, adapter examples and browser-check APIs:
+Primitives, parity decisions, adapter examples and browser-check APIs:
 [design-primitives.md](design-primitives.md).
