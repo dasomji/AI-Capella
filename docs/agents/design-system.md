@@ -3,7 +3,7 @@
 `src/design-system/tokens.css` is the authored design-value source. It defines primitive
 pigments, shared theme-independent roles and complete varying semantic mappings for `night-paper`, `parchment`, and `velvet`, the
 orthogonal Revival type preset and Tailwind's semantic adapter.
-The system preserves the existing appearance; owner decisions in AICAP-28 remain pending.
+AICAP-28 owner decisions now unify the foundation families; the decision contract below supersedes historical parity guidance for those roles.
 
 ```mermaid
 flowchart LR
@@ -70,7 +70,7 @@ policy). Color scheme comes from the token block. Copy an existing block to reta
 complete key set, then change role values there: player disc, selected pills, voice materials,
 library cover ground, sheens and renderer effects are included. Shared roles supply geometry
 and typography; they do not hide an extra display palette. Existing translated labels remain;
-`menuLabel: null` keeps Velvet URL-only. New entries can use their registry label.
+`menuLabel: null` keeps experimental Velvet out of the main appearance choices. New entries can use their registry label.
 
 Components never select a theme ID. CSS material recipes query `material-family` and
 `color-scheme`; renderers consume the typed `material-strategy` role for paper kind and
@@ -118,9 +118,9 @@ Theme API:
 Cached reads do not poll DOM attributes; the preference API invalidates synchronously and the
 attribute observer handles external attribute edits at its next delivery. Subscriber errors
 are isolated with `reportError`; nested invalidation continues the current pass with the
-latest snapshot for remaining listeners. There is no quiet-moment preference override API.
+latest snapshot for remaining listeners. D05 queues preferences through the repertoire boundary described below.
 
-Reuse one snapshot per drawing frame; never read computed styles per note. Renderer caches compare revisions; see `renderer-themes.md`. Verify actual playback swaps as
+Only apply preferences through the theme controller. Reuse one snapshot per drawing frame; never read computed styles per note. Renderer caches compare revisions; see `renderer-themes.md`. Verify actual playback swaps as
 well as the showcase.
 
 Only width thresholds occupy `--breakpoint-*` in the static `@theme` block. The landscape height
@@ -256,26 +256,27 @@ Bundled `@font-face` identities register assets rather than choose stacks. `safe
 expected Verovio cursor stylesheet remains exempt by its exact SHA-256; do not relax the sanitizer.
 The guard is local AST analysis with the limitations above, not an interprocedural proof.
 
-## Parity roles retained
+## Applied foundation decisions (AICAP-28)
 
-| Family | Distinct roles retained for current appearance |
+| Decision | Contract |
 | --- | --- |
-| DOM/canvas grounds | `surface-sunken/surface/raised/overlay/hover` vs `canvas-surface-sunken/surface/raised/overlay`; `score-stage-top/middle/bottom`; material sheet/card grounds |
-| Gold accents | `accent/focus`, `admin-accent`, `transcription-accent`, `accent-offline`, `accent-invitation`, `score-query`, voice 3 / feedback idea; the historical admin system surface remains a named input though its erroneous OS override is removed |
-| Gold materials | `material-gold-deep/mid/light` vs `material-wordmark-gold-deep/mid/light`, plus `material-gold-leaf`; stop positions remain separate |
-| Ink / whites | `ink`, `material-wordmark-ink`, `score-key-light`, warm/hot light, reading-strip lamp vs `material-paper-lamp`, fibre light/ink |
-| Type | DOM body/mono/display/heading/song-title, shorter auth/admin/transcription stacks (`font-auth-*`), canvas text/mono/display, mark/brand/script/music; Revival does not silently change auth/admin or canvas text |
-| Controls / spacing | 42px legacy control vs 44px auth/admin/transcription heights; compact controls; existing space scale and score ruler height |
-| Radii | Legacy control/card/dialog, square field, admin control, transcription tile/card/dialog, sheet/menu/chip/round |
-| State | Disabled base/admin/auth/offline and dimmed-voice opacities remain separate |
-| Effects / motion | Material emboss vs menu/admin/focus shadows; switch/fast/normal/slow and transcription/dedication timings; distinct stacking contexts |
-| Display / print | Display ink/fonts versus stable print paper/ink and LiberationSerif / LightScoreEngraving asset identities; engraving is unchanged |
+| D01 | One accent family per theme: `accent`, `admin-accent`, `transcription-accent`, `accent-offline`, `accent-invitation` and domain gold all resolve to one accent. Main-app night gold `#d4ad65` is retained; Parchment uses existing invitation gold `#795315`, which also meets normal-text contrast. Admin's independently authored palette supplies no design precedent. |
+| D02 | One paper hierarchy, with intentional sunken/page/raised/overlay/hover shades. Admin uses `surface`, `ink`, `ink-secondary` and `rule-strong`; canvas elevations and stage stops consume the same hierarchy. Night layers retain the main app's warm dark paper; Parchment retains `#e3d2ae` / `#e8d8b6` / `#eee2c6` / `#f3e9d3` / `#f7f0df`. Velvet retains its experimental wave/glass materials. Texture, transmission, occlusion and glow remain distinct material inputs. |
+| D03 | Default type is antique for named brand (`Baltimore Black Slope`) and piece-title (`Modern Antique`) roles. Atkinson Hyperlegible supplies body, controls, instructional headings, forms, lyrics and monospace information. The compatibility `revival` preset name now means this mixed policy. Remington no longer overrides body/control/mono. Auth branding explicitly uses `font-brand`. |
+| D04 | Supported main looks are Night paper and Parchment, with the current title. `theme/resolver.js` catalogues Velvet, earlier/staff/stage titles, earlier ribbon, alternate paper kinds, Bodoni and gel overrides in `experimentalPresets`. Legacy URLs/storage remain readable; active IDs are exposed as `data-experimental`, menus identify experimental appearance, and the paper menu is explicitly experimental in EN/DE. Velvet no longer forces an older title. |
+| D05 B | Hold every requested appearance change throughout the player, including stopped/paused playback. `setAppearanceRehearsing(true)` enters the hold; only repertoire entry calls `false`. `requestAppearanceChange(category, apply)` keeps the last request per category. Explicit theme choices, OS changes, cross-tab theme/type/title changes and paper switches use this boundary. A manual choice shows EN/DE deferred guidance. A queued explicit preference takes precedence over subsequent OS changes. Renderers still support immediate snapshot changes outside a rehearsal; no audio or session lifecycle is changed. |
+| D07 | `gold-ink-deep`, `gold-ink`, `gold-ink-light` are the single ink family. Material/wordmark aliases share those stops. Quiet music marks end in the deep stop; the brand and decorative leaf can use the brighter highlight. Existing main-app material pigments are retained where legible; gradients/interpolation algorithms are unchanged. |
+| D10 (tokens) | `control-height-touch` / `control-target-touch` = 44px, `control-height-compact` = 32px; `control-padding-inline/block` = 16/8px, `-compact` = 10/4px; `control-gap` / `control-gap-compact` = 8/6px. Matching spacing utilities exist. `tw:touch:` means width ≤ `panel` (900px) **or any coarse pointer**, including hybrid laptops. Standard/full-width controls use 44px; explicit compact variants restore ≥44px min-height AND min-width plus ordinary padding/gap under `touch`. Music-specific shapes remain distinct. |
+| D18 | PDF stays dark-on-white through immutable print paper/ink and bundled print fonts, independent of display appearance. No engraving changes. Unit and rasterized mid-job print checks enforce that separation. |
+| D19 | Supported browser floor: Safari 16.4+, Chrome 111+, Firefox 128+ ([Tailwind compatibility](https://tailwindcss.com/docs/compatibility)). The owner accepted this floor; actual choir-device inventory and floor-version/device testing remain rollout checks, not completed evidence. Affected singers should update the browser or iPad/iPhone OS, or use a device meeting the floor. Local Chromium coverage alone does not establish Safari/Firefox support or style-query support on every floor version. |
+| D20 | Normal text roles meet ≥4.5:1 on every flat surface layer; accent/focus meets ≥3:1 as a control indicator. Muted text uses existing main-app secondary ink (`#b5aebb` / `#5b4a3a`). Parchment danger/success/warning are darkened to `#9a303a` / `#1c5c37` / `#853a2f`. This fixes DESK-06, TAB-08 and MOB-09 with margin on the darkest paper layer. Decorative rules and disabled states are not normal-text indicators. Textured/composited browser samples complement the flat-token regression. |
+| D22 B | A01 transcription/invitation/lead ink canonicalizes to `#795315`; A02 browser chrome canonicalizes to page `#e8d8b6`. Other material/light/voice pigments are not merged merely because they are nearby. |
 
-The old offline marker fallback is explicitly mapped to `accent-offline`, so introducing a
-complete default accent fixes focus without recoloring that marker. `paper.ts` writes its
-procedural texture to `--ds-material-fibre-live` and notifies the controller. Paper-theme
-`material-fibre` roles use that live input with the authored SVG fallback; velvet keeps `none`.
-Material recipes and the renderer accessor consume the chosen semantic role directly.
+Retained compatibility role names preserve consumer APIs, not independently authored palettes.
+Voice colors and category feedback colors remain pending their separate owner review. Material
+strategies (`light`/`ink`, lantern/gel) retain their renderer algorithms. `paper.ts` writes the
+procedural output to `--ds-material-fibre-live`; output completion is not a new preference.
+Other component decisions are owned by their recipes; see [design-primitives.md](design-primitives.md).
 
 ## Verification
 
