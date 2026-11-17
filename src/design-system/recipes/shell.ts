@@ -4,8 +4,8 @@ export {accountStageRecipe, brandRecipe} from "./auth";
 
 export function appShellRecipe() {
   return {
-    root: "tw:h-app-height tw:w-full tw:overflow-hidden tw:motion-app-transition tw:[&.arriving]:opacity-opacity-hidden tw:[&.arriving]:pointer-events-none tw:[&.arriving]:[transition:none] tw:relative tw:z-app-z-index",
-    view: "view tw:hidden tw:h-full",
+    root: "tw:flex tw:flex-col tw:h-app-height tw:w-full tw:overflow-hidden tw:motion-app-transition tw:[&.arriving]:opacity-opacity-hidden tw:[&.arriving]:pointer-events-none tw:[&.arriving]:[transition:none] tw:relative tw:z-app-z-index",
+    view: "view tw:hidden tw:flex-1 tw:min-h-flush",
     landing: "tw:[#app.mode-landing_&]:flex tw:relative tw:select-none tw:select-none tw:touch-callout-none tw:flex-col tw:items-center tw:justify-center-safe tw:gap-landing-gap tw:p-landing-padding tw:box-border tw:overflow-y-auto tw:overflow-x-hidden tw:[&>*]:shrink-0 tw:[:root[data-title='zeile']_&]:gap-landing-gap-written tw:[:root[data-title='zeile']_&]:pb-landing-padding-bottom tw:[:root[data-title='buehne']_&]:gap-landing-gap-written tw:[:root[data-title='buehne']_&]:pb-landing-padding-bottom",
     library: "tw:[#app.mode-library_&]:flex tw:relative tw:flex-col",
     player: "tw:[#app.mode-player_&]:grid",
