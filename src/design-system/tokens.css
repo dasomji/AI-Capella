@@ -1249,4 +1249,6 @@
   --ds-tour-note-width: min(360px, calc(100vw - 20px));
   --ds-power-note-width: min(440px, calc(100vw - 32px));
   --ds-note-enter-offset: 16px;
+  --ds-duration-note-out: 170ms;
+  --ds-duration-note-in: 300ms;
 }
