@@ -54,3 +54,6 @@
 
 /* Native numeric fields retain textfield appearance; Tailwind exposes only auto/none. */
 @utility appearance-textfield { appearance:textfield; }
+
+@custom-variant reduced-transparency { @media (prefers-reduced-transparency: reduce) { @slot; } }
+@custom-variant hover-none { @media (hover: none) { @slot; } }

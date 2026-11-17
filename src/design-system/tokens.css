@@ -13,6 +13,8 @@
 
 /* Primitive palette; only semantic --ds-* roles are public. */
 :root {
+  --ds-scale-card-lift: 1.03;
+  --ds-compositor-opacity: opacity;
   --ds-position-center: 50%;
   --ds-space-note: calc(var(--ds-space-control) + var(--ds-space-tight) / 2);
   --pigment-material-paper-swatch-glow: rgb(255,208,156);
@@ -2522,6 +2524,7 @@
   --color-admin-secondary: var(--ds-admin-secondary);
   --color-admin-surface: var(--ds-admin-surface);
   --color-backdrop: var(--ds-backdrop);
+  --color-action-hover: var(--ds-action-hover);
   --color-component-action-hover: var(--ds-component-action-hover);
   --color-component-menu-check: var(--ds-component-menu-check);
   --color-component-menu-hover: var(--ds-component-menu-hover);
@@ -3113,6 +3116,7 @@
   --z-index-drop-veil-z-index: var(--ds-drop-veil-z-index);
   --z-index-intro-z-index: var(--ds-intro-z-index);
   --z-index-library-update-layer: var(--ds-library-update-layer);
+  --z-index-menu: var(--ds-layer-note);
   --z-index-note: var(--ds-layer-note);
   --z-index-panel-layer-fps: var(--ds-panel-layer-fps);
   --z-index-panel-layer-sync-debug: var(--ds-panel-layer-sync-debug);
