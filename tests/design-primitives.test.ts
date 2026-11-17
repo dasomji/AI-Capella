@@ -546,6 +546,20 @@ describe("P3 review regression contracts", () => {
 });
 
 describe("legacy overlay exit transport", () => {
+  it("keeps a replacement sheet alive when the opening menu finishes closing", () => {
+    let finishExit!: () => void;
+    const menu = modal({ exit: finish => { finishExit = finish; } });
+    menu.api.close();
+    const account = modal();
+    const focused = document.activeElement;
+    finishExit();
+    expect(menu.dialog.open).toBe(false);
+    expect(account.dialog.open).toBe(true);
+    expect(document.activeElement).toBe(focused);
+    expect(document.body.style.overflow).toBe("hidden");
+    account.api.close();
+  });
+
   it("waits for transitionend or the 160ms fallback and skips waiting under reduced motion", () => {
     vi.useFakeTimers();
     const finish = vi.fn(),

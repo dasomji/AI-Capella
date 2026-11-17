@@ -67,13 +67,14 @@ export function openDialog(
   let closed = false,
     closing = false,
     busy = options.busy ?? false;
+  let closingChildren: DialogController[] | undefined;
   const finish = (notify: boolean) => {
     if (closed) return;
     closed = true;
-    // Closing a parent also releases any dependent top layers.
+    // Layers opened after an exit starts replace the closing layer; they are not its children.
     const index = stack.findIndex((entry) => entry.controller === controller);
-    for (const entry of stack.slice(index + 1).reverse())
-      entry.controller.dispose();
+    for (const child of (closingChildren ?? stack.slice(index + 1).map(entry => entry.controller)).reverse())
+      child.dispose();
     dialog.removeEventListener("cancel", onCancel);
     dialog.removeEventListener("close", onNativeClose);
     dialog.removeEventListener("pointerdown", onPointer);
@@ -84,6 +85,7 @@ export function openDialog(
     if (
       previousFocus instanceof HTMLElement &&
       previousFocus.isConnected &&
+      (!stack.length || stack.at(-1)!.dialog.contains(previousFocus)) &&
       !previousFocus.closest("[inert]")
     )
       previousFocus.focus({ preventScroll: true });
@@ -109,6 +111,8 @@ export function openDialog(
     close() {
       if (closed || closing) return;
       closing = true;
+      const index = stack.findIndex(entry => entry.controller === controller);
+      closingChildren = stack.slice(index + 1).map(entry => entry.controller);
       if (options.exit) options.exit(() => finish(true));
       else finish(true);
     },
