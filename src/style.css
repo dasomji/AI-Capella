@@ -3390,7 +3390,7 @@ body:has(#app.mode-landing)::after {
 .domain-sheet form > label { display:grid; gap:6px; color:var(--paper-dim); font:500 11px var(--ds-font-auth-mono); text-transform:uppercase; letter-spacing:.08em; }
 .domain-sheet input:not([type=checkbox]) { width:100%; min-width:0; box-sizing:border-box; border-color:var(--paper-dim); padding:8px 0; font:400 16px var(--ds-font-auth-body); }
 .capability-row { display:flex; flex-wrap:wrap; gap:12px 18px; }
-.capability-switch input:checked + .capability-switch input:checked + .capability-switch input:focus-visible + .row-menu { position:relative; flex:none; }
+.row-menu { position:relative; flex:none; }
 .row-menu summary { list-style:none; cursor:pointer; padding:6px 10px; font-size:22px; color:var(--paper-dim); }
 .row-menu summary::-webkit-details-marker { display:none; }
 .landing-empty { text-align:center; border:0; max-width:360px; margin:auto; }

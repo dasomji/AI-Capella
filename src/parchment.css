@@ -316,7 +316,7 @@
    night paper they are paper-light -- their small print turned round with them. ---------------- */
 
 :root[data-ground='pergament'] .intro-count {
-  color: rgb(243 233 211 / 0.62);
+  color: var(--ds-note-secondary);
 }
 
 :root[data-ground='pergament'] .intro-dots i {
