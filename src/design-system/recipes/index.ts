@@ -4,6 +4,10 @@ export * from "./overlays";
 /** Layout-only extension, deliberately finite: visual overrides are not part of the API. */
 export const layoutClasses = [
   "tw:w-full",
+  "tw:my-20",
+  "tw:gap-0",
+  "tw:mt-10",
+  "tw:pr-76",
   "tw:m-4",
   "tw:mb-20",
   "tw:absolute",
