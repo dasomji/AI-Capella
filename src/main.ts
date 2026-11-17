@@ -865,8 +865,8 @@ function renderLanding(_now=false) {
  for(const id of unlockedEnsembles().filter(id=>id!==currentEnsemble)){const b=createButton({variant:'ensemble-other',text:ensembleName(id)});b.onclick=()=>{setActiveEnsemble(id);renderLanding(true);};dedicationEl.append(b);}
  document.querySelector<HTMLElement>('#mode-ensemble-btn')!.hidden=inPublicFolder();dedicationEl.classList.add('written');renderModeControls();
 }
-const createEnsemble=()=>createEnsembleSheet(id=>{setActiveEnsemble(id);sessionStorage.setItem(MODE_SWITCH_KEY,'solo');location.reload();});
-document.querySelector('#landing-create')!.addEventListener('click',createEnsemble);
+const createEnsemble=(opener:HTMLElement)=>createEnsembleSheet(id=>{setActiveEnsemble(id);sessionStorage.setItem(MODE_SWITCH_KEY,'solo');location.reload();},opener);
+document.querySelector('#landing-create')!.addEventListener('click',event=>createEnsemble(event.currentTarget as HTMLElement));
 document.querySelector('#landing-samples')!.addEventListener('click',()=>{setActiveEnsemble(PUBLIC_ID);currentEnsemble=PUBLIC_ID;setViewMode('library');void runBootstrap();});
 function renderLibraryHead() {
  const btn=createButton({variant:'ensemble-switch',text:ensembleName(currentEnsemble)});btn.append(libraryIcon('chevronDown'));btn.onclick=()=>void openEnsembleMenu(btn);libTitleEl.replaceChildren(btn);libTitleEl.classList.add('ens-title');
@@ -875,7 +875,7 @@ function renderLibraryHead() {
 }
 async function openEnsembleMenu(anchor:HTMLElement) {
  const items:Parameters<typeof openMenu>[1]=[...unlockedEnsembles(),PUBLIC_ID].map(id=>({label:ensembleName(id),icon:'users',checked:id===currentEnsemble,onSelect:()=>void switchEnsemble(id)}));
- items.push({label:pt('createEnsemble'),disabled:isOffline(),icon:'plus',onSelect:createEnsemble});
+ items.push({label:pt('createEnsemble'),disabled:isOffline(),icon:'plus',onSelect:()=>createEnsemble(anchor)});
  if(leads(currentEnsemble)||ensembleById(currentEnsemble)?.capabilities.manageMembers)items.push({label:pt('membersInvitations')+(isOffline()?' · '+off('online'):''),disabled:isOffline(),icon:'users',onSelect:()=>void membersSheet(currentEnsemble,anchor)});
  if(leads(currentEnsemble))items.push({disabled:isOffline(),label:t('renameEnsemble'),icon:'pencil',onSelect:()=>void renameCurrentEnsemble()});
  if(!inPublicFolder()) {

@@ -132,7 +132,7 @@ async function action(fn: () => Promise<void>) {
     toast(domainError((e as Error).message), "error");
   }
 }
-export function createEnsembleSheet(done: (id: string) => void) {
+export function createEnsembleSheet(done: (id: string) => void, opener?: HTMLElement) {
   const body = element("form");
   body.className = "sheet-body domain-sheet";
   const name = field(body, pt("ensembleName"), "text", "domain-create");
@@ -170,7 +170,7 @@ export function createEnsembleSheet(done: (id: string) => void) {
       }
     });
   };
-  openSheet(pt("createEnsemble"), body);
+  openSheet(pt("createEnsemble"), body, opener);
 }
 export async function membersSheet(id: string, anchor?: HTMLElement) {
   const body = element("div");
