@@ -134,6 +134,7 @@ try {
         await page.getByText(/· This device$/).waitFor();
         await page.evaluate(() => document.fonts.ready);
         await page.locator('.sheet-root.open').waitFor();
+        await page.mouse.move(0, 0);
         await page.evaluate(async () => {
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           for (const animation of document.getAnimations()) {
