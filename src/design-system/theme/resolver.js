@@ -2,7 +2,7 @@
 export const themeRegistry = /** @type {const} */ ([
     { id: 'night-paper', menuLabel: 'designNight', label: 'Night paper', aliases: ['papier'], storage: 'papier', defaultStart: null, system: 'dark' },
     { id: 'parchment', menuLabel: 'designParchment', label: 'Parchment', aliases: ['pergament'], storage: 'pergament', defaultStart: null, system: 'light' },
-    { id: 'velvet', menuLabel: null, label: 'Velvet (experimental)', aliases: ['samt'], storage: 'samt', defaultStart: 'heute', system: null },
+    { id: 'velvet', menuLabel: null, label: 'Velvet (experimental)', aliases: ['samt'], storage: 'samt', defaultStart: null, system: null },
 ]);
 /** Retained only as named experimental device presets; never main appearance choices. */
 export const experimentalPresets = /** @type {const} */ ([
