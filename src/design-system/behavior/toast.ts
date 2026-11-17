@@ -10,6 +10,10 @@ export interface ToastMessage {
   kind: NonNullable<ToastOptions["kind"]>;
   id: number;
 }
+function duration(role: string) {
+  const value = readTheme().roles[role];
+  return parseFloat(value) * (value.endsWith("ms") ? 1 : 1000);
+}
 let message: ToastMessage | null = null;
 let sequence = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -36,7 +40,7 @@ export function dismissToast() {
     fadeTimer = setTimeout(() => {
       host.hidePopover?.();
       host.textContent = "";
-    }, parseFloat(readTheme().roles["toast-duration-exit"]));
+    }, duration("toast-duration-exit"));
   }
   listeners.forEach((fn) => fn());
 }
@@ -75,5 +79,5 @@ export function toast(text: string, kind: ToastMessage["kind"] = "info") {
   message = { text, kind, id: ++sequence };
   render();
   listeners.forEach((fn) => fn());
-  timer = setTimeout(dismissToast, parseFloat(readTheme().roles[kind === "error" ? "toast-duration-error" : "toast-duration-info"]));
+  timer = setTimeout(dismissToast, duration(kind === "error" ? "toast-duration-error" : "toast-duration-info"));
 }

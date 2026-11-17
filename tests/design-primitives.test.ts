@@ -768,7 +768,7 @@ describe('final review adapter and keyboard regressions', () => {
 it('uses token durations for toast lifetime and exit rather than numeric defaults', () => {
   vi.useFakeTimers();
   const original = { ...toastRoles };
-  Object.assign(toastRoles, { 'toast-duration-info': '17ms', 'toast-duration-error': '23ms', 'toast-duration-exit': '11ms' });
+  Object.assign(toastRoles, { 'toast-duration-info': '0.017s', 'toast-duration-error': '23ms', 'toast-duration-exit': '0.011s' });
   try {
     toast('Short info');
     vi.advanceTimersByTime(16); expect(getToast()?.text).toBe('Short info');

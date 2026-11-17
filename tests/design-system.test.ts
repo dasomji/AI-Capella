@@ -266,3 +266,29 @@ it('builds a loud fourth theme from every resolved paint alias', async () => {
   expect(paint.get('--ds-library-cover-background')).not.toBe('#15131f');
   expect(paint.size).toBeGreaterThan(200);
 });
+
+it('keeps ongoing guides and reusable scripts independent of phase evidence and archived revisions', async () => {
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const guides = [...readdirSync('docs/agents').map(n=>'docs/agents/'+n), ...readdirSync('docs/adr').map(n=>'docs/adr/'+n), 'GLOSSARY.md'];
+  for (const file of guides.filter(f=>f.endsWith('.md'))) {
+    const source=readFileSync(file,'utf8');
+    expect(source,file).not.toContain('/tmp/aicap-design/');
+    expect(source,file).not.toMatch(/\bP[1-9](?:[/.][0-9]|\b)(?!_)/);
+  }
+  for (const file of ['browser-design-system-runner','browser-p4c-parity','browser-p4c-tour-parity']) {
+    const source=readFileSync(`scripts/${file}.mjs`,'utf8');
+    expect(source,file).not.toMatch(/\/tmp\/aicap-design\/|tailf5ea68|\b[a-f0-9]{40}\b/);
+  }
+});
+it('runs acceptance and adapter parity with reusable keyboard, auth and admin checks in CI', async () => {
+  const { readFileSync } = await import('node:fs');
+  const workflow=readFileSync('.github/workflows/deploy.yml','utf8');
+  for(const command of ['test:browser:theme-extension','test:browser:design-system','test:browser:keyboard','test:browser:admin-parity','test:browser:auth-flows'])expect(workflow).toContain(`npm run ${command}`);
+});
+it('uses named toast, title intensity and print viewport roles at their consumers', async () => {
+  const { readFileSync } = await import('node:fs');
+  for(const [file,roles] of Object.entries({lightName:['light-name-letter-spacing','title-name-flare-core-alpha','title-name-flare-edge-alpha'],titleStage:['stage-beam-core-alpha','stage-grain-strand-alpha-min','stage-staff-dark-alpha'],exportPdf:['print-export-viewport-width']})){
+    const source=readFileSync(`src/${file}.ts`,'utf8');
+    for(const role of roles)expect(source,`${file}: ${role}`).toContain(`roles['${role}']`);
+  }
+});
