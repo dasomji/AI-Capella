@@ -1981,6 +1981,25 @@
 /* Tailwind adapter. No default pigment/font/size/radius/shadow vocabulary. */
 
 
+/* Administration layout (D06 A, D16 A): compact LightScore work pages with routed details. */
+:root {
+  --ds-admin-page-width: 80rem;
+  --ds-admin-page-inset: clamp(var(--ds-space-content), 3vw, var(--ds-space-panel));
+  --ds-admin-shell-top: calc(var(--ds-safe-top) + var(--ds-space-control));
+  --ds-admin-shell-bottom: calc(var(--ds-safe-bottom) + var(--ds-space-page));
+  --ds-admin-shell-left: calc(var(--ds-safe-left) + var(--ds-admin-page-inset));
+  --ds-admin-shell-right: calc(var(--ds-safe-right) + var(--ds-admin-page-inset));
+  --ds-admin-section-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  --ds-admin-metric-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  --ds-admin-definition-columns: minmax(7rem, 2fr) 3fr;
+  --ds-admin-records-width: 44rem;
+  --ds-admin-metrics-width: 30rem;
+  --ds-admin-filter-width: 11rem;
+  --ds-admin-search-width: 16rem;
+  --ds-admin-content-height: 24rem;
+  --ds-admin-picker-height: 18rem;
+}
+
 /* Workspace parity geometry; D06/D12/D16 retain these independent roles. */
 :root {
   --ds-workspace-inset: clamp(var(--ds-space-content),4vw,var(--ds-space-stage));
