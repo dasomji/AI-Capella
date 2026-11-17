@@ -351,7 +351,7 @@ function switchRecipeStyles({
       controlBase +
       " " +
       (variant === "admin" ? denseDisabled : disabledRecipe) +
-      (variant === "admin" ? " tw:min-h-sheet-dense tw:font-auth-mono tw:text-body-small tw:leading-leading-admin tw:relative tw:inline-block tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer " :
+      (variant === "admin" ? " tw:normal-nums tw:min-h-sheet-dense tw:font-auth-mono tw:text-body-small tw:leading-leading-admin tw:relative tw:inline-block tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer " :
       " tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-(length:--ds-stroke-focus) tw:peer-focus-visible:[outline-color:var(--ds-focus)] tw:peer-focus-visible:outline-offset-(--ds-space-compact) tw:peer-disabled:opacity-(--ds-opacity-disabled) tw:min-h-flush tw:leading-leading-body tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer ") +
       sizes[variant] +
       " " +
