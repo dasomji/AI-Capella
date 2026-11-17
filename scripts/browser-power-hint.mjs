@@ -16,7 +16,7 @@ const bundles = await build({
     load: (id) => id === fixtureId
       ? `import ${JSON.stringify(source("design-system/app.css"))};
          export { showPowerHint } from ${JSON.stringify(source("powerHint.ts"))};
-         export { openSheet, closeOverlay } from ${JSON.stringify(source("ui.ts"))};`
+         export { createSheet, createButton, closeOverlay } from ${JSON.stringify(source("design-system/dom/index.ts"))};`
       : undefined,
   }],
   build: {
@@ -45,18 +45,21 @@ try {
     await page.addScriptTag({ content: code });
     for (const order of ["hint-first", "sheet-first"]) {
       await page.evaluate((order) => {
-        const { showPowerHint, openSheet } = window.powerHintFixture;
+        const { showPowerHint, createSheet, createButton } = window.powerHintFixture;
         const content = document.createElement("div");
-        content.className = "sheet-body domain-sheet account-sheet";
-        content.innerHTML = '<button class="btn primary">Sign out</button><div style="height:180px"></div>';
+        content.className = "account-sheet";
+        content.append(createButton({ text: "Sign out", intent: "primary" }));
+        const spacer = document.createElement("div");
+        spacer.style.height = "180px";
+        content.append(spacer);
         content.querySelector("button").onclick = () => content.dataset.clicked = "true";
         if (order === "hint-first") showPowerHint();
-        openSheet("Account and devices", content);
+        createSheet({ variant: "domain-sheet", title: "Account and devices", content }).open();
         if (order === "sheet-first") showPowerHint();
       }, order);
       // Entrances start on the next frame: getAnimations() alone can return an empty list
       // before .open/.show are applied, leaving the sheet translated offscreen in CI.
-      await page.waitForFunction(() => document.querySelector(".sheet-root.open") && document.querySelector(".power-hint.show"));
+      await page.waitForFunction(() => document.querySelector('dialog[open][data-sheet-state="open"]') && document.querySelector(".power-hint.show"));
       await page.evaluate(async () => {
         await document.fonts.ready;
         await Promise.all(document.getAnimations().map((animation) => animation.finished));
@@ -94,7 +97,7 @@ try {
       await page.getByRole("button", { name: "Sign out", exact: true }).click();
       assert.equal(await page.locator(".account-sheet").getAttribute("data-clicked"), "true");
       await page.evaluate(() => window.powerHintFixture.closeOverlay());
-      await page.locator(".sheet-root").waitFor({ state: "detached" });
+      await page.locator("dialog[open]").waitFor({ state: "detached" });
       assert.equal(await page.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest(".power-hint"), point), true,
         "The same point must reach the hint after closing the sheet");
       await page.getByRole("button", { name: "Got it", exact: true }).click();

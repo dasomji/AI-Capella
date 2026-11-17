@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { themeRegistry, themePreference } from '../src/design-system/theme/resolver.js';
 
 // Exercise auto mode plus persisted overrides (including overrides opposite to the OS).
 export const themeCases = [
@@ -48,11 +49,11 @@ export async function checkPlayerThemes(page, base, screenshot) {
     await page.getByText('Evening Rise', { exact: true }).first().click();
     await page.locator('.play-btn').waitFor({ state: 'visible' });
     await page.evaluate(() => document.fonts.ready);
-    const design = theme.design ?? (theme.scheme === 'light' ? 'pergament' : 'papier');
+    const expected = theme.design ? themePreference(theme.design) : themeRegistry.find(entry => entry.system === theme.scheme).id;
     assert.deepEqual(await page.evaluate(() => ({
-      design: document.documentElement.dataset.design,
-      ground: document.documentElement.dataset.ground ?? null,
-    })), { design: design === 'pergament' ? 'papier' : design, ground: design === 'pergament' ? 'pergament' : null });
+      theme: document.documentElement.dataset.theme,
+      legacy: document.documentElement.hasAttribute('data-design') || document.documentElement.hasAttribute('data-ground'),
+    })), { theme: expected, legacy: false });
     await assertPlayerContrast(page);
     if (screenshot) await screenshot(`theme-${theme.name}`);
   }
