@@ -79,7 +79,6 @@ export function TranscriptionScreen({ query, setQuery }: { query: Query; setQuer
           <Button
             size="compact"
             type="button"
-            intent={paused ? "primary" : "danger"}
             disabled={!control}
             onClick={(e) => { opener.current = e.currentTarget; setConfirm(true); }}
           >
