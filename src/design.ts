@@ -35,6 +35,8 @@ export type Design = typeof themeRegistry[number]['aliases'][number];
 export type DesignChoice = 'auto' | Design;
 const appearance = typeof document === 'undefined' ? undefined : bootstrapTheme();
 initializeTheme();
+/** Active legacy looks are experimental device presets, not supported main themes. */
+export const EXPERIMENTAL_APPEARANCE = appearance?.experiments ?? [];
 export function legacyDesign(id: string): Design {
   const theme = themeRegistry.find(theme => theme.id === id) ?? themeRegistry[0];
   return theme.aliases[0];

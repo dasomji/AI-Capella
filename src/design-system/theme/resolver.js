@@ -2,7 +2,20 @@
 export const themeRegistry = /** @type {const} */ ([
     { id: 'night-paper', menuLabel: 'designNight', label: 'Night paper', aliases: ['papier'], storage: 'papier', defaultStart: null, system: 'dark' },
     { id: 'parchment', menuLabel: 'designParchment', label: 'Parchment', aliases: ['pergament'], storage: 'pergament', defaultStart: null, system: 'light' },
-    { id: 'velvet', menuLabel: null, label: 'Velvet', aliases: ['samt'], storage: 'samt', defaultStart: 'heute', system: null },
+    { id: 'velvet', menuLabel: null, label: 'Velvet (experimental)', aliases: ['samt'], storage: 'samt', defaultStart: 'heute', system: null },
+]);
+/** Retained only as named experimental device presets; never main appearance choices. */
+export const experimentalPresets = /** @type {const} */ ([
+    { id: 'velvet', label: 'Velvet', parameter: 'design', value: 'samt' },
+    { id: 'earlier-title', label: 'Earlier title', parameter: 'start', value: 'heute' },
+    { id: 'staff-title', label: 'Staff title draft', parameter: 'start', value: 'zeile' },
+    { id: 'stage-title', label: 'Stage title draft', parameter: 'start', value: 'buehne' },
+    { id: 'ribbon-draft', label: 'Earlier ribbon draft', parameter: 'logo', value: '1' },
+    { id: 'night-fibres', label: 'Night fibres', parameter: 'papier', value: 'nacht' },
+    { id: 'handmade-paper', label: 'Handmade paper', parameter: 'papier', value: 'buetten' },
+    { id: 'washi-paper', label: 'Washi paper', parameter: 'papier', value: 'washi' },
+    { id: 'bodoni-type', label: 'Bodoni type', parameter: 'schrift', value: 'bodoni' },
+    { id: 'gel-roll', label: 'Gel roll override', parameter: 'roll', value: 'gel' },
 ]);
 /** @param {string | null} value */
 export function themePreference(value) {
@@ -28,7 +41,7 @@ export default function bootstrapTheme(next) {
     try { light = matchMedia('(prefers-color-scheme: light)').matches; } catch { /* Dark default. */ }
     const theme = themeRegistry.find(theme => selected === 'system' ? theme.system === (light ? 'light' : 'dark') : theme.id === selected) ?? themeRegistry[0];
     const type = choice('schrift', 'ai-capella-schrift', ['neu', 'bodoni', 'heute', 'test'], 'neu');
-    const start = theme.defaultStart ?? choice('start', 'ai-capella-start', ['neu', 'heute', 'zeile', 'buehne'], 'neu');
+    const start = choice('start', 'ai-capella-start', ['neu', 'heute', 'zeile', 'buehne'], 'neu');
     root.dataset.theme = theme.id;
     // tokens.css owns the scheme; a stale inline value would override theme edits.
     root.style.removeProperty('color-scheme');
@@ -40,6 +53,15 @@ export default function bootstrapTheme(next) {
     else delete root.dataset.start;
     if (start === 'zeile' || start === 'buehne') root.dataset.title = start;
     else delete root.dataset.title;
+    const choicesByParameter = {
+        design: theme.aliases[0], start, schrift: type === 'heute' ? 'bodoni' : type,
+        logo: choice('logo', 'ai-capella-logo', ['1', '2'], '2'),
+        papier: choice('papier', 'ai-capella-papier', ['verge', 'nacht', 'buetten', 'washi'], 'verge'),
+        roll: choice('roll', 'ai-capella-roll', ['lantern', 'gel'], 'lantern'),
+    };
+    const experiments = experimentalPresets.filter(preset => choicesByParameter[preset.parameter] === preset.value).map(preset => preset.id);
+    if (experiments.length) root.dataset.experimental = experiments.join(' ');
+    else delete root.dataset.experimental;
     const chrome = getComputedStyle(root).getPropertyValue('--ds-browser-chrome').trim();
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
@@ -48,5 +70,5 @@ export default function bootstrapTheme(next) {
         document.head.append(meta);
     }
     if (chrome) meta.setAttribute('content', chrome);
-    return { id: theme.id, preference: selected, revival: type !== 'bodoni' && type !== 'heute', start };
+    return { id: theme.id, preference: selected, revival: type !== 'bodoni' && type !== 'heute', start, experiments };
 }
