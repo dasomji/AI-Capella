@@ -1,4 +1,4 @@
-import { readTheme, type ThemeSnapshot } from './design-system/theme';
+import { readTheme, type ThemeSnapshot, type Color } from './design-system/theme';
 import { safeSvg } from "./safe-svg";
 // The sheet music as a PDF: the song's own MusicXML, engraved by Verovio (verovio.org, LGPL) as A4
 // pages in the key it plays in now, with the voices chosen (all, unless some are left out) under the
@@ -215,6 +215,17 @@ async function fontBase64(url: string): Promise<string> {
   return btoa(binary);
 }
 
+/** Map inherited notation ink while preserving explicit fills, holes and paint servers. */
+export function applyPrintInk(svg: SVGSVGElement, ink: Color) {
+  svg.style.color = ink.css;
+  svg.style.fill = ink.css;
+  for (const node of [svg, ...svg.querySelectorAll('*')]) {
+    for (const attribute of ['fill', 'stroke']) {
+      if (node.getAttribute(attribute) === 'currentColor') node.setAttribute(attribute, ink.css);
+    }
+  }
+}
+
 /** Engraves the request and returns the PDF; `progress` hears what's happening. */
 export async function makePdf(req: PdfRequest, progress: (step: 'engraver' | 'engraving' | 'pages', page?: number, pages?: number) => void = () => {}): Promise<Blob> {
   const print = Object.freeze({ ...(req.print ?? readTheme().print) });
@@ -285,14 +296,7 @@ export async function makePdf(req: PdfRequest, progress: (step: 'engraver' | 'en
       const svg = safeSvg(svgText);
       // Map only sanitized, generated notation presentation. The sanitizer's exact expected
       // Verovio CSS remains unchanged; these are controlled concrete export roles afterward.
-      svg.style.color = print.ink.css;
-      svg.style.fill = print.ink.css;
-      for (const node of [svg, ...svg.querySelectorAll('*')]) {
-        for (const attribute of ['fill', 'stroke']) {
-          const value = node.getAttribute(attribute);
-          if (value && value !== 'none' && !value.startsWith('url(')) node.setAttribute(attribute, print.ink.css);
-        }
-      }
+      applyPrintInk(svg, print.ink);
       host.replaceChildren(svg);
       const drawing = flattenInnerSvg(svg);
       if (drawing) fitToWidth(svg, drawing);

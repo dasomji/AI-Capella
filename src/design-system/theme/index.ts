@@ -7,6 +7,7 @@ import type { Color } from './color';
 export type { ThemeId, ThemePreference, Color };
 
 export const colorRoles = [
+  'canvas-mask', 'material-gel-gloss-color', 'score-overview-past',
   'material-paper-ground',
   'material-paper-swatch-glow', 'material-paper-swatch-line', 'title-name-ink', 'title-name-glow',
   'title-name-flare-core', 'title-name-flare-edge', 'title-name-nib', 'ribbon-flare-core',
@@ -43,7 +44,7 @@ export const colorRoles = [
 ] as const;
 export const fontRoles = ['body', 'control', 'mono', 'display', 'heading', 'song-title', 'mark', 'brand', 'script', 'music', 'auth-body', 'auth-display', 'auth-mono', 'canvas-text', 'canvas-mono', 'canvas-display'] as const;
 export type ThemeSnapshot = Readonly<{
-  revision: number; id: ThemeId; preference: ThemePreference; type: string;
+  revision: number; id: ThemeId; preference: ThemePreference; type: string; titleDraft: 'current' | 'earlier';
   color: (role: typeof colorRoles[number]) => Color;
   colors: Readonly<Record<typeof colorRoles[number], Color>>;
   fonts: Readonly<Record<typeof fontRoles[number], string>>;
@@ -57,17 +58,28 @@ export type ThemeSnapshot = Readonly<{
 let snapshot: ThemeSnapshot | undefined;
 let revision = 0;
 let initialized = false;
-const quietChanges = new Set<() => void>();
 const listeners = new Set<(theme: ThemeSnapshot) => void>();
 
 let observedKey = '';
 const attributeKey = () => ['theme', 'type', 'themePreference'].map(key => document.documentElement.dataset[key]).join('|');
+let dispatching = false;
+function deliver(listener: (theme: ThemeSnapshot) => void, theme: ThemeSnapshot) {
+  try { listener(theme); }
+  catch (error) {
+    if (typeof globalThis.reportError === 'function') globalThis.reportError(error);
+    else console.error(error);
+  }
+}
 function refresh() {
   observedKey = attributeKey();
   snapshot = undefined;
   revision++;
-  // Do not perform style reads for unused API subscribers; readTheme is lazy.
-  if (listeners.size) { const value = readTheme(); for (const listener of listeners) { if (value.revision !== revision) break; listener(value); } }
+  // A material writer may invalidate during delivery. Continue with the latest snapshot for
+  // remaining listeners, without recursively re-running listeners already visited in this pass.
+  if (dispatching || !listeners.size) return;
+  dispatching = true;
+  try { for (const listener of listeners) deliver(listener, readTheme()); }
+  finally { dispatching = false; }
 }
 function updateChrome() {
   const color = getComputedStyle(document.documentElement).getPropertyValue('--ds-browser-chrome').trim();
@@ -76,11 +88,6 @@ function updateChrome() {
 export function systemTheme(): ThemeId {
   const scheme = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   return (themeRegistry.find(theme => theme.system === scheme) ?? themeRegistry[0]).id;
-}
-/** Optional quiet-moment policy for consumers that defer preference application. Main repaints live. */
-export function onSystemThemeChange(fn: () => void) {
-  quietChanges.add(fn);
-  return () => { quietChanges.delete(fn); };
 }
 // A visit's URL override has already been consumed. A new choice must survive reload
 // rather than re-storing the old query (and bouncing choices between open tabs).
@@ -99,13 +106,11 @@ export function initializeTheme() {
   const media = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: light)') : undefined;
   media?.addEventListener('change', () => {
     if (document.documentElement.dataset.themePreference !== 'system') return;
-    if (quietChanges.size) { for (const change of quietChanges) change(); return; }
     bootstrapTheme('system'); updateChrome(); refresh();
   });
   window.addEventListener('storage', event => {
     if (event.key !== 'ai-capella-design' && event.key !== null) return;
     forgetInitialThemeQuery();
-    if (quietChanges.size) { for (const change of quietChanges) change(); return; }
     // Cross-tab choices use stored values, not this tab's initial URL override.
     bootstrapTheme(themePreference(event.newValue)); updateChrome(); refresh();
   });
@@ -127,7 +132,6 @@ export function setThemePreference(preference: ThemePreference) {
     else localStorage.setItem('ai-capella-design', themeRegistry.find(theme => theme.id === preference)!.storage);
   } catch { /* This visit can still choose a theme. */ }
   forgetInitialThemeQuery();
-  if (quietChanges.size) { for (const change of quietChanges) change(); return; }
   bootstrapTheme(preference); updateChrome(); refresh();
 }
 
@@ -151,7 +155,6 @@ function concreteColor(value: string): Color {
 export function readTheme(): ThemeSnapshot {
   if (typeof document === 'undefined') throw Error('readTheme() needs a styled client document; call it in a client effect');
   initializeTheme();
-  if (observedKey !== attributeKey()) refresh();
   if (snapshot) return snapshot;
   const root = document.documentElement, style = getComputedStyle(root);
   const roles: Record<string, string> = {};
@@ -165,7 +168,7 @@ export function readTheme(): ThemeSnapshot {
   const colors = Object.freeze(Object.fromEntries(colorRoles.map(role => [role, concreteColor(value(role))]))) as ThemeSnapshot['colors'];
   const fonts = Object.freeze(Object.fromEntries(fontRoles.map(role => [role, value('font-' + role)]))) as ThemeSnapshot['fonts'];
   snapshot = Object.freeze({
-    revision, id: root.dataset.theme as ThemeId, preference: root.dataset.themePreference as ThemePreference, type: root.dataset.type ?? 'bodoni',
+    revision, id: root.dataset.theme as ThemeId, preference: root.dataset.themePreference as ThemePreference, type: root.dataset.type ?? 'bodoni', titleDraft: root.dataset.start === 'neu' ? 'current' : 'earlier',
     color: (role: typeof colorRoles[number]) => colors[role],
     material: Object.freeze({ surface: value('material-fibre') === 'none' ? 'waves' : 'paper', light: value('color-scheme') === 'light' ? 'ink' : 'additive', composite: value('color-scheme') === 'light' ? 'multiply' : 'lighter', onLight: value('color-scheme') === 'light' }),
     colors, fonts, spectrum: Object.freeze(Array.from({ length: 8 }, (_, i) => concreteColor(value(`voice-${i + 1}`)))),
@@ -178,7 +181,7 @@ export function readTheme(): ThemeSnapshot {
 export function subscribeTheme(fn: (theme: ThemeSnapshot) => void, { immediate = false }: { immediate?: boolean } = {}) {
   if (typeof document === 'undefined') return () => {};
   initializeTheme(); listeners.add(fn);
-  if (immediate) fn(readTheme());
+  if (immediate) deliver(fn, readTheme());
   return () => { listeners.delete(fn); };
 }
 
@@ -186,7 +189,6 @@ export function subscribeTheme(fn: (theme: ThemeSnapshot) => void, { immediate =
 export function getThemeRevision() {
   if (typeof document === 'undefined') return 0;
   initializeTheme();
-  if (observedKey !== attributeKey()) refresh();
   return revision;
 }
 /** Cache one derived resource per revision; retain one wrapper per resource. */

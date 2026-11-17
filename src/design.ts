@@ -1,5 +1,5 @@
 import { themeRegistry, themePreference, bootstrapTheme } from './design-system/theme/bootstrap';
-import { initializeTheme, setThemePreference, systemTheme, onSystemThemeChange, subscribeTheme } from './design-system/theme';
+import { initializeTheme, setThemePreference, systemTheme, subscribeTheme } from './design-system/theme';
 // Which look this device shows. The default is what the whole choir sees; a device can switch to
 // another by opening the app with ?design=samt (or ?logo=1, ?roll=gel), and keeps it until opened
 // with the default again. The look (design) follows the device's light or dark mode unless chosen
@@ -45,9 +45,6 @@ export let DESIGN: Design = appearance ? legacyDesign(appearance.id) : 'papier';
 /** Preferences apply live; retained renderer resources follow the snapshot revision. */
 export function setDesignChoice(next: DesignChoice) {
   setThemePreference(themePreference(next));
-}
-export function onSystemDesignChange(changed: () => void) {
-  return onSystemThemeChange(changed);
 }
 /** Parchment: the paper design on a light ground (everything of the paper design holds, in light). */
 export let PARCHMENT = DESIGN === 'pergament';

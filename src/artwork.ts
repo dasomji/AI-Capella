@@ -3,7 +3,7 @@ import type { Score } from './score';
 import { colorForPart } from './palette';
 import { withAlpha } from './theme';
 import { NIGHT_PAPER, paintPaper, STILL } from './paper';
-import { LOGO_DRAFT, START_DRAFT, type LogoDraft } from './design';
+import { LOGO_DRAFT, type LogoDraft } from './design';
 import { drawLightRibbons, RibbonField } from './lightRibbons';
 import { broadNib, pointAlong, pointedPen, type Pt } from './pen';
 
@@ -81,13 +81,13 @@ export function fadeEnds(ctx: CanvasRenderingContext2D, w: number, h: number, o:
   ctx.globalCompositeOperation = 'destination-out';
   const span = o.x1 - o.x0;
   const fadeL = ctx.createLinearGradient(o.x0, 0, o.x0 + span * left, 0);
-  fadeL.addColorStop(0, readTheme().print.paper.rgba(1));
-  fadeL.addColorStop(1, readTheme().print.paper.rgba(0));
+  fadeL.addColorStop(0, readTheme().color('canvas-mask').rgba(1));
+  fadeL.addColorStop(1, readTheme().color('canvas-mask').rgba(0));
   ctx.fillStyle = fadeL;
   ctx.fillRect(0, 0, o.x0 + span * left, h);
   const fadeR = ctx.createLinearGradient(o.x1 - span * right, 0, o.x1, 0);
-  fadeR.addColorStop(0, readTheme().print.paper.rgba(0));
-  fadeR.addColorStop(1, readTheme().print.paper.rgba(1));
+  fadeR.addColorStop(0, readTheme().color('canvas-mask').rgba(0));
+  fadeR.addColorStop(1, readTheme().color('canvas-mask').rgba(1));
   ctx.fillStyle = fadeR;
   ctx.fillRect(o.x1 - span * right, 0, w, h);
   ctx.restore();
@@ -355,8 +355,16 @@ export function animateRibbons(canvas: HTMLCanvasElement, layout: (w: number, h:
   let start = after ? Infinity : performance.now();
   void after?.then(() => (start = performance.now()));
   // The draft title screen: lines of light that answer the pointer (see lightRibbons.ts).
-  const field = START_DRAFT && !still && canvas.parentElement ? new RibbonField(canvas.parentElement, canvas) : null;
+  let field: RibbonField | null = null;
+  const syncField = () => {
+    const current = readTheme().titleDraft === 'current';
+    if (current && !still && canvas.parentElement) field ??= new RibbonField(canvas.parentElement, canvas);
+    else { field?.dispose(); field = null; }
+    return current;
+  };
+  syncField();
   const frame = (now: number) => {
+    const current = syncField();
     raf = still ? 0 : requestAnimationFrame(frame);
     // About 30 frames a second; the interactive draft runs at the full rate (strings, sparks).
     if (!still && (document.hidden || now - last < (field ? 0 : 32))) return;
@@ -367,7 +375,7 @@ export function animateRibbons(canvas: HTMLCanvasElement, layout: (w: number, h:
     // `pace` below 1: the lines are written, and sway, more slowly and calmly.
     const sec = still ? 99 : Math.max(0, (now - start) / 1000) * pace;
     const o = layout(prepared.w, prepared.h);
-    if (START_DRAFT) {
+    if (current) {
       const { progress, done } = swarm ? swarmWriting(o.voices, sec) : writing(LOGO_DRAFT, o.voices, sec);
       if (onFront && sec > 0 && sec < done) onFront(o.x0 + Math.max(...progress) * (o.x1 - o.x0));
       const lit = Math.min(1, Math.max(0, (sec - done) / 1.4));

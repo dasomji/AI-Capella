@@ -1,4 +1,4 @@
-import { readTheme, getThemeRevision } from './design-system/theme';
+import { readTheme } from './design-system/theme';
 import { backingSize } from './pixels';
 import type { Score } from './score';
 import type { LoopRegion } from './pianoRoll';
@@ -111,7 +111,8 @@ export class OverviewStrip {
   }
 
   render(playheadBeat: number) {
-    if (this.themeRevision !== getThemeRevision()) { this.themeRevision = getThemeRevision(); this.dirty = true; }
+    const theme = readTheme();
+    if (this.themeRevision !== theme.revision) { this.themeRevision = theme.revision; this.dirty = true; }
     if (this.cssWidth <= 0 || this.cssHeight <= 0) return;
     if (this.dirty || !this.notesLayer) this.buildNotesLayer();
     const ctx = this.canvas.getContext('2d');
@@ -134,7 +135,7 @@ export class OverviewStrip {
     }
     if (this.notesLayer) ctx.drawImage(this.notesLayer, 0, 0, this.cssWidth, this.cssHeight);
     const px = Math.round(this.beatToX(playheadBeat));
-    ctx.fillStyle = readTheme().material.onLight ? readTheme().color('page-background').rgba(0.6) : readTheme().color('canvas-surface').rgba(0.55);
+    ctx.fillStyle = theme.color('score-overview-past').rgba(Number(theme.roles['score-overview-past-alpha']));
     ctx.fillRect(PAD_X, top - 4, Math.max(0, px - PAD_X), bottom - top + 8);
     ctx.fillStyle = PAPER;
     ctx.fillRect(px - 1, 2, 2, this.cssHeight - 4);

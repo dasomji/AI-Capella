@@ -259,8 +259,8 @@ export function animateStaff(canvas: HTMLCanvasElement, name: TitleName): () => 
       [x1 + 2, x1 - 26],
     ]) {
       const f = ctx.createLinearGradient(from, 0, to, 0);
-      f.addColorStop(0, readTheme().print.paper.rgba(1));
-      f.addColorStop(1, readTheme().print.paper.rgba(0));
+      f.addColorStop(0, readTheme().color('canvas-mask').rgba(1));
+      f.addColorStop(1, readTheme().color('canvas-mask').rgba(0));
       ctx.fillStyle = f;
       ctx.fillRect(Math.min(from, to), top - space * 3, Math.abs(to - from), space * 10);
     }

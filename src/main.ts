@@ -32,7 +32,7 @@ const serverLibraryEnabled = true;
 import { animateRibbons, coverDataFromScore, drawCover, drawMark, prepareCanvas, type CoverData } from './artwork';
 import { icon } from './icons';
 import { countLabel, keyName, lang, setLang, t, type MessageKey } from './i18n';
-import { subscribeTheme, getThemeRevision } from './design-system/theme';
+import { subscribeRendererTheme } from './rendererTheme';
 import { canvasFontsReady } from './theme';
 import { WaveBackdrop } from './backdrop';
 import { DESIGN_CHOICE, PAPER_DESIGN, PARCHMENT, setDesignChoice, START_DRAFT, START_STAFF, START_STAGE, type DesignChoice } from './design';
@@ -3622,11 +3622,14 @@ function stopRenderLoop() {
   }
 }
 
-function resizeCanvases() {
+function resizeCanvasMetrics() {
   pianoRoll?.resize();
   staffView?.resize();
   overview?.resize();
   updateCanvasRect();
+}
+function resizeCanvases() {
+  resizeCanvasMetrics();
   renderNow();
 }
 
@@ -3639,22 +3642,7 @@ window.addEventListener('resize', () => {
 // The paper design's paper (paper.ts): on the CSS surfaces from the start; another one chosen on
 // this device is painted everywhere at once.
 initPaper();
-subscribeTheme(theme => {
-  // Reassign runtime part data as well as canvas inputs. Preserve focus, mix and open sheets.
-  document.querySelectorAll<HTMLElement>('[data-part]').forEach(el => {
-    const index = currentScore?.parts.findIndex(part => part.id === el.dataset.part) ?? -1;
-    if (index >= 0 && currentScore) el.style.setProperty('--c', colorForPart(index, currentScore.parts.length, theme));
-  });
-  document.querySelectorAll<HTMLElement>('[data-theme-voice]').forEach(el => {
-    el.style.setProperty('--c', colorForPart(Number(el.dataset.themeVoice), Number(el.dataset.themeVoiceCount), theme));
-  });
-  repaintForTheme();
-  // Fonts may arrive after a theme/type swap; invalidate metrics and baked syllables only
-  // after those faces are available. A superseded load must not repaint an earlier theme.
-  const revision = theme.revision;
-  void canvasFontsReady().then(() => { if (getThemeRevision() === revision) { resizeCanvases(); repaintForTheme(); } });
-});
-document.fonts?.addEventListener('loadingdone', () => { resizeCanvases(); repaintForTheme(); });
+subscribeRendererTheme({ score: () => currentScore, repaint: repaintForTheme, resize: resizeCanvasMetrics });
 window.addEventListener('paperchange', () => {
   pianoRoll?.repaint();
   drawAllCovers();

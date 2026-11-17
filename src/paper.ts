@@ -1,4 +1,4 @@
-import { notifyThemeMaterialChange, readTheme, subscribeTheme } from './design-system/theme';
+import { readTheme, subscribeTheme, getThemeRevision, type ThemeSnapshot } from './design-system/theme';
 // The paper of the paper design (design.ts). One texture, made on the device when the app starts
 // (seeded, so the same everywhere), and used by every paper surface: the CSS ones -- the ground,
 // the song cards, the bars, the sheets -- as a background image (--fibre), the canvases -- the
@@ -46,6 +46,8 @@ export function paperKind(): PaperKind {
 /** Switches this device to another paper (remembered), and tells the views to paint it. */
 export function setPaperKind(next: PaperKind) {
   if (next === kind) return;
+  deferredTexture = false;
+  textureJob++;
   kind = preferredKind = next;
   try {
     if (next === DEFAULT_PAPER) localStorage.removeItem('ai-capella-papier');
@@ -345,7 +347,7 @@ function make(k: PaperKind) {
       // A fibre holds the light back: it takes away what the paper lets through there.
       lctx.globalCompositeOperation = 'destination-out';
       lctx.lineWidth = f.width * 1.3;
-      lctx.strokeStyle = readTheme().print.paper.rgba(Number((0.7 * f.block).toFixed(3)));
+      lctx.strokeStyle = readTheme().color('canvas-mask').rgba(Number((0.7 * f.block).toFixed(3)));
       lctx.stroke();
       lctx.globalCompositeOperation = 'source-over';
     });
@@ -370,7 +372,18 @@ function make(k: PaperKind) {
   return { surface, light };
 }
 
+let deferredTexture = false;
+let blankTiles: Tiles | undefined;
 function tilesOf(k: PaperKind = kind): Tiles {
+  // Paint the new ground immediately; the expensive seeded texture arrives at idle.
+  if (deferredTexture) {
+    if (!blankTiles) {
+      const surface = document.createElement('canvas'), light = document.createElement('canvas');
+      surface.width = surface.height = light.width = light.height = N;
+      blankTiles = { surface, light };
+    }
+    return blankTiles;
+  }
   let t = made.get(k);
   if (!t) {
     t = make(k);
@@ -394,7 +407,7 @@ function applyCss() {
   if (appliedFibre !== value) {
     appliedFibre = value;
     document.documentElement.style.setProperty('--ds-material-fibre-live', value);
-    notifyThemeMaterialChange();
+    // Generated fibre is a CSS output, not a new semantic input/revision.
   }
 }
 
@@ -527,12 +540,12 @@ export function backlight(ctx: CanvasRenderingContext2D, x: number, top: number,
   // Strongest at the lamp, fading out over the music to come and, sooner, over what was played.
   s.globalCompositeOperation = 'destination-in';
   const g = s.createLinearGradient(0, 0, w, 0);
-  g.addColorStop(0, readTheme().print.paper.rgba(0));
-  g.addColorStop(behind / w / 2, readTheme().print.paper.rgba(0.35));
-  g.addColorStop(behind / w, readTheme().print.paper.rgba(1));
-  g.addColorStop((behind + ahead * 0.35) / w, readTheme().print.paper.rgba(0.55));
-  g.addColorStop((behind + ahead * 0.7) / w, readTheme().print.paper.rgba(0.18));
-  g.addColorStop(1, readTheme().print.paper.rgba(0));
+  g.addColorStop(0, readTheme().color('canvas-mask').rgba(0));
+  g.addColorStop(behind / w / 2, readTheme().color('canvas-mask').rgba(0.35));
+  g.addColorStop(behind / w, readTheme().color('canvas-mask').rgba(1));
+  g.addColorStop((behind + ahead * 0.35) / w, readTheme().color('canvas-mask').rgba(0.55));
+  g.addColorStop((behind + ahead * 0.7) / w, readTheme().color('canvas-mask').rgba(0.18));
+  g.addColorStop(1, readTheme().color('canvas-mask').rgba(0));
   s.fillStyle = g;
   s.fillRect(0, 0, w, height);
   if (mask) mask(s, left);
@@ -569,16 +582,36 @@ export function paintSwatch(canvas: HTMLCanvasElement, of: PaperKind, w: number,
 function channels(role: 'material-paper-fibre-ink' | 'material-paper-fibre-light' | 'material-paper-lamp') {
   const color = readTheme().color(role); return [color.r, color.g, color.b];
 }
-// Ignore our own generated CSS image notification. Set the input key before publishing, so
-// the nested revision never recursively regenerates the texture or repaints an old theme.
+// Texture output never publishes a nested revision. Each deferred job captures the input
+// revision and is discarded if a newer preference/type/material change wins before idle.
 let materialKey = '';
+let textureJob = 0;
+function scheduleTexture(theme: ThemeSnapshot) {
+  deferredTexture = true;
+  appliedFibre = '';
+  document.documentElement.style.removeProperty('--ds-material-fibre-live');
+  const job = ++textureJob, revision = theme.revision;
+  const generate = () => {
+    if (job !== textureJob || revision !== getThemeRevision()) return;
+    deferredTexture = false;
+    // Discard composites of the temporary plain ground before publishing real tiles.
+    composed.clear(); patterns = new WeakMap();
+    applyCss();
+    window.dispatchEvent(new Event('paperchange'));
+  };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(generate, { timeout: 1000 });
+  else setTimeout(generate, 0);
+}
 subscribeTheme(theme => {
   NIGHT_PAPER = theme.color('material-paper-ground').css;
-  const key = JSON.stringify([theme.material, (['material-paper-fibre-ink', 'material-paper-fibre-light', 'material-paper-lamp', 'material-paper-strand-shadow', 'material-paper-strand-light', 'material-paper-warm-fleck'] as const).map(role => theme.color(role).css),
+  const key = JSON.stringify([theme.material, (['material-paper-fibre-ink', 'material-paper-fibre-light', 'material-paper-lamp', 'material-paper-strand-shadow', 'material-paper-strand-light', 'material-paper-warm-fleck', 'canvas-mask'] as const).map(role => theme.color(role).css),
     ['material-paper-surface-light', 'material-paper-surface-dark', 'material-paper-light-bright', 'material-paper-light-base'].map(role => theme.roles[role])]);
-  if (materialKey === key) return;
+  if (materialKey === key) {
+    if (deferredTexture) scheduleTexture(theme);
+    return;
+  }
   materialKey = key;
   kind = theme.material.onLight ? 'pergament' : preferredKind;
   made.clear(); composed.clear(); patterns = new WeakMap();
-  if (paperInitialized) applyCss();
+  if (paperInitialized) scheduleTexture(theme);
 }, { immediate: true });

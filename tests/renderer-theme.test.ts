@@ -89,6 +89,8 @@ it('preserves every pre-P2 renderer pigment across all three themes', async () =
   const { default: postcss } = await import('postcss');
   const css = postcss.parse(readFileSync('src/design-system/tokens.css', 'utf8'));
   const expected: Record<string, readonly string[]> = {
+    'canvas-mask': ['#ffffff', '#ffffff', '#ffffff'],
+    'material-gel-gloss-color': ['#ffffff', '#ffffff', '#ffffff'],
     'material-paper-ground': ['#1b1621', '#e8d8b6', '#1b1621'],
     'title-name-ink': ['rgb(255,252,244)', 'rgb(46,32,22)', 'rgb(255,252,244)'],
     'title-name-glow': ['rgb(255,190,112)', 'rgb(226,150,52)', 'rgb(255,190,112)'],
@@ -171,5 +173,120 @@ it('preserves every pre-P2 renderer pigment across all three themes', async () =
       if (new Set(colors).size === 1) expect(shared.has('--ds-' + role)).toBe(true);
       else expect(shared.has('--ds-' + role)).toBe(false);
     }
+  }
+});
+
+it('keeps warm accessor/revision reads independent of attributes and computed styles', async () => {
+  const { api, computed } = await clientTheme();
+  const current = api.readTheme(), reads = computed.mock.calls.length;
+  const dataset = vi.spyOn(document.documentElement, 'dataset', 'get').mockImplementation(() => { throw Error('hot attribute read'); });
+  try {
+    for (let i = 0; i < 100; i++) {
+      expect(api.readTheme()).toBe(current);
+      expect(api.getThemeRevision()).toBe(current.revision);
+    }
+    expect(computed).toHaveBeenCalledTimes(reads);
+  } finally { dataset.mockRestore(); }
+});
+
+it('reports each throwing subscriber and still delivers later listeners, including immediate delivery', async () => {
+  const { api } = await clientTheme();
+  const report = vi.fn(); vi.stubGlobal('reportError', report);
+  const error = Error('broken renderer');
+  api.subscribeTheme(() => { throw error; }, { immediate: true });
+  const later = vi.fn(); api.subscribeTheme(later);
+  api.notifyThemeMaterialChange();
+  expect(report.mock.calls).toEqual([[error], [error]]);
+  expect(later).toHaveBeenCalledExactlyOnceWith(api.readTheme());
+});
+
+it('does not re-run earlier listeners during nested invalidation', async () => {
+  const { api } = await clientTheme();
+  const first = vi.fn(); api.subscribeTheme(first);
+  let changed = false;
+  api.subscribeTheme(() => { if (!changed) { changed = true; api.notifyThemeMaterialChange(); } });
+  const last = vi.fn(); api.subscribeTheme(last);
+  api.notifyThemeMaterialChange();
+  expect(first).toHaveBeenCalledTimes(1);
+  expect(last).toHaveBeenCalledExactlyOnceWith(api.readTheme());
+});
+
+it('can import the lantern without a styled client document', async () => {
+  vi.resetModules();
+  vi.stubGlobal('document', undefined);
+  await expect(import('../src/lantern')).resolves.toHaveProperty('Lantern');
+});
+
+it('maps only currentColor notation attributes for PDF presentation', async () => {
+  const { api } = await clientTheme();
+  const { applyPrintInk } = await import('../src/exportPdf');
+  const host = document.createElement('div');
+  host.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" stroke="currentColor"/><path fill="#123456" stroke="none"/><path fill="url(#paint)" stroke="rgb(0,0,0)"/></svg>';
+  const svg = host.querySelector('svg')!;
+  applyPrintInk(svg, api.readTheme().print.ink);
+  const paths = svg.querySelectorAll('path');
+  expect(paths[0].getAttribute('fill')).toBe('rgb(0, 0, 0)');
+  expect(paths[0].getAttribute('stroke')).toBe('rgb(0, 0, 0)');
+  expect(paths[1].getAttribute('fill')).toBe('#123456');
+  expect(paths[1].getAttribute('stroke')).toBe('none');
+  expect(paths[2].getAttribute('fill')).toBe('url(#paint)');
+  expect(paths[2].getAttribute('stroke')).toBe('rgb(0,0,0)');
+});
+
+it('repaints once with ready fonts and rejects an obsolete font completion', async () => {
+  const { api } = await clientTheme();
+  let loaded = true;
+  const pending: (() => void)[] = [];
+  vi.doMock('../src/theme', () => ({ canvasFontsLoaded: () => loaded, canvasFontsReady: () => loaded ? Promise.resolve() : new Promise<void>(resolve => pending.push(resolve)) }));
+  try {
+    const { subscribeRendererTheme } = await import('../src/rendererTheme');
+    const repaint = vi.fn(), resize = vi.fn();
+    const stop = subscribeRendererTheme({ score: () => null, repaint, resize });
+    api.notifyThemeMaterialChange();
+    await Promise.resolve();
+    expect(repaint).toHaveBeenCalledTimes(1);
+    expect(resize).not.toHaveBeenCalled();
+    loaded = false;
+    api.notifyThemeMaterialChange();
+    api.notifyThemeMaterialChange();
+    expect(repaint).toHaveBeenCalledTimes(3);
+    pending[0](); await Promise.resolve();
+    expect(repaint).toHaveBeenCalledTimes(3);
+    expect(resize).not.toHaveBeenCalled();
+    pending[1](); await Promise.resolve();
+    expect(resize).toHaveBeenCalledTimes(1);
+    expect(repaint).toHaveBeenCalledTimes(4);
+    stop();
+  } finally { vi.doUnmock('../src/theme'); }
+});
+
+it('preserves the historical per-theme intensity inputs and separates screen/print roles', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { default: postcss } = await import('postcss');
+  const css = postcss.parse(readFileSync('src/design-system/tokens.css', 'utf8'));
+  const expected: Record<string, [number[][], number[][]]> = {
+    'material-lantern-through-stops': [[[0,0],[.2,0],[.5,.22],[.8,.38],[1,.46]], [[0,0],[.3,0],[.7,.1],[1,.18]]],
+    'material-lantern-hot-stops': [[[.3,.82,.4]], [[.08,.22,.11]]],
+    'material-lantern-paper-glow-alpha': [[[.11]], [[.24]]],
+    'material-lantern-hole-boost': [[[1.3]], [[0]]],
+    'score-row-shadow-lantern-alpha': [[[.13]], [[.07]]],
+    'score-row-shadow-gel-alpha': [[[.26]], [[.07]]],
+    'score-hole-edge-alpha': [[[.35]], [[.4]]],
+    'material-reading-strip-alpha': [[[.1]], [[.16]]],
+    'score-overview-past-alpha': [[[.55]], [[.6]]],
+    'title-name-glow-layers': [[[.45,.22],[.18,.3],[.06,.45]], [[.45,.16],[.16,.2]]],
+    'ribbon-highlight-alpha': [[[.55]], [[.45]]],
+  };
+  for (const theme of ['night-paper', 'parchment', 'velvet']) {
+    const roles = new Map<string,string>();
+    css.walkRules(rule => { if (rule.selectors.includes(`:root[data-theme="${theme}"]`)) rule.walkDecls(d => { roles.set(d.prop, d.value); }); });
+    for (const [role, values] of Object.entries(expected)) {
+      const actual = roles.get('--ds-' + role);
+      expect(actual, `${theme} supplies ${role}`).toBeDefined();
+      expect(actual!.split(',').map(row => row.trim().split(/\s+/).map(Number)), `${theme}: ${role}`).toEqual(values[theme === 'parchment' ? 1 : 0]);
+    }
+  }
+  for (const file of ['theme', 'pianoRoll', 'paper', 'lightName', 'titleStage', 'titleStaff', 'artwork', 'inkWordmark', 'lantern']) {
+    expect(readFileSync(`src/${file}.ts`, 'utf8'), `${file} screen inputs`).not.toContain('.print.paper');
   }
 });

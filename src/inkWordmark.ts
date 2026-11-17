@@ -103,9 +103,9 @@ export function renderInk(canvas: HTMLCanvasElement, text: string, size: number,
   const m = mask.getContext('2d')!;
   m.scale(dpr, dpr);
   m.font = font;
-  m.fillStyle = readTheme().print.paper.css;
+  m.fillStyle = readTheme().color('canvas-mask').css;
   // A pen's ink line is never as fine as the typeface's display hairlines: a little width all round.
-  m.strokeStyle = readTheme().print.paper.css;
+  m.strokeStyle = readTheme().color('canvas-mask').css;
   m.lineWidth = Math.max(1, size * 0.014);
   m.lineJoin = 'round';
   m.textBaseline = 'alphabetic';

@@ -93,9 +93,9 @@ describe('theme source contracts M1/M2/M6/M7 and m1/m3/m4/m6/N2', () => {
     expect([...themeRoleNames]).toEqual(roleManifest(source));
     expect(source).not.toMatch(/--pigment-\d+\b/);
     expect(source).not.toMatch(/\.fb-item|\.landing-dedication|--breakpoint-(?:panel-max|short-landscape)/);
-    const adapter = css.nodes.find(n => n.type === 'atrule' && n.name === 'theme' && n.params === 'inline');
+    const adapters = css.nodes.filter(n => n.type === 'atrule' && n.name === 'theme' && n.params === 'inline');
     const mappings = new Map<string, string>();
-    if (adapter?.type === 'atrule') adapter.walkDecls(d => { mappings.set(d.prop, d.value); });
+    for (const adapter of adapters) if (adapter.type === 'atrule') adapter.walkDecls(d => { mappings.set(d.prop, d.value); });
     css.walkDecls(d => {
       const name = d.prop.replace(/^--ds-space-/, '--spacing-').replace(/^--ds-layer-/, '--z-index-').replace(/^--ds-size-/, '--text-').replace(/^--ds-shadow-/, '--shadow-');
       if (name !== d.prop) expect(mappings.get(name)).toBe(`var(${d.prop})`);
@@ -105,7 +105,7 @@ describe('theme source contracts M1/M2/M6/M7 and m1/m3/m4/m6/N2', () => {
     });
     const paper = fs.readFileSync('src/paper.ts','utf8');
     expect(paper).toContain("setProperty('--ds-material-fibre-live'");
-    expect(paper).toContain('notifyThemeMaterialChange();');
+    expect(paper).not.toContain('notifyThemeMaterialChange();');
     const components = fs.readFileSync('src/design-system/legacy-components.css','utf8');
     expect(components).toContain('.fb-item.kind-wish');
     expect(components).toMatch(/\.admin-detail[\s\S]*font-family:var\(--ds-font-auth-body\)/);
@@ -189,21 +189,14 @@ describe('client theme lifecycle API', () => {
       expect(api.breakpoint('panel')).toBe('900px');
       const query=vi.fn(()=>media);vi.stubGlobal('matchMedia',query);Object.defineProperty(dom.window,'matchMedia',{value:query,configurable:true});
       api.matchBreakpoint('panel','below');expect(query).toHaveBeenCalledWith('(width < 900px)');
-      const quietA=vi.fn(),quietB=vi.fn();const unsubscribeA=api.onSystemThemeChange(quietA),unsubscribeB=api.onSystemThemeChange(quietB);
-      const current=dom.window.document.documentElement.dataset.theme;
       dom.window.history.replaceState(null,'','/?design=papier&schrift=bodoni');
       dom.window.dispatchEvent(new dom.window.StorageEvent('storage',{key:'ai-capella-design',newValue:'pergament'}));
-      expect(quietA).toHaveBeenCalledTimes(1);expect(quietB).toHaveBeenCalledTimes(1);
       expect(new URL(dom.window.location.href).searchParams.has('design')).toBe(false);
       expect(new URL(dom.window.location.href).searchParams.get('schrift')).toBe('bodoni');
-      expect(dom.window.document.documentElement.dataset.theme).toBe(current);
-      dom.window.history.replaceState(null,'','/?design=papier');
-      api.setThemePreference('parchment');
-      expect(new URL(dom.window.location.href).searchParams.has('design')).toBe(false);
-      expect(quietA).toHaveBeenCalledTimes(2);expect(quietB).toHaveBeenCalledTimes(2);
-      expect(dom.window.localStorage.getItem('ai-capella-design')).toBe('pergament');
-      expect(dom.window.document.documentElement.dataset.theme).toBe(current);
-      unsubscribeA();unsubscribeB();
+      expect(api.readTheme().id).toBe('parchment');
+      api.setThemePreference('night-paper');
+      expect(api.readTheme().id).toBe('night-paper');
+      expect(dom.window.localStorage.getItem('ai-capella-design')).toBe('papier');
       dom.window.document.documentElement.dataset.themePreference='system';
       for(const notify of mediaListeners)notify();
       expect(api.readTheme().id).toBe('night-paper');

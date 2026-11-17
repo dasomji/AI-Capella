@@ -216,9 +216,9 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
       [0.7, 0.45],
       [0.88, 0.05],
       [1, 0],
-    ]) across.addColorStop(at * turn, readTheme().print.paper.rgba(a));
-    across.addColorStop(Math.min(1, turn + 0.001), readTheme().print.paper.rgba(0));
-    across.addColorStop(1, readTheme().print.paper.rgba(0));
+    ]) across.addColorStop(at * turn, readTheme().color('canvas-mask').rgba(a));
+    across.addColorStop(Math.min(1, turn + 0.001), readTheme().color('canvas-mask').rgba(0));
+    across.addColorStop(1, readTheme().color('canvas-mask').rgba(0));
     cx.globalCompositeOperation = 'destination-in';
     cx.fillStyle = across;
     cx.fillRect(0, 0, w, h);

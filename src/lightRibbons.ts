@@ -156,7 +156,7 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
       const upTo = Math.max(2, Math.round(p * steps));
       ctx.beginPath();
       for (let j = 0; j <= upTo; j++) (j ? ctx.lineTo : ctx.moveTo).call(ctx, pts[j][0], pts[j][1]);
-      ctx.strokeStyle = readTheme().material.onLight ? readTheme().color('ribbon-highlight').rgba(0.45 * lit) : readTheme().color('ribbon-highlight').rgba(0.55 * lit);
+      ctx.strokeStyle = readTheme().color('ribbon-highlight').rgba(Number(readTheme().roles['ribbon-highlight-alpha']) * lit);
       ctx.lineWidth = Math.max(0.6, line * 0.3);
       ctx.stroke();
     }
@@ -168,7 +168,7 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
       spot.addColorStop(1, withAlpha(color, 0));
       ctx.fillStyle = spot;
       ctx.fillRect(px - line * 7, py - line * 7, line * 14, line * 14);
-      ctx.fillStyle = readTheme().material.onLight ? readTheme().color('ribbon-nib').rgba(0.95) : readTheme().color('ribbon-nib').rgba(0.95);
+      ctx.fillStyle = readTheme().color('ribbon-nib').rgba(0.95);
       ctx.beginPath();
       ctx.arc(px, py, Math.max(1.3, line * 0.65), 0, Math.PI * 2);
       ctx.fill();

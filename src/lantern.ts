@@ -44,16 +44,15 @@ const HOT_AHEAD_PX = 34;
 const STRIP_HEIGHT = 1.2; // vertical reach of the strip, as a multiple of the roll's height
 // How much of the holes' light spills onto the paper around them.
 const HALO_REACH = [0.16, 110, 240] as const;
-const HALO_STOPS = bell(null, 1); // Alpha-only destination-in coverage mask.
 // The lamp seen through the paper itself: faint, as light from behind is.
 const PAPER_GLOW_REACH = [0.08, 64, 130] as const;
 
 
 /** Gradient stops for a bell-shaped fall-off (no visible edge), from `peak` opacity down to none. */
-function bell(color: Color | null, peak: number): [number, string][] {
+function bell(color: Color, peak: number): [number, string][] {
   return [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1].map((t) => {
     const a = t === 1 ? 0 : peak * Math.exp(-((t / 0.4) ** 2));
-    return [t, color ? color.rgba(Number(a.toFixed(4))) : readTheme().print.paper.rgba(Number(a.toFixed(4)))];
+    return [t, color.rgba(Number(a.toFixed(4)))];
   });
 }
 // How much of the holes' light reaches the paper around them, from the sharpest to the widest blur.
@@ -63,25 +62,15 @@ const FLARE_HALO_ALPHA = 0.5;
 // How much of that light is added back into the holes it comes from.
 // (Not on parchment: light added to its light inks only pales them.)
 const lanternInputs = memoizeByTheme(theme => {
-  const throughStops: [number, string][] = theme.material.onLight
-  ? [
-      [0, theme.color('material-lantern-occlusion').rgba(0)],
-      [0.3, theme.color('material-lantern-occlusion').rgba(0)],
-      [0.7, theme.color('material-lantern-occlusion').rgba(0.1)],
-      [1, theme.color('material-lantern-occlusion').rgba(0.18)],
-    ]
-  : [
-      [0, theme.color('material-lantern-occlusion').rgba(0)],
-      [0.2, theme.color('material-lantern-occlusion').rgba(0)],
-      [0.5, theme.color('material-lantern-occlusion').rgba(0.22)],
-      [0.8, theme.color('material-lantern-occlusion').rgba(0.38)],
-      [1, theme.color('material-lantern-occlusion').rgba(0.46)],
-    ];
-
+  const throughStops: [number, string][] = theme.roles['material-lantern-through-stops'].split(',').map(stop => {
+    const [at, alpha] = stop.trim().split(/\s+/).map(Number);
+    return [at, theme.color('material-lantern-occlusion').rgba(alpha)];
+  });
   return { THROUGH_STOPS: throughStops, HOT_WHITE: theme.color('material-light-hot'),
-    HOT_STOPS: theme.material.onLight ? [0.08, 0.22, 0.11] : [0.3, 0.82, 0.4],
-    PAPER_GLOW_STOPS: bell(theme.color('material-lantern-glow'), theme.material.onLight ? 0.24 : 0.11),
-    HOLE_BOOST: theme.material.onLight ? 0 : 1.3 };
+    HOT_STOPS: theme.roles['material-lantern-hot-stops'].split(/\s+/).map(Number),
+    HALO_STOPS: bell(theme.color('canvas-mask'), 1),
+    PAPER_GLOW_STOPS: bell(theme.color('material-lantern-glow'), Number(theme.roles['material-lantern-paper-glow-alpha'])),
+    HOLE_BOOST: Number(theme.roles['material-lantern-hole-boost']) };
 });
 
 function cone(width: number, height: number, x: number): Cone {
@@ -166,7 +155,7 @@ export class Lantern {
    * is where the lamp is (the reading line). Draw the paper over this, then call over().
    */
   under(ctx: CanvasRenderingContext2D, width: number, height: number, lampX: number, drawFilters: (ctx: CanvasRenderingContext2D) => void, flares: Flare[]) {
-    const { THROUGH_STOPS, HOT_WHITE, HOT_STOPS, PAPER_GLOW_STOPS, HOLE_BOOST } = lanternInputs();
+    const { THROUGH_STOPS, HOT_WHITE, HOT_STOPS, HALO_STOPS, PAPER_GLOW_STOPS, HOLE_BOOST } = lanternInputs();
     this.width = width;
     this.height = height;
     const spot = cone(width, height, lampX);

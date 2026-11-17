@@ -1,4 +1,4 @@
-import { matchBreakpoint, readTheme, subscribeTheme, getThemeRevision } from './design-system/theme';
+import { matchBreakpoint, readTheme, memoizeByTheme, subscribeTheme, getThemeRevision } from './design-system/theme';
 // The title screen's name, LightScore: "Light" moves, "Score" holds. "Score" appears in the middle,
 // in embossed gold; the voice lines of light come in with it, a loose swarm, and as their tips reach
 // its S they push it aside to its place (push(), called from main.ts). Meanwhile "Light" is written
@@ -67,27 +67,21 @@ function renderLight(size: number, dpr: number): LightArt {
   };
   const [core, c] = canvas();
   // (On parchment written in iron-gall ink, the lamp's warmth still around it.)
-  c.fillStyle = readTheme().material.onLight ? readTheme().color('title-name-ink').css : readTheme().color('title-name-ink').css;
+  c.fillStyle = readTheme().color('title-name-ink').css;
   c.fillText('Light', pad, baseline);
   const [full, f] = canvas();
   glow(f, core, dpr, size);
   return { core, full, dpr, pad, width, baseline, size };
 }
 
+const glowLayers = memoizeByTheme(theme => theme.roles['title-name-glow-layers'].split(',').map(layer => layer.trim().split(/\s+/).map(Number)));
+
 /** Draws `letters` (device px) onto `ctx` in their glow: warm light around a white-hot stroke. */
 function glow(ctx: CanvasRenderingContext2D, letters: HTMLCanvasElement, dpr: number, size: number) {
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  for (const [blur, a] of readTheme().material.onLight
-    ? [
-        [size * 0.45, 0.16],
-        [size * 0.16, 0.2],
-      ]
-    : [
-        [size * 0.45, 0.22],
-        [size * 0.18, 0.3],
-        [size * 0.06, 0.45],
-      ]) {
+  for (const [radius, a] of glowLayers()) {
+    const blur = size * radius;
     ctx.shadowColor = readTheme().color('title-name-glow').rgba(a);
     ctx.shadowBlur = blur * dpr;
     ctx.drawImage(letters, 0, 0);
@@ -239,7 +233,7 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
     const dpr = art.dpr;
     // What the nib has covered since the last frame joins the written part.
     const m = mask.getContext('2d')!;
-    m.fillStyle = readTheme().print.paper.css;
+    m.fillStyle = readTheme().color('canvas-mask').css;
     while (masked < path.length && path[masked].t <= t) {
       const p = path[masked];
       m.beginPath();
