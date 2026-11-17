@@ -101,7 +101,7 @@ function toggleGroupRecipeStyles({
     );
   };
   return {
-    root: variant==="admin-language" ? "tw:block tw:font-auth-mono tw:text-small tw:leading-admin tw:text-admin-secondary tw:tabular-nums" : (variant==="admin"||variant==="presets") && separator!==undefined ? "tw:block tw:font-auth-body tw:text-body tw:leading-body tw:tabular-nums " + (variant === "presets" ? "tw:text-admin-ink" : "tw:text-admin-secondary") : variant === "language" && separator !== undefined
+    root: variant==="admin-language" ? "tw:block tw:font-auth-mono tw:text-small tw:leading-admin tw:text-ink-secondary tw:tabular-nums" : (variant==="admin"||variant==="presets") && separator!==undefined ? "tw:block tw:font-auth-body tw:text-body tw:leading-body tw:tabular-nums " + (variant === "presets" ? "tw:text-admin-ink" : "tw:text-admin-secondary") : variant === "language" && separator !== undefined
       ? "tw:block tw:font-auth-mono tw:text-small tw:leading-admin tw:text-ink-secondary"
       : "tw:inline-flex tw:items-center tw:flex-wrap " +
       (variant === "segmented"
