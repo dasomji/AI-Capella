@@ -46,6 +46,7 @@
     "test:browser:admin-parity": "BROWSER_SCRIPT=scripts/browser-admin-parity.mjs node scripts/browser-isolated.mjs",
     "test:browser:auth-flows": "BROWSER_SCRIPT=scripts/browser-auth-p4a-flows.mjs node scripts/browser-isolated.mjs",
     "test:design-mutants": "node scripts/design-mutants.mjs",
+    "test:browser:design-parity": "node scripts/browser-design-parity.mjs",
     "check:design-utilities": "node scripts/check-design-utilities.mjs"
   },
   "devDependencies": {

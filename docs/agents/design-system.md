@@ -325,3 +325,14 @@ paints fail except these property/element-specific Chromium defaults in `theme-p
 
 Literal fill/stroke on visible SVG geometry and colors in shadows/gradients remain subject
 to both the guard and loud-theme test. The hardcoded-paint mutant must still fail.
+
+`npm run test:browser:design-parity` compares all rendered computed properties, generated
+content and exact screenshot pixels on auth/admin and main app states at 1440/768/390 for
+all three themes. Supply `PARITY_BASE`, `PARITY_BASE_BUILD` and `PARITY_BUILD` for the
+reference git revision and the two production builds, and an external `BROWSER_EVIDENCE`.
+The source fixture is archived from git; both sides use production CSS so minification does
+not become a false pixel regression. Large computed values use SHA-256 dictionary entries
+with full originals retained in each compressed artifact. Only Parchment’s Administration
+link color and pixels inside its measured box are allowed to differ.
+The offline browser flow verifies the precached area sheet has rules, its library stays a
+grid, and card geometry matches the online render.
