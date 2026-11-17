@@ -11,12 +11,9 @@ export const accountStyles = {
   email: "tw:block tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:m-account-email-margin tw:text-ink-secondary tw:type-account-email-font",
   heading: "tw:m-account-heading-margin tw:pt-account-gap tw:frame-top-account-heading-border-top tw:type-account-heading-font tw:uppercase tw:tracking-account-heading-tracking tw:text-ink-secondary tw:[&:first-child]:border-0 tw:[&:first-child]:pt-flush tw:[&:first-child]:mt-flush",
   adminLink: "tw:font-inherit tw:font-family-inherit tw:text-account-link tw:[text-decoration:revert] tw:cursor-pointer",
-  shared: "tw:flex tw:gap-domain-label-gap tw:items-center tw:flex-wrap tw:font-inherit tw:font-family-inherit tw:text-inherit tw:[&_>_span]:font-inherit tw:[&_>_span]:font-family-inherit tw:[&_>_span]:text-inherit",
   password: "tw:flex tw:gap-domain-label-gap tw:items-center tw:flex-wrap tw:font-inherit tw:font-family-inherit tw:text-inherit",
-  sharedInput: "tw:appearance-auto tw:m-native-checkbox-margin tw:p-flush tw:font-inherit tw:font-family-inherit tw:text-inherit tw:accent-accent",
   label: "tw:font-inherit tw:font-family-inherit tw:text-inherit",
   input: "tw:w-full tw:min-w-flush tw:box-border tw:border-0 tw:frame-bottom-account-input-border-bottom tw:p-account-input-padding tw:surface-material-clear tw:text-ink tw:type-account-input-font",
-  deleteConfirm: "tw:text-center",
 } as const;
 export const accountParts = ["body","email","note","heading","admin-link"] as const;
 export type AccountPart = (typeof accountParts)[number];
@@ -29,5 +26,4 @@ const parts = {
 };
 export function accountPartRecipe(part: AccountPart) { return normalizeRecipe(parts[part]); }
 export function accountFieldRecipe() { return {root:"ds-account-password " + accountStyles.password,label:"ds-account-label " + accountStyles.label,control:"ds-account-input tw:rounded-field " + accountStyles.input,hint:"tw:sr-only",error:"ds-account-error " + accountStyles.error}; }
-export function sharedDeviceRecipe() { return {label:"ds-account-shared " + accountStyles.shared,input:"ds-account-shared-input " + accountStyles.sharedInput,root:"tw:hidden",thumb:"tw:hidden"}; }
 export function accountErrorRecipe() { return "ds-account-error account-error " + accountStyles.error; }
