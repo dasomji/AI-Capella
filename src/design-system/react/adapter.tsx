@@ -125,6 +125,7 @@ export function createReactAdapter(recipes: typeof import('../recipes/base'), pa
 
 function Button({
   variant,
+  size,
   intent,
   pressed,
   busy = false,
@@ -140,6 +141,7 @@ function Button({
       ref={ref}
       {...parts.buttonPart({
         variant,
+        size,
         intent,
         pressed,
         busy,
@@ -167,6 +169,7 @@ function Button({
 }
 function IconButton({
   variant,
+  size,
   label,
   layout,
   busy = false,
@@ -179,7 +182,7 @@ function IconButton({
     <button
       {...props}
       {...parts.buttonPart({
-        icon: { variant },
+        icon: { variant, size },
         pressed,
         busy,
         disabled: props.disabled,
@@ -210,8 +213,10 @@ function ControlGroup({ layout, ...props }: Native<HTMLAttributes<HTMLSpanElemen
   return <span {...props} data-ds="control-group" className={recipes.withLayout(recipes.controlGroupRecipe(), layout)} />;
 }
 const FieldVariant = createContext<r.FieldVariant | undefined>(undefined);
+const FieldDensity = createContext<r.FieldOptions["density"]>(undefined);
 function Input({
   variant,
+  density,
   invalid,
   layout,
   type = "text",
@@ -219,6 +224,7 @@ function Input({
 }: InputProps) {
   const inherited = useContext(FieldVariant);
   variant ??= inherited;
+  density ??= useContext(FieldDensity);
   invalid =
     invalid ??
     (props["aria-invalid"] !== undefined &&
@@ -228,13 +234,14 @@ function Input({
     <input
       {...props}
       type={type}
-      {...parts.controlPart("input", { variant, invalid, layout })}
+      {...parts.controlPart("input", { variant, density, invalid, layout })}
     />
   );
 }
-function Select({ variant, invalid, layout, ...props }: SelectProps) {
+function Select({ variant, density, invalid, layout, ...props }: SelectProps) {
   const inherited = useContext(FieldVariant);
   variant ??= inherited;
+  density ??= useContext(FieldDensity);
   invalid =
     invalid ??
     (props["aria-invalid"] !== undefined &&
@@ -243,18 +250,20 @@ function Select({ variant, invalid, layout, ...props }: SelectProps) {
   return (
     <select
       {...props}
-      {...parts.controlPart("select", { variant, invalid, layout })}
+      {...parts.controlPart("select", { variant, density, invalid, layout })}
     />
   );
 }
 function Textarea({
   variant,
+  density,
   invalid,
   layout,
   ...props
 }: TextareaProps) {
   const inherited = useContext(FieldVariant);
   variant ??= inherited;
+  density ??= useContext(FieldDensity);
   invalid =
     invalid ??
     (props["aria-invalid"] !== undefined &&
@@ -263,7 +272,7 @@ function Textarea({
   return (
     <textarea
       {...props}
-      {...parts.controlPart("textarea", { variant, invalid, layout })}
+      {...parts.controlPart("textarea", { variant, density, invalid, layout })}
     />
   );
 }
@@ -276,12 +285,13 @@ function Field({
   describedBy,
   children,
   variant,
+  density,
   invalid,
   layout,
 }: FieldProps) {
   const generated = useId();
   const controlId = id ?? generated;
-  const slots = recipes.fieldRecipe({ variant, invalid: !!error || invalid });
+  const slots = recipes.fieldRecipe({ variant, density, invalid: !!error || invalid });
   const description =
     [
       describedBy,
@@ -295,13 +305,13 @@ function Field({
       <label htmlFor={controlId} className={slots.label}>
         {label}
       </label>
-      <FieldVariant value={variant}>
+      <FieldVariant value={variant}><FieldDensity value={density}>
         {children({
           id: controlId,
           "aria-describedby": description,
           "aria-invalid": !!error || invalid || undefined,
         })}
-      </FieldVariant>
+      </FieldDensity></FieldVariant>
       {hint && (
         <p id={controlId + "-hint"} className={slots.hint}>
           {hint}
@@ -326,17 +336,18 @@ function FieldGroup({ variant, invalid, label, labelId: explicitLabelId, childre
     <div role="group" aria-labelledby={labelId}>{children}</div>
   </div>;
 }
-function Checkbox({ variant, label, layout, ...props }: CheckboxProps) {
-  const slots = recipes.checkboxRecipe({ variant });
+function Checkbox({ variant, density, label, layout, ...props }: CheckboxProps) {
+  const slots = recipes.checkboxRecipe({ variant, density });
   return (
     <label className={recipes.withLayout(slots.root, layout)}>
-      <input {...props} {...parts.checkboxPart({ variant })} />
+      <input {...props} {...parts.checkboxPart({ variant, density })} />
       <span>{label}</span>
     </label>
   );
 }
 function Switch({
   variant,
+  density,
   checked = false,
   label,
   layout,
@@ -347,7 +358,7 @@ function Switch({
   name,
   ...props
 }: SwitchProps) {
-  const slots = recipes.switchRecipe({ variant, checked });
+  const slots = recipes.switchRecipe({ variant, checked, density });
   if (mode === "checkbox")
     return (
       <label className={recipes.withLayout(slots.label, layout)}>
@@ -752,6 +763,7 @@ function Table({
 }: Native<HTMLAttributes<HTMLTableElement>> & r.TableOptions) {
   const inherited = useContext(TableVariant);
   variant ??= inherited;
+  density ??= useContext(FieldDensity);
   return (
     <TableVariant value={variant}>
       <table
