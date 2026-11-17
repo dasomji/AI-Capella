@@ -122,8 +122,9 @@ accepts a `trigger` and `placement="start" | "end"`, focuses the menu when opene
 focus on Escape or selection. Omit trigger only for an intentionally static menu specimen.
 Dispose DOM menus when removing them. Busy and disabled commands are guarded in both adapters.
 
-`toast()` is the one lazy notifier across React and DOM; no host component is needed. Its body
-host uses a manual popover in the top layer and survives toast-then-close. Text stays through
+`toast()` is the one lazy notifier across React and DOM; no host component is needed. Its single
+host uses a manual popover in the top layer. It follows the active native modal so notification
+buttons remain focusable, then returns to body before modal removal and survives toast-then-close. Text stays through
 the token-defined exit fade. Placement is consistently bottom-center in every context. Brief
 informational notices use `toast-duration-info`; errors persist with a translated dismissal
 button. `toast(text, kind, {action: {label, onSelect}})` and `{persistent: true}` also stay until

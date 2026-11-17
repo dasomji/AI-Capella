@@ -84,12 +84,15 @@ try {
     await page.screenshot({path:`${out}/${theme}-${width}x${height}-${variant}-row-menu.png`});
     await page.evaluate(()=>{unrow();row.dispose();document.querySelector('details').remove();});
    }
-   await page.evaluate(()=>{B.toast('The operation failed. Retry when ready.','error');B.toast('A later saved notice');});
+   await page.evaluate(()=>{window.toastModal=D.createDialog({title:'Active operation',content:D.createInput({})});toastModal.open();B.toast('The operation failed. Retry when ready.','error');B.toast('A later saved notice');});
    await page.waitForTimeout(6600);
    assert.equal(await page.evaluate(()=>B.getToast().kind),'error','D15 errors persist beyond former timeout');
    await page.screenshot({path:`${out}/${theme}-${width}x${height}-persistent-error.png`});
    await page.locator('#toast button').click();
    assert.equal(await page.evaluate(()=>B.getToast().text),'A later saved notice');
+   assert.equal(await page.evaluate(()=>toastModal.element.open),true,'Toast dismissal does not cancel the active modal');
+   await page.evaluate(()=>toastModal.close());
+   assert.equal(await page.locator('#toast').evaluate(el=>el.parentElement===document.body),true,'Notifier survives modal removal');
    await page.evaluate(()=>B.dismissToast());
   }
   console.log('Overlay captured',theme,width,height);

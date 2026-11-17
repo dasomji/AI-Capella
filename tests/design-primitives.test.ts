@@ -334,6 +334,7 @@ describe("menu keyboard and shared notifier", () => {
     const host = document.getElementById("toast")!;
     const { api } = modal();
     toast("In modal");
+    expect(host.parentElement).toBe(document.querySelector("dialog[open]"));
     api.close();
     expect(host.parentElement).toBe(document.body);
     expect(host.textContent).toBe("In modal");
