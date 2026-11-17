@@ -718,7 +718,7 @@ export function installTranscription(options: {
       });
       const narrowToggle = createButton({
         text: tr("showOriginal"),
-        attrs: { "aria-pressed": "false" },
+        pressed: false,
         onClick: () => setComparison(!comparing),
       });
       const narrowControls = el("div", undefined, transcriptionJobRecipe().comparisonToggle);
@@ -726,7 +726,6 @@ export function installTranscription(options: {
       const wideControls = el("div", undefined, transcriptionJobRecipe().comparisonWide);
       wideControls.append(comparison);
       // Above the panes, so switching back never requires scrolling through the review form.
-      layout.before(narrowControls);
       function setComparison(checked: boolean) {
         comparing = checked;
         main.dataset.comparison = checked ? "original" : "score";
@@ -846,7 +845,7 @@ export function installTranscription(options: {
         }),
       );
       secondary.querySelectorAll("button").forEach((b) => {
-        updateButton(b, { variant: "transcription-link" });
+        updateButton(b, { variant: "standard", intent: "quiet", size: "compact" });
         b.classList.add("tx-link");
       });
       actions.append(importButton, secondary, permissionNote);
