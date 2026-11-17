@@ -75,7 +75,7 @@ function controlPart(
         : recipes.inputRecipe;
   return {
     "data-ds": kind,
-    "data-field-variant": options.variant ?? "boxed",
+    "data-field-variant": options.variant ?? "ruled",
     "aria-invalid": options.invalid || undefined,
     className: recipes.withLayout(recipe(options), options.layout),
   };
