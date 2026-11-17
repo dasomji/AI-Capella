@@ -127,3 +127,11 @@
 @keyframes tx-flash {from{opacity:var(--ds-shell-tx-flash-opacity-387)}to{opacity:var(--ds-shell-tx-flash-opacity-388)}}
 /* Animation frames require CSS keyframes; recipes select the token-backed animation. */
 @keyframes tx-pulse {50%{opacity:var(--ds-shell-tx-pulse-opacity-389)}}
+
+/* Verovio creates these SVG label nodes; retain their typography before review getBBox measurement. */
+.tx-score-page svg .label {
+  font: var(--ds-player-label-font-148);
+  letter-spacing: var(--ds-player-label-letter-spacing-149);
+  text-transform: uppercase;
+  color: var(--ds-ink-muted);
+}
