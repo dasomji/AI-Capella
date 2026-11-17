@@ -106,7 +106,8 @@ try {
 
   await p.getByRole("button", { name: "Create ensemble", exact: true }).click();
   await p.getByLabel("Name", { exact: true }).fill("Browser Choir");
-  await p.locator(".domain-sheet button.primary").click();
+  await p.getByRole("dialog", { name: "Create ensemble", exact: true })
+    .getByRole("button", { name: "Create ensemble", exact: true }).click();
   await p.locator(".ens-switch").waitFor();
   const ensembles = (await request(p, "/ensembles")).body,
     e = ensembles[0].id;
@@ -123,7 +124,8 @@ try {
   await p.locator(".ens-switch").click();
   await p.getByText("Members & invitations", { exact: true }).click();
   await p.getByLabel("Email", { exact: true }).fill(emailB);
-  await p.getByRole("button", { name: "Invite", exact: true }).click();
+  await p.getByRole("dialog", { name: "Members & invitations", exact: true })
+    .getByRole("button", { name: "Invite", exact: true }).click();
   await p.getByText(emailB, { exact: true }).waitFor();
 
   // Full theme matrix reloads with persisted design in captureDesign.
