@@ -62,8 +62,17 @@ try{
   assert.equal(await p.locator('.tx-score-page .note').first().evaluate(el=>getComputedStyle(el).fill),await p.locator('.tx-score-page').first().evaluate(el=>getComputedStyle(el).color));
   assert.equal(await p.locator('.tx-glyph.warning').first().innerText(),'!');assert.equal(await p.locator('.tx-mark.warning').first().textContent(),'!');
   assert.match(await p.locator('.tx-review-panel > .tx-pencil').innerText(),language==='de'?/1 Warnung · 2 Unsicherheiten/:/1 warning · 2 uncertainties/);
-  await p.getByRole('switch').focus();await p.keyboard.press('Space');await p.locator('.tx-original img').waitFor();await shot(`review-on-${prefix}`,p);
-  assert.equal(await p.getByRole('switch').getAttribute('aria-checked'),'true');
+  const narrow=width<900;
+  const comparison=narrow?p.getByRole('button',{name:language==='de'?/^(Original|Noten) anzeigen$/:/^Show (original|score)$/}):p.getByRole('switch');
+  await comparison.focus();await p.keyboard.press('Space');await p.locator('.tx-original img').waitFor();await p.locator('.tx-original img').evaluate(img=>img.decode());await shot(`review-on-${prefix}`,p);
+  assert.equal(await comparison.getAttribute(narrow?'aria-pressed':'aria-checked'),'true');
+  if(narrow){
+   assert.ok(await p.locator('.tx-score').isHidden(),'Phone comparison replaces the score');
+   await comparison.press('Space');
+   assert.ok(await p.locator('.tx-score').isVisible(),'Phone comparison returns to the score');
+   assert.ok(await p.locator('.tx-original').isHidden(),'Returning to the score hides the original');
+   assert.equal(await comparison.getAttribute('aria-pressed'),'false');
+  }else assert.ok(await p.locator('.tx-score').isVisible(),'Desktop comparison keeps both panes');
   assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await c.close();
  }
