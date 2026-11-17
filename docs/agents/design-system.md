@@ -162,6 +162,13 @@ from production.
 
 ## Guard: zero baseline
 
+`npm run check:design-utilities` loads the full app.css entry through the pinned Tailwind
+compiler and checks every authored `tw:` candidate in src TypeScript/TSX literals. A candidate
+that emits no CSS fails, with source locations; `tw:peer` is the intentional selector marker.
+This catches unsupported named scales, missing variants and dead utility aliases. Unit tests
+also check emitted and computed focus offsets and include absent-utility negative controls.
+
+
 `npm run check:design-tokens` uses TypeScript and PostCSS ASTs. It checks source CSS/TS/JS,
 server presentation and authored public SVG/manifest assets. It flags literal colors
 (including named colors, template RGB channels and local tuple/channel flow to visual
@@ -245,6 +252,7 @@ Material recipes and the renderer accessor consume the chosen semantic role dire
 ## Verification
 
 Run `npm run typecheck`, `npm test`, `npm run build`, `npm run check:design-tokens`,
+`npm run check:design-utilities`,
 `npm run test:browser:design-system`, `npm run test:browser:theme-extension`,
 `npm run test:browser:renderer-themes`, and the isolated authentication/admin browser suites.
 Set `BROWSER_EVIDENCE` to an external evidence directory when collecting captures. CI runs the
