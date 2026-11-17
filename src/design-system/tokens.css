@@ -202,6 +202,8 @@
   --pigment-material-gold-leaf: #d1a548;
   --pigment-material-gold-leaf-2: #a87920;
   --pigment-material-gold-leaf-3: #8a5e14;
+  --pigment-canvas-mask: #ffffff;
+  --pigment-gel-gloss: #ffffff;
   --pigment-print-paper: #ffffff;
   --pigment-print-ink: #000000;
   --pigment-voice-1: #F4879B;
@@ -400,6 +402,8 @@
   --ds-material-paper-surface-dark: .085;
   --ds-material-paper-light-bright: .3;
   --ds-material-paper-light-base: .35;
+  --ds-canvas-mask: var(--pigment-canvas-mask);
+  --ds-material-gel-gloss-color: var(--pigment-gel-gloss);
   --ds-material-gel-gloss: .75;
   --ds-material-grain-strength: .065;
   --ds-material-gold-leaf: linear-gradient(180deg, var(--pigment-material-gold-leaf), var(--pigment-material-gold-leaf-2) 55%, var(--pigment-material-gold-leaf-3));
@@ -453,6 +457,20 @@
 
 :root,
 :root[data-theme="night-paper"] {
+  /* Renderer intensity inputs; retain the historical light/dark appearance exactly. */
+  --ds-material-lantern-through-stops: 0 0, .2 0, .5 .22, .8 .38, 1 .46;
+  --ds-material-lantern-hot-stops: .3 .82 .4;
+  --ds-material-lantern-paper-glow-alpha: .11;
+  --ds-material-lantern-hole-boost: 1.3;
+  --ds-score-row-shadow-lantern-alpha: .13;
+  --ds-score-row-shadow-gel-alpha: .26;
+  --ds-score-hole-edge-alpha: .35;
+  --ds-material-reading-strip-alpha: .1;
+  --ds-score-overview-past: var(--ds-canvas-surface);
+  --ds-score-overview-past-alpha: .55;
+  --ds-title-name-glow-layers: .45 .22, .18 .3, .06 .45;
+  --ds-ribbon-highlight-alpha: .55;
+
   --ds-material-paper-ground: var(--pigment-page-background);
   --ds-title-name-ink: var(--pigment-title-name-ink-night);
   --ds-title-name-glow: var(--pigment-title-name-glow-night);
@@ -550,6 +568,20 @@
 }
 
 :root[data-theme="parchment"] {
+  /* Renderer intensity inputs; retain the historical light/dark appearance exactly. */
+  --ds-material-lantern-through-stops: 0 0, .3 0, .7 .1, 1 .18;
+  --ds-material-lantern-hot-stops: .08 .22 .11;
+  --ds-material-lantern-paper-glow-alpha: .24;
+  --ds-material-lantern-hole-boost: 0;
+  --ds-score-row-shadow-lantern-alpha: .07;
+  --ds-score-row-shadow-gel-alpha: .07;
+  --ds-score-hole-edge-alpha: .4;
+  --ds-material-reading-strip-alpha: .16;
+  --ds-score-overview-past: var(--ds-page-background);
+  --ds-score-overview-past-alpha: .6;
+  --ds-title-name-glow-layers: .45 .16, .16 .2;
+  --ds-ribbon-highlight-alpha: .45;
+
   --ds-material-paper-ground: var(--pigment-page-background-2);
   --ds-title-name-ink: var(--pigment-title-name-ink-parchment);
   --ds-title-name-glow: var(--pigment-title-name-glow-parchment);
@@ -647,6 +679,20 @@
 }
 
 :root[data-theme="velvet"] {
+  /* Renderer intensity inputs; retain the historical light/dark appearance exactly. */
+  --ds-material-lantern-through-stops: 0 0, .2 0, .5 .22, .8 .38, 1 .46;
+  --ds-material-lantern-hot-stops: .3 .82 .4;
+  --ds-material-lantern-paper-glow-alpha: .11;
+  --ds-material-lantern-hole-boost: 1.3;
+  --ds-score-row-shadow-lantern-alpha: .13;
+  --ds-score-row-shadow-gel-alpha: .26;
+  --ds-score-hole-edge-alpha: .35;
+  --ds-material-reading-strip-alpha: .1;
+  --ds-score-overview-past: var(--ds-canvas-surface);
+  --ds-score-overview-past-alpha: .55;
+  --ds-title-name-glow-layers: .45 .22, .18 .3, .06 .45;
+  --ds-ribbon-highlight-alpha: .55;
+
   --ds-material-paper-ground: var(--pigment-page-background);
   --ds-title-name-ink: var(--pigment-title-name-ink-night);
   --ds-title-name-glow: var(--pigment-title-name-glow-night);
@@ -901,6 +947,9 @@
   --color-title-staff-flare-core: var(--ds-title-staff-flare-core);
   --color-title-staff-flare-edge: var(--ds-title-staff-flare-edge);
   --color-artwork-nib: var(--ds-artwork-nib);
+  --color-canvas-mask: var(--ds-canvas-mask);
+  --color-material-gel-gloss-color: var(--ds-material-gel-gloss-color);
+  --color-score-overview-past: var(--ds-score-overview-past);
   --color-material-gel-deep: var(--ds-material-gel-deep);
   --color-material-wordmark-rim: var(--ds-material-wordmark-rim);
   --color-score-lantern-cavity: var(--ds-score-lantern-cavity);
