@@ -21,7 +21,7 @@ import type {
 import { createPortal } from "react-dom";
 import type * as r from "../recipes";
 import type * as p from "../parts";
-import { openDialog, bindMenu, type DialogBehaviorOptions } from "../behavior";
+import { openDialog, bindMenu, anchorPopover, type DialogBehaviorOptions } from "../behavior";
 export { toast } from "../behavior";
 
 type Native<T> = Omit<T, "className" | "style"> & {
@@ -547,6 +547,7 @@ function ToggleGroup({
 }
 function Dialog({
   variant,
+  destructive,
   open,
   title,
   body,
@@ -571,7 +572,7 @@ function Dialog({
     if (!open || specimen || !ref.current) return;
     const active = openDialog(ref.current, {
       ...latest.current.behavior,
-      motion: variant === "sheet" || variant === "domain-sheet" || variant === "library-sheet" ? "sheet" : variant === "library-popover" || variant === "library-prompt" ? "panel" : undefined,
+      motion: "panel",
       onCancel: (reason) => {
         latest.current.behavior?.onCancel?.(reason);
         latest.current.onCancel?.(reason);
@@ -591,13 +592,14 @@ function Dialog({
     () => controller.current?.setBusy(!!behavior?.busy),
     [behavior?.busy],
   );
-  const slots = recipes.dialogRecipe({ variant });
+  const slots = recipes.dialogRecipe({ variant, destructive });
   const node = (
     <dialog
       {...props}
       ref={ref}
       open={specimen ? open : undefined}
       data-ds="dialog"
+      data-dialog-layout={variant === "transcription-review" ? "fullscreen" : "centered"}
       role={
         props.role ??
         (variant === "confirm" || variant === "admin-confirm" || variant === "admin-reason"
@@ -638,8 +640,13 @@ const Sheet = ({variant="sheet",...props}: Omit<DialogProps, "variant"> & {varia
 const Drawer = (props: Omit<DialogProps, "variant">) => (
   <Dialog {...props} variant="drawer" />
 );
-const ConfirmDialog = ({variant="confirm",...props}: Omit<DialogProps, "variant"> & {variant?: "confirm"|"admin-confirm"|"admin-reason"}) => (
-  <Dialog {...props} variant={variant} />
+export interface ConfirmDialogProps extends Omit<DialogProps, "variant"> {
+  variant?: "confirm" | "admin-confirm" | "admin-reason";
+  /** Use the generated action to inherit deliberate danger treatment. */
+  confirmAction?: { label: string; onConfirm: () => void };
+}
+const ConfirmDialog = ({variant="confirm", confirmAction, actions, ...props}: ConfirmDialogProps) => (
+  <Dialog {...props} variant={variant} role="alertdialog" actions={<>{actions}{confirmAction && <Button intent={props.destructive ? "danger" : "primary"} onClick={confirmAction.onConfirm}>{confirmAction.label}</Button>}</>} />
 );
 function Menu({
   variant,
@@ -683,8 +690,14 @@ function Menu({
       )
         closeRef.current();
     };
+    ref.current?.showPopover?.();
+    const unplace = ref.current && triggerRef.current ? anchorPopover(ref.current, triggerRef.current, placement) : undefined;
     document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
+    return () => {
+      unplace?.();
+      ref.current?.hidePopover?.();
+      document.removeEventListener("pointerdown", outside);
+    };
   }, [open, trigger]);
   const slots = recipes.menuRecipe({ variant });
   const list = (
@@ -694,6 +707,7 @@ function Menu({
       ref={ref}
       hidden={trigger ? !open : props.hidden}
       role="menu"
+      popover={trigger ? "manual" : undefined}
       aria-label={label}
       className={recipes.withLayout(slots.root, layout)}
     >
@@ -722,7 +736,7 @@ function Menu({
     </div>
   );
   return trigger ? (
-    <div className="ds-menu-anchor tw:relative tw:[&>[role=menu]]:absolute tw:[&>[role=menu]]:top-full tw:[&>[role=menu]]:left-flush tw:[&>[role=menu]]:z-menu tw:[&[data-placement=end]>[role=menu]]:left-auto tw:[&[data-placement=end]>[role=menu]]:right-flush" data-placement={placement}>
+    <div className="ds-menu-anchor tw:relative tw:[&>[role=menu]]:fixed tw:[&>[role=menu]]:inset-auto tw:[&>[role=menu]]:m-flush tw:[&>[role=menu]]:overflow-auto tw:[&>[role=menu]]:z-menu" data-placement={placement}>
       <Button
         ref={triggerRef}
         aria-haspopup="menu"
