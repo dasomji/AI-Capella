@@ -110,7 +110,7 @@ export function ReasonDialog({
   );
   const behavior = { opener, busy, busyCancel: "block" as const, outside: "ignore" as const };
   return form ? (
-    <Dialog open variant="admin-detail" title={title} data-admin="confirm" destructive={destructive} behavior={behavior} onCancel={onCancel}>
+    <Dialog open variant="admin-detail" role={destructive ? "alertdialog" : "dialog"} title={title} data-admin="confirm" destructive={destructive} behavior={behavior} onCancel={onCancel}>
       {content}
     </Dialog>
   ) : (
