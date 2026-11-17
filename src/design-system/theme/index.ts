@@ -97,6 +97,22 @@ export function setThemePreference(preference: ThemePreference) {
   bootstrapTheme(preference); updateChrome(); refresh();
 }
 
+// Production CSS minification may shorten authored sRGB hex to a named color (e.g. bisque).
+// Resolve those through the browser once on the snapshot's cold path, never during drawing.
+// Invalid colors and contextual CSS keywords must still fail instead of becoming canvas black.
+let colorProbe: CanvasRenderingContext2D | undefined;
+function concreteColor(value: string): Color {
+  try { return normalizeColor(value); }
+  catch (error) {
+    if (!/^[a-z]+$/i.test(value) || /^(?:currentcolor|inherit|initial|unset|revert|revertlayer)$/i.test(value)
+      || typeof CSS === 'undefined' || !CSS.supports('color', value)) throw error;
+    colorProbe ??= document.createElement('canvas').getContext('2d') ?? undefined;
+    if (!colorProbe) throw error;
+    colorProbe.fillStyle = value;
+    return normalizeColor(colorProbe.fillStyle);
+  }
+}
+
 /** Immutable, concrete snapshot. One getComputedStyle per revision, never per frame. */
 export function readTheme(): ThemeSnapshot {
   if (typeof document === 'undefined') throw Error('readTheme() needs a styled client document; call it in a client effect');
@@ -112,15 +128,15 @@ export function readTheme(): ThemeSnapshot {
     return result;
   };
   const number = (role: string) => { const n = Number(value(role)); if (!Number.isFinite(n)) throw Error(`Non-numeric design token ${role}`); return n; };
-  const colors = Object.freeze(Object.fromEntries(colorRoles.map(role => [role, normalizeColor(value(role))]))) as ThemeSnapshot['colors'];
+  const colors = Object.freeze(Object.fromEntries(colorRoles.map(role => [role, concreteColor(value(role))]))) as ThemeSnapshot['colors'];
   const fonts = Object.freeze(Object.fromEntries(fontRoles.map(role => [role, value('font-' + role)]))) as ThemeSnapshot['fonts'];
   snapshot = Object.freeze({
     revision, id: root.dataset.theme as ThemeId, preference: root.dataset.themePreference as ThemePreference, type: root.dataset.type ?? 'bodoni',
     color: (role: typeof colorRoles[number]) => colors[role],
     material: Object.freeze({ surface: value('material-fibre') === 'none' ? 'waves' : 'paper', light: value('color-scheme') === 'light' ? 'ink' : 'additive', composite: value('color-scheme') === 'light' ? 'multiply' : 'lighter', onLight: value('color-scheme') === 'light' }),
-    colors, fonts, spectrum: Object.freeze(Array.from({ length: 8 }, (_, i) => normalizeColor(value(`voice-${i + 1}`)))),
+    colors, fonts, spectrum: Object.freeze(Array.from({ length: 8 }, (_, i) => concreteColor(value(`voice-${i + 1}`)))),
     fallback: Object.freeze({ hueStep: number('voice-fallback-hue-step'), saturation: number('voice-fallback-saturation'), lightness: number('voice-fallback-lightness') }),
-    print: Object.freeze({ paper: normalizeColor(value('print-paper')), ink: normalizeColor(value('print-ink')), textFont: value('print-font-text'), musicFont: value('print-font-music'), notationScale: number('print-notation-scale') }),
+    print: Object.freeze({ paper: concreteColor(value('print-paper')), ink: concreteColor(value('print-ink')), textFont: value('print-font-text'), musicFont: value('print-font-music'), notationScale: number('print-notation-scale') }),
     roles: Object.freeze(roles),
   });
   return snapshot;

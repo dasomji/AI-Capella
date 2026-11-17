@@ -6,7 +6,9 @@ sinks use `snapshot.fonts`; part assignments use `colorForPart(index, count, sna
 
 A snapshot selects typed material strategies from the authored `material-fibre` and
 `color-scheme` roles: paper versus waves, ink versus additive light. The formulas, trace paths,
-notation geometry and animation timing remain in their original renderer modules. The traced
+notation geometry and animation timing remain in their original renderer modules. CSS minifiers may
+serialize sRGB tokens as named colors; the accessor resolves valid names through a cached canvas
+on the snapshot cold path and still rejects invalid/contextual values. The traced
 Light word is paired with the bundled Italianno face; another script requires another trace.
 
 `main.ts` subscribes without registering a quiet-moment preference handler. It reassigns DOM

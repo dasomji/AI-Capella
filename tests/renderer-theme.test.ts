@@ -59,3 +59,25 @@ it('uses supplied spectrum/fallback inputs for all voice counts and keeps frozen
   expect(print.ink.css).toBe('rgb(0, 0, 0)');
   expect(api.readTheme().print.ink.css).toBe('rgb(152, 118, 84)');
 });
+
+it('normalizes minified named CSS pigments on the snapshot cold path and rejects invalid names', async () => {
+  const { api, values } = await clientTheme();
+  const normalized = '#ffe4c4';
+  // The browser canvas is the external boundary: it serializes valid named sRGB colors as hex.
+  const probe = { get fillStyle() { return normalized; }, set fillStyle(_value: string) {} };
+  const createElement = document.createElement.bind(document);
+  const create = vi.spyOn(document, 'createElement').mockImplementation((name: string) =>
+    name === 'canvas' ? { getContext: () => probe } as unknown as HTMLCanvasElement : createElement(name));
+  vi.stubGlobal('CSS', { supports: (_property: string, color: string) => color === 'bisque' });
+  values['--ds-material-light-warm'] = 'bisque';
+  try {
+    const theme = api.readTheme();
+    expect(theme.color('material-light-warm').css).toBe('rgb(255, 228, 196)');
+    expect(create).toHaveBeenCalledTimes(1);
+    api.readTheme();
+    expect(create).toHaveBeenCalledTimes(1);
+    values['--ds-material-light-warm'] = 'notacolor';
+    expect(() => api.notifyThemeMaterialChange()).not.toThrow();
+    expect(() => api.readTheme()).toThrow('Unsupported concrete theme color');
+  } finally { create.mockRestore(); }
+});
