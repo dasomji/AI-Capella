@@ -1,3 +1,4 @@
+import { playerUtilityClasses } from "./player";
 import { normalizeRecipe } from "./normalize";
 /** Pure, literal Tailwind recipes. Each property owns disjoint CSS properties. */
 export const controlBase =
@@ -111,7 +112,7 @@ function buttonRecipeStyles({
 }: ButtonOptions = {}): string {
   if (variant === "scan-mark-go" || variant === "scan-mark-ok") return [...new Set((buttonRecipeStyles({variant:'standard',intent,pressed}).split(' ').filter(c=>variant!=='scan-mark-ok'||!['tw:border-rule-strong','tw:text-ink','tw:border-ink','tw:border-danger'].includes(c)).join(' ') + ' ds-panel-scan-button' + (variant === 'scan-mark-ok' ? ' ds-panel-scan-quiet tw:border-transparent tw:text-ink-secondary' : '')).split(' '))].join(' ');
   if (variant in panelButtons) return panelButtons[variant as keyof typeof panelButtons];
-  if (variant in playerButtonShapes) return playerButtonShapes[variant as keyof typeof playerButtonShapes] + (variant === "player-play" && playing ? " playing" : "");
+  if (variant in playerButtonShapes) return playerUtilityClasses(playerButtonShapes[variant as keyof typeof playerButtonShapes]) + (variant === "player-play" && playing ? " playing" : "");
   if (variant === 'landing-create') return buttonRecipeStyles({variant:'standard',intent,pressed}).replace('tw:text-button','tw:text-body-small').replace('tw:inline-flex','tw:block').replace('tw:m-0','') + ' tw:mx-auto tw:mt-18 tw:text-center';
   if (variant === 'library-action' || variant === 'offline-update') {
     const standard = buttonRecipeStyles({variant:'standard',intent,pressed});
@@ -171,8 +172,8 @@ export interface IconButtonOptions {
 function iconButtonRecipeStyles({
   variant = "standard",
 }: IconButtonOptions = {}) {
-  if (variant === "section-add") return "ds-player-button ds-player-icon ds-player-icon-small ds-panel-section-add icon-btn small";
-  if (["player", "player-landscape", "player-zoom", "player-follow", "voice-more"].includes(variant)) return "ds-player-button ds-player-icon icon-btn" + ({player:"", "player-landscape":" ds-player-landscape-only landscape-only", "player-zoom":"", "player-follow":" ds-player-follow-btn follow-btn", "voice-more":" ds-player-voice-more voice-more ds-player-icon-small small"} as Record<string,string>)[variant];
+  if (variant === "section-add") return playerUtilityClasses("ds-player-button ds-player-icon ds-player-icon-small ds-panel-section-add icon-btn small");
+  if (["player", "player-landscape", "player-zoom", "player-follow", "voice-more"].includes(variant)) return playerUtilityClasses("ds-player-button ds-player-icon icon-btn" + ({player:"", "player-landscape":" ds-player-landscape-only landscape-only", "player-zoom":"", "player-follow":" ds-player-follow-btn follow-btn", "voice-more":" ds-player-voice-more voice-more ds-player-icon-small small"} as Record<string,string>)[variant]);
   if (variant === "library-more") return "ds-library-button ds-library-song-more song-more tw:inline-grid tw:place-items-center tw:flex-none tw:size-40 tw:rounded-icon";
   const shapes: Record<NonNullable<IconButtonOptions["variant"]>, string> = {
     "section-add":"", player:"", "player-landscape":"", "player-zoom":"", "player-follow":"", "voice-more":"",
@@ -223,7 +224,7 @@ function fieldRecipeStyles(
     const controls = {"panel-tempo":"ds-panel-field ds-panel-bpm-input bpm-input field", "panel-measure":"ds-panel-field ds-panel-measure-input measure-input field", "panel-export":"ds-panel-field field", "panel-offset":"ds-panel-range"};
     return {root:"ds-panel-part ds-panel-field-group",label:"ds-panel-label label",control:"ds-panel-input " + controls[variant as keyof typeof controls],hint:"tw:sr-only",error:"tw:sr-only"};
   }
-  if (variant === "player-volume") return {root:"ds-player-duck-row",label:"ds-player-label label",control:"ds-player-input ds-player-volume duck-range",hint:"tw:sr-only",error:"tw:sr-only"};
+  if (variant === "player-volume") return {root:playerUtilityClasses("ds-player-duck-row"),label:playerUtilityClasses("ds-player-label label"),control:playerUtilityClasses("ds-player-input ds-player-volume duck-range"),hint:"tw:sr-only",error:"tw:sr-only"};
   if (variant === "account-password") return {root:"ds-account-password",label:"ds-account-label",control:"ds-account-input tw:rounded-field",hint:"tw:sr-only",error:"ds-account-error"};
   if (variant === 'library-prompt') {
     const boxed = fieldRecipeStyles({variant:'boxed',invalid},kind);
@@ -306,7 +307,7 @@ function switchRecipeStyles({
   variant = "player",
   checked = false,
 }: SwitchOptions = {}) {
-  if (variant === "player-preference") return {label:"ds-player-switch-label",input:"tw:sr-only",root:"ds-player-button ds-player-switch switch",thumb:"tw:hidden"};
+  if (variant === "player-preference") return {label:"ds-player-switch-label",input:"tw:sr-only",root:playerUtilityClasses("ds-player-button ds-player-switch switch"),thumb:"tw:hidden"};
   // D11: the offline policy retains its native checkbox, rather than a drawn track.
   if (variant === "shared-device") return {label:"ds-account-shared",input:"ds-account-shared-input",root:"tw:hidden",thumb:"tw:hidden"};
   const sizes = {

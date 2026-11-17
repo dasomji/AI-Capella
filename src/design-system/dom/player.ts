@@ -1,5 +1,6 @@
 import {
   playerPartRecipe,
+  playerGlyphRecipe,
   transportRecipe,
   voiceRowRecipe,
   type PlayerPart,
@@ -120,7 +121,7 @@ export function createMixerVolume(options: { id: string; label: string }) {
 /** SMuFL is trusted text, never interpreted markup. */
 export function createPlayerGlyph(text: string, kind: string) {
   const glyph = document.createElement("span");
-  glyph.className = "ds-player-glyph menu-glyph " + kind;
+  glyph.className = playerGlyphRecipe(kind);
   glyph.textContent = text;
   glyph.setAttribute("aria-hidden", "true");
   return glyph;
