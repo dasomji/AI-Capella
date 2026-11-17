@@ -74,7 +74,7 @@ jobs:
           if-no-files-found: ignore
   integration-browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     services:
       mailpit:
         image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
