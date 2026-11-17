@@ -188,7 +188,7 @@ function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }
         : ""),
     row:
       records
-        ? "tw:[&[data-href]]:cursor-pointer tw:[&[data-href]]:hover:bg-table-row-hover"
+        ? "tw:[&[tabindex]]:cursor-pointer tw:[&[tabindex]]:hover:bg-table-row-hover tw:[&[data-href]]:cursor-pointer tw:[&[data-href]]:hover:bg-table-row-hover"
         : "tw:bg-transparent",
     empty: "tw:p-section tw:text-ink-secondary tw:text-left",
     pagination:
