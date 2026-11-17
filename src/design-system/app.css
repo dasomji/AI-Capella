@@ -347,3 +347,6 @@
 
 /* The switch thumb is generated, but its simple geometry is utility-expressible. */
 @utility player-switch-thumb-transition { transition: var(--ds-player-switch-after-transition-101); }
+
+/* Background shorthands clear images as well as color; @theme colors cannot express this. */
+@utility background-library-clear { background: none; }
