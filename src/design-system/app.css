@@ -11,7 +11,6 @@
 @import '../style.css' layer(legacy);
 @import '../parchment.css' layer(legacy);
 @import '../auth.css' layer(legacy);
-@import '../admin.css' layer(legacy);
 @import '../transcription.css' layer(legacy);
 @import './tokens.css' layer(tokens);
 @import './legacy-components.css' layer(components);
