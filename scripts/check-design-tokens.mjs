@@ -102,8 +102,8 @@ export function scanDesignFile(file, source, options = {}) {
     // Native cascade keywords select inheritance/structure, not authored design values.
     if (/^\[-?[a-z-]+:(?:inherit|revert|initial|unset|none)\]$/.test(utility)) return true;
     const variables = [...utility.matchAll(/(?:var\(\s*|[:(])(--[\w-]+)/g)].map(m=>m[1]);
-    // --c is the runtime voice color; --rx/--ry are measured pointer tilt coordinates.
-    return variables.length > 0 && namedTokens(utility.replace(/_/g, ' ')).length === 0 && variables.every(v=>v.startsWith('--ds-') || ['--c','--rx','--ry'].includes(v)) && !/(?:#[\da-f]{3,8}\b|\d+(?:px|rem|em|ms|s|deg|%)\b|rgba?\(|hsla?\()/i.test(utility);
+    // Element-local voice paint, pointer tilt and writing progress/delays are runtime inputs.
+    return variables.length > 0 && namedTokens(utility.replace(/_/g, ' ')).length === 0 && variables.every(v=>v.startsWith('--ds-') || ['--c','--rx','--ry','--written','--ded-delay','--ded-wait'].includes(v)) && !/(?:#[\da-f]{3,8}\b|\d+(?:px|rem|em|ms|s|deg|%)\b|rgba?\(|hsla?\()/i.test(utility);
   }
   function classes(text, context) {
     for (const match of text.matchAll(paletteClass)) add('palette-utility', context, match[0]);
