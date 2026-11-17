@@ -2561,6 +2561,7 @@
   --color-material-intro-count-color: var(--ds-material-intro-count-color);
   --color-material-title-l-color: var(--ds-material-title-l-color);
   --color-note-secondary: var(--ds-note-secondary);
+  --color-on-accent: var(--ds-on-accent);
   --color-on-danger: var(--ds-on-danger);
   --color-panel-scan-mark-img-background: var(--ds-panel-scan-mark-img-background);
   --color-panel-stepper-background: var(--ds-panel-stepper-background);
