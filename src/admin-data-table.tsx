@@ -265,7 +265,7 @@ export function AdminDataTable({
           action={filtered && onClear ? <Button size="compact" type="button" onClick={onClear}>{t.clear}</Button> : undefined}
         />
       )}
-      {(pagination.pageIndex > 0 || next || rows.length > 10) && (
+      {(pagination.pageIndex > 0 || next || rows.length > 0) && (
         <TablePagination data-admin="pagination">
           <Button
             size="compact"
