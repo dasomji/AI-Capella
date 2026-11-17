@@ -176,7 +176,7 @@
   --pigment-material-vellum-strong-parchment: rgb(239 229 205 / 0.93);
   --pigment-shadow-material-highlight-parchment: rgb(255 255 250 / 0.6);
   --pigment-accent-parchment: var(--pigment-accent-invitation);
-  --pigment-warning-parchment: #9a4437;
+  --pigment-warning-parchment: #853a2f;
   --pigment-on-accent: #fff8ea;
   --pigment-browser-chrome: var(--pigment-page-background-parchment);
   --pigment-accent-invitation: #795315;
