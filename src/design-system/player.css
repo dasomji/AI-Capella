@@ -1,5 +1,4 @@
-/* Native generated/UA parts cannot be addressed by element utility classes. */
-/* Native pseudo-element styling retains the browser slider/decorative part. */
+/* WebKit’s generated volume track cannot receive the mixer’s element classes. */
 .ds-player-volume::-webkit-slider-runnable-track {
   height: var(--ds-space-compact);
   border-radius: var(
@@ -7,7 +6,7 @@
   );
   background: var(--ds-surface-hover);
 }
-/* Native pseudo-element styling retains the browser slider/decorative part. */
+/* WebKit’s volume thumb needs its native offset, geometry and material shadow independently of the input. */
 .ds-player-volume::-webkit-slider-thumb {
   appearance: none;
   width: var(--ds-space-action);
@@ -21,7 +20,7 @@
     --ds-player-input-type-range-vendor-slider-thumb-box-shadow
   );
 }
-/* Native pseudo-element styling retains the browser slider/decorative part. */
+/* Firefox exposes a separate generated volume track with the same authored track roles. */
 .ds-player-volume::-moz-range-track {
   height: var(--ds-space-compact);
   border-radius: var(
@@ -29,7 +28,7 @@
   );
   background: var(--ds-surface-hover);
 }
-/* Native pseudo-element styling retains the browser slider/decorative part. */
+/* Firefox owns thumb layout and border defaults independently of WebKit’s offset model. */
 .ds-player-volume::-moz-range-thumb {
   width: var(--ds-space-action);
   height: var(--ds-space-action);
@@ -37,13 +36,13 @@
   border-radius: var(--ds-radius-round);
   background: var(--ds-ink);
 }
-/* Native pseudo-element styling retains the browser slider/decorative part. */
+/* The horizontal voice-chip scroller keeps scrolling while suppressing its WebKit scrollbar subpart. */
 .ds-player-chips::-webkit-scrollbar {
   display: none;
 }
-/* Native pseudo-element styling retains the browser slider/decorative part. */
+/* The generated WebKit thumb chooses its shadow through the theme’s light-material strategy. */
 @container style(--ds-color-scheme: light) {
-/* Native thumb shadow follows the material color-scheme role. */
+/* Light-material thumb elevation is applied to the native subpart that has no recipe-owned DOM node. */
 :root:root .ds-player-volume::-webkit-slider-thumb {
   box-shadow: var(
     --ds-player-input-type-range-vendor-slider-thumb-box-shadow-light
