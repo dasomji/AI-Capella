@@ -43,8 +43,8 @@ const libraryStyles = {
   menuSub: "tw:grid",
   menuOption: "tw:min-h-toolbar! tw:font-weight-medium!",
   menuDanger: "tw:text-danger tw:[&_.ic]:text-danger!",
-  offlineUpdate: "tw:fixed tw:bottom-action tw:right-action tw:z-library-update-layer",
-  link: "tw:min-h-flush tw:text-label tw:font-weight-label tw:text-ink-secondary tw:p-library-link-padding tw:rounded-tile-dense tw:text-center tw:[&:hover]:text-ink tw:[&.ds-library-landing-aside]:text-body-small",
+  offlineUpdate: "tw:flex-none tw:self-end tw:m-small tw:max-w-full tw:whitespace-normal",
+  link: "tw:min-h-flush tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:max-w-full tw:wrap-anywhere tw:text-label tw:font-weight-label tw:text-ink-secondary tw:p-library-link-padding tw:rounded-tile-dense tw:text-center tw:[&:hover]:text-ink tw:[&.ds-library-landing-aside]:text-body-small",
   tag: "tw:type-library-tag-font tw:tracking-library-tag-tracking tw:uppercase tw:text-ink-muted tw:frame-all-library-tag-border tw:rounded-pill tw:p-library-tag-padding",
   promptHead: "tw:contents",
 } as const;
@@ -82,7 +82,7 @@ const controls = {
 export type LibraryControl = keyof typeof controls;
 export function libraryControlRecipe(variant: LibraryControl) { return controls[variant]; }
 export function libraryCardRecipe() { return "ds-library-song-card song-card" + " " + libraryStyles.songCard + " " + accountStyles.songCard; }
-export function libraryMoreRecipe() { return "ds-library-button ds-library-song-more song-more" + " " + libraryStyles.button + " " + libraryStyles.songMore + " tw:inline-grid tw:place-items-center tw:flex-none tw:size-toolbar tw:rounded-icon"; }
+export function libraryMoreRecipe() { return "ds-library-button ds-library-song-more song-more" + " " + libraryStyles.button + " " + libraryStyles.songMore + " tw:inline-grid tw:place-items-center tw:flex-none tw:size-toolbar tw:touch:min-w-control-target-touch tw:touch:min-h-control-target-touch tw:rounded-icon"; }
 export function libraryBadgeRecipe(variant:"tag"|"prepared") { return variant==="tag" ? "ds-library-tag tag" + " " + libraryStyles.tag : "ds-offline-mark offline-mark" + " " + accountStyles.offlineMark; }
 export function offlineUpdateRecipe() { return "ds-library-offline-update" + " " + libraryStyles.offlineUpdate; }
 export function librarySearchRecipe() { return {root:"ds-library-search" + " " + libraryStyles.search,label:"tw:sr-only",control:"ds-library-search-input" + " " + libraryStyles.searchInput + " tw:rounded-field",hint:"tw:sr-only",error:"tw:sr-only"}; }
