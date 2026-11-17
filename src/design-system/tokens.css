@@ -2181,10 +2181,10 @@
     --ds-player-t-sep-margin: var(--ds-space-none) var(--ds-space-small);
     --ds-player-play-button-transition: transform var(--ds-duration-fast), box-shadow var(--ds-duration-normal);
     --ds-player-play-button-active-transform: scale(0.95);
-    --ds-player-header-padding-phone: var(--ds-safe-top) max(var(--ds-space-snug), var(--ds-safe-right)) var(--ds-space-none) max(var(--ds-space-compact), var(--ds-safe-left));
+    --ds-player-header-padding-phone: var(--ds-safe-top) var(--ds-space-snug) var(--ds-space-none) var(--ds-space-compact);
     --ds-player-back-button-padding-phone: var(--ds-space-none) var(--ds-space-small);
     --ds-player-segment-button-padding-phone: var(--ds-space-none) var(--ds-space-segment-dense);
-    --ds-player-transport-padding: var(--ds-space-small) max(var(--ds-space-action), var(--ds-safe-right)) calc(var(--ds-space-inline) + var(--ds-safe-bottom)) max(var(--ds-space-action), var(--ds-safe-left));
+    --ds-player-transport-padding: var(--ds-space-small) var(--ds-space-action) calc(var(--ds-space-inline) + var(--ds-safe-bottom));
     --ds-player-transport-padding-bottom: calc(var(--ds-space-compact) + var(--ds-safe-bottom));
     --ds-player-sheet-body-voice-list-padding: var(--ds-space-compact) var(--ds-space-none) var(--ds-space-small);
     --ds-player-sheet-body-duck-padding: var(--ds-space-row) var(--ds-space-none) var(--ds-space-action);
@@ -2239,7 +2239,7 @@
   --ds-player-reset-padding: var(--ds-space-compact) var(--ds-space-snug);
   --ds-player-header-grid-area: top;
   --ds-player-voices-panel-grid-area: side;
-  --ds-player-voice-row-grid-template-columns: var(--ds-space-row) minmax(0, 1fr) var(--ds-size-admin-mobile) var(--ds-size-admin-mobile);
+  --ds-player-voice-row-grid-template-columns: var(--ds-space-row) minmax(0, 1fr) var(--ds-control-target-touch) var(--ds-control-target-touch);
   --ds-player-voice-row-columns-actions: var(--ds-space-row) minmax(0, 1fr) var(--ds-size-admin-mobile) var(--ds-size-admin-mobile) var(--ds-space-heading);
   --ds-player-sheet-body-grid-template-columns: var(--ds-space-row) minmax(0, 1fr) var(--ds-space-toolbar) var(--ds-space-toolbar) var(--ds-space-toolbar-dense);
   --ds-player-voice-name-line-height: 1.2;
@@ -2353,10 +2353,12 @@
     'ov ov'
     'tr tr';
   --ds-roll-staff-transform: translateZ(0);
+  --ds-player-tablet-rows: 60px minmax(0, 1fr) var(--ds-space-chips) var(--ds-control-target-touch) auto;
+  --ds-player-tablet-areas: 'top top' 'side stage' 'ov ov' 'info info' 'tr tr';
   --ds-player-grid-template-columns-phone: minmax(0, 1fr);
   --ds-player-grid-template-rows-phone: calc(54px + var(--ds-safe-top)) var(--ds-control-height-touch) minmax(0, 1fr) var(--ds-space-toolbar-dense) var(--ds-control-height-touch) auto;
   --ds-player-grid-template-areas-phone: 'top' 'chips' 'stage' 'ov' 'info' 'tr';
-  --ds-player-grid-template-rows-landscape: calc(var(--ds-space-chips) + var(--ds-safe-top)) minmax(0, 1fr) var(--ds-space-heading) var(--ds-space-toolbar-dense) auto;
+  --ds-player-grid-template-rows-landscape: calc(var(--ds-space-chips) + var(--ds-safe-top)) minmax(0, 1fr) var(--ds-space-heading) var(--ds-control-target-touch) auto;
   --ds-player-grid-template-areas-landscape: 'top' 'stage' 'ov' 'info' 'tr';
   --ds-sheet-grab-left: 50%;
   --ds-sheet-grab-margin-left: calc(-1 * var(--ds-space-group));
