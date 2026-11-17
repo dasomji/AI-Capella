@@ -109,8 +109,8 @@ try {
     for(const prop of Object.keys(x.styles))if(x.styles[prop]!==y.styles[prop])diffs.push({index:j,id:x.id,tag:x.tag,text:x.text,pseudo:x.pseudo,property:prop,before:x.styles[prop],after:y.styles[prop]});
    }
    const adminChange=theme==='parchment'&&old.screen==='account-sheet';
-   const colorProperties=new Set(['color','border-top-color','border-right-color','border-bottom-color','border-left-color','outline-color','column-rule-color','caret-color','text-decoration-color','-webkit-text-fill-color','-webkit-text-stroke-color']);
-   const allowed=diffs.filter(d=>adminChange&&d.tag==='A'&&d.text==='Administration'&&colorProperties.has(d.property));
+   const colorProperties=new Set(['color','border-top-color','border-right-color','border-bottom-color','border-left-color','border-block-start-color','border-block-end-color','border-inline-start-color','border-inline-end-color','outline-color','column-rule-color','row-rule-color','caret-color','text-decoration-color','text-emphasis-color','-webkit-text-fill-color','-webkit-text-stroke-color']);
+   const allowed=diffs.filter(d=>adminChange&&d.tag==='A'&&d.text==='Administration'&&d.pseudo===null&&colorProperties.has(d.property)&&d.before==='rgb(0, 0, 238)'&&d.after==='rgb(156, 109, 26)');
    const unexpected=diffs.filter(d=>!allowed.includes(d));
    const link=adminChange?old.styles.find(d=>d.tag==='A'&&d.text==='Administration'&&d.pseudo===null):undefined;
    let unexpectedPixels=0;
