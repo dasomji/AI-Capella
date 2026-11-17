@@ -121,8 +121,17 @@ try {
   const cacheUrls=await p.evaluate(async()=>{const urls=[];for(const key of await caches.keys())for(const req of await (await caches.open(key)).keys())urls.push(req.url);return urls;});
   assert(cacheUrls.length>20);assert(cacheUrls.every(u=>!new URL(u).pathname.startsWith('/api')&&!/[?]/.test(u)));assert(cacheUrls.some(u=>u.endsWith('/offline.html')));
   console.log('prepared and public cache verified');
+  const onlineCardRadius=await p.locator('.song-card').first().evaluate(card=>getComputedStyle(card).borderRadius);
   await a.setOffline(true);await p.reload();
   await p.locator('.song-card:has(.offline-mark)').waitFor();
+  const offlineStyles=await p.evaluate(()=>{
+    const area=[...document.styleSheets].find(sheet=>/\/workspace-[^/]+\.css$/.test(sheet.href??''));
+    const card=document.querySelector('.song-card'),grid=document.querySelector('#song-grid');
+    return {areaRules:area?.cssRules.length??0,grid:getComputedStyle(grid).display,radius:getComputedStyle(card).borderRadius};
+  });
+  assert.ok(offlineStyles.areaRules>0,'Offline shell loads the precached app stylesheet');
+  assert.equal(offlineStyles.grid,'grid','Offline library keeps its area layout');
+  assert.equal(offlineStyles.radius,onlineCardRadius,'Offline cards keep their themed area geometry');
   await p.locator('#lib-banner').filter({hasText:'Offline – prepared pieces are available'}).waitFor();
   assert.equal(await p.locator('#import-btn').isDisabled(),true);
   await p.locator('.song-card:has(.offline-mark) .song-open').click();
