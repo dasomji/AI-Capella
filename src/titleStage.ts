@@ -1,4 +1,4 @@
-import { shellRecipe } from "./design-system/recipes/shell";
+import { appShellRecipe } from "./design-system/recipes/shell";
 import { readTheme, subscribeTheme } from './design-system/theme';
 // "Die Bühne" -- the title screen as a stage before the light comes on (design.ts START_STAGE).
 //
@@ -115,7 +115,7 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
   // .stage-layer): repainting it full-screen every frame would be far too slow.
   const layer = () => {
     const c = document.createElement('canvas');
-    c.className = shellRecipe("stage-layer");
+    c.className = appShellRecipe().layer;
     c.setAttribute('aria-hidden', 'true');
     canvas.parentElement?.insertBefore(c, canvas);
     return c;
