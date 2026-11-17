@@ -853,7 +853,7 @@ export function TableWrap({
 }
 
 /** Finite semantic composition slots, shared with DOM workspaces. */
-export function Workspace({as: Tag = 'div', part, layout, ...props}: Native<HTMLAttributes<HTMLElement>> & {as?: 'main'|'header'|'div'|'section'|'span'|'p'|'h1'|'h2'|'h3'|'dl'|'dt'|'dd'|'pre'|'strong'|'small'|'fieldset'|'legend'; part:r.WorkspacePart;ref?:Ref<any>}) {
+export function Workspace({as: Tag = 'div', part, layout, ...props}: Native<HTMLAttributes<HTMLElement>> & {href?:string;as?: 'a'|'main'|'header'|'div'|'section'|'span'|'p'|'h1'|'h2'|'h3'|'dl'|'dt'|'dd'|'pre'|'strong'|'small'|'fieldset'|'legend'; part:r.WorkspacePart;ref?:Ref<any>}) {
   return <Tag {...props} className={r.withLayout(r.workspaceRecipe(part),layout)}/>;
 }
 export function NavigationTabs({label, items, value, onNavigate, variant, layout, ...props}: Native<HTMLAttributes<HTMLElement>> & r.NavigationOptions & {label:string;items:readonly {value:string;label:string;href:string}[];value:string;onNavigate?:(value:string)=>void}) {

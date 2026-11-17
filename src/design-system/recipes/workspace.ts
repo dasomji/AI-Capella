@@ -13,7 +13,7 @@ export function workspaceRecipe(part: WorkspacePart) {
   const parts: Record<WorkspacePart,string>={
     page:'tw:block tw:min-h-dvh tw:min-w-0 tw:max-w-full tw:bg-admin-surface tw:px-(--ds-workspace-inset) tw:py-32 tw:max-account:px-16 tw:max-account:py-20 tw:tabular-nums',
     header:'tw:block tw:relative tw:border-0 tw:border-b tw:border-solid tw:border-admin-header-rule tw:pb-18 tw:after:absolute tw:after:-bottom-px tw:after:inset-x-(--ds-workspace-rule-inset) tw:after:h-px tw:after:bg-admin-header-rule tw:after:content-(--ds-content-empty) tw:max-account:after:inset-x-(--ds-workspace-rule-phone-inset)',
-    wordmark:'tw:inline tw:font-auth-display tw:text-workspace-wordmark',
+    wordmark:'tw:inline tw:font-auth-display tw:text-workspace-wordmark tw:underline',
     title:'tw:block tw:font-auth-display tw:font-emphasis tw:text-admin tw:my-18 tw:max-account:text-admin-mobile',
     heading:'tw:block tw:font-auth-display tw:font-emphasis tw:text-workspace-heading tw:my-(--ds-workspace-heading-margin)',
     subheading:'tw:block tw:font-auth-mono tw:font-regular tw:text-body-small tw:leading-admin tw:uppercase tw:tracking-(--ds-tracking-label) tw:my-(--ds-workspace-subheading-margin)',
