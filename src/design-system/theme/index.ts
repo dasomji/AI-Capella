@@ -114,6 +114,10 @@ function updateChrome() {
   const color = getComputedStyle(document.documentElement).getPropertyValue('--ds-browser-chrome').trim();
   if (color) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
 }
+/** Menu-time support status for the currently applied appearance. */
+export function hasExperimentalAppearance(): boolean {
+  return typeof document !== 'undefined' && !!document.documentElement.dataset.experimental;
+}
 export function systemTheme(): ThemeId {
   const scheme = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   return (themeRegistry.find(theme => theme.system === scheme) ?? themeRegistry[0]).id;
