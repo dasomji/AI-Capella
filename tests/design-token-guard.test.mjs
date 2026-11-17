@@ -80,14 +80,14 @@ describe('review guard regressions M3–M6 / N1', () => {
   it('M5 covers CSS media and imports, allowing layered imports and system preferences', () => {
     expect(scanDesignFile('src/new.css', '@media (max-width: 800px){x{display:none}} @import "x.css";').map(row => row.kind)).toEqual(['raw-media-query','unlayered-css-import']);
     expect(scanDesignFile('src/new.css', '@import "x.css" layer(components);')).toEqual([]);
-    expect(scanDesignFile('src/design-system/tokens.css', '@import "x.css"; :root{--ds-ink:#123456}').map(row=>row.kind)).toEqual(['unlayered-css-import']);
+    expect(scanDesignFile('src/design-system/tokens.css', '@import "x.css"; :root[data-theme=night]{--ds-ink:#123456}').map(row=>row.kind)).toEqual(['unlayered-css-import']);
     expect(scan("matchMedia('(prefers-color-scheme:light)'); matchBreakpoint('panel','below');")).toEqual([]);
   });
   it.each(['p-[13px]', 'z-[9999]', 'w-[420px]', 'gap-[7px]', 'max-w-[90vw]', 'inset-x-[3rem]', 'basis-[50%]', 'm-(--legacy-space)', 'w-[var(--legacy-width)]'])('M6 rejects arbitrary layout %s', value => {
     expect(scan(`const cls='tw:hover:${value}';`).some(row => row.kind === 'arbitrary-aesthetic')).toBe(true);
   });
   it('M6 permits semantic arbitrary variables and semantic scales', () => {
-    expect(scan("const cls='tw:p-(--ds-space-12) tw:z-[var(--ds-layer-menu)] tw:max-panel:w-24 tw:p-2';")).toEqual([]);
+    expect(scan("const cls='tw:p-(--ds-space-12) tw:z-[var(--ds-layer-menu)] tw:max-panel:w-control tw:p-control';")).toEqual([]);
   });
   it('cannot revive the retired baseline mechanism through upgraded rules', () => {
     const row = {file:'src/old.ts',kind:'raw-color',context:'old',value:'#123456',count:1};
@@ -136,4 +136,16 @@ describe('final review guard evasions', () => {
     for (const name of ['--ds-panel-bpm-radius-39','shell-0031-0','player-native-height-4px']) expect(checkSemanticName(name),name).toBe(true);
     for (const name of ['--ds-space-12','--spacing-24','--ds-radius-card','tw:p-24']) expect(checkSemanticName(name.replace(/^(--ds-space|--spacing|tw:p)-\d+$/, 'semantic-scale')),name).toBe(false);
   });
+});
+
+it('rejects shared screen pigments while retaining explicit print exceptions', () => {
+  const css=':root{--ds-cover-background:#15131f;--ds-ink:var(--pigment-ink);--ds-print-paper:#fff;--ds-print-ink:#000} :root[data-theme="new"]{--ds-cover-background:#25231f}';
+  expect(scanDesignFile('src/design-system/tokens.css',css).filter(r=>r.kind==='shared-screen-color').map(r=>r.context)).toEqual(['--ds-cover-background','--ds-ink']);
+});
+it.each([
+  ['src/design-system/tokens.css', ':root{--ds-panel-bpm-radius-39:var(--ds-radius-card)}'],
+  ['src/design-system/app.css', '@utility shell-0031-0{display:block} @custom-variant player-0032-0 (&:hover);'],
+  ['src/new.ts', 'const x="tw:player-native-height-4px";'],
+])('enforces semantic names when enabled: %s', (file,source) => {
+  expect(scanDesignFile(file,source,{semanticNames:true}).some(r=>r.kind==='value-encoding-name')).toBe(true);
 });
