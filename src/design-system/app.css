@@ -258,7 +258,7 @@
 @utility background-library-song-more-background { background: var(--ds-library-song-more-background); }
 @utility background-library-song-card-tag-background { background: var(--ds-library-song-card-tag-background); }
 @utility background-library-song-card-skeleton-background-2 { background: var(--ds-library-song-card-skeleton-background-2); }
-@utility border-bottom-library-phone-song-card-border-bottom { border-bottom: var(--ds-library-phone-song-card-border-bottom); }
+@utility border-bottom-library-phone-song-card-border-bottom { --tw-sort: border-bottom-width; border-bottom: var(--ds-library-phone-song-card-border-bottom); }
 @utility transform-library-phone-song-more-transform { transform: var(--ds-library-phone-song-more-transform); }
 @utility background-library-phone-more-background { background: var(--ds-library-phone-more-background); }
 @utility transform-library-phone-song-card-tag-transform { transform: var(--ds-library-phone-song-card-tag-transform); }
@@ -295,7 +295,7 @@
 @utility background-library-song-card-lifted-background { background: var(--ds-library-song-card-lifted-background); }
 @utility border-library-song-card-lifted-border { --tw-sort: border-width; border: var(--ds-library-song-card-lifted-border); }
 @utility transition-library-song-card-lifted-transition { transition: var(--ds-library-song-card-lifted-transition); }
-@utility border-top-library-landing-empty-border-top { border-top: var(--ds-library-landing-empty-border-top); }
+@utility border-top-library-landing-empty-border-top { --tw-sort: border-top-width; border-top: var(--ds-library-landing-empty-border-top); }
 @utility font-library-landing-empty-p-first-child-font { --tw-sort: font-family; font: var(--ds-library-landing-empty-p-first-child-font); }
 @utility filter-library-mode-btn-ic-filter { filter: var(--ds-library-mode-btn-ic-filter); }
 @utility white-space-library-revival-song-meta-white-space { white-space: var(--ds-library-revival--song-meta-white-space); }
@@ -310,7 +310,7 @@
 @utility font-library-prompt-heading { --tw-sort: font-family; font: var(--ds-library-prompt-heading); }
 @utility transition-library-popover-transition { transition: var(--ds-library-popover-transition); }
 @utility max-width-none { max-width: none; }
-@utility border-top-library-sheet-border-top { border-top: var(--ds-library-sheet-border-top); }
+@utility border-top-library-sheet-border-top { --tw-sort: border-top-width; border-top: var(--ds-library-sheet-border-top); }
 @utility background-rule-strong { background: var(--ds-rule-strong); }
 @utility border-library-sheet-border { --tw-sort: border-width; border: var(--ds-library-sheet-border); }
 @utility transition-library-menu-item-transition { transition: var(--ds-library-menu-item-transition); }
@@ -325,11 +325,11 @@
 @utility transform-account-navigation-switch-transform { transform: var(--ds-account-navigation-switch-transform); }
 @utility transition-account-navigation-other-transition { transition: var(--ds-account-navigation-other-transition); }
 @utility font-account-email-font { --tw-sort: font-family; font: var(--ds-account-email-font); }
-@utility border-top-account-heading-border-top { border-top: var(--ds-account-heading-border-top); }
+@utility border-top-account-heading-border-top { --tw-sort: border-top-width; border-top: var(--ds-account-heading-border-top); }
 @utility font-account-heading-font { --tw-sort: font-family; font: var(--ds-account-heading-font); }
 @utility color-revert { color: revert; }
 @utility text-decoration-revert { text-decoration: revert; }
-@utility border-bottom-account-input-border-bottom { border-bottom: var(--ds-account-input-border-bottom); }
+@utility border-bottom-account-input-border-bottom { --tw-sort: border-bottom-width; border-bottom: var(--ds-account-input-border-bottom); }
 @utility font-account-input-font { --tw-sort: font-family; font: var(--ds-account-input-font); }
 @utility outline-account-body-outline { outline: var(--ds-account-body-outline); }
 
