@@ -15,6 +15,8 @@ export async function verifyDesignSystemPage() {
   document.head.append(sheet);
   const rows = [...document.querySelectorAll("[data-specimen]")];
   if (rows.length < 180) throw Error("Showcase missing primitives");
+  for (const name of ["button/account-link/secondary/default", "button/password-toggle/secondary/default", "field/ruled-account/input/invalid", "control-group/trailing-action", "toggle-group/language-separated", "status/account/error"])
+    if (!rows.some(row => row.dataset.specimen === name)) throw Error("Missing account parity specimen: " + name);
   const mismatches = [];
   let elements = 0,
     properties = 0,
