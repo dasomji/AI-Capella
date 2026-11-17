@@ -188,8 +188,9 @@ switcher. Production eliminates the route and catalog. Run the exported page fun
 browser harness): `verifyDesignSystemPage`, `verifyDesignSystemContexts`,
 `verifyDesignSystemBehavior`, `verifyP3ReviewFixes` and, in an actual reduced-motion browser
 context, `verifyP3ReducedMotion`. Inspect returned mismatches (must be empty). They compare tags, native state, attributes, roles, aria associations and all
-computed properties and before/after pseudo-elements, exercise native focus behavior, and
-mutate/restore one role to prove both adapters react to a token-only edit. The context check
+computed presentation properties and before/after pseudo-elements, exercise native focus behavior, and
+mutate/restore one role to prove both adapters react to a token-only edit. Custom-property
+maps are checked by the theme contracts rather than repeatedly compared on every specimen. The context check
 neutralizes only the two host shells' layout dimensions; component appearance still competes
 with the actual auth/admin composition recipes. Run `npm run test:browser:design-system`;
 set `BROWSER_EVIDENCE` for captures outside git.
