@@ -6,9 +6,9 @@ import { normalizeRecipe } from "./normalize";
 /** Pure, literal Tailwind recipes. Each property owns disjoint CSS properties. */
 const controlBehavior = "tw:box-border tw:disabled:cursor-default tw:aria-disabled:cursor-wait tw:motion-reduce:transition-none";
 const controlFocus = {
-  standard: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-focus tw:focus-visible:outline-offset-compact",
-  admin: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-admin-accent tw:focus-visible:outline-offset-tight",
-  library: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-ink tw:focus-visible:outline-offset-compact",
+  standard: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-focus tw:focus-visible:outline-offset-(--ds-space-compact)",
+  admin: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-admin-accent tw:focus-visible:outline-offset-(--ds-space-tight)",
+  library: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-ink tw:focus-visible:outline-offset-(--ds-space-compact)",
 };
 const unfocusedControlBase = controlBehavior + " tw:m-flush";
 const adminControlBase = unfocusedControlBase + " " + controlFocus.admin;
@@ -256,7 +256,7 @@ function fieldRecipeStyles(
   const prompt = variant === "library-prompt";
   const ruled = variant !== "boxed" && !prompt;
   return {
-    root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-flush" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-flush tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group") : admin ? "tw:grid tw:gap-snug tw:min-w-flush tw:font-auth-body tw:text-label tw:leading-leading-body tw:tracking-(--ds-tracking-default) tw:tabular-nums" : "tw:grid tw:gap-snug tw:min-w-flush " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
+    root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-flush" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-flush tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group") : admin ? "tw:grid tw:gap-snug tw:min-w-flush tw:font-auth-body tw:text-label tw:leading-leading-body tw:normal-case tw:tracking-(--ds-tracking-default) tw:tabular-nums" : "tw:grid tw:gap-snug tw:min-w-flush " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
     label:
       variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-leading-body tw:text-ink" : variant === "domain" ? "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-(--ds-domain-label-tracking) tw:leading-leading-admin tw:text-ink-secondary" : ruled && !admin
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-tracking-auth-label tw:leading-leading-field tw:text-ink-secondary"
@@ -352,7 +352,7 @@ function switchRecipeStyles({
       " " +
       (variant === "admin" ? denseDisabled : disabledRecipe) +
       (variant === "admin" ? " tw:min-h-sheet-dense tw:font-auth-mono tw:text-body-small tw:leading-leading-admin tw:relative tw:inline-block tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer " :
-      " tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-(length:--ds-stroke-focus) tw:peer-focus-visible:[outline-color:var(--ds-focus)] tw:peer-focus-visible:outline-offset-compact tw:peer-disabled:opacity-(--ds-opacity-disabled) tw:min-h-flush tw:leading-leading-body tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer ") +
+      " tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-(length:--ds-stroke-focus) tw:peer-focus-visible:[outline-color:var(--ds-focus)] tw:peer-focus-visible:outline-offset-(--ds-space-compact) tw:peer-disabled:opacity-(--ds-opacity-disabled) tw:min-h-flush tw:leading-leading-body tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer ") +
       sizes[variant] +
       " " +
       (variant === "player"
