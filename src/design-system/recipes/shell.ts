@@ -10,7 +10,7 @@ export function appShellRecipe() {
     player: "tw:[#app.mode-player_&]:grid",
     overview: "overview tw:reduced-transparency:[-webkit-backdrop-filter:none] tw:reduced-transparency:[backdrop-filter:none] tw:reduced-transparency:surface-surface-raised",
     stage: "stage tw:surface-material-stage-background",
-    layer: "stage-layer tw:absolute tw:inset-flush tw:w-full tw:h-full tw:pointer-events-none tw:opacity-opacity-hidden tw:will-change-opacity",
+    layer: "stage-layer tw:absolute tw:inset-flush tw:w-full tw:h-full tw:pointer-events-none tw:opacity-opacity-hidden tw:will-change-(--ds-compositor-opacity)",
   } as const;
 }
 
