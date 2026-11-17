@@ -88,8 +88,8 @@ const librarySlots = {
     "tw:library-song-card-skeleton:background-library-song-card-skeleton-background-2 " +
     "tw:library-song-card-skeleton:animate-library-song-card-skeleton-animation " +
     "tw:library-song-card-base-max-compact:rounded-library-song-card-border-radius " +
-    "tw:library-song-card-base-max-compact:background-library-clear tw:library-song-card-base-max-compact:border-0 " +
-    "tw:library-song-card-base-max-compact:border-bottom-library-phone-song-card-border-bottom " +
+    "tw:library-song-card-base-max-compact:border-0 " +
+    "tw:library-song-card-base-max-compact:border-bottom-library-phone-song-card-border-bottom tw:library-song-card-base-max-compact:border-library-song-card-border-color " +
     "tw:library-song-card-hover-max-compact:transform-none " +
     "tw:library-song-card-ds-library-tag-max-compact:top-library-radius-round " +
     "tw:library-song-card-ds-library-tag-max-compact:left-auto " +
