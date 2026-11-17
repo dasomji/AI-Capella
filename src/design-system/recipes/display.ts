@@ -168,7 +168,8 @@ function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }
   return {
     root:
       "tw:w-full tw:border-collapse tw:font-control tw:text-body-small tw:leading-leading-body tw:text-ink tw:tabular-nums " +
-      (variant === "metrics" ? "tw:min-w-(--ds-admin-metrics-width)" : "tw:min-w-(--ds-admin-records-width)") +
+      // Metrics size to their content and scroll inside the wrapper only when they must.
+      (variant === "metrics" ? "" : "tw:min-w-(--ds-admin-records-width)") +
       (records
         ? " tw:max-account:block tw:max-account:min-w-flush tw:max-account:[&_thead]:block tw:max-account:[&_thead_tr]:flex tw:max-account:[&_thead_tr]:flex-wrap tw:max-account:[&_thead_tr]:gap-x-control tw:max-account:[&_thead_tr]:pb-small tw:max-account:[&_th:not(:has(button))]:hidden tw:max-account:[&_tbody]:grid tw:max-account:[&_tbody]:gap-small tw:max-account:[&_tbody_tr]:grid tw:max-account:[&_tbody_tr]:gap-compact tw:max-account:[&_tbody_tr]:p-control tw:max-account:[&_tbody_tr]:rounded-card tw:max-account:[&_tbody_tr]:border-(length:--ds-stroke-thin) tw:max-account:[&_tbody_tr]:border-solid tw:max-account:[&_tbody_tr]:border-rule tw:max-account:[&_tbody_tr]:bg-surface"
         : ""),
@@ -182,7 +183,7 @@ function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }
       (records ? " tw:max-account:static tw:max-account:border-0 tw:max-account:p-flush tw:max-account:bg-transparent" : ""),
     cell:
       "tw:text-left tw:align-top tw:leading-leading-body tw:text-ink tw:tabular-nums tw:px-small tw:py-small tw:max-w-(--ds-table-cell-max) tw:border-rule " + line + " " +
-      (mono ? "tw:font-mono tw:text-small tw:whitespace-nowrap" : "tw:font-control tw:text-body-small tw:wrap-anywhere") +
+      (mono ? "tw:font-mono tw:text-small tw:whitespace-nowrap" : variant === "metrics" ? "tw:font-control tw:text-body-small tw:whitespace-nowrap" : "tw:font-control tw:text-body-small tw:wrap-anywhere") +
       (records
         ? " tw:max-account:max-w-none tw:max-account:border-0 tw:max-account:p-flush tw:max-account:whitespace-normal tw:max-account:wrap-anywhere tw:max-account:grid tw:max-account:grid-cols-(--ds-admin-definition-columns) tw:max-account:gap-small tw:max-account:justify-items-start tw:max-account:items-baseline tw:max-account:before:content-[attr(data-label)] tw:max-account:before:text-small tw:max-account:before:text-ink-secondary tw:max-account:before:font-control"
         : ""),
