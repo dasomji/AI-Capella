@@ -200,9 +200,10 @@ try {
   await q.getByText("Rename", { exact: true }).click();
   await q.getByRole("alertdialog").getByRole("textbox").fill("Conflict name");
   await q.getByRole("button", { name: "Save", exact: true }).click();
-  await q
-    .getByText("Someone else just changed this – reloaded.", { exact: true })
-    .waitFor();
+  // D15: the operation error remains visible until the singer dismisses it.
+  const conflictNotice = q.locator('#toast[role="alert"]').filter({hasText: 'Someone else just changed this – reloaded.'});
+  await conflictNotice.waitFor();
+  await conflictNotice.getByRole('button', {name: 'Close', exact: true}).click();
   await q.unrouteAll();
   console.log("conflict passed");
   assert.equal(
