@@ -24,8 +24,16 @@
 }
 /* Animation frames require a keyframes rule; the animation is selected by a token-backed utility. */
 @keyframes ds-loading { 0%,100% {opacity:1} 50% {opacity:var(--ds-opacity-loading)} }
-/* Generated pseudo-elements must share the opt-in all:initial boundary. */
-.ds-reset::before,.ds-reset::after { all:initial;content:none; }
+/* Generated slots reset their content while preserving the parent text direction, typography and input policy. */
+.ds-reset::before,.ds-reset::after {
+  all:initial; content:none;
+  direction:inherit; text-align:inherit; letter-spacing:inherit;
+  text-transform:inherit; white-space:inherit; text-indent:inherit;
+  word-spacing:inherit; line-height:inherit; font-variant:inherit;
+  color-scheme:inherit; visibility:inherit; pointer-events:inherit;
+  accent-color:inherit; print-color-adjust:inherit;
+}
+
 /* The generated menu glow has no DOM node to receive element utility classes. */
 .ds-menu-item::before {
   content:'';position:absolute;inset:var(--ds-menu-glow-inset);z-index:var(--ds-layer-behind);
@@ -37,11 +45,3 @@
 @media (prefers-reduced-motion:reduce) { .ds-menu-item::before { transition:none; } }
 /* The reset boundary must preserve native hidden regardless of slot display utilities. */
 .ds-reset[hidden] { display:none !important; }
-/* Generated decorations restore inherited visibility and input policy after all:initial. */
-.ds-reset::before, .ds-reset::after {
-  direction:inherit; text-align:inherit; letter-spacing:inherit;
-  text-transform:inherit; white-space:inherit; text-indent:inherit;
-  word-spacing:inherit; line-height:inherit; font-variant:inherit;
-  color-scheme:inherit; visibility:inherit; pointer-events:inherit;
-  accent-color:inherit; print-color-adjust:inherit;
-}
