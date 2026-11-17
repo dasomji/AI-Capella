@@ -1,5 +1,5 @@
-/** Retain the legacy popover's measured entrance and fade while native modality owns focus. */
-export function popoverMotion(dialog: HTMLDialogElement) {
+/** Retain the legacy panel's measured entrance and fade while native modality owns focus. */
+export function panelMotion(dialog: HTMLDialogElement) {
   let frame = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let end: ((event: TransitionEvent) => void) | undefined;
@@ -8,17 +8,17 @@ export function popoverMotion(dialog: HTMLDialogElement) {
     clearTimeout(timer);
     if (end) dialog.removeEventListener("transitionend", end);
   };
-  dialog.dataset.popoverState = "entering";
+  dialog.dataset.panelState = "entering";
   return {
     enter() {
       dialog.getBoundingClientRect();
       frame = requestAnimationFrame(() => {
-        dialog.dataset.popoverState = "open";
+        dialog.dataset.panelState = "open";
       });
     },
     exit(finish: () => void) {
       clear();
-      dialog.dataset.popoverState = "closing";
+      dialog.dataset.panelState = "closing";
       const duration = Math.max(
         0,
         ...getComputedStyle(dialog)
@@ -29,7 +29,7 @@ export function popoverMotion(dialog: HTMLDialogElement) {
           ),
       );
       if (
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ||
         !duration
       ) {
         finish();
@@ -47,7 +47,7 @@ export function popoverMotion(dialog: HTMLDialogElement) {
     },
     dispose() {
       clear();
-      delete dialog.dataset.popoverState;
+      delete dialog.dataset.panelState;
     },
   };
 }

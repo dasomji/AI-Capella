@@ -775,9 +775,9 @@
 
 @media (max-width:theme(--breakpoint-compact)) { .ds-library-song-more { background:var(--ds-library-phone-more-background); } }
 .ds-library-popover { transition:opacity var(--ds-duration-fast), transform var(--ds-duration-fast) var(--ds-ease-standard); }
-.ds-library-popover[data-popover-state='entering'] { opacity:0; transform:var(--ds-library-popover-enter); }
-.ds-library-popover[data-popover-state='open'] { opacity:1; transform:none; }
-.ds-library-popover[data-popover-state='closing'] { opacity:0; }
+.ds-library-popover[data-panel-state='entering'] { opacity:0; transform:var(--ds-library-popover-enter); }
+.ds-library-popover[data-panel-state='open'] { opacity:1; transform:none; }
+.ds-library-popover[data-panel-state='closing'] { opacity:0; }
 .ds-library-song-more { text-align:center; }
 .ds-library-song-body { text-align:left; }
 .ds-library-song-title,.ds-library-song-meta { text-align:inherit; }
@@ -790,3 +790,8 @@
 .ds-library-cover,.ds-library-paper-swatch { overflow:clip; }
 .ds-library-menu-check { font:inherit; }
 .ds-library-overlay,.ds-library-prompt-content,.ds-library-prompt-body { -webkit-font-smoothing:inherit; -webkit-locale:inherit; -webkit-tap-highlight-color:inherit; }
+
+.ds-library-prompt { transition:transform var(--ds-duration-normal) var(--ds-ease-standard),opacity var(--ds-duration-fast); }
+.ds-library-prompt[data-panel-state='entering'],.ds-library-prompt[data-panel-state='closing'] { opacity:0; transform:var(--ds-library-prompt-enter); }
+.ds-library-prompt[data-panel-state='open'] { opacity:1; transform:none; }
+.ds-library-prompt-head { display:contents; }

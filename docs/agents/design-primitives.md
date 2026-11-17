@@ -207,3 +207,8 @@ including the historical night-paper loading card and parchment phone menu-butto
 DOM Menu items may supply an icon Node, radio semantics and nested `options` with a current
 `value`. Labels remain text, disabled commands stay guarded, and the menu owner disposes the
 binding on close. Popovers share native modal focus and measured entrance/fade transport.
+
+Library prompts and popovers retain their measured scale/fade entrance and exit through the
+shared native panel-motion controller; sheets keep the slide/swipe controller. Focus and
+scroll lock remain with the native dialog until the exit completes, with reduced motion closing
+immediately. The recipes retain their separate historical scale inputs.

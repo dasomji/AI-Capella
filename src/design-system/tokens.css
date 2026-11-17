@@ -1500,3 +1500,5 @@
 
 :root { --ds-library-tag-font: 600 11px/1 var(--ds-font-mono); --ds-library-tag-tracking:.06em; }
 :root { --ds-library-popover-enter: translateY(-4px) scale(.98); }
+
+:root { --ds-library-prompt-enter: scale(.97); }

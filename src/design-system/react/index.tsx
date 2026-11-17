@@ -538,7 +538,7 @@ export function Dialog({
     if (!open || specimen || !ref.current) return;
     const active = openDialog(ref.current, {
       ...latest.current.behavior,
-      motion: variant === "sheet" || variant === "domain-sheet" || variant === "library-sheet" ? "sheet" : variant === "library-popover" ? "popover" : undefined,
+      motion: variant === "sheet" || variant === "domain-sheet" || variant === "library-sheet" ? "sheet" : variant === "library-popover" || variant === "library-prompt" ? "panel" : undefined,
       onCancel: (reason) => {
         latest.current.behavior?.onCancel?.(reason);
         latest.current.onCancel?.(reason);

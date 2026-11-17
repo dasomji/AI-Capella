@@ -224,6 +224,7 @@ export const themeRoleNames = [
   "library-popover-enter",
   "library-popover-max",
   "library-popover-min",
+  "library-prompt-enter",
   "library-prompt-heading",
   "library-prompt-max",
   "library-revival--song-meta-white-space",

@@ -1,11 +1,11 @@
-import { popoverMotion } from "./popover";
+import { panelMotion } from "./panel";
 import { sheetMotion } from "./sheet";
 /** Native showModal owns background inertness, including later portals and stacked modals. */
 export type CancelReason = "escape" | "outside" | "button" | "swipe";
 export interface DialogBehaviorOptions {
   opener?: Element | null;
   /** Shared slide and swipe transport for sheet variants. */
-  motion?: "sheet" | "popover";
+  motion?: "sheet" | "panel";
   initialFocus?: HTMLElement | (() => HTMLElement | null);
   escape?: "close" | "ignore";
   outside?: "close" | "ignore";
@@ -75,8 +75,8 @@ export function openDialog(
   const motion =
     options.motion === "sheet"
       ? sheetMotion(dialog, () => controller.requestClose("swipe"))
-      : options.motion === "popover"
-        ? popoverMotion(dialog)
+      : options.motion === "panel"
+        ? panelMotion(dialog)
         : undefined;
   const finish = (notify: boolean) => {
     if (closed) return;

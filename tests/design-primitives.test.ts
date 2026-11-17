@@ -637,6 +637,29 @@ describe("legacy overlay exit transport", () => {
   });
 });
 
+describe("shared panel motion", () => {
+  it("retains native modality during the fade and restores focus only when it finishes", () => {
+    vi.useFakeTimers();
+    const { dialog, api, opener } = modal({ motion: "panel" });
+    expect(dialog.dataset.panelState).toBe("entering");
+    vi.advanceTimersByTime(20);
+    expect(dialog.dataset.panelState).toBe("open");
+    dialog.style.transitionDuration = "0.16s";
+    api.requestClose();
+    expect(dialog.dataset.panelState).toBe("closing");
+    expect(dialog.open).toBe(true);
+    expect(document.body.style.overflow).toBe("hidden");
+    const event = new Event("transitionend");
+    Object.defineProperty(event, "propertyName", { value: "opacity" });
+    dialog.dispatchEvent(event);
+    expect(dialog.open).toBe(false);
+    expect(document.activeElement).toBe(opener);
+    expect(dialog.hasAttribute("data-panel-state")).toBe(false);
+    vi.runAllTimers();
+    expect(dialog.open).toBe(false);
+  });
+});
+
 describe("shared sheet motion", () => {
   it("retains the modal and scroll lock through the exit, then restores focus", () => {
     vi.useFakeTimers();

@@ -527,8 +527,9 @@ export function createDialog(options: DialogOptions) {
           options.variant === "domain-sheet" ||
           options.variant === "library-sheet"
             ? "sheet"
-            : options.variant === "library-popover"
-              ? "popover"
+            : options.variant === "library-popover" ||
+                options.variant === "library-prompt"
+              ? "panel"
               : undefined,
         onClose: () => {
           options.behavior?.onClose?.();
