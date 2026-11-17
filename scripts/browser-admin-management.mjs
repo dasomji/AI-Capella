@@ -233,6 +233,19 @@ try {
     .waitFor();
   await loaded();
   await shot("user-memberships");
+  // Real Tab presses must remain in the native drawer and return to its opening row.
+  const keyboardDrawer = page.locator('[data-admin=detail]');
+  const focusable = keyboardDrawer.locator('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]');
+  const firstControl = focusable.first(), lastControl = focusable.last();
+  assert.equal(await firstControl.evaluate(el=>el===document.activeElement),true);
+  await lastControl.focus();await page.keyboard.press('Tab');
+  assert.equal(await firstControl.evaluate(el=>el===document.activeElement),true,'Tab wraps inside drawer');
+  await page.keyboard.press('Shift+Tab');
+  assert.equal(await lastControl.evaluate(el=>el===document.activeElement),true,'Shift+Tab wraps inside drawer');
+  await page.keyboard.press('Escape');
+  assert.equal(await users.locator('tbody tr').first().evaluate(el=>el===document.activeElement),true,'Drawer returns focus to opening row');
+  await page.keyboard.press('Enter');await keyboardDrawer.waitFor();await loaded();
+
   // More than one membership page makes mutation refresh behavior observable.
   await db.query(
     "insert into memberships(ensemble_id,user_id) select $1,id from \"user\" where email like 'pagination-%' order by id limit 12",
@@ -280,7 +293,28 @@ try {
     .last()
     .click();
   await shot("add-confirmation");
-  await confirmation("Browser: add the existing test account");
+  const nestedConfirm = page.getByRole('alertdialog');
+  assert.equal(await page.locator('dialog:modal').count(),2,'Confirm stacks above the open drawer');
+  const reasonControl = nestedConfirm.getByLabel('Reason',{exact:true});
+  assert.equal(await reasonControl.evaluate(el=>el===document.activeElement),true,'Reason receives initial focus');
+  await nestedConfirm.getByRole('button',{name:'Cancel',exact:true}).focus();await page.keyboard.press('Tab');
+  assert.equal(await reasonControl.evaluate(el=>el===document.activeElement),true,'Tab wraps inside confirmation');
+  await page.keyboard.press('Escape');await nestedConfirm.waitFor({state:'hidden'});
+  assert.equal(await management.getByRole('button',{name:'Add member',exact:true}).last().evaluate(el=>el===document.activeElement),true,'Escape returns focus to drawer action');
+  await page.keyboard.press('Enter');await nestedConfirm.waitFor();
+  let releaseAdd, addStarted;
+  const addGate = new Promise(resolve=>{releaseAdd=resolve;});
+  const addRequest = new Promise(resolve=>{addStarted=resolve;});
+  await page.route('**/api/admin/ensembles/'+ensemble.id+'/members',async route=>{addStarted();await addGate;await route.continue();},{times:1});
+  await reasonControl.fill('Browser: add the existing test account');
+  await nestedConfirm.getByRole('button',{name:'Confirm change',exact:true}).click();await addRequest;
+  try {
+    await page.keyboard.press('Escape');
+    assert.equal(await nestedConfirm.count(),1,'Busy confirmation blocks Escape');
+    assert.equal(await nestedConfirm.getByRole('button',{name:'Cancel',exact:true}).isDisabled(),true);
+    assert.equal(await page.locator('dialog:modal').count(),2);
+  } finally {releaseAdd();}
+  await nestedConfirm.waitFor({state:'hidden'});
   const members = management.getByRole("region", {
     name: "Memberships",
     exact: true,
@@ -301,6 +335,17 @@ try {
     .getByRole("button")
     .click();
   await loaded(members);
+  const staleRow=members.locator('tbody tr').filter({hasText:'pagination-'}).first();
+  await staleRow.getByLabel('Transcribe',{exact:true}).check();
+  await staleRow.getByRole('button',{name:'Save permissions',exact:true}).click();
+  await page.route('**/api/admin/ensembles/'+ensemble.id+'/members/*',route=>route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({code:'stale_permissions'})}),{times:1});
+  const staleDialog=page.getByRole('alertdialog');
+  await staleDialog.getByLabel('Reason',{exact:true}).fill('Browser: stale permission snapshot');
+  await staleDialog.getByRole('button',{name:'Confirm change',exact:true}).click();
+  await staleDialog.getByRole('alert').filter({hasText:'Permissions changed in another session'}).waitFor();
+  assert.equal(await staleDialog.getByLabel('Reason',{exact:true}).inputValue(),'Browser: stale permission snapshot');
+  await loaded(members);await shot('stale-permissions');
+  await page.keyboard.press('Escape');await staleDialog.waitFor({state:'hidden'});
   // An in-place refresh failure retains both the current page and its Next cursor.
   const refreshIds = await ids(members);
   const refreshRow = members.locator("tbody tr").filter({hasText: "pagination-"}).first();
@@ -314,7 +359,7 @@ try {
   for(let attempt = 0; attempt < 2; attempt++) {
     await loaded(members);
     assert.deepEqual(await ids(members), refreshIds);
-    assert.equal(await members.getByRole("button", {name: "Next", exact: true}).getAttribute("aria-disabled"), "false");
+    assert.notEqual(await members.getByRole("button", {name: "Next", exact: true}).getAttribute("aria-disabled"), "true");
     await members.getByRole("button", {name: "Retry", exact: true}).click();
   }
   await loaded(members);

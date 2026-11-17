@@ -4,7 +4,6 @@ import { AdminMembershipManagement } from './admin-management';
 import { adminManagementMessages } from './i18n';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { adminRateMessage, adminMessages, adminFieldMessages, adminPolishMessages, type Lang } from './i18n';
-import { LanguageToggle } from './account-stage';
 import { adminInstant, calendarInstant, calendarRange } from './admin-time';
 type Row = Record<string, any>;
 class AdminRequestError extends Error {constructor(public status:number,message:string){super(message);}}
@@ -70,7 +69,7 @@ export function AdminPage() {
         if(v===null||v===undefined)return '—';
         if(['state','outcome','failure_reason','error_kind','kind','format'].includes(key)&&typeof v==='string')return label(v);
         if(key==='transcription_job_id')return <a href={'/admin/transcription?search='+encodeURIComponent(v)}>{v}</a>;
-        if(typeof v==='boolean')return ['is_lead','manage_members','edit_music_pieces','ai_transcription'].includes(key)?<Badge variant="admin" intent={v?'accent':'neutral'}>{key==='is_lead'&&v?d.lead:v?d.yes:d.no}</Badge>:<span>{v?d.yes:d.no}</span>;
+        if(typeof v==='boolean')return ['is_lead','manage_members','edit_music_pieces','ai_transcription'].includes(key)?<Badge variant="admin" intent={v?'accent':'neutral'}>{key==='is_lead'&&v?d.lead:v?d.yes:d.no}</Badge>:<Workspace as="span" part={v?"ink":"secondary"}>{v?d.yes:d.no}</Workspace>;
         if(typeof v==='string'&&(key.endsWith('_at')||['last_active','last_sign_in'].includes(key)))return <time dateTime={v} title={new Date(v).toISOString()}>{adminInstant(v,zone,language)}</time>;
         if(typeof v==='number')return number(v);
         if(typeof v==='string'&&/(^id$|_id$|hash|sha256)/.test(key))return <Workspace as="span" part="identifier"><span title={v}>{v.slice(0,12)}{v.length>12?'…':''}</span><IconButton variant="admin-copy" label={msg('Copy')+' '+label(key)} onClick={event=>{event.stopPropagation();copy(v);}}>{copyIcon}</IconButton></Workspace>;
@@ -86,7 +85,7 @@ export function AdminPage() {
     return <Workspace as="main" part="page" data-admin="shell">
       <Workspace as="header" part="header">
         <a href="/app"><Workspace as="span" part="wordmark">LightScore</Workspace></a>
-        <Workspace part="language"><LanguageToggle language={language} onChange={setLanguage}/></Workspace>
+        <Workspace part="language"><ToggleGroup variant="admin-language" label="Language / Sprache" separator=" · " items={[{value:"de",label:"DE"},{value:"en",label:"EN"}]} value={language} onChange={value=>{const next=value as Lang;localStorage.setItem("ai-capella-lang",next);document.documentElement.lang=next;setLanguage(next);}}/></Workspace>
         <Workspace as="h1" part="title">{d.title}</Workspace>
         <NavigationTabs variant="admin" label={d.title} value={tab} items={(['users','ensembles','pieces','audit','transcription'] as const).map(t=>({value:t,label:d[t],href:'/admin/'+t}))} onNavigate={t=>{history.pushState({},'', '/admin/'+t);setQuery('');setFilters({});setTab(t);}}/>
       </Workspace>
@@ -94,9 +93,9 @@ export function AdminPage() {
       <form onSubmit={event=>event.preventDefault()}><Workspace part="filters" data-admin="filters">
         {tab!=='transcription'&&<Workspace part="search"><Field variant="admin" label={d.search}>{association=><Input {...association} type="search" value={query} onChange={event=>setQuery(event.target.value)}/>}</Field></Workspace>}
         {['from','to'].map(k=><Workspace part="filter" key={k}><Field variant="admin" label={k==='from'?msg('From'):msg('Until (exclusive)')}>{association=><Input {...association} type="date" value={filters[k]??''} onChange={event=>setFilters({...filters,[k]:event.target.value,all:''})}/>}</Field></Workspace>)}
-        <Workspace part="presets"><ToggleGroup variant="presets" label={msg('days')} value="" items={[7,30,90,0].map(days=>({value:String(days),label:days?`${days} ${msg('days')}`:d.all}))} onChange={value=>{const days=Number(value);setFilters({...filters,...(days?calendarRange(zone,days):{from:'',to:'',all:'true'})});}}/><Workspace as="small" part="note">{msg('Time zone')}: {zone}</Workspace></Workspace>
+        <Workspace part="presets"><ToggleGroup variant="presets" separator=" · " label={msg('days')} value="" items={[7,30,90,0].map(days=>({value:String(days),label:days?`${days} ${msg('days')}`:d.all}))} onChange={value=>{const days=Number(value);setFilters({...filters,...(days?calendarRange(zone,days):{from:'',to:'',all:'true'})});}}/><Workspace as="small" part="note">{msg('Time zone')}: {zone}</Workspace></Workspace>
         {[...(['pieces','transcription'].includes(tab)?['ensemble']:[]),...(tab==='audit'?['actor','target','action','outcome']:[])].map(k=><Workspace part="filter" key={k}><Field variant="admin" label={label(k)}>{association=><Input {...association} value={filters[k]??''} onChange={event=>setFilters({...filters,[k]:event.target.value})}/>}</Field></Workspace>)}
-        {tab!=='transcription'&&[...(!['users','ensembles'].includes(tab)?['sort','direction']:[]),...(tab==='users'?['verified','sysadmin']:[]),...(tab==='pieces'?['format']:[]),...(tab==='audit'?['targetType']:[])].map(k=><Workspace as="fieldset" part="fieldset" key={k}><Workspace as="legend" part="legend">{label(k)}</Workspace><ToggleGroup variant="admin" label={label(k)} value={filters[k]??(k==='sort'?'id':k==='direction'?'asc':'')} items={[...(['sort','direction'].includes(k)?[]:['']),...(k==='sort'?['id','created',...(tab==='pieces'?['updated']:[]),'name']:k==='direction'?['asc','desc']:k==='format'?['musicxml','score']:k==='targetType'?['user','ensemble','piece','original','transcription','membership','invitation']:['true','false'])].map(v=>({value:v,label:v===''?d.all:v==='true'?d.yes:v==='false'?d.no:label(v)}))} onChange={v=>setFilters({...filters,[k]:v})}/></Workspace>)}
+        {tab!=='transcription'&&[...(!['users','ensembles'].includes(tab)?['sort','direction']:[]),...(tab==='users'?['verified','sysadmin']:[]),...(tab==='pieces'?['format']:[]),...(tab==='audit'?['targetType']:[])].map(k=><Workspace as="fieldset" part="fieldset" key={k}><Workspace as="legend" part="legend">{label(k)}</Workspace><ToggleGroup variant="admin" separator=" · " label={label(k)} value={filters[k]??(k==='sort'?'id':k==='direction'?'asc':'')} items={[...(['sort','direction'].includes(k)?[]:['']),...(k==='sort'?['id','created',...(tab==='pieces'?['updated']:[]),'name']:k==='direction'?['asc','desc']:k==='format'?['musicxml','score']:k==='targetType'?['user','ensemble','piece','original','transcription','membership','invitation']:['true','false'])].map(v=>({value:v,label:v===''?d.all:v==='true'?d.yes:v==='false'?d.no:label(v)}))} onChange={v=>setFilters({...filters,[k]:v})}/></Workspace>)}
       </Workspace></form>
       {tab==='transcription'&&<>
         <Card as="section" variant="admin" data-admin="ops"><Workspace as="h2" part="heading">{d.stop}</Workspace><Status variant="admin">{control?.paused?msg('Paused since ')+(control.last?adminInstant(control.last.created_at,zone,language)+' '+msg('by ')+(control.last.actor_name??'—'):'—'):msg('Processing enabled')}</Status>

@@ -1,4 +1,4 @@
-import { Button, Checkbox, Field, Input, Textarea, ConfirmDialog, Status, Workspace, toast } from "./design-system/react";
+import { Button, Checkbox, Field, Input, Textarea, ConfirmDialog, Status, Workspace } from "./design-system/react";
 import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import {
   AdminDataTable,
@@ -124,16 +124,17 @@ function Confirmation({
   language,
   onCancel,
   onConfirm,
+  opener,
 }: {
   pending: Pending;
   language: Lang;
   onCancel: () => void;
   onConfirm: (reason: string) => Promise<void>;
+  opener: HTMLElement | null;
 }) {
   const [reason, setReason] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const opener = useRef(document.activeElement as HTMLElement | null);
   const d = adminManagementMessages[language], a = adminMessages[language];
   const values = (p: Permissions) =>
     permissionKeys
@@ -143,7 +144,7 @@ function Confirmation({
       .join(" · ");
   return (
     <ConfirmDialog open variant="admin-confirm" title={pending.title} data-admin="confirm"
-      behavior={{opener:opener.current,busy,busyCancel:'block',outside:'ignore'}} onCancel={onCancel}>
+      behavior={{opener,busy,busyCancel:'block',outside:'ignore'}} onCancel={onCancel}>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -212,6 +213,7 @@ export function AdminMembershipManagement({
     [email, setEmail] = useState(""),
     [status, setStatus] = useState("");
   const heading = useRef<HTMLHeadingElement>(null),
+    confirmOpener = useRef<HTMLElement | null>(null),
     focusAfterRemove = useRef(false);
   useEffect(() => {
     if (!pending && focusAfterRemove.current) {
@@ -220,6 +222,7 @@ export function AdminMembershipManagement({
     }
   }, [pending]);
   const queue = useCallback((p: Pending) => {
+    confirmOpener.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
     setStatus("");
     setPending(p);
   }, []);
@@ -292,6 +295,7 @@ export function AdminMembershipManagement({
         </Workspace>
       )}
       <AdminDataTable
+        actionLayout="tw:m-4"
         path="memberships"
         caption={a.memberships}
         columns={columns}
@@ -316,6 +320,7 @@ export function AdminMembershipManagement({
         <Workspace part="inset" data-admin="add">
           <Workspace as="h3" part="subheading">{entity === "ensembles" ? d.findUser : a.ensembles}</Workspace>
           <AdminDataTable
+            actionLayout="tw:m-4"
             path={entity === "ensembles" ? "users" : "ensembles"}
             caption={entity === "ensembles" ? d.chooseUser : a.ensembles}
             columns={pickerColumns}
@@ -401,6 +406,7 @@ export function AdminMembershipManagement({
       )}
       {pending && (
         <Confirmation
+          opener={confirmOpener.current}
           pending={pending}
           language={language}
           onCancel={() => setPending(null)}

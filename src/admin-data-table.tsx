@@ -1,4 +1,4 @@
-import { Button, Field, Input, Select, Table, TableWrap, TableHeader, TableCell, TableRow, TablePagination, EmptyState, Loading, Status, Workspace } from "./design-system/react";
+import { Button, Field, Input, Select, Table, TableWrap, TableHeader, TableCell, TableRow, TablePagination, EmptyState, Loading, Status, Workspace, type ButtonProps } from "./design-system/react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   useTable,
@@ -33,6 +33,7 @@ export function AdminDataTable({
   revision = 0,
   onZone,
   caption,
+  actionLayout,
 }: {
   path: string;
   columns: AdminColumn[];
@@ -43,6 +44,7 @@ export function AdminDataTable({
   revision?: number;
   onZone?: (zone: string) => void;
   caption: string;
+  actionLayout?: ButtonProps["layout"];
 }) {
   const d = adminMessages[language],
     m = adminManagementMessages[language];
@@ -163,7 +165,7 @@ export function AdminDataTable({
       {error && (
         <div>
           <Status variant="admin" role="alert">{error}</Status>
-          <Button variant="dense" type="button" onClick={() => setRetry((v) => v + 1)}>
+          <Button layout={actionLayout} variant="dense" type="button" onClick={() => setRetry((v) => v + 1)}>
             {m.retry}
           </Button>
         </div>
@@ -191,7 +193,7 @@ export function AdminDataTable({
                       }
                     >
                       {header.column.getCanSort() ? (
-                        <Button variant="dense-sort"
+                        <Button layout={actionLayout} variant="dense-sort"
                           type="button"
                           aria-disabled={busy}
                           onClick={() => {
@@ -256,7 +258,7 @@ export function AdminDataTable({
       {busy && <Loading layout="tw:sr-only">{m.loading}</Loading>}
       {!busy && !error && !rows.length && <EmptyState variant="admin-text" title={d.empty}/>}
       <TablePagination data-admin="pagination">
-        <Button variant="dense"
+        <Button layout={actionLayout} variant="dense"
           type="button"
           aria-disabled={busy || !pagination.pageIndex}
           onClick={() => {
@@ -269,7 +271,7 @@ export function AdminDataTable({
           {m.page} {pagination.pageIndex + 1}
           {busy ? " · " + m.loading : ""}
         </span>
-        <Button variant="dense"
+        <Button layout={actionLayout} variant="dense"
           type="button"
           aria-disabled={busy || !next}
           onClick={() => {
