@@ -1169,3 +1169,15 @@
   --text-wordmark: var(--ds-size-wordmark);
   --color-table-row-hover: var(--ds-table-row-hover);
 }
+
+/* Account form parity; D08–D10 preserve the existing independent metrics. */
+:root {
+  --ds-leading-account: 1.55;
+  --ds-leading-account-links: 1.8;
+  --ds-space-76: 76px;
+}
+@theme inline {
+  --leading-account: var(--ds-leading-account);
+  --leading-account-links: var(--ds-leading-account-links);
+  --spacing-76: var(--ds-space-76);
+}
