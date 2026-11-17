@@ -1,40 +1,40 @@
 /* Native generated/UA parts cannot be addressed by element utility classes. */
 /* Native pseudo-element styling retains the browser slider/decorative part. */
 .ds-player-volume::-webkit-slider-runnable-track {
-  height: var(--ds-player-utility-native-height-4px);
+  height: var(--ds-space-compact);
   border-radius: var(
-    --ds-player-input-type-range-webkit-slider-runnable-track-border-radius-53
+    --ds-radius-track
   );
   background: var(--ds-surface-hover);
 }
 /* Native pseudo-element styling retains the browser slider/decorative part. */
 .ds-player-volume::-webkit-slider-thumb {
   appearance: none;
-  width: var(--ds-player-utility-native-width-18px);
-  height: var(--ds-player-utility-native-width-18px);
+  width: var(--ds-space-action);
+  height: var(--ds-space-action);
   margin-top: var(
-    --ds-player-input-type-range-webkit-slider-thumb-margin-top-54
+    --ds-player-input-type-range-vendor-slider-thumb-margin-top
   );
-  border-radius: var(--ds-player-live-dot-border-radius-9);
+  border-radius: var(--ds-radius-round);
   background: var(--ds-ink);
   box-shadow: var(
-    --ds-player-input-type-range-webkit-slider-thumb-box-shadow-55
+    --ds-player-input-type-range-vendor-slider-thumb-box-shadow
   );
 }
 /* Native pseudo-element styling retains the browser slider/decorative part. */
 .ds-player-volume::-moz-range-track {
-  height: var(--ds-player-utility-native-height-4px);
+  height: var(--ds-space-compact);
   border-radius: var(
-    --ds-player-input-type-range-webkit-slider-runnable-track-border-radius-53
+    --ds-radius-track
   );
   background: var(--ds-surface-hover);
 }
 /* Native pseudo-element styling retains the browser slider/decorative part. */
 .ds-player-volume::-moz-range-thumb {
-  width: var(--ds-player-utility-native-width-18px);
-  height: var(--ds-player-utility-native-width-18px);
+  width: var(--ds-space-action);
+  height: var(--ds-space-action);
   border: 0;
-  border-radius: var(--ds-player-live-dot-border-radius-9);
+  border-radius: var(--ds-radius-round);
   background: var(--ds-ink);
 }
 /* Native pseudo-element styling retains the browser slider/decorative part. */
@@ -46,7 +46,7 @@
 /* Native thumb shadow follows the material color-scheme role. */
 :root:root .ds-player-volume::-webkit-slider-thumb {
   box-shadow: var(
-    --ds-player-input-type-range-webkit-slider-thumb-box-shadow-156
+    --ds-player-input-type-range-vendor-slider-thumb-box-shadow-light
   );
 }
 }
