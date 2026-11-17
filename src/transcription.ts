@@ -55,7 +55,7 @@ function button(
 function updateButton(button: HTMLButtonElement, options: Parameters<typeof updatePrimitiveButton>[1]) {
   const hooks = [...button.classList].filter(name => name.startsWith("tx-"));
   updatePrimitiveButton(button, options);
-  button.classList.add(...shellRecipe(hooks.join(" ")).split(" "));
+  if (hooks.length) button.classList.add(...shellRecipe(hooks.join(" ")).split(" "));
 }
 function errorText(e: unknown) {
   return tr(e instanceof ApiError ? e.code : "error");
