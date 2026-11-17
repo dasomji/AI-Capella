@@ -10,8 +10,9 @@ const records=[];
 try {
  for(const theme of ['night-paper','parchment']) for(const [width,height] of [[1440,900],[768,1024],[390,844],[844,390]]) {
   const page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce'});
-  await page.goto(process.env.BASE_URL+'/dev/design-system');
-  await page.locator('.ds-specimens').waitFor();
+  console.log('Overlay viewport',theme,width,height);
+  await page.goto(process.env.BASE_URL+'/healthz');
+  await page.setContent('<!doctype html><html><head><link rel="stylesheet" href="/src/design-system/app.css"></head><body></body></html>');
   await page.evaluate(async theme=>{
    const {setThemePreference}=await import('/src/design-system/theme/index.ts');setThemePreference(theme);
    window.D=await import('/src/design-system/dom/index.ts');window.B=await import('/src/design-system/behavior/index.ts');
@@ -74,6 +75,7 @@ try {
    assert.equal(await page.evaluate(()=>B.getToast().text),'A later saved notice');
    await page.evaluate(()=>B.dismissToast());
   }
+  console.log('Overlay captured',theme,width,height);
   await page.close();
  }
  await fs.writeFile(`${out}/geometry.json`,JSON.stringify(records,null,2));
