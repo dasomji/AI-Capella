@@ -15,5 +15,13 @@
 @import '../transcription.css' layer(legacy);
 @import './tokens.css' layer(tokens);
 @import './legacy-components.css' layer(components);
+@import './components.css' layer(components);
 @import 'tailwindcss/utilities.css' layer(utilities) prefix(tw) source(none);
 @source '../';
+
+/* Tailwind directives must be top-level, outside the imported tokens layer. */
+@utility max-w-dialog { max-width: var(--ds-max-width-dialog); }
+@utility max-h-dialog { max-height: var(--ds-max-height-dialog); }
+@utility max-h-sheet { max-height: var(--ds-max-height-sheet); }
+
+@utility bg-material-card { background: var(--ds-material-card); }

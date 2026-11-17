@@ -401,6 +401,14 @@
   --ds-voice-6: var(--pigment-feedback-wish);
   --ds-voice-7: var(--pigment-voice-7);
   --ds-voice-8: var(--pigment-feedback-survey);
+  --ds-component-action-hover: var(--ds-action-hover);
+  --ds-component-tour-rule: rgb(21 17 26 / 0.22);
+  --ds-component-menu-glow: radial-gradient(closest-side, rgb(255 212 160 / 0.2), rgb(255 208 156 / 0.08) 60%, rgb(255 208 156 / 0));
+  --ds-component-menu-hover: #fff3e2;
+  --ds-component-menu-shadow: 0 0 14px rgb(255 214 160 / 0.45);
+  --ds-component-menu-check: #e2c48c;
+  --ds-component-overlay-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  --ds-component-toast-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
 }
 
 :root[data-theme="parchment"] {
@@ -479,6 +487,14 @@
   --ds-voice-6: var(--pigment-feedback-wish-2);
   --ds-voice-7: var(--pigment-voice-7-2);
   --ds-voice-8: var(--pigment-feedback-survey-2);
+  --ds-component-action-hover: var(--ds-surface-hover);
+  --ds-component-tour-rule: rgb(243 233 211 / 0.3);
+  --ds-component-menu-glow: radial-gradient(closest-side, rgb(220 150 60 / 0.18), rgb(220 150 60 / 0.07) 60%, rgb(220 150 60 / 0));
+  --ds-component-menu-hover: #1f160f;
+  --ds-component-menu-shadow: 0 0 14px rgb(230 160 70 / 0.35);
+  --ds-component-menu-check: #9c6d1a;
+  --ds-component-overlay-shadow: var(--ds-shadow-material-highlight), 0 30px 70px -20px rgb(90 60 25 / 0.45);
+  --ds-component-toast-shadow: 0 16px 40px rgb(90 60 25 / 0.3);
 }
 
 :root[data-theme="velvet"] {
@@ -557,6 +573,14 @@
   --ds-voice-6: var(--pigment-feedback-wish);
   --ds-voice-7: var(--pigment-voice-7);
   --ds-voice-8: var(--pigment-feedback-survey);
+  --ds-component-action-hover: var(--ds-action-hover);
+  --ds-component-tour-rule: rgb(21 17 26 / 0.22);
+  --ds-component-menu-glow: radial-gradient(closest-side, rgb(255 212 160 / 0.2), rgb(255 208 156 / 0.08) 60%, rgb(255 208 156 / 0));
+  --ds-component-menu-hover: #fff3e2;
+  --ds-component-menu-shadow: 0 0 14px rgb(255 214 160 / 0.45);
+  --ds-component-menu-check: #e2c48c;
+  --ds-component-overlay-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  --ds-component-toast-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
 }
 
 /* Additional renderer pigments retained separately from UI ink (P2 inputs). */
@@ -634,8 +658,86 @@
   --tx-warning: var(--ds-transcription-warning);
 }
 
+/* Component dimensions retain legacy roles pending D08–D17. */
+:root {
+  --ds-space-26: 26px;
+  --ds-space-52: 52px;
+  --ds-space-21: 21px;
+  --ds-size-button: 15px;
+  --ds-size-toast: 14.5px;
+  --ds-leading-field: 1.5;
+  --ds-leading-admin: normal;
+  --ds-animation-loading: ds-loading 1.5s ease-in-out infinite;
+  --ds-opacity-loading: .4;
+  --ds-control-height-tour: 38px;
+  --ds-menu-glow-blur: 9px;
+  --ds-menu-glow-inset: 8px 14px;
+  --ds-radius-icon: 10px;
+  --ds-radius-segment: 11px;
+  --ds-control-textarea-height: 90px;
+  --ds-width-empty: 360px;
+  --ds-width-dialog: 420px;
+  --ds-max-width-dialog: calc(100vw - 40px);
+  --ds-width-sheet: 440px;
+  --ds-left-sheet: calc(50% - 220px);
+  --ds-width-drawer: 640px;
+  --ds-width-table: 1080px;
+  --ds-width-transcription: 560px;
+  --ds-max-height-dialog: 92dvh;
+  --ds-max-height-sheet: 88dvh;
+  --ds-shadow-dialog: 0 30px 80px rgba(0, 0, 0, 0.6);
+  --ds-shadow-toast: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --ds-action-hover: #fff8ee;
+}
+
 /* Tailwind adapter. No default pigment/font/size/radius/shadow vocabulary. */
 @theme inline {
+  --animate-loading: var(--ds-animation-loading);
+  --font-weight-regular: var(--ds-weight-body);
+  --font-weight-emphasis: var(--ds-weight-medium);
+  --font-weight-label: var(--ds-weight-label);
+  --font-weight-strong: var(--ds-weight-strong);
+  --text-button: var(--ds-size-button);
+  --shadow-dialog: var(--ds-shadow-dialog);
+  --shadow-component-overlay: var(--ds-component-overlay-shadow);
+  --shadow-component-toast: var(--ds-component-toast-shadow);
+  --color-menu-check: var(--ds-component-menu-check);
+  --shadow-toast: var(--ds-shadow-toast);
+  --text-toast: var(--ds-size-toast);
+  --leading-body: var(--ds-leading-body);
+  --leading-admin: var(--ds-leading-admin);
+  --color-tour-rule: var(--ds-component-tour-rule);
+  --leading-field: var(--ds-leading-field);
+  --leading-label: var(--ds-leading-label);
+  --tracking-auth-label: var(--ds-tracking-auth-label);
+  --font-auth-body: var(--ds-font-auth-body);
+  --font-auth-mono: var(--ds-font-auth-mono);
+  --font-auth-display: var(--ds-font-auth-display);
+  --radius-admin-control: var(--ds-radius-admin-control);
+  --radius-segment: var(--ds-radius-segment);
+  --radius-icon: var(--ds-radius-icon);
+  --radius-round: var(--ds-radius-round);
+  --radius-transcription-tile: var(--ds-radius-transcription-tile);
+  --radius-transcription-dialog: var(--ds-radius-transcription-dialog);
+  --spacing-control-height-auth: var(--ds-control-height-auth);
+  --spacing-control-height-admin: var(--ds-control-height-admin);
+  --spacing-control-height-transcription: var(--ds-control-height-transcription);
+  --spacing-tour: var(--ds-control-height-tour);
+  --spacing-textarea: var(--ds-control-textarea-height);
+  --spacing-empty: var(--ds-width-empty);
+  --spacing-dialog: var(--ds-width-dialog);
+  --spacing-sheet: var(--ds-width-sheet);
+  --spacing-left-sheet: var(--ds-left-sheet);
+  --spacing-table: var(--ds-width-table);
+  --spacing-drawer: var(--ds-width-drawer);
+  --spacing-transcription: var(--ds-width-transcription);
+  --spacing-26: var(--ds-space-26);
+  --spacing-52: var(--ds-space-52);
+  --spacing-21: var(--ds-space-21);
+  --color-action-hover: var(--ds-component-action-hover);
+  --default-transition-duration: var(--ds-duration-fast);
+  --transition-duration-switch: var(--ds-duration-switch);
+
   --spacing-content: var(--ds-space-24);
   --spacing-control: var(--ds-space-12);
   --spacing-swatch: var(--ds-space-64);
@@ -754,3 +856,4 @@
   --color-transcription-accent: var(--ds-transcription-accent);
   --color-transcription-warning: var(--ds-transcription-warning);
 }
+
