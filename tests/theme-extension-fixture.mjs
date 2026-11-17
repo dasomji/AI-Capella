@@ -37,7 +37,7 @@ export function themeExtensionPlugin() {
     load(id) { if(id.endsWith('/theme/resolver.js?raw'))return `export default ${JSON.stringify(extended)}`; },
     transform(code,id) {
       if(id.endsWith('/theme/resolver.js'))return extended;
-      if(id.endsWith('/design-system/app.css'))return code+'\n@layer tokens {'+block.toString()+'}'+(process.env.THEME_PROOF_MUTANT==='hardcoded'?'\nbutton,h1{color:#f00!important}':'');
+      if(id.endsWith('/design-system/app.css'))return code+'\n@layer tokens {'+block.toString()+'}'+(process.env.THEME_PROOF_MUTANT==='hardcoded'?'\nbutton,h1{color:#f00!important}':process.env.THEME_PROOF_MUTANT==='reset'?'\n.ds-reset{text-align:initial!important}':'');
     },
   };
 }

@@ -249,6 +249,8 @@ describe("every recipe property is exclusive within a state and breakpoint", () 
 it('preserves unselectable landing notes and the library Menu ink focus outline', () => {
   expect(controlNoteRecipe()).toContain('tw:select-none');
   expect(controlNoteRecipe()).not.toContain('tw:select-text');
+  expect(r.panelPartRecipe('ctl-note')).toContain('tw:select-none');
+  expect(r.panelPartRecipe('ctl-note')).not.toContain('tw:select-text');
   const menu=r.iconButtonRecipe({variant:'library-menu'});
   expect(menu).toContain('tw:focus-visible:outline-ink');
   expect(menu).not.toContain('tw:focus-visible:outline-focus');
