@@ -181,3 +181,60 @@ it('requires a named import layer and checks raw Tailwind media variants', () =>
   expect(scan("const x='tw:[@media_(max-width:_700px)]:hidden'").some(r=>r.kind==='raw-media-query')).toBe(true);
   expect(scanDesignFile('src/design-system/tokens.css','[data-design=papier]{display:block}').some(r=>r.kind==='legacy-theme-selector')).toBe(true);
 });
+
+describe('P6d token and theme boundary regressions', () => {
+  it.each([
+    ['raw-media-query', 'const x="tw:max-[700px]:hidden"'],
+    ['raw-media-query', 'const x="tw:min-[40rem]:block"'],
+    ['theme-variant', 'const x="tw:dark:bg-surface"'],
+    ['legacy-theme-read', 'root.dataset["theme"]'],
+    ['legacy-theme-read', 'const {theme: selected} = root.dataset'],
+    ['legacy-theme-read', 'root.querySelector("[data-theme=parchment]")'],
+    ['legacy-theme-read', 'root.setAttribute("data-theme", "parchment")'],
+    ['theme-id-branch', 'if (readTheme().id === "parchment") draw()'],
+    ['computed-color-at-sink', 'ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")"'],
+    ['numeric-color-at-sink', 'ctx.fillStyle = 0xff00ee'],
+    ['value-encoding-name', 'const x="tw:panel-paint-3"'],
+  ])('rejects %s: %s', (kind, source) => {
+    expect(scan(source).some(row=>row.kind===kind)).toBe(true);
+  });
+  it.each([
+    '@container score (min-width:700px){x{display:none}}',
+    '@media (width > 40vw){x{display:none}}',
+  ])('rejects raw container/media lengths: %s', source => {
+    expect(scanDesignFile('src/design-system/native.css',source).some(row=>row.kind==='raw-media-query')).toBe(true);
+  });
+  it.each([
+    '--ds-shadow:0 0 2px red',
+    '--ds-gradient:linear-gradient(red, blue)',
+    '--ds-mix:color-mix(in srgb, red, blue)',
+  ])('requires theme ownership of shared named paints: %s', decl => {
+    expect(scanDesignFile('src/design-system/tokens.css',`:root{${decl}}`).some(row=>row.kind==='shared-screen-color')).toBe(true);
+  });
+  it.each(['fill="red"','stroke="blue"','fill="#123456"','style="fill:red;stroke:blue"'])('checks SVG asset colors: %s', attr => {
+    expect(scanDesignFile('src/design-system/assets/example.svg',`<svg><path ${attr}/></svg>`).some(row=>['raw-color','named-color'].includes(row.kind))).toBe(true);
+  });
+  it('allows inherited SVG paint and theme runtime ownership', () => {
+    expect(scanDesignFile('src/design-system/assets/example.svg','<svg><path fill="currentColor" stroke="none"/></svg>')).toEqual([]);
+    expect(scanDesignFile('src/design-system/theme/example.ts','root.dataset["theme"]; const {theme}=root.dataset; root.setAttribute("data-theme","example"); readTheme().id === "example";')).toEqual([]);
+  });
+  it('preserves token-composed lengths and data-family indices',()=>{
+    expect(scanDesignFile('src/design-system/tokens.css',':root{--ds-space-control:12px;--ds-widget-gap:var(--ds-space-control)}')).toEqual([]);
+    expect(scan('const c="tw:-translate-x-1/2 tw:[&_*]:border-0 tw:grid-cols-2"')).toEqual([]);
+  });
+});
+
+it.each([
+ 'const theme=readTheme(); if(theme.id === "parchment") draw()',
+ 'const {id:selected}=readTheme(); if(selected === "parchment") draw()',
+ 'const id=readTheme().id; if("parchment" === id) draw()',
+])('rejects local theme-ID comparison aliases: %s',source=>{
+ expect(scan(source).some(row=>row.kind==='theme-id-branch')).toBe(true);
+});
+it('allows only an exact documented brand SVG digest',async()=>{
+ const {createHash}=await import('node:crypto');
+ const file='public/brand/example.svg',source='<svg><path fill="red"/></svg>';
+ const brandArtworkHashes={[file]:createHash('sha256').update(source).digest('hex')};
+ expect(scanDesignFile(file,source,{brandArtworkHashes})).toEqual([]);
+ expect(scanDesignFile(file,source.replace('red','blue'),{brandArtworkHashes})).not.toEqual([]);
+});
