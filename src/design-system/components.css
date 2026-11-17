@@ -41,7 +41,7 @@
   .ds-table-records tbody,.ds-table-records tbody tr { display:block;width:100%; }
   .ds-table-records tbody tr { border-bottom:var(--ds-stroke-thin) solid var(--ds-admin-rule);padding:var(--ds-space-10) 0; }
   .ds-table-records td { display:block;min-width:0;max-width:none;width:100%;border:0;white-space:normal;overflow-wrap:anywhere;padding:var(--ds-space-6) var(--ds-space-10); }
-  .ds-table-records td::before { content:attr(data-label);display:block;font-size:var(--ds-size-small);color:var(--ds-admin-secondary); }
+  .ds-table-records td::before { content:attr(data-label);display:block;font-family:inherit;font-size:var(--ds-size-small);line-height:inherit;color:var(--ds-admin-secondary); }
 }
 .ds-reset::before,.ds-reset::after { all:initial;content:none; }
 .ds-menu-item { position:relative;isolation:isolate; }

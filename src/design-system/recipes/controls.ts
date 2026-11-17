@@ -74,10 +74,10 @@ function buttonRecipeStyles({
           : "tw:bg-transparent tw:text-admin-ink tw:border-admin-rule"
         : buttonIntents[intent];
   return [
-    controlBase,
+    variant.startsWith("dense") ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : controlBase,
     variant.startsWith("dense") ? denseDisabled : disabledRecipe,
-    variant.startsWith("dense") ? "tw:leading-admin" : "tw:leading-body",
-    "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 tw:border tw:border-solid tw:whitespace-nowrap tw:cursor-pointer",
+    variant.startsWith("dense") ? "tw:leading-admin tw:tabular-nums" : "tw:leading-body",
+    "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 tw:border-solid tw:whitespace-nowrap tw:cursor-pointer " + (variant === "dense-sort" ? "tw:border-0" : "tw:border"),
     buttonShapes[variant],
     color,
     pressed ? "tw:shadow-emboss-pressed" : "",
@@ -110,7 +110,7 @@ function iconButtonRecipeStyles({
   };
   return [
     controlBase,
-    variant.startsWith("admin") ? denseDisabled : disabledRecipe,
+    variant.startsWith("admin") ? "tw:tabular-nums " + denseDisabled : disabledRecipe,
     "tw:inline-grid tw:place-items-center tw:flex-none tw:border-0 tw:bg-transparent tw:cursor-pointer",
     shapes[variant],
   ].join(" ");
@@ -136,7 +136,7 @@ function fieldRecipeStyles(
   const admin = variant === "admin";
   const ruled = variant !== "boxed";
   return {
-    root: variant === "ruled-account" ? "tw:block tw:my-20 tw:min-w-0 tw:font-auth-body" : admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body" : "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
+    root: variant === "ruled-account" ? "tw:block tw:my-20 tw:min-w-0 tw:font-auth-body" : admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body tw:tabular-nums" : "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
     label:
       ruled && !admin
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary"
@@ -144,7 +144,7 @@ function fieldRecipeStyles(
     control: [
       admin ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : controlBase,
       disabledRecipe,
-      "tw:block tw:w-full tw:min-w-0 tw:font-regular tw:disabled:cursor-default",
+      "tw:block tw:w-full tw:min-w-0 tw:font-regular tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
       kind === "textarea" && admin
         ? "tw:h-auto tw:min-h-textarea tw:resize-y tw:border tw:border-solid tw:rounded-field tw:p-10 tw:font-auth-body tw:text-body tw:leading-admin tw:bg-admin-surface tw:text-admin-ink"
         : variant === "domain" && kind === "select"

@@ -1158,6 +1158,7 @@
   --ds-content-empty: '';
   --ds-size-metric: 26px;
   --ds-size-workspace-wordmark: 22px;
+  --ds-size-workspace-heading: 24px;
   --ds-table-cell-min: 140px;
   --ds-table-cell-mono-min: 110px;
   --ds-table-cell-max: 320px;
@@ -1166,6 +1167,7 @@
 }
 @theme inline {
   --text-metric: var(--ds-size-metric);
+  --text-workspace-heading: var(--ds-size-workspace-heading);
   --text-workspace-wordmark: var(--ds-size-workspace-wordmark);
   --color-table-row-hover: var(--ds-table-row-hover);
 }

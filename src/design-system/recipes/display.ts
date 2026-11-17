@@ -61,6 +61,7 @@ export const toggleGroupVariants = [
   "language",
   "transcription",
   "admin",
+  "admin-language",
   "presets",
 ] as const;
 export interface ToggleGroupOptions {
@@ -73,6 +74,7 @@ function toggleGroupRecipeStyles({
   separator,
 }: ToggleGroupOptions = {}) {
   const item = (pressed = false) => {
+    if(variant==='admin'||variant==='presets'||variant==='admin-language')return "tw:inline-block tw:box-border tw:m-0 tw:min-h-44 tw:px-2 tw:py-4 tw:border-0 tw:rounded-field tw:bg-transparent tw:text-body-small tw:leading-admin tw:cursor-pointer tw:tabular-nums tw:focus-visible:outline-2 tw:focus-visible:outline-admin-accent tw:focus-visible:outline-offset-3 " + (variant==='admin-language'?'tw:min-w-28 tw:font-auth-mono ':'tw:font-auth-body ') + (pressed?'tw:text-admin-ink tw:font-label tw:underline tw:underline-offset-5':'tw:text-admin-secondary tw:font-regular');
     if (variant === "language" && separator !== undefined)
       return "tw:inline-block tw:box-border tw:m-0 tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4 tw:border-0 tw:rounded-field tw:bg-transparent tw:font-auth-mono tw:text-small tw:font-regular tw:leading-admin tw:cursor-pointer tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-focus tw:focus-visible:outline-offset-4 " + (pressed ? "tw:text-ink" : "tw:text-ink-secondary");
     if (variant === "segmented")
@@ -90,20 +92,15 @@ function toggleGroupRecipeStyles({
           : "tw:min-h-44 tw:px-2 tw:py-4";
     return (
       "tw:box-border tw:m-0 tw:inline-flex tw:items-center tw:justify-center tw:border-0 tw:rounded-field tw:bg-transparent " +
-      (variant === "admin" || variant === "presets"
-        ? "tw:font-auth-body tw:text-label tw:leading-body"
-        : "tw:font-auth-mono tw:text-small tw:leading-field") +
-      (pressed && (variant==="admin"||variant==="presets") ? " tw:font-strong" : " tw:font-regular") + " tw:cursor-pointer tw:disabled:opacity-(--ds-opacity-disabled) tw:focus-visible:outline-2 tw:focus-visible:outline-focus " +
+      "tw:font-auth-mono tw:text-small tw:leading-field" +
+      " tw:font-regular" + " tw:cursor-pointer tw:disabled:opacity-(--ds-opacity-disabled) tw:focus-visible:outline-2 tw:focus-visible:outline-focus " +
       metric +
       " " +
-      (variant === "admin" || variant === "presets" ? pressed ? "tw:text-admin-ink" : "tw:text-admin-secondary" : pressed ? "tw:text-ink" : "tw:text-ink-secondary") +
-      ((variant === "admin" || variant === "presets") && pressed
-        ? " tw:underline tw:underline-offset-5"
-        : "")
+      (pressed ? "tw:text-ink" : "tw:text-ink-secondary")
     );
   };
   return {
-    root: variant === "language" && separator !== undefined
+    root: variant==="admin-language" ? "tw:block tw:font-auth-mono tw:text-small tw:leading-admin tw:text-admin-secondary tw:tabular-nums" : (variant==="admin"||variant==="presets") && separator!==undefined ? "tw:block tw:font-auth-body tw:text-body tw:leading-body tw:text-admin-secondary tw:tabular-nums" : variant === "language" && separator !== undefined
       ? "tw:block tw:font-auth-mono tw:text-small tw:leading-admin tw:text-ink-secondary"
       : "tw:inline-flex tw:items-center tw:flex-wrap " +
       (variant === "segmented"
@@ -168,18 +165,18 @@ function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }
       (variant === "records"
         ? "ds-table-records tw:max-account:min-w-0 tw:max-account:table-fixed "
         : "") +
-      "tw:w-full tw:min-w-table tw:border-collapse tw:font-auth-body tw:text-body-small tw:leading-body tw:text-admin-ink",
+      "tw:w-full tw:min-w-table tw:border-collapse tw:font-auth-body tw:text-body-small tw:leading-body tw:text-admin-ink tw:tabular-nums",
     wrap: "tw:max-w-full tw:overflow-auto tw:overscroll-contain" + (bounded ? " tw:max-h-(--ds-table-height)" : "") + (variant === "records" ? " tw:max-account:overflow-visible tw:max-account:max-h-none" : ""),
     header:
       (variant === "records"
         ? "tw:max-account:static tw:max-account:border-0 tw:max-account:whitespace-normal "
         : "") +
-      "tw:font-auth-body tw:text-body-small tw:leading-body tw:text-admin-ink tw:max-account:px-10 tw:max-account:py-10 tw:sticky tw:top-0 tw:bg-admin-surface tw:text-left tw:font-emphasis tw:whitespace-nowrap tw:px-14 tw:py-12 tw:border-0 tw:border-b tw:border-solid tw:border-admin-rule",
+      "tw:font-auth-body tw:text-body-small tw:leading-body tw:text-admin-ink tw:tabular-nums tw:align-middle tw:max-account:px-10 tw:max-account:py-10 tw:sticky tw:top-0 tw:bg-admin-surface tw:text-left tw:font-emphasis tw:whitespace-nowrap tw:px-14 tw:py-12 tw:border-0 tw:border-b tw:border-solid tw:border-admin-rule",
     cell:
       (variant === "records"
         ? "tw:max-account:block tw:max-account:w-full tw:max-account:min-w-0 tw:max-account:max-w-none tw:max-account:border-0 tw:max-account:whitespace-normal tw:max-account:py-6 tw:max-account:px-10 "
         : "") +
-      (mono ? "tw:min-w-(--ds-table-cell-mono-min) tw:font-auth-mono tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:max-account:overflow-visible tw:max-account:wrap-anywhere" : "tw:min-w-(--ds-table-cell-min) tw:font-auth-body") + " tw:text-body-small tw:leading-body tw:max-w-(--ds-table-cell-max) tw:px-14 tw:py-12 tw:text-admin-secondary tw:first:text-admin-ink tw:align-top tw:border-0 tw:border-b tw:border-solid tw:border-admin-rule",
+      (mono ? "tw:min-w-(--ds-table-cell-mono-min) tw:font-auth-mono tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:max-account:overflow-visible tw:max-account:wrap-anywhere" : "tw:min-w-(--ds-table-cell-min) tw:font-auth-body") + " tw:text-body-small tw:leading-body tw:tabular-nums tw:max-w-(--ds-table-cell-max) tw:px-14 tw:py-12 tw:text-admin-secondary tw:first:text-admin-ink tw:align-top tw:border-0 tw:border-b tw:border-solid tw:border-admin-rule",
     row:
       variant === "records" ? "tw:hover:bg-table-row-hover tw:cursor-pointer" : "tw:bg-transparent",
     empty: "tw:p-24 tw:text-admin-secondary tw:text-left",
