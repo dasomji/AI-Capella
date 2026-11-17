@@ -44,6 +44,8 @@
 @custom-variant max-phone-wide-inclusive { @media (max-width: theme(--breakpoint-phone-wide)) { @slot; } }
 @custom-variant max-compact-inclusive { @media (max-width: theme(--breakpoint-compact)) { @slot; } }
 @custom-variant max-phone-inclusive { @media (max-width: theme(--breakpoint-phone)) { @slot; } }
+/* D10: phones/tablets and hybrid devices retain comfortable targets. */
+@custom-variant touch { @media (width <= theme(--breakpoint-panel)), (any-pointer: coarse) { @slot; } }
 @custom-variant pointer-motion { @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) { @slot; } }
 @custom-variant panel { @media (min-width: theme(--breakpoint-panel)) { @slot; } }
 @custom-variant max-account-inclusive { @media (max-width: theme(--breakpoint-account)) { @slot; } }
