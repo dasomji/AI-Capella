@@ -17,6 +17,8 @@ export async function verifyDesignSystemPage() {
   if (rows.length < 180) throw Error("Showcase missing primitives");
   for (const name of ["button/account-link/secondary/default", "button/password-toggle/secondary/default", "field/ruled-account/input/invalid", "control-group/trailing-action", "toggle-group/language-separated", "status/account/error"])
     if (!rows.some(row => row.dataset.specimen === name)) throw Error("Missing account parity specimen: " + name);
+  for (const name of ["navigation/admin", "workspace/page", "workspace/definitions", "button/dense-sort/secondary/default", "toggle-group/admin-language", "dialog/admin-reason", "dialog/admin-confirm", "table/records", "table/metrics", "status/admin", "badge/admin"])
+    if (!rows.some(row => row.dataset.specimen === name)) throw Error("Missing admin parity specimen: " + name);
   const mismatches = [];
   let elements = 0,
     properties = 0,
