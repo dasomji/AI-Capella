@@ -500,11 +500,12 @@ export function createDialog(options: DialogOptions) {
         },
       })),
     close: () => controller?.close(),
+    requestClose: () => controller?.requestClose("button"),
     setBusy: (value: boolean) => controller?.setBusy(value),
   };
 }
-export const createSheet = (options: Omit<DialogOptions, "variant">) =>
-  createDialog({ ...options, variant: "sheet" });
+export const createSheet = ({variant="sheet", ...options}: Omit<DialogOptions, "variant"> & {variant?: "sheet"|"domain-sheet"}) =>
+  createDialog({ ...options, variant });
 export const createDrawer = (options: Omit<DialogOptions, "variant">) =>
   createDialog({ ...options, variant: "drawer" });
 export const createConfirmDialog = (options: Omit<DialogOptions, "variant"> & {variant?: "confirm"|"admin-confirm"|"admin-reason"}) =>

@@ -586,8 +586,8 @@ export function Dialog({
       ? null
       : createPortal(node, document.body);
 }
-export const Sheet = (props: Omit<DialogProps, "variant">) => (
-  <Dialog {...props} variant="sheet" />
+export const Sheet = ({variant="sheet",...props}: Omit<DialogProps, "variant"> & {variant?: "sheet"|"domain-sheet"}) => (
+  <Dialog {...props} variant={variant} />
 );
 export const Drawer = (props: Omit<DialogProps, "variant">) => (
   <Dialog {...props} variant="drawer" />
