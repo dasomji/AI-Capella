@@ -78,3 +78,10 @@ body:has(.domain-sheet) .ds-toast-placement { top:var(--ds-space-16); bottom:aut
 .ds-domain-sheet { background:var(--ds-material-vellum-strong);backdrop-filter:var(--ds-material-filter-strong); }
 .ds-transcription-panel { background-image:var(--ds-material-fibre); }
 .ds-transcription-panel::backdrop { backdrop-filter:blur(var(--ds-overlay-blur)); }
+
+/* Placement and lifecycle belong to the named inverted note recipes. */
+.ds-tour-note { position:absolute;left:0;top:0;width:var(--ds-tour-note-width);opacity:0;transition:opacity 0.17s ease; }
+.ds-tour-note.shown { opacity:1;transition-duration:0.3s; }
+.ds-power-note { position:fixed;left:50%;bottom:var(--ds-toast-bottom);z-index:var(--ds-layer-note);width:var(--ds-power-note-width);transform:translate(-50%,var(--ds-note-enter-offset));opacity:0;transition:opacity var(--ds-duration-normal),transform var(--ds-duration-normal) var(--ds-ease-standard); }
+.ds-power-note.show { opacity:1;transform:translate(-50%,0); }
+@media (width < theme(--breakpoint-panel)) { .ds-power-note { bottom:var(--ds-toast-bottom-phone); } }

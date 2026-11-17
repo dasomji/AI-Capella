@@ -1242,3 +1242,10 @@
   --z-index-note: var(--ds-layer-note);
   --z-index-tour: var(--ds-layer-tour);
 }
+
+/* Inverted note geometry survives the opt-in reset (D17). */
+:root {
+  --ds-tour-note-width: min(360px, calc(100vw - 20px));
+  --ds-power-note-width: min(440px, calc(100vw - 32px));
+  --ds-note-enter-offset: 16px;
+}
