@@ -1,7 +1,7 @@
 import { themeRegistry } from './design-system/theme';
 import { appShellRecipe, landingRecipe } from "./design-system/recipes/shell";
 import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, updateField, createLoading, createEmptyState, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
-import { matchBreakpoint, setAppearanceRehearsing } from './design-system/theme';
+import { matchBreakpoint, hasExperimentalAppearance, setAppearanceRehearsing } from './design-system/theme';
 import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
 import { isOffline } from './offline-state';
@@ -38,7 +38,7 @@ import { countLabel, keyName, lang, setLang, t, type MessageKey } from './i18n';
 import { subscribeRendererTheme } from './rendererTheme';
 import { canvasFontsReady } from './theme';
 import { WaveBackdrop } from './backdrop';
-import { DESIGN_CHOICE, EXPERIMENTAL_APPEARANCE, PAPER_DESIGN, PARCHMENT, setDesignChoice, START_DRAFT, START_STAFF, START_STAGE, type DesignChoice } from './design';
+import { DESIGN_CHOICE, PAPER_DESIGN, PARCHMENT, setDesignChoice, START_DRAFT, START_STAFF, START_STAGE, type DesignChoice } from './design';
 import { initPaper, paintSwatch, PAPER_KINDS, paperKind, setPaperKind, type PaperKind } from './paper';
 import { applyPercussion } from './percussion';
 import { lightScoreName, type TitleName } from './lightName';
@@ -937,7 +937,7 @@ function appearanceItems() {
       onSelect: choose(aliases[0]),
     })),
   ];
-  return [{ label: EXPERIMENTAL_APPEARANCE.length ? t('experimentalAppearance') : t('appearance'), icon: 'sheet' as const, value: options.find((o) => o.checked)?.label ?? '', options, onSelect: () => {} }];
+  return [{ label: hasExperimentalAppearance() ? t('experimentalAppearance') : t('appearance'), icon: 'sheet' as const, value: options.find((o) => o.checked)?.label ?? '', options, onSelect: () => {} }];
 }
 
 // Theme changes repaint retained resources without touching the audio/session lifecycle.
