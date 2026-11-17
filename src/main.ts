@@ -65,6 +65,7 @@ function openLibrarySheet(
   content: HTMLElement,
   opener?: Element | null,
   onClose?: () => void,
+  closeVariant: "standard" | "player" = "standard",
 ) {
   const sheet = createSheet({
     variant: "library-sheet",
@@ -79,6 +80,7 @@ function openLibrarySheet(
   head.prepend(grab);
   head.append(
     createIconButton({
+      variant: closeVariant,
       label: t("close"),
       icon: libraryIcon("close"),
       onClick: () => sheet.requestClose(),
@@ -2552,7 +2554,7 @@ function openMixerSheet(opener: HTMLElement) {
   const list=createPlayerPart('ul','voice-list');
   currentScore.parts.forEach((p,i)=>list.append(voiceRow(p.id,p.name,colorForPart(i,currentScore!.parts.length))));
   wrap.append(list,createMixerVolume({id:'duck-range-sheet',label:t('othersWhileSoloing')}),createButton({text:t('reset'),variant:'library-action',layout:'tw:w-full',attrs:{'data-action':'mix-reset'}}));
-  openLibrarySheet(t('voices'),wrap,opener);
+  openLibrarySheet(t('voices'),wrap,opener,undefined,'player');
   applyMixToViews();
 }
 
