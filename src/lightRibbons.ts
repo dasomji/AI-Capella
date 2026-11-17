@@ -127,8 +127,8 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
       if (f.k < 0.01) continue;
       const r = Math.min(90, h * 0.14);
       const flare = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
-      flare.addColorStop(0, readTheme().color('ribbon-flare-core').rgba(0.75 * f.k));
-      flare.addColorStop(0.3, readTheme().color('ribbon-flare-edge').rgba(0.22 * f.k));
+      flare.addColorStop(0, readTheme().color('ribbon-flare-core').rgba(Number(readTheme().roles['ribbon-flare-core-alpha']) * f.k));
+      flare.addColorStop(0.3, readTheme().color('ribbon-flare-edge').rgba(Number(readTheme().roles['ribbon-flare-edge-alpha']) * f.k));
       flare.addColorStop(1, readTheme().color('ribbon-flare-edge').rgba(0));
       g.fillStyle = flare;
       g.fillRect(f.x - r, f.y - r, r * 2, r * 2);
@@ -150,7 +150,7 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
     if (p <= 0) continue;
     const stroke = new Path2D();
     pointedPen(stroke, pts, { w: line * 3.2, hair: Math.max(0.8, line * 0.34), taper: 0.06, upTo: p });
-    ctx.fillStyle = withAlpha(color, 0.85);
+    ctx.fillStyle = withAlpha(color, Number(readTheme().roles['ribbon-ink-alpha']));
     ctx.fill(stroke, 'nonzero');
     if (lit > 0) {
       const upTo = Math.max(2, Math.round(p * steps));
@@ -164,11 +164,11 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
       // The pen's point: a spark where the light is being drawn.
       const [px, py] = pointAlong(pts, p);
       const spot = ctx.createRadialGradient(px, py, 0, px, py, line * 7);
-      spot.addColorStop(0, withAlpha(color, 0.6));
+      spot.addColorStop(0, withAlpha(color, Number(readTheme().roles['ribbon-spot-alpha'])));
       spot.addColorStop(1, withAlpha(color, 0));
       ctx.fillStyle = spot;
       ctx.fillRect(px - line * 7, py - line * 7, line * 14, line * 14);
-      ctx.fillStyle = readTheme().color('ribbon-nib').rgba(0.95);
+      ctx.fillStyle = readTheme().color('ribbon-nib').rgba(Number(readTheme().roles['ribbon-nib-alpha']));
       ctx.beginPath();
       ctx.arc(px, py, Math.max(1.3, line * 0.65), 0, Math.PI * 2);
       ctx.fill();
@@ -183,8 +183,8 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
         const a = Math.sin(Math.PI * u) * lit;
         const r = (o.bead ?? 3.2) * (0.6 + 0.4 * a);
         const spark = ctx.createRadialGradient(bx, by, 0, bx, by, r * 3.5);
-        spark.addColorStop(0, readTheme().color('ribbon-spark').rgba(0.9 * a));
-        spark.addColorStop(0.3, withAlpha(color, 0.6 * a));
+        spark.addColorStop(0, readTheme().color('ribbon-spark').rgba(Number(readTheme().roles['ribbon-spark-alpha']) * a));
+        spark.addColorStop(0.3, withAlpha(color, Number(readTheme().roles['ribbon-spark-edge-alpha']) * a));
         spark.addColorStop(1, withAlpha(color, 0));
         ctx.fillStyle = spark;
         ctx.fillRect(bx - r * 3.5, by - r * 3.5, r * 7, r * 7);

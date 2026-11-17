@@ -697,12 +697,12 @@ export class PianoRoll {
     // beat->x mapping as the note content below so bar numbers/section letters line up with bars.
     ctx.fillStyle = INK1;
     ctx.fillRect(0, 0, width, RULER_HEIGHT_PX);
-    ctx.fillStyle = paper(0.12);
+    ctx.fillStyle = paper(Number(readTheme().roles['score-ruler-edge-alpha']));
     ctx.fillRect(0, RULER_HEIGHT_PX - 1, width, 1);
     if (this.loopRegion) {
       const x1 = beatToX(this.loopRegion.start);
       const x2 = beatToX(this.loopRegion.end);
-      ctx.fillStyle = paper(0.14);
+      ctx.fillStyle = paper(Number(readTheme().roles['score-ruler-loop-alpha']));
       roundedRect(ctx, x1, 5, x2 - x1, RULER_HEIGHT_PX - 10, 4);
       ctx.fill();
       ctx.fillStyle = PAPER;
@@ -738,9 +738,9 @@ export class PianoRoll {
       if (!this.loopRegion) return;
       const x1 = beatToX(this.loopRegion.start);
       const x2 = beatToX(this.loopRegion.end);
-      ctx.fillStyle = paper(0.035);
+      ctx.fillStyle = paper(Number(readTheme().roles['score-loop-fill-alpha']));
       ctx.fillRect(x1, 0, x2 - x1, contentAreaHeight);
-      ctx.fillStyle = paper(0.3);
+      ctx.fillStyle = paper(Number(readTheme().roles['score-loop-edge-alpha']));
       ctx.fillRect(Math.round(x1), 0, 1, contentAreaHeight);
       ctx.fillRect(Math.round(x2), 0, 1, contentAreaHeight);
     };
@@ -865,7 +865,7 @@ export class PianoRoll {
     if (playheadXPos >= -36 && playheadXPos <= width + 36) {
       // The lantern's reading line is lit by the lamp behind it -- the line itself only a fine mark.
       if (!LANTERN) playheadBeam(ctx, playheadXPos, 0, height);
-      ctx.fillStyle = LANTERN ? paper(0.72) : PAPER;
+      ctx.fillStyle = LANTERN ? paper(Number(readTheme().roles['score-lantern-playhead-alpha'])) : PAPER;
       if (LANTERN) ctx.fillRect(playheadXPos - 0.5, 0, 1, height);
       else ctx.fillRect(playheadXPos - 1, 0, 2, height);
       ctx.fillStyle = PAPER;
@@ -1111,7 +1111,7 @@ export class PianoRoll {
       for (const marker of this.beatMarkers) {
         const x = Math.round((marker.beat - originBeat) * this.pixelsPerBeat);
         if (x < -30 || x > bufCssWidth + 30) continue;
-        rctx.fillStyle = paper(marker.isDownbeat ? 0.4 : 0.16);
+        rctx.fillStyle = paper(marker.isDownbeat ? Number(readTheme().roles['score-ruler-downbeat-alpha']) : Number(readTheme().roles['score-ruler-beat-alpha']));
         rctx.fillRect(x, RULER_HEIGHT_PX - (marker.isDownbeat ? 10 : 5), 1, marker.isDownbeat ? 9 : 4);
         if (!marker.isDownbeat) continue;
         let textX = x + 6;
@@ -1130,14 +1130,14 @@ export class PianoRoll {
           textX = x + boxW + 11;
         }
         rctx.font = `600 11px ${this.theme.fonts['canvas-mono']}`;
-        rctx.fillStyle = paper(0.62);
+        rctx.fillStyle = paper(Number(readTheme().roles['score-ruler-label-alpha']));
         rctx.fillText(String(marker.measureNumber), textX, 18);
         let after = textX + rctx.measureText(String(marker.measureNumber)).width;
         if (marker.measureNumber !== undefined && this.markedBars.has(marker.measureNumber)) after += 3 + drawQueryMark(rctx, after + 3, 18);
         const change = this.signatureAt.get(marker.beat);
         if (change) {
           const fifths = change.fifths !== undefined ? transposeFifths(change.fifths, this.transpose) : undefined;
-          drawRulerSignature(rctx, change, fifths, after + 7, paper(0.85));
+          drawRulerSignature(rctx, change, fifths, after + 7, paper(Number(readTheme().roles['score-ruler-signature-alpha'])));
         }
       }
       // Section letters that don't sit on a bar line (hand-marked mid-bar) still get their box.
@@ -1179,7 +1179,7 @@ export class PianoRoll {
         ctx.fillRect(0, y, widthCss, rowHeight);
       }
       if (pc === 0) {
-        ctx.fillStyle = paper(0.08);
+        ctx.fillStyle = paper(Number(readTheme().roles['score-octave-edge-alpha']));
         ctx.fillRect(0, Math.round(y + rowHeight - 1), widthCss, 1);
       }
     }
@@ -1188,12 +1188,12 @@ export class PianoRoll {
     for (const marker of this.beatMarkers) {
       const x = Math.round(localBeatToX(marker.beat));
       if (x < -20 || x > widthCss + 20) continue;
-      ctx.fillStyle = paper(marker.isDownbeat ? 0.15 : 0.05);
+      ctx.fillStyle = paper(marker.isDownbeat ? Number(readTheme().roles['score-grid-downbeat-alpha']) : Number(readTheme().roles['score-grid-beat-alpha']));
       ctx.fillRect(x, 0, 1, heightCss);
     }
     const endX = Math.round(localBeatToX(this.score.totalBeats));
     if (endX > -20 && endX < widthCss + 20) {
-      ctx.fillStyle = paper(0.3);
+      ctx.fillStyle = paper(Number(readTheme().roles['score-end-bar-alpha']));
       ctx.fillRect(endX, 0, 1, heightCss);
       ctx.fillRect(endX + 3, 0, 3, heightCss);
     }
@@ -1368,12 +1368,12 @@ export class PianoRoll {
     ctx.lineCap = 'round';
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(5, capR);
-    throughClips(ctx, clear, 0.3 * dim, () => ctx.stroke(path));
+    throughClips(ctx, clear, Number(readTheme().roles['score-tie-shadow-alpha']) * dim, () => ctx.stroke(path));
     ctx.strokeStyle = light;
     ctx.lineWidth = 1.6;
-    throughClips(ctx, clear, 0.95 * dim, () => ctx.stroke(path));
+    throughClips(ctx, clear, Number(readTheme().roles['score-tie-ink-alpha']) * dim, () => ctx.stroke(path));
     ctx.fillStyle = light;
-    throughClips(ctx, clear, 0.95 * dim, () => ctx.fill(dots));
+    throughClips(ctx, clear, Number(readTheme().roles['score-tie-dot-alpha']) * dim, () => ctx.fill(dots));
   }
 
   /**
@@ -1424,7 +1424,7 @@ export class PianoRoll {
     }
     ctx.save();
     ctx.fillStyle = towardPaper(color, Number(readTheme().roles['score-key-tint-mix']));
-    throughClips(ctx, clear, 0.85 * (dimmed ? DIMMED_ALPHA : 1), () => ctx.fill(shape));
+    throughClips(ctx, clear, Number(readTheme().roles['score-articulation-alpha']) * (dimmed ? DIMMED_ALPHA : 1), () => ctx.fill(shape));
     ctx.restore();
   }
 

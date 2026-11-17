@@ -290,3 +290,35 @@ it('preserves the historical per-theme intensity inputs and separates screen/pri
     expect(readFileSync(`src/${file}.ts`, 'utf8'), `${file} screen inputs`).not.toContain('.print.paper');
   }
 });
+
+it('keeps canvas alpha and pigment mixing strengths in numeric theme roles', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { default: ts } = await import('typescript');
+  const { default: postcss } = await import('postcss');
+  const css=postcss.parse(readFileSync('src/design-system/tokens.css','utf8'));
+  const declared=new Map<string,string>();css.walkDecls(d=>{declared.set(d.prop,d.value);});
+  for(const name of ['lightName','titleStage','titleStaff','artwork','theme','pianoRoll','overview','lightRibbons','lantern','inkWordmark']) {
+    const source=readFileSync(`src/${name}.ts`,'utf8');
+    for(const match of source.matchAll(/roles\['([^']+(?:alpha|mix|factor)(?:-[a-z]+)?)'\]/g)) {
+      expect(themeRoleNames,`${name}: ${match[1]}`).toContain(match[1]);
+      expect(Number.isFinite(Number(declared.get('--ds-'+match[1]))),match[1]).toBe(true);
+    }
+    const ast=ts.createSourceFile(name+'.ts',source,ts.ScriptTarget.Latest,true);
+    function visit(node: import('typescript').Node) {
+      if(ts.isCallExpression(node)) {
+        const callee=node.expression.getText(ast);
+        const alpha=callee.endsWith('.rgba') || callee==='paper' ? node.arguments[0] : ['withAlpha','towardPaper','towardInk'].includes(callee) ? node.arguments[1] : undefined;
+        if(alpha) {
+          function strength(child: import('typescript').Node) {
+            if(ts.isNumericLiteral(child) && +child.text>0 && +child.text<1)
+              throw Error(`${name}: raw canvas paint strength ${child.getText(ast)} in ${node.getText(ast)}`);
+            ts.forEachChild(child,strength);
+          }
+          strength(alpha);
+        }
+      }
+      ts.forEachChild(node,visit);
+    }
+    visit(ast);
+  }
+});
