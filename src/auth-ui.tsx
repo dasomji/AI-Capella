@@ -163,7 +163,7 @@ export function AuthPage() {
           {association => <Input {...association} name="confirm" type="password" autoComplete="current-password" onChange={() => setConfirmationError(false)} required />}
         </Field></>}
         <Status id={statusId} variant="account" intent={status && !['signedout', 'expired'].includes(status) ? 'error' : 'neutral'}>{m[status as keyof typeof m] ?? ""}</Status>
-        <Button variant="cta" intent="primary" layout="tw:mt-inline" type="submit" busy={busy}>{verification ? m.verifyEmail : m[mode]}</Button>
+        <Button size="full-width" intent="primary" layout="tw:mt-inline" type="submit" busy={busy}>{verification ? m.verifyEmail : m[mode]}</Button>
       </form>
       {status === "unverified" && <nav className={accountStageRecipe().links}><Button variant="account-link" busy={busy} disabled={clock < resendAt} onClick={() => void resend()}>{m.resend}{clock < resendAt ? ` (${Math.ceil((resendAt - clock) / 1000)} s)` : ""}</Button></nav>}
       <nav className={accountStageRecipe().links}>

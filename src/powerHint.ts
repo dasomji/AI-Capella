@@ -56,7 +56,7 @@ export function showPowerHint() {
   };
   const never = createButton({
     text: t("powerHintNever"),
-    variant: "hint-link",
+    intent: "quiet", size: "compact",
     onClick: () => {
       store(() => localStorage, OFF_KEY);
       close();
@@ -64,7 +64,7 @@ export function showPowerHint() {
   });
   const ok = createButton({
     text: t("powerHintOk"),
-    variant: "hint",
+    variant: "standard",
     onClick: close,
   });
   actions.append(never, ok);
