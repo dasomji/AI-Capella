@@ -1170,6 +1170,7 @@
   --ds-workspace-metric-columns: repeat(auto-fit,minmax(150px,1fr));
   --ds-workspace-confirm-width: min(440px,calc(100vw - 32px));
   --ds-workspace-confirm-height: 90dvh;
+  --ds-dialog-native-max-width: calc(100% - 2em - 6px);
   --ds-content-empty: '';
   --ds-size-metric: 26px;
   --ds-size-workspace-wordmark: 22px;

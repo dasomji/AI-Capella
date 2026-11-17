@@ -177,7 +177,7 @@ function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }
       (variant === "records"
         ? "tw:max-account:block tw:max-account:w-full tw:max-account:min-w-0 tw:max-account:max-w-none tw:max-account:border-0 tw:max-account:whitespace-normal tw:max-account:py-6 tw:max-account:px-10 "
         : "") +
-      (mono ? "tw:min-w-(--ds-table-cell-mono-min) tw:font-auth-mono tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:max-account:overflow-visible tw:max-account:wrap-anywhere" : "tw:min-w-(--ds-table-cell-min) tw:font-auth-body") + " tw:text-body-small tw:leading-body tw:tabular-nums tw:max-w-(--ds-table-cell-max) tw:px-14 tw:py-12 tw:text-admin-secondary tw:first:text-admin-ink tw:align-top tw:border-0 tw:border-b tw:border-solid tw:border-admin-rule",
+      (mono ? "tw:min-w-(--ds-table-cell-mono-min) tw:font-auth-mono tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:max-account:overflow-visible tw:max-account:wrap-anywhere" : "tw:min-w-(--ds-table-cell-min) tw:font-auth-body") + " tw:text-body-small tw:leading-body tw:tabular-nums tw:max-w-(--ds-table-cell-max) tw:px-14 tw:py-12 " + (variant === "records" ? "" : "tw:max-account:p-10 ") + "tw:text-admin-secondary tw:first:text-admin-ink tw:align-top tw:border-0 tw:border-b tw:border-solid tw:border-admin-rule",
     row:
       variant === "records" ? "tw:[&[tabindex]]:hover:bg-table-row-hover tw:[&[tabindex]]:cursor-pointer" : "tw:bg-transparent",
     empty: "tw:p-24 tw:text-admin-secondary tw:text-left",

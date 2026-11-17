@@ -94,7 +94,7 @@ function buttonRecipeStyles({
   return [
     variant.startsWith("dense") ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : controlBase,
     variant.startsWith("dense") ? denseDisabled : disabledRecipe,
-    variant.startsWith("dense") ? "tw:leading-admin" : "tw:leading-body",
+    variant.startsWith("dense") ? "tw:leading-admin tw:normal-nums" : "tw:leading-body",
     (variant.startsWith("dense") ? (variant==="dense-sort"?"tw:inline-block ":"tw:inline-block tw:text-center ") : "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 ") + "tw:border-solid tw:whitespace-nowrap tw:cursor-pointer " + (variant === "dense-sort" ? "tw:border-0 tw:text-left" : "tw:border"),
     buttonShapes[variant as keyof typeof buttonShapes],
     color,
