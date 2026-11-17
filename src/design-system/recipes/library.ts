@@ -5,7 +5,7 @@ const librarySlots = {
   "ds-library-button":
     "tw:font-inherit tw:color-inherit tw:background-library-clear tw:border-0 tw:p-0 tw:cursor-pointer " +
     "tw:library-button-disabled:cursor-default tw:library-button-disabled:opacity-library-opacity-disabled " +
-    "tw:library-button-focus-visible:outline-library-button-outline tw:library-button-focus-visible:outline-offset-(--ds-space-2)",
+    "tw:library-button-focus-visible:outline-library-button-outline tw:library-button-focus-visible:outline-offset-(--ds-space-micro)",
   "ds-library-mode-btn":
     "tw:library-mode-btn-last-used:border-library-mode-btn-last-used-border-color " +
     "tw:library-mode-btn-last-used:shadow-library-mode-btn-last-used-box-shadow tw:inline-flex tw:items-center " +

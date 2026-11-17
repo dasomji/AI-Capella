@@ -1,8 +1,8 @@
 /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
 #player {
-    grid-template-columns: var(--ds-shell-player-grid-template-columns-79);
-    grid-template-rows: var(--ds-shell-player-grid-template-rows-80);
-    grid-template-areas: var(--ds-shell-player-grid-template-areas-81)
+    grid-template-columns: var(--ds-player-grid-template-columns);
+    grid-template-rows: var(--ds-player-grid-template-rows);
+    grid-template-areas: var(--ds-player-grid-template-areas)
 }
 /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
 .stage {
@@ -22,7 +22,7 @@
     touch-action: none;
     user-select: none;
     will-change: transform;
-    transform: var(--ds-shell-roll-staff-transform-82)
+    transform: var(--ds-roll-staff-transform)
 }
 /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
 #roll {
@@ -36,7 +36,7 @@
 .overview {
     grid-area: ov;
     position: relative;
-    border-top: var(--ds-shell-overview-border-top-83)
+    border-top: var(--ds-overview-border-top)
 }
 /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
 #overview {
@@ -49,21 +49,21 @@
 @media (width < theme(--breakpoint-panel)) {
     /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
     #player {
-        grid-template-columns: var(--ds-shell-player-grid-template-columns-84);
-        grid-template-rows: var(--ds-shell-player-grid-template-rows-85);
-        grid-template-areas: var(--ds-shell-player-grid-template-areas-86)
+        grid-template-columns: var(--ds-player-grid-template-columns-phone);
+        grid-template-rows: var(--ds-player-grid-template-rows-phone);
+        grid-template-areas: var(--ds-player-grid-template-areas-phone)
     }
 }
 @media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) {
     /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
     #player {
-        grid-template-rows: var(--ds-shell-player-grid-template-rows-87);
-        grid-template-areas: var(--ds-shell-player-grid-template-areas-88)
+        grid-template-rows: var(--ds-player-grid-template-rows-landscape);
+        grid-template-areas: var(--ds-player-grid-template-areas-landscape)
     }
 }
 /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
 .following #overview {
-    opacity: var(--ds-shell-following-overview-opacity-100)
+    opacity: var(--ds-following-overview-opacity)
 }
 /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
 #app.sing-along .overview {
@@ -72,31 +72,31 @@
 @media (min-width: theme(--breakpoint-panel)) {
     /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
     #app.sing-along #player {
-        grid-template-rows: var(--ds-shell-app-sing-along-player-grid-template-rows-101);
-        grid-template-areas: var(--ds-shell-app-sing-along-player-grid-template-areas-102)
+        grid-template-rows: var(--ds-app-sing-along-player-grid-template-rows);
+        grid-template-areas: var(--ds-app-sing-along-player-grid-template-areas)
     }
 }
 @media (width < theme(--breakpoint-panel)) {
     /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
     #app.sing-along #player {
-        grid-template-rows: var(--ds-shell-app-sing-along-player-grid-template-rows-103);
-        grid-template-areas: var(--ds-shell-app-sing-along-player-grid-template-areas-104)
+        grid-template-rows: var(--ds-app-sing-along-player-grid-template-rows-phone);
+        grid-template-areas: var(--ds-app-sing-along-player-grid-template-areas-phone)
     }
 }
 @media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) {
     /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
     #app.sing-along #player {
-        grid-template-rows: var(--ds-shell-app-sing-along-player-grid-template-rows-105);
-        grid-template-areas: var(--ds-shell-app-sing-along-player-grid-template-areas-106)
+        grid-template-rows: var(--ds-app-sing-along-player-grid-template-rows-landscape);
+        grid-template-areas: var(--ds-app-sing-along-player-grid-template-areas-landscape)
     }
 }
 /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
 .overview {
-    background: var(--ds-shell-overview-background-114);
+    background: var(--ds-material-vellum);
     -webkit-backdrop-filter: none;
     backdrop-filter: none
 }
 /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
 .overview {
-    box-shadow: var(--ds-shell-overview-box-shadow-115)
+    box-shadow: var(--ds-shadow-material-highlight)
 }

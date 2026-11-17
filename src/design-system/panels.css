@@ -5,34 +5,34 @@
 }
 /* Native WebKit range track cannot receive utility classes. */
 .ds-panel-range::-webkit-slider-runnable-track {
-  height: var(--ds-space-4);
-  border-radius: var(--ds-panel-section-marks-rmark-border-radius-14);
+  height: var(--ds-space-compact);
+  border-radius: var(--ds-radius-track);
   background: var(--ds-surface-hover);
 }
 /* Native WebKit range thumb cannot receive utility classes. */
 .ds-panel-range::-webkit-slider-thumb {
   appearance: none;
-  width: var(--ds-space-18);
-  height: var(--ds-space-18);
+  width: var(--ds-space-action);
+  height: var(--ds-space-action);
   margin-top: var(
-    --ds-panel-input-type-range-webkit-slider-thumb-margin-top-60
+    --ds-panel-input-type-range-vendor-slider-thumb-margin-top
   );
-  border-radius: var(--ds-panel-round-btn-border-radius-33);
+  border-radius: var(--ds-radius-round);
   background: var(--ds-ink);
   box-shadow: var(--ds-range-thumb-shadow);
 }
 /* Native Firefox range track cannot receive utility classes. */
 .ds-panel-range::-moz-range-track {
-  height: var(--ds-space-4);
-  border-radius: var(--ds-panel-section-marks-rmark-border-radius-14);
+  height: var(--ds-space-compact);
+  border-radius: var(--ds-radius-track);
   background: var(--ds-surface-hover);
 }
 /* Native Firefox range thumb cannot receive utility classes. */
 .ds-panel-range::-moz-range-thumb {
-  width: var(--ds-space-18);
-  height: var(--ds-space-18);
+  width: var(--ds-space-action);
+  height: var(--ds-space-action);
   border: 0;
-  border-radius: var(--ds-panel-round-btn-border-radius-33);
+  border-radius: var(--ds-radius-round);
   background: var(--ds-ink);
 }
 /* Native disclosure marker must retain the browser closed marker after the opt-in reset. */

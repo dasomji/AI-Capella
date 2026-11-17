@@ -259,19 +259,19 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-voice-row.is-dimmed .ds-player-voice-name
     "tw:[&.is-dimmed_.ds-player-voice-name]:text-ink-muted",
     // .ds-player-voice-row.is-muted .ds-player-light
-    "tw:[&.is-muted_.ds-player-light]:opacity-(--ds-player-voice-row-is-muted-light-opacity-31)",
+    "tw:[&.is-muted_.ds-player-light]:opacity-(--ds-player-voice-row-is-muted-light-opacity)",
 
     "tw:material-light:[&:hover]:player-voice-row-background-2",
   ].join(" "),
   "ds-player-voice-more": [
     // .ds-player-voice-more
-    "tw:w-player-utility-voice-more-width tw:opacity-(--ds-player-voice-more-opacity-30)",
+    "tw:w-player-utility-voice-more-width tw:opacity-(--ds-player-voice-more-opacity)",
     // .ds-player-voice-more:focus-visible
     "tw:[&:focus-visible]:opacity-100",
   ].join(" "),
   "ds-player-light": [
     // .ds-player-light
-    "tw:w-player-utility-light-width tw:h-player-utility-light-width tw:rounded-player-live-dot-border-radius-9 tw:player-light-border tw:opacity-(--ds-player-light-opacity-33) tw:player-light-transition",
+    "tw:w-player-utility-light-width tw:h-player-utility-light-width tw:rounded-player-live-dot-border-radius-9 tw:player-light-border tw:opacity-(--ds-player-light-opacity) tw:player-light-transition",
     // .ds-player-light.on
     "tw:[&.on]:player-light-background tw:[&.on]:opacity-100 tw:[&.on]:player-light-box-shadow",
   ].join(" "),
@@ -339,9 +339,9 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-chip.is-muted
     "tw:[&.is-muted]:text-ink-muted tw:[&.is-muted]:line-through tw:[&.is-muted]:decoration-ink-muted",
     // .ds-player-chip.is-dimmed i
-    "tw:[&.is-dimmed_i]:opacity-(--ds-player-chip-is-dimmed-i-opacity-62)",
+    "tw:[&.is-dimmed_i]:opacity-(--ds-player-chip-is-dimmed-i-opacity)",
     // .ds-player-chip.is-muted i
-    "tw:[&.is-muted_i]:opacity-(--ds-player-chip-is-muted-i-opacity-63)",
+    "tw:[&.is-muted_i]:opacity-(--ds-player-chip-is-muted-i-opacity)",
     // .ds-player-chip · (prefers-reduced-transparency: reduce)
     "tw:player-reduced-transparency:backdrop-filter-none tw:player-reduced-transparency:player-pos-background",
 
@@ -367,7 +367,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
   ].join(" "),
   "ds-player-chips-mixer": [
     // .ds-player-chips-mixer
-    "tw:player-chips-mixer-grid-area tw:hidden tw:justify-self-end tw:items-center tw:p-player-chips-mixer-padding-64 tw:player-chips-mixer-background tw:z-(--ds-player-utility-chips-mixer-z-index)",
+    "tw:player-chips-mixer-grid-area tw:hidden tw:justify-self-end tw:items-center tw:p-player-chips-mixer-padding-64 tw:player-chips-mixer-background tw:z-(--ds-player-chips-mixer-z-index)",
     // .ds-player-chips-mixer · (width < theme(--breakpoint-panel))
     "tw:max-panel:flex",
     // .ds-player-chips-mixer · (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape)
@@ -399,7 +399,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-zoom .ds-player-follow-btn[aria-pressed="true"]
     "tw:[&_.ds-player-follow-btn[aria-pressed='true']]:text-ink tw:[&_.ds-player-follow-btn[aria-pressed='true']]:player-t-btn-background-2 tw:[&_.ds-player-follow-btn[aria-pressed='true']]:player-shadow-player-zoom-follow-btn-aria-pressed-true-box-shadow-121",
     // .ds-player-zoom .ds-player-follow-btn[aria-pressed="true"] .ic
-    "tw:[&_.ds-player-follow-btn[aria-pressed='true']_.ic]:filter-(--ds-player-zoom-follow-btn-aria-pressed-true-ic-filter-122)",
+    "tw:[&_.ds-player-follow-btn[aria-pressed='true']_.ic]:filter-(--ds-player-zoom-follow-button-pressed-icon-filter)",
     // .ds-player-zoom · (prefers-reduced-transparency: reduce)
     "tw:player-reduced-transparency:backdrop-filter-none tw:player-reduced-transparency:player-pos-background",
 
@@ -427,7 +427,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-info-row · (width < theme(--breakpoint-panel))
     "tw:max-panel:flex",
     // .following .ds-player-info-row
-    "tw:[.following_&]:opacity-(--ds-player-following-transport-t-center-opacity-103)",
+    "tw:[.following_&]:opacity-(--ds-player-following-transport-t-center-opacity)",
     // #app.sing-along .ds-player-info-row
     "tw:[#app.sing-along_&]:hidden!",
     // .ds-player-info-row · (prefers-reduced-transparency: reduce)
@@ -435,11 +435,11 @@ const playerUtilities: Readonly<Record<string, string>> = {
   ].join(" "),
   "ds-player-info-metro": [
     // .ds-player-info-metro
-    "tw:opacity-(--ds-player-info-metro-opacity-72)",
+    "tw:opacity-(--ds-player-info-metro-opacity)",
     // .ds-player-info-metro.on
     "tw:[&.on]:opacity-100 tw:[&.on]:text-ink",
     // .ds-player-info-metro.on .ic
-    "tw:[&.on_.ic]:filter-(--ds-player-zoom-follow-btn-aria-pressed-true-ic-filter-122)",
+    "tw:[&.on_.ic]:filter-(--ds-player-zoom-follow-button-pressed-icon-filter)",
 
     "tw:material-paper:[&.on_.ic]:filter-none",
   ].join(" "),
@@ -453,11 +453,11 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-transport · (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape)
     "tw:player-short-landscape:pt-player-transport-padding-top-93 tw:player-short-landscape:pb-player-transport-padding-bottom-94",
     // .following .ds-player-transport .ds-player-t-center
-    "tw:[.following_&_.ds-player-t-center]:opacity-(--ds-player-following-transport-t-center-opacity-103)",
+    "tw:[.following_&_.ds-player-t-center]:opacity-(--ds-player-following-transport-t-center-opacity)",
     // .following .ds-player-transport .ds-player-t-right
-    "tw:[.following_&_.ds-player-t-right]:opacity-(--ds-player-following-transport-t-center-opacity-103)",
+    "tw:[.following_&_.ds-player-t-right]:opacity-(--ds-player-following-transport-t-center-opacity)",
     // .following .ds-player-transport .ds-player-pos
-    "tw:[.following_&_.ds-player-pos]:opacity-(--ds-player-following-transport-t-center-opacity-103)",
+    "tw:[.following_&_.ds-player-pos]:opacity-(--ds-player-following-transport-t-center-opacity)",
     // #app.sing-along .ds-player-transport
     "tw:[#app.sing-along_&]:hidden!",
     // .ds-player-transport · (prefers-reduced-transparency: reduce)
@@ -493,7 +493,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-t-btn · (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape)
     "tw:player-short-landscape:w-player-utility-zoom-value-min-width tw:player-short-landscape:h-player-utility-zoom-value-min-width",
     // .ds-player-t-btn.ds-player-toggle[aria-pressed="true"] .ic
-    "tw:[&.ds-player-toggle[aria-pressed='true']_.ic]:filter-(--ds-player-zoom-follow-btn-aria-pressed-true-ic-filter-122)",
+    "tw:[&.ds-player-toggle[aria-pressed='true']_.ic]:filter-(--ds-player-zoom-follow-button-pressed-icon-filter)",
 
     "tw:material-paper:[&.ds-player-toggle[aria-pressed='true']]:player-t-btn-background-3 tw:material-paper:[&.ds-player-toggle[aria-pressed='true']]:border-transparent tw:material-paper:[&.ds-player-toggle[aria-pressed='true']]:player-shadow-shadow-emboss-pressed",
 
@@ -519,7 +519,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-play-btn:hover
     "tw:[&:hover]:player-shadow-player-play-btn-hover-box-shadow-126",
     // .ds-player-play-btn:active
-    "tw:[&:active]:transform-(--ds-player-play-btn-active-transform-85)",
+    "tw:[&:active]:transform-(--ds-player-play-button-active-transform)",
     // .ds-player-play-btn .ic
     "tw:[&_.ic]:w-player-utility-glyph-height tw:[&_.ic]:h-player-utility-glyph-height",
     // .ds-player-play-btn:not(.playing) .ic
@@ -537,7 +537,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
 
     "tw:material-paper:[&:active]:player-shadow-shadow-emboss-pressed",
 
-    "tw:material-paper:[&_.ic]:filter-(--ds-player-play-btn-ic-filter-136)",
+    "tw:material-paper:[&_.ic]:filter-(--ds-player-play-button-icon-filter)",
 
     "tw:material-light:[&]:text-ink tw:material-light:[&]:player-play-btn-background-3 tw:material-light:[&]:player-shadow-shadow-emboss-raised",
 
@@ -545,7 +545,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
 
     "tw:material-light:[&:active]:player-shadow-shadow-emboss-pressed",
 
-    "tw:material-light:[&_.ic]:filter-(--ds-player-play-btn-ic-filter-152)",
+    "tw:material-light:[&_.ic]:filter-(--ds-player-play-button-icon-filter-light)",
   ].join(" "),
   "ds-player-t-right": [
     // .ds-player-t-right
@@ -577,7 +577,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-switch
     "tw:relative tw:w-player-utility-switch-width tw:h-player-utility-icon-width-2 tw:rounded-player-badge-border-radius-22 tw:player-switch-background tw:flex-none tw:player-switch-transition",
     // The generated thumb uses the same token-backed utility surface as the track.
-    "tw:after:content-(--ds-content-empty) tw:after:absolute tw:after:left-4 tw:after:top-4 tw:after:size-24 tw:after:rounded-player-live-dot-border-radius-9 tw:after:bg-ink-secondary tw:after:player-switch-thumb-transition tw:aria-checked:after:transform-(--ds-player-switch-aria-checked-true-after-transform-102) tw:aria-checked:after:bg-surface-sunken",
+    "tw:after:content-(--ds-content-empty) tw:after:absolute tw:after:left-4 tw:after:top-4 tw:after:size-24 tw:after:rounded-player-live-dot-border-radius-9 tw:after:bg-ink-secondary tw:after:player-switch-thumb-transition tw:aria-checked:after:transform-(--ds-player-switch-checked-after-transform) tw:aria-checked:after:bg-surface-sunken",
     // .ds-player-switch[aria-checked="true"]
     "tw:[&[aria-checked='true']]:player-mute-btn-background",
   ].join(" "),

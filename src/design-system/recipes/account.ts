@@ -22,7 +22,7 @@ const accountSlots = {
   "ds-account-body":
     "tw:grid tw:gap-account-gap tw:font-inherit tw:color-inherit tw:webkit-font-smoothing-inherit " +
     "tw:webkit-locale-inherit tw:webkit-tap-highlight-color-inherit tw:select-text " +
-    "tw:account-body-focus-visible:outline-account-body-outline tw:account-body-focus-visible:outline-offset-(--ds-space-4) " +
+    "tw:account-body-focus-visible:outline-account-body-outline tw:account-body-focus-visible:outline-offset-(--ds-space-compact) " +
     "tw:account-body-base:webkit-font-smoothing-inherit tw:account-body-base:webkit-locale-inherit " +
     "tw:account-body-base:webkit-tap-highlight-color-inherit tw:account-body-base:select-text",
   "ds-account-note":
