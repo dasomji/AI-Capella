@@ -681,11 +681,6 @@ function Menu({
   );
   useEffect(() => {
     if (!open || !trigger) return;
-    ref.current
-      ?.querySelector<HTMLElement>(
-        '[role^="menuitem"]:not(:disabled):not([aria-disabled="true"])',
-      )
-      ?.focus();
     const outside = (event: PointerEvent) => {
       if (
         !ref.current?.contains(event.target as Node) &&
@@ -695,6 +690,11 @@ function Menu({
     };
     ref.current?.showPopover?.();
     const unplace = ref.current && triggerRef.current ? anchorPopover(ref.current, triggerRef.current, placement) : undefined;
+    ref.current
+      ?.querySelector<HTMLElement>(
+        '[role^="menuitem"]:not(:disabled):not([aria-disabled="true"])',
+      )
+      ?.focus();
     document.addEventListener("pointerdown", outside);
     return () => {
       unplace?.();
