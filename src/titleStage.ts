@@ -342,7 +342,7 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
       // The voices' notes as unlit slots, a little clearer on the lit staff.
       x.lineWidth = space * 0.62;
       for (const n of notes) {
-        x.strokeStyle = withAlpha(n.color, 0.07 + 0.08 * level);
+        x.strokeStyle = withAlpha(n.color, Number(readTheme().roles['stage-note-dark-alpha']) + Number(readTheme().roles['stage-note-lit-alpha-range']) * level);
         x.beginPath();
         x.moveTo(n.from, lineY(n.k - 0.5, n.from));
         x.lineTo(n.to, lineY(n.k - 0.5, n.to));
@@ -448,8 +448,8 @@ export function animateStage(canvas: HTMLCanvasElement, name: TitleName): () => 
           motes[i] = spawn(s, false);
           continue;
         }
-        const tw = 0.55 + 0.45 * Math.sin(now * (m.glint ? 1.7 : 0.9) + m.phase);
-        let a = lamp * inLight * tw * (m.glint ? 0.9 : 0.6);
+        const tw = Number(readTheme().roles['stage-dust-twinkle-base']) + Number(readTheme().roles['stage-dust-twinkle-range']) * Math.sin(now * (m.glint ? 1.7 : 0.9) + m.phase);
+        let a = lamp * inLight * tw * (m.glint ? Number(readTheme().roles['stage-dust-glint-alpha']) : Number(readTheme().roles['stage-dust-mote-alpha']));
         if (a < 0.01) continue;
         const rr = m.r;
         ctx.globalAlpha = Math.min(1, a);
@@ -511,9 +511,9 @@ function litNote(from: number, to: number, y: (x: number) => number, thick: numb
   x.translate(-left, -top);
   x.lineCap = 'round';
   x.lineWidth = thick;
-  x.shadowColor = withAlpha(color, 0.75);
-  x.shadowBlur = thick * 1.6 * dpr;
-  x.strokeStyle = withAlpha(color, 0.85);
+  x.shadowColor = withAlpha(color, Number(readTheme().roles['stage-note-glow-alpha']));
+  x.shadowBlur = thick * Number(readTheme().roles['stage-note-glow-blur-factor']) * dpr;
+  x.strokeStyle = withAlpha(color, Number(readTheme().roles['stage-note-ink-alpha']));
   x.beginPath();
   x.moveTo(from, y(from));
   x.lineTo(to, y(to));
