@@ -111,6 +111,7 @@
   --pigment-material-edge: rgb(255 244 228 / 0.09);
   --pigment-shadow-material-highlight: rgb(255 244 228 / 0.07);
   --pigment-shadow-material-lift: rgb(0 0 0 / 0.75);
+  --pigment-account-link: rgb(158,158,255);
   --pigment-accent: #d4ad65;
   --pigment-warning: #ef9d8e;
   --pigment-backdrop: #0009;
@@ -441,6 +442,7 @@
   --ds-material-edge: var(--pigment-material-edge);
   --ds-shadow-material-highlight: inset 0 1px 0 var(--pigment-shadow-material-highlight);
   --ds-material-card: var(--ds-material-sheet);
+  --ds-account-link: var(--pigment-account-link);
   --ds-accent: var(--pigment-accent);
   --ds-warning: var(--pigment-warning);
   --ds-on-accent: var(--pigment-surface-sunken);
@@ -929,6 +931,7 @@
   --ds-material-edge: var(--pigment-rule-2);
   --ds-shadow-material-highlight: inset 0 1px 0 var(--pigment-shadow-material-highlight-2);
   --ds-material-card: var(--ds-material-sheet);
+  --ds-account-link: var(--ds-accent);
   --ds-accent: var(--pigment-accent-2);
   --ds-warning: var(--pigment-warning-2);
   --ds-on-accent: var(--pigment-on-accent);
@@ -1415,6 +1418,7 @@
   --ds-material-edge: var(--pigment-material-edge-2);
   --ds-shadow-material-highlight: inset 0 1px 0 var(--pigment-shadow-material-highlight-3);
   --ds-material-card: radial-gradient(120% 80% at 28% 0%, var(--pigment-material-card), transparent 60%), var(--ds-material-velvet-noise), linear-gradient(165deg, var(--pigment-material-card-2), var(--pigment-material-card-3));
+  --ds-account-link: var(--pigment-account-link);
   --ds-accent: var(--pigment-accent);
   --ds-warning: var(--pigment-warning);
   --ds-on-accent: var(--pigment-surface-sunken);
@@ -2513,6 +2517,7 @@
   --animate-transcription-flash-transcription-wash-animation: var(--ds-transcription-flash-transcription-wash-animation);
   --animate-transcription-segment-running-animation: var(--ds-transcription-segment-running-animation);
   --aspect-library-cover-aspect-ratio: var(--ds-library-cover-aspect-ratio);
+  --color-account-link: var(--ds-account-link);
   --color-accent: var(--ds-accent);
   --color-accent-invitation: var(--ds-accent-invitation);
   --color-accent-offline: var(--ds-accent-offline);
