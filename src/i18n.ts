@@ -900,7 +900,7 @@ export const sharedPlaybackTourMessages = {
   },
   title: { de: 'Gemeinsam steuern', en: 'Shared playback' },
   player: {
-    de: 'In »Gemeinsam« steuern alle die gemeinsame Wiedergabe. Änderungen gelten auf allen Geräten.',
-    en: 'In Together, everyone controls shared playback. Changes apply on every device.',
+    de: 'In »Gemeinsam« steuern alle die gemeinsame Wiedergabe. Die Wiedergabesteuerung gilt auf allen Geräten; Lautstärke, Stummschaltung und Solo bleiben persönlich.',
+    en: 'In Together, everyone controls shared playback. Playback controls apply on every device; volume, mute and solo stay personal.',
   },
 } as const;
