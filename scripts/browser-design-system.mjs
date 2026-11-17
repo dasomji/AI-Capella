@@ -1,7 +1,7 @@
 /** Run in /dev/design-system with Playwright page.evaluate or the shared browser evaluator.
  * Tests real emitted CSS and native focus behavior; throws on a mismatch. No server setup.
  */
-export async function verifyDesignSystemPage() {
+export async function verifyDesignSystemPage({ specimens } = {}) {
   for (
     let attempt = 0;
     attempt < 100 && !document.querySelector("[data-renderer=dom] button");
@@ -35,7 +35,9 @@ export async function verifyDesignSystemPage() {
   let elements = 0,
     properties = 0,
     attributes = 0;
-  for (const row of rows) {
+  const checkedRows = specimens ? rows.filter(row => specimens.includes(row.dataset.specimen)) : rows;
+  if (specimens && checkedRows.length !== specimens.length) throw Error("Requested comparison specimen missing");
+  for (const row of checkedRows) {
     const a = row.querySelector('[data-renderer="react"]'),
       b = row.querySelector('[data-renderer="dom"]');
     const react = [...a.querySelectorAll("*")],
@@ -153,7 +155,7 @@ export async function verifyDesignSystemPage() {
   sheet.remove();
   return {
     theme: document.documentElement.dataset.theme,
-    specimens: rows.length,
+    specimens: checkedRows.length,
     elements,
     properties,
     attributes,
@@ -304,14 +306,15 @@ export async function verifyDesignSystemBehavior() {
   };
 }
 
-export async function verifyDesignSystemContexts() {
+export async function verifyDesignSystemContexts({ specimens } = {}) {
   await document.fonts.ready;
   const style = document.createElement("style");
   style.textContent =
     ".ds-specimen-pair>[data-renderer]{width:100%!important;max-width:none!important;padding:0!important;min-height:0!important}[data-specimen] *,[data-specimen] *::before,[data-specimen] *::after{animation:none!important;transition:none!important}";
   document.head.append(style);
-  const a = [...document.querySelectorAll('[data-renderer="react"]')],
-    b = [...document.querySelectorAll('[data-renderer="dom"]')];
+  const matches = el => !specimens || specimens.includes(el.closest('[data-specimen]').dataset.specimen);
+  const a = [...document.querySelectorAll('[data-renderer="react"]')].filter(matches),
+    b = [...document.querySelectorAll('[data-renderer="dom"]')].filter(matches);
   const mismatches = [];
   let properties = 0;
   try {
