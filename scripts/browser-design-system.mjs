@@ -676,7 +676,7 @@ export async function verifyP3ReducedMotion() {
 export async function verifyOwnerComponents() {
   const records=[];
   const {matchBreakpoint}=await import('/src/design-system/theme/index.ts');
-  const touch=matchMedia('(any-pointer: coarse)').matches || matchBreakpoint('panel','max');
+  const touch=matchMedia('(any-pointer: coarse)').matches || matchBreakpoint('panel','max').matches;
   for(const renderer of ['react','dom']) {
     for(const size of ['standard','compact','full-width','touch']) {
       const button=document.querySelector(`[data-specimen="button-size/${size}/primary/default"] [data-renderer="${renderer}"] button`);
