@@ -402,6 +402,12 @@ export function createEmptyState(
   }
   return root;
 }
+export function createControlGroup(options: ElementOptions & { content?: Node | readonly Node[] } = {}) {
+  const group = element("span", r.controlGroupRecipe(), undefined, options);
+  group.dataset.ds = "control-group";
+  if (options.content) group.append(...(Array.isArray(options.content) ? options.content : [options.content]) as Node[]);
+  return group;
+}
 export interface ToggleGroupOptions
   extends r.ToggleGroupOptions, ElementOptions {
   label: string;
@@ -418,7 +424,13 @@ export function createToggleGroup(options: ToggleGroupOptions) {
     ...options,
     attrs: { ...options.attrs, role: "group", "aria-label": options.label },
   });
-  for (const item of options.items) {
+  for (const [index, item] of options.items.entries()) {
+    if (index > 0 && options.separator !== undefined) {
+      const separator = document.createElement("span");
+      separator.setAttribute("aria-hidden", "true");
+      separator.textContent = options.separator;
+      root.append(separator);
+    }
     const button = createButton({
       text: item.label,
       disabled: item.disabled,
