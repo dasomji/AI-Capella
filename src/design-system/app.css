@@ -360,3 +360,10 @@
 
 /* Tailwind has no cursor-inherit keyword utility. */
 @utility cursor-library-inherit { cursor: inherit; }
+
+/* Border/outline widths and outline offsets have no extensible @theme namespaces. */
+@utility panel-stroke { border-width: var(--ds-stroke-thin); }
+@utility panel-stroke-top { border-top-width: var(--ds-stroke-thin); }
+@utility panel-stroke-bottom { border-bottom-width: var(--ds-stroke-thin); }
+@utility panel-focus-width { outline-width: var(--ds-stroke-focus); }
+@utility panel-focus-offset { outline-offset: var(--ds-space-2); }
