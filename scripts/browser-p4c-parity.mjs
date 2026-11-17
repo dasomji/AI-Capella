@@ -1,0 +1,48 @@
+/** P4c repeatable parity fixtures. No product writes or provider requests. */
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+import sharp from 'sharp';
+import { verifyP4cKeyboard } from './browser-p4c-keyboard.mjs';
+const base=process.env.BASE_URL??'https://lightscore-main-app-59737521.tailf5ea68.ts.net';
+const out=process.env.EVIDENCE_DIR??'/tmp/aicap-design/evidence/p4c/before';fs.mkdirSync(out,{recursive:true});
+const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+const png=await sharp({create:{width:180,height:240,channels:3,background:'#e5dece'}}).png().toBuffer();
+const xml='<score-partwise version="4.0"><part-list><score-part id="S"><part-name>Soprano</part-name></score-part></part-list><part id="S"><measure number="1"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes><note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration><type>whole</type></note></measure></part></score-partwise>';
+try{for(const theme of ['night-paper','parchment'])for(const [width,height] of [[1440,900],[768,1024],[390,844]]){
+ const context=await browser.newContext({viewport:{width,height},colorScheme:'dark'});const page=await context.newPage();await page.routeWebSocket('**',ws=>ws.close());
+ await page.addInitScript(()=>{localStorage.setItem('ai-capella-lang','en');localStorage.setItem('ai-capella-intro-off','1');});
+ await page.goto(base+'/dev/design-system');await page.locator('.ds-specimens').waitFor();await page.evaluate(()=>document.fonts.ready);const styles=await page.locator('style,link[rel=stylesheet]').evaluateAll(nodes=>nodes.map(n=>n.outerHTML).join(''));await page.goto(base+'/healthz');await page.setContent('<!doctype html><html><head>'+styles+'</head><body></body></html>');await page.evaluate(async theme=>{await document.fonts.ready;const m=await import('/src/design-system/theme/index.ts');m.setThemePreference(theme);document.body.replaceChildren();},theme);
+ await page.evaluate(async ({xml,png})=>{
+  window.fixtureLead=true;window.fixtureJob={id:'fixture-job',state:'completed',stage:'completed',options:{title:'Evening song'},pages:[{page_number:0,source_page:1,state:'completed',object_id:'source',content_type:'image/png',original_filename:'Score.png'}]};
+  const fetchOriginal=window.fetch.bind(window);window.fetch=async(input,options)=>{const path=String(input);let data;
+   if(path==='/api/me')data={user:{id:'lead',name:'Ensemble Lead',email:'admin@test.com'}};
+   else if(path==='/api/ensembles')data=[{id:'fixture',name:'Testchor',isLead:window.fixtureLead,membershipId:'lead-membership',capabilities:{manageMembers:true,editPieces:true,transcribe:true}}];
+   else if(path.includes('/members/')&&options?.method==='PATCH')data={};
+   else if(path.endsWith('/members'))data=[{id:'lead-membership',userId:'lead',name:'Ensemble Lead',email:'admin@test.com',isLead:true,capabilities:{}},{id:'member',userId:'member',name:'Test User',email:'user@test.com',isLead:false,capabilities:{manageMembers:false,editPieces:true,transcribe:false}}];
+   else if(path.endsWith('/invitations'))data=[{id:'invite',email:'singer@test.com',state:'pending',deliveryState:'sent'}];
+   else if(path==='/api/transcription/config')data={pdf:50e6,photo:20e6,pages:20};
+   else if(path.endsWith('/transcriptions'))data=[window.fixtureJob];
+   else if(path.endsWith('/result'))return new Response(xml);
+   else if(path.endsWith('/report'))data={measures:[{measure:1,part:'S',page:1,localMeasure:'1'}],validation:{structurallyValid:true,warnings:[{code:'measure_duration',measure:1,part:'S'}],uncertainties:[],errors:[]}};
+   else if(path.includes('/originals/'))return new Response(Uint8Array.from(atob(png),c=>c.charCodeAt(0)),{headers:{'Content-Type':'image/png'}});
+   else return fetchOriginal(input,options);
+   return new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json','Date':new Date().toUTCString()}});
+  };
+  await (await import('/src/ensembles.ts')).initializeEnsembles();
+  window.ui=await import('/src/ensemble-ui.ts');window.intro=await import('/src/intro.ts');window.power=await import('/src/powerHint.ts');
+ },{xml,png:png.toString('base64')});
+ const shot=async name=>{await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(650);await page.screenshot({path:`${out}/${theme}-${width}-${name}.png`,animations:'disabled'});};
+ const close=async()=>{await page.evaluate(async()=>{(await import('/src/intro.ts')).stopIntro();document.querySelectorAll('dialog').forEach(d=>d.close());});await page.waitForTimeout(400);};
+ await page.evaluate(()=>window.ui.createEnsembleSheet(()=>{}));await shot('ensemble-create');await close();
+ await page.evaluate(()=>window.ui.membersSheet('fixture'));await shot('members-lead');await page.locator('details summary').first().click();await shot('member-menu');await close();await close();
+ await page.evaluate(()=>window.ui.membersSheet('fixture'));await page.locator('dialog form input[type=email]').fill('new-singer@test.com');await page.locator('dialog form').scrollIntoViewIfNeeded();await shot('invite-form');await close();
+ await page.evaluate(async()=>{window.fixtureLead=false;await window.ui.membersSheet('fixture');});await shot('members-member');await close();
+ await page.evaluate(async()=>{window.fixtureLead=true;await (await import('/src/ensembles.ts')).refreshEnsembleNames();const entry=document.createElement('button');entry.id='transcription-entry';entry.textContent='Read a score';const jobs=document.createElement('div');jobs.id='transcription-jobs';document.body.append(entry,jobs);window.tx=(await import('/src/transcription.ts')).installTranscription({beforeListen:()=>true,reviewCleanup:()=>()=>{},socket:{on(){},off(){},emit(){}},ensemble:()=> 'fixture',entry,jobs,open:async()=>{}});});
+ await page.locator('.tx-job').waitFor();await page.locator('.tx-job details summary').click();await shot('job-menu');await page.locator('.tx-job details summary').click();
+ await page.locator('#transcription-entry').click();await shot('upload-empty');await page.locator('input[accept="image/jpeg,image/png,image/webp"]').setInputFiles([1,2].map(n=>({name:`Photo ${n}.png`,mimeType:'image/png',buffer:png})));await page.locator('#tx-title').fill('Evening song');await page.locator('.tx-photo img').first().waitFor();await shot('upload-files');
+ await page.evaluate(()=>{window.XMLHttpRequest=class {upload={};listeners={};open(){}setRequestHeader(){}send(file){this.upload.onprogress?.({lengthComputable:true,loaded:file.size/2,total:file.size});}abort(){this.onabort?.();}};});await page.getByRole('button',{name:'Start reading',exact:true}).click();await shot('upload-progress');await close();
+ await page.getByRole('button',{name:'Review',exact:true}).click();await page.locator('.tx-score svg').first().waitFor();await shot('review');await page.getByRole('switch').focus();await page.keyboard.press('Space');await page.locator('.tx-original img').waitFor();await shot('review-original');await close();
+ await page.evaluate(()=>{window.tx.dispose();document.body.replaceChildren();const ens=document.createElement('button');ens.className='ens-switch';ens.textContent='Testchor';const grid=document.createElement('div');grid.id='song-grid';const song=document.createElement('button');song.className='song-card';song.textContent='Evening song';grid.append(song);document.body.append(ens,grid);window.intro.startIntro('library');});await shot('tour-1');await page.keyboard.press('ArrowRight');await shot('tour-2');await close();
+ await page.evaluate(()=>{document.body.replaceChildren();window.power.showPowerHint();});await shot('power-hint');
+ console.log(theme,width,'captured');if(process.env.P4C_KEYBOARD==='1')console.log(JSON.stringify(await verifyP4cKeyboard(page,theme))); await context.close();
+}}finally{await browser.close();}

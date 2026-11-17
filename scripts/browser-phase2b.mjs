@@ -112,7 +112,7 @@ try {
   await shot(p, "title-empty-dark");
   await p.getByRole("button", { name: "Create ensemble", exact: true }).click();
   await p.getByLabel("Name", { exact: true }).fill("Browser Choir");
-  await p.locator(".domain-sheet button.primary").click();
+  await p.locator(".domain-sheet").getByRole("button", {name:"Create ensemble",exact:true}).click();
   await p.locator(".ens-switch").waitFor();
   const ensembles = (await request(p, "/ensembles")).body,
     e = ensembles[0].id;
