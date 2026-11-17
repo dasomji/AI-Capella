@@ -16,6 +16,7 @@ export const buttonVariants = [
   "link",
   "account-link",
   "password-toggle",
+  "tile", "compact", "review-item", "transcription-link", "transcription-language", "tour-link", "hint-link", "hint",
 ] as const;
 export type ButtonVariant = (typeof buttonVariants)[number];
 /** tour: danger=primary, quiet=secondary (D17); dense: primary/quiet=secondary (D10). */
@@ -25,7 +26,17 @@ export interface ButtonOptions {
   intent?: ButtonIntent;
   pressed?: boolean;
 }
-const buttonShapes: Record<ButtonVariant, string> = {
+const parityButtonShapes = {
+  tile: "tw:flex-1 tw:min-w-0 tw:min-h-upload-tile tw:max-score:min-h-upload-tile-phone tw:flex-col tw:px-10 tw:py-18 tw:whitespace-normal tw:rounded-transcription-tile tw:bg-surface tw:text-ink tw:border-rule-strong tw:text-button tw:font-label tw:font-auth-body tw:leading-body",
+  compact: "tw:min-h-36 tw:p-6 tw:rounded-card tw:border-rule-strong tw:bg-transparent tw:text-ink tw:text-small tw:font-label tw:font-auth-body tw:leading-body",
+  "review-item": "tw:w-full tw:mb-4 tw:justify-start tw:items-baseline tw:text-left tw:whitespace-normal tw:py-12 tw:px-0 tw:border-0 tw:border-b tw:rounded-field tw:border-rule-strong tw:bg-transparent tw:text-ink tw:font-auth-body tw:font-regular tw:text-body-small tw:leading-field",
+  "transcription-link": "tw:min-h-0 tw:rounded-field tw:px-0 tw:py-8 tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:hover:text-ink tw:hover:underline tw:font-auth-body tw:font-regular tw:text-label tw:leading-field",
+  "transcription-language": "tw:min-h-36 tw:rounded-field tw:px-0 tw:py-4 tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-regular tw:text-small tw:leading-field",
+  "tour-link": "tw:min-h-0 tw:rounded-control tw:px-6 tw:py-4 tw:border-0 tw:bg-transparent tw:text-note-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-label tw:leading-body",
+  "hint-link": "tw:min-h-0 tw:rounded-control tw:px-6 tw:py-4 tw:border-0 tw:bg-transparent tw:text-hint-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-label tw:leading-body",
+  hint: "tw:min-h-control-height tw:rounded-card tw:px-18 tw:py-0 tw:text-button tw:font-label tw:font-control tw:leading-body tw:border-rule-strong tw:hover:border-ink-secondary tw:bg-transparent tw:text-surface-sunken",
+} as const;
+const buttonShapes: Record<Exclude<ButtonVariant, keyof typeof parityButtonShapes>, string> = {
   standard:
     "tw:min-h-control-height tw:rounded-card tw:px-18 tw:py-0 tw:text-button tw:font-label tw:font-control",
   cta: "tw:min-h-control-height-auth tw:rounded-card tw:px-18 tw:py-0 tw:w-full tw:text-button tw:font-label tw:font-auth-body",
@@ -57,12 +68,18 @@ function buttonRecipeStyles({
     return [
       controlBase,
       "tw:disabled:opacity-(--ds-opacity-disabled-auth) tw:aria-disabled:opacity-(--ds-opacity-disabled-auth)",
-      buttonShapes[variant],
+      buttonShapes[variant as keyof typeof buttonShapes],
       "tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:cursor-pointer",
       variant === "account-link"
         ? "tw:inline-block tw:leading-(--ds-leading-account-links) tw:hover:text-ink tw:hover:underline"
         : "tw:block tw:absolute tw:right-0 tw:bottom-10 tw:leading-admin tw:normal-case tw:tracking-normal",
     ].join(" ");
+  if (variant in parityButtonShapes) {
+    const shape = parityButtonShapes[variant as keyof typeof parityButtonShapes];
+    return [controlBase, disabledRecipe, "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 tw:border tw:border-solid tw:cursor-pointer", shape,
+      variant === "transcription-language" ? pressed ? "tw:text-ink" : "tw:text-ink-secondary" : "",
+      variant === "tile" && pressed ? "tw:border-transcription-accent tw:shadow-transcription-selected" : ""].join(" ");
+  }
   const color =
     variant === "tour"
       ? intent === "secondary" || intent === "quiet"
@@ -78,7 +95,7 @@ function buttonRecipeStyles({
     variant.startsWith("dense") ? denseDisabled : disabledRecipe,
     variant.startsWith("dense") ? "tw:leading-admin tw:tabular-nums" : "tw:leading-body",
     "tw:inline-flex tw:items-center tw:justify-center tw:gap-8 tw:border-solid tw:whitespace-nowrap tw:cursor-pointer " + (variant === "dense-sort" ? "tw:border-0" : "tw:border"),
-    buttonShapes[variant],
+    buttonShapes[variant as keyof typeof buttonShapes],
     color,
     pressed ? "tw:shadow-emboss-pressed" : "",
   ].join(" ");
@@ -121,6 +138,7 @@ export const fieldVariants = [
   "ruled",
   "ruled-account",
   "domain",
+  "domain-create",
   "transcription",
   "admin",
 ] as const;
@@ -134,11 +152,12 @@ function fieldRecipeStyles(
   kind: "input" | "select" | "textarea" = "input",
 ) {
   const admin = variant === "admin";
+  const domain = variant === "domain" || variant === "domain-create";
   const ruled = variant !== "boxed";
   return {
     root: variant === "ruled-account" ? "tw:block tw:mt-20 tw:min-w-0 tw:font-auth-body " + (invalid ? "tw:mb-16" : "tw:mb-20") : admin ? "tw:grid tw:gap-6 tw:min-w-0 tw:font-auth-body tw:text-label tw:leading-body tw:tabular-nums" : "tw:grid tw:gap-6 tw:min-w-0 tw:font-body",
     label:
-      ruled && !admin
+      variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-body tw:text-ink" : ruled && !admin
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary"
         : admin ? "tw:text-label tw:font-auth-body tw:leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
     control: [
@@ -147,10 +166,10 @@ function fieldRecipeStyles(
       "tw:block tw:w-full tw:min-w-0 tw:font-regular tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
       kind === "textarea" && admin
         ? "tw:h-auto tw:min-h-textarea tw:resize-y tw:border tw:border-solid tw:rounded-field tw:p-10 tw:font-auth-body tw:text-body tw:leading-admin tw:bg-admin-surface tw:text-admin-ink"
-        : variant === "domain" && kind === "select"
+        : domain && kind === "select"
           ? "tw:rounded-field tw:border-0 tw:border-b tw:border-solid tw:px-8 tw:py-8 tw:leading-body tw:bg-transparent tw:text-ink tw:font-control tw:text-body"
           : ruled
-            ? `tw:rounded-field tw:border-0 tw:border-b tw:border-solid ${variant === "domain" ? "tw:py-8 tw:leading-admin" : admin ? "tw:py-10 tw:leading-body" : "tw:py-10 tw:leading-field"} ${admin ? "tw:px-2 tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-label" : variant === "domain" ? "tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body" : "tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input"}`
+            ? `tw:rounded-field tw:border-0 tw:border-b tw:border-solid ${domain ? "tw:py-8 tw:leading-admin" : admin ? "tw:py-10 tw:leading-body" : "tw:py-10 tw:leading-field"} ${admin ? "tw:px-2 tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-label" : domain ? "tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body" : "tw:px-0 tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input"}`
             : (kind === "textarea"
                 ? "tw:h-auto tw:min-h-textarea tw:resize-y tw:p-10"
                 : "tw:h-control-height tw:px-12 tw:py-0") +
@@ -159,7 +178,7 @@ function fieldRecipeStyles(
         ? "tw:border-danger"
         : admin
           ? "tw:border-admin-rule tw:focus:border-focus"
-          : variant === "domain" && kind === "select"
+          : domain && kind === "select"
             ? "tw:border-rule-strong tw:focus:border-focus"
             : ruled
               ? "tw:border-ink-secondary tw:focus:border-focus"
@@ -218,8 +237,8 @@ function switchRecipeStyles({
   };
   return {
     label:
-      "tw:relative tw:inline-flex tw:items-center tw:gap-8 tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer",
-    input: "tw:sr-only tw:peer",
+      "tw:relative tw:inline-flex tw:items-center tw:gap-8 tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-32 tw:flex-nowrap" : ""),
+    input: variant === "capability" ? "tw:absolute tw:opacity-0 tw:w-28 tw:h-24 tw:m-0 tw:peer" : "tw:sr-only tw:peer",
     root:
       controlBase +
       " " +
