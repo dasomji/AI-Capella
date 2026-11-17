@@ -97,7 +97,7 @@ export class OverviewStrip {
     for (const dimPass of [true, false]) {
       for (const part of this.score.parts) {
         if (this.hidden.has(part.id) || this.dimmed.has(part.id) !== dimPass) continue;
-        ctx.fillStyle = withAlpha(this.partColor(part.id), dimPass ? 0.3 : 0.95);
+        ctx.fillStyle = withAlpha(this.partColor(part.id), dimPass ? Number(readTheme().roles['score-overview-voice-dim-alpha']) : Number(readTheme().roles['score-overview-voice-active-alpha']));
         for (const n of this.score.notes) {
           if (n.partId !== part.id) continue;
           const x = this.beatToX(n.startBeat);
