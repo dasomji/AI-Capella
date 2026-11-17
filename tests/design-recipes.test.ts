@@ -12,8 +12,8 @@ describe("pure recipes", () => {
     expect(r.iconButtonRecipe({ variant: "admin-close" })).toContain(
       "tw:text-admin-close",
     );
-    expect(r.selectRecipe({ variant: "domain" })).toContain("tw:px-small");
-    expect(r.inputRecipe({ variant: "domain" })).toContain("tw:px-flush");
+    expect(r.selectRecipe({ variant: "domain" })).toContain("tw:border-b-(length:--ds-stroke-thin)");
+    expect(r.inputRecipe({ variant: "domain" })).toContain("tw:font-control");
     expect(r.cardRecipe({ variant: "tour" })).toContain("tw:pt-row");
   });
   it("gives the notifier and specimens one recipe plus a named placement", () => {
@@ -137,7 +137,7 @@ describe("pure recipes", () => {
       if (["search", "numeric", "repeated-name"].includes(variant)) {
         expect(slots.control).toContain("tw:rounded-card");
         expect(slots.control).not.toContain("tw:border-0");
-      } else if (!["player-volume"].includes(variant) && !variant.startsWith("panel-")) {
+      } else if (!["player-volume", "library-search"].includes(variant) && !variant.startsWith("panel-")) {
         expect(slots.control).toContain("tw:rounded-field");
         expect(slots.control).toContain("tw:border-0");
       }
