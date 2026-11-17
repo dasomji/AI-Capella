@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import postcss from 'postcss';
-export const testTheme = { id:'test-aurora',label:'Test aurora',aliases:['test-aurora'],storage:'test-aurora',defaultStart:null,colorScheme:'dark',system:null };
+export const testTheme = { id:'test-aurora',label:'Test aurora',aliases:['test-aurora'],storage:'test-aurora',defaultStart:null,system:null };
 /** Deliberately disagree with night-paper, including neutral pigments and alias-backed paint. */
 export function loudThemeBlock(source) {
   const css = postcss.parse(source), values = new Map();

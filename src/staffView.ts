@@ -1294,7 +1294,7 @@ export class StaffView {
       if (on) {
         ctx.save();
         ctx.shadowColor = color;
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = Number(this.theme.roles['score-staff-glow-blur']);
         draw();
         ctx.restore();
       }
@@ -1436,7 +1436,7 @@ export class StaffView {
       if (lit) {
         ctx.save();
         ctx.shadowColor = color;
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = Number(this.theme.roles['score-staff-glow-blur']);
         draw();
         ctx.restore();
       }

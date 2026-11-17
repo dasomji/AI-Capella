@@ -1,8 +1,8 @@
 /* Canonical pre-paint resolver. This exact source also runs inline; keep it self-contained. */
 export const themeRegistry = /** @type {const} */ ([
-    { id: 'night-paper', menuLabel: 'designNight', label: 'Night paper', aliases: ['papier'], storage: 'papier', defaultStart: null, colorScheme: 'dark', system: 'dark' },
-    { id: 'parchment', menuLabel: 'designParchment', label: 'Parchment', aliases: ['pergament'], storage: 'pergament', defaultStart: null, colorScheme: 'light', system: 'light' },
-    { id: 'velvet', menuLabel: null, label: 'Velvet', aliases: ['samt'], storage: 'samt', defaultStart: 'heute', colorScheme: 'dark', system: null },
+    { id: 'night-paper', menuLabel: 'designNight', label: 'Night paper', aliases: ['papier'], storage: 'papier', defaultStart: null, system: 'dark' },
+    { id: 'parchment', menuLabel: 'designParchment', label: 'Parchment', aliases: ['pergament'], storage: 'pergament', defaultStart: null, system: 'light' },
+    { id: 'velvet', menuLabel: null, label: 'Velvet', aliases: ['samt'], storage: 'samt', defaultStart: 'heute', system: null },
 ]);
 /** @param {string | null} value */
 export function themePreference(value) {
@@ -30,7 +30,9 @@ export default function bootstrapTheme(next) {
     const type = choice('schrift', 'ai-capella-schrift', ['neu', 'bodoni', 'heute', 'test'], 'neu');
     const start = theme.defaultStart ?? choice('start', 'ai-capella-start', ['neu', 'heute', 'zeile', 'buehne'], 'neu');
     root.dataset.theme = theme.id;
-    root.style.colorScheme = theme.colorScheme;
+    // tokens.css owns the scheme; a stale inline value would override theme edits.
+    root.style.removeProperty('color-scheme');
+    root.style.colorScheme = getComputedStyle(root).getPropertyValue('--ds-color-scheme').trim();
     root.dataset.themePreference = selected;
     if (type !== 'bodoni' && type !== 'heute') root.dataset.type = 'revival';
     else delete root.dataset.type;

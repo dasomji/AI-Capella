@@ -5,8 +5,10 @@ import { themeRegistry, themeBootstrapScript } from '../src/design-system/theme/
 import { normalizeColor } from '../src/design-system/theme/color';
 import { withAlpha, towardPaper, towardInk } from '../src/theme';
 
+const tokenSchemes = (await import('node:fs')).readFileSync('src/design-system/tokens.css','utf8').match(/:root\[data-theme="[^"]+"\][^{]*\{[^}]+\}/g)?.join('\n') ?? '';
+
 function boot(query = '', stored: string | null = null, light = false, denied = false) {
-  const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', { url: `http://localhost/${query}`, runScripts: 'outside-only' });
+  const dom = new JSDOM('<!doctype html><html><head><style>' + tokenSchemes + '</style></head><body></body></html>', { url: `http://localhost/${query}`, runScripts: 'outside-only' });
   if (stored) dom.window.localStorage.setItem('ai-capella-design', stored);
   Object.defineProperty(dom.window, 'matchMedia', { value: () => ({ matches: light }) });
   if (denied) Object.defineProperty(dom.window, 'localStorage', { get() { throw Error('storage denied'); } });
@@ -21,9 +23,9 @@ describe('one early appearance resolver', () => {
     dom.window.close();
   });
   it.each(themeRegistry)('preserves explicit $id over system appearance', theme => {
-    const dom=boot('',theme.storage,theme.colorScheme !== 'light');
+    const dom=boot('',theme.storage,theme.system !== 'light');
     expect(dom.window.document.documentElement.dataset.theme).toBe(theme.id);
-    expect(dom.window.document.documentElement.style.colorScheme).toBe(theme.colorScheme);
+    expect(dom.window.document.documentElement.style.colorScheme).toBe(dom.window.getComputedStyle(dom.window.document.documentElement).getPropertyValue('--ds-color-scheme').trim());
     dom.window.close();
     const reset=boot('?design=auto',theme.storage,false);
     expect(reset.window.document.documentElement.dataset.theme).toBe(themeRegistry.find(theme=>theme.system==='dark')?.id);
@@ -160,7 +162,7 @@ describe('client theme lifecycle API', () => {
     for (const role of api.colorRoles) values['--ds-'+role]='#123456';
     for (const role of api.fontRoles) values['--ds-font-'+role]='Snapshot Font';
     for (let i=1;i<=8;i++) values['--ds-voice-'+i]='#123456';
-    Object.assign(values, {'--ds-print-paper':'#ffffff','--ds-print-ink':'#000000','--ds-print-font-text':'Print Font','--ds-print-font-music':'Music Font','--tw-breakpoint-panel':'56.25rem'});
+    Object.assign(values, {'--ds-material-strategy':'light','--ds-print-paper':'#ffffff','--ds-print-ink':'#000000','--ds-print-font-text':'Print Font','--ds-print-font-music':'Music Font','--tw-breakpoint-panel':'56.25rem'});
     // Deliberately not iterable: Safari's custom-property enumeration is not a contract.
     const computed = vi.fn(()=>({getPropertyValue:(key:string)=>values[key]??'',fontSize:'16px'}));
     vi.stubGlobal('getComputedStyle',computed);
@@ -218,17 +220,15 @@ describe('client theme lifecycle API', () => {
   });
 });
 
-it('keeps bootstrap color schemes equal to the authored theme roles', async () => {
-  const { readFileSync } = await import('node:fs');
-  const { default: postcss } = await import('postcss');
-  const css = postcss.parse(readFileSync('src/design-system/tokens.css', 'utf8'));
+it('derives the bootstrap scheme solely from the token block', () => {
   for (const theme of themeRegistry) {
-    let scheme;
-    css.walkRules(rule => {
-      if (rule.selectors.includes(`:root[data-theme="${theme.id}"]`))
-        rule.walkDecls('--ds-color-scheme', d => { scheme = d.value; });
-    });
-    expect(scheme, theme.id).toBe(theme.colorScheme);
+    expect(theme).not.toHaveProperty('colorScheme');
+    const dom = boot('', theme.storage);
+    const root = dom.window.document.documentElement;
+    root.style.setProperty('--ds-color-scheme', 'only light');
+    dom.window.eval(themeBootstrapScript);
+    expect(root.style.colorScheme).toBe('only light');
+    dom.window.close();
   }
 });
 it('leaves theme-color ownership to the idempotent bootstrap', async () => {
