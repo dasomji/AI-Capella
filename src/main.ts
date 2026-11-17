@@ -38,7 +38,7 @@ import { countLabel, keyName, lang, setLang, t, type MessageKey } from './i18n';
 import { subscribeRendererTheme } from './rendererTheme';
 import { canvasFontsReady } from './theme';
 import { WaveBackdrop } from './backdrop';
-import { DESIGN_CHOICE, PAPER_DESIGN, PARCHMENT, setDesignChoice, START_DRAFT, START_STAFF, START_STAGE, type DesignChoice } from './design';
+import { DESIGN_CHOICE, EXPERIMENTAL_APPEARANCE, PAPER_DESIGN, PARCHMENT, setDesignChoice, START_DRAFT, START_STAFF, START_STAGE, type DesignChoice } from './design';
 import { initPaper, paintSwatch, PAPER_KINDS, paperKind, setPaperKind, type PaperKind } from './paper';
 import { applyPercussion } from './percussion';
 import { lightScoreName, type TitleName } from './lightName';
@@ -927,7 +927,6 @@ function soundItems() {
  */
 function appearanceItems() {
   const choose = (next: DesignChoice) => () => {
-    if (next === DESIGN_CHOICE) return;
     if (setDesignChoice(next)) toast(t('appearanceDeferred'));
   };
   const options = [
@@ -938,7 +937,7 @@ function appearanceItems() {
       onSelect: choose(aliases[0]),
     })),
   ];
-  return [{ label: t('appearance'), icon: 'sheet' as const, value: options.find((o) => o.checked)?.label ?? '', options, onSelect: () => {} }];
+  return [{ label: EXPERIMENTAL_APPEARANCE.length ? t('experimentalAppearance') : t('appearance'), icon: 'sheet' as const, value: options.find((o) => o.checked)?.label ?? '', options, onSelect: () => {} }];
 }
 
 // Theme changes repaint retained resources without touching the audio/session lifecycle.
