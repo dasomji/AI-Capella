@@ -284,6 +284,7 @@ export const themeRoleNames = [
   "library-banner-max-width",
   "library-banner-padding",
   "library-button-outline",
+  "library-card-columns-comfortable",
   "library-card-hover-edge",
   "library-card-lift",
   "library-card-perspective",
