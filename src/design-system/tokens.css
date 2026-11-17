@@ -1,4 +1,4 @@
-/* AICAP-28: sole authored design-value source. Preserve parity; see docs/agents/design-system.md. */
+/* AICAP-28: sole authored design-value source; owner decisions in docs/agents/design-system.md. */
 @theme static {
   --*: initial;
   --breakpoint-phone: 420px;
@@ -87,8 +87,6 @@
   --pigment-material-paper-strand-shadow-parchment: rgb(96,62,28);
   --pigment-material-paper-strand-light: rgb(255,244,228);
   --pigment-material-paper-warm-fleck: rgb(70,40,20);
-  --pigment-artwork-cover-ground: #15131f;
-  --pigment-brand-mark-tile: #17151f;
   --pigment-backdrop-wave-1: #110d1b;
   --pigment-backdrop-wave-2: #141020;
   --pigment-backdrop-wave-3: #181326;
@@ -107,7 +105,7 @@
   --pigment-rule-strong: rgba(239, 231, 218, 0.18);
   --pigment-ink: #efe7da;
   --pigment-ink-secondary: #b5aebb;
-  --pigment-ink-muted: #8a8498;
+  --pigment-ink-muted: var(--pigment-ink-secondary);
   --pigment-danger: #e8797e;
   --pigment-success: #86d9a8;
   --pigment-material-vellum-night-top: rgb(255 244 228 / 0.025);
@@ -127,9 +125,6 @@
   --pigment-admin-rule: #766958;
   --pigment-admin-accent: #e5bd69;
   --pigment-admin-danger: #f2a49a;
-  --pigment-admin-header-rule: #ae655c;
-  --pigment-admin-system-surface: #f6f2eb;
-  --pigment-accent-offline: #b49a5b;
   --pigment-feedback-wish: #72b7f2;
   --pigment-feedback-idea: #edc96b;
   --pigment-feedback-note: #a9d38a;
@@ -146,7 +141,6 @@
   --pigment-score-stage-bottom: #0e0c16;
   --pigment-material-gold-deep: rgb(150,114,50);
   --pigment-material-wordmark-gold-mid: rgb(196,158,84);
-  --pigment-material-wordmark-gold-deep: rgb(140,106,46);
   --pigment-material-wordmark-ink: rgb(239,230,216);
   --pigment-material-wordmark-gold-light: rgb(246,222,160);
   --pigment-material-light-warm: rgb(255,228,196);
@@ -172,41 +166,24 @@
   --pigment-rule-strong-parchment: rgb(70 46 20 / 0.24);
   --pigment-ink-parchment: #2e2219;
   --pigment-ink-secondary-parchment: #5b4a3a;
-  --pigment-ink-muted-parchment: #7d6a55;
-  --pigment-danger-parchment: #a8303a;
-  --pigment-success-parchment: #2e8a55;
+  --pigment-ink-muted-parchment: var(--pigment-ink-secondary-parchment);
+  --pigment-danger-parchment: #9a303a;
+  --pigment-success-parchment: #226b41;
   --pigment-material-vellum-parchment-top: rgb(255 252 242 / 0.35);
   --pigment-material-vellum-parchment-bottom: rgb(255 252 242 / 0);
   --pigment-material-vellum-parchment-ground: rgb(241 232 210 / 0.97);
   --pigment-material-vellum-strong-parchment: rgb(239 229 205 / 0.93);
   --pigment-shadow-material-highlight-parchment: rgb(255 255 250 / 0.6);
-  --pigment-accent-parchment: #9c6d1a;
+  --pigment-accent-parchment: var(--pigment-accent-invitation);
   --pigment-warning-parchment: #9a4437;
   --pigment-on-accent: #fff8ea;
-  --pigment-browser-chrome: #e8d9b8;
-  --pigment-admin-surface-parchment: #eee2ca;
-  --pigment-admin-ink-parchment: #30251e;
-  --pigment-admin-secondary-parchment: #605043;
-  --pigment-admin-rule-parchment: #8d7d68;
-  --pigment-admin-accent-parchment: #755018;
-  --pigment-admin-danger-parchment: #a33d32;
-  --pigment-transcription-accent: #795515;
+  --pigment-browser-chrome: var(--pigment-page-background-parchment);
   --pigment-accent-invitation: #795315;
   --pigment-feedback-wish-parchment: #2d69ae;
   --pigment-feedback-idea-parchment: #9c7414;
   --pigment-feedback-note-parchment: #5a8a2a;
   --pigment-feedback-survey-parchment: #8445a6;
   --pigment-score-query: #a46f18;
-  --pigment-score-past-parchment: rgb(232,216,182);
-  --pigment-canvas-surface-sunken: #e6d6b4;
-  --pigment-canvas-surface-parchment: #dfcda7;
-  --pigment-canvas-surface-raised-parchment: #eadcbd;
-  --pigment-canvas-surface-overlay-parchment: #f0e5cc;
-  --pigment-score-stage-top-parchment: #ede0c3;
-  --pigment-score-stage-middle-parchment: #e8d8b7;
-  --pigment-score-stage-bottom-parchment: #e3d1ad;
-  --pigment-material-gold-deep-parchment: rgb(112,78,22);
-  --pigment-material-gold-mid: rgb(160,116,40);
   --pigment-material-gold-light: rgb(104,72,20);
   --pigment-material-lamp-parchment: rgb(236,160,64);
   --pigment-material-sheet-parchment-top: #efe3c7;
@@ -272,8 +249,6 @@
   --ds-opacity-hidden: 0;
   --ds-opacity-visible: 1;
   --pigment-material-gold-leaf-edge: #d1a548;
-  --pigment-material-gold-leaf-warm: #a87920;
-  --pigment-material-gold-leaf-light: #8a5e14;
   --pigment-voice-2: #F6A77A;
   --pigment-voice-5: #6FD3BE;
   --pigment-voice-7: #9A9CF5;
@@ -423,6 +398,11 @@
 
 :root,
 :root[data-theme="night-paper"] {
+  /* D07: shared gold ink; brand alone uses the bright highlight stop. */
+  --ds-gold-ink-deep: var(--pigment-material-wordmark-gold-mid);
+  --ds-gold-ink: var(--ds-accent);
+  --ds-gold-ink-light: var(--pigment-material-wordmark-gold-light);
+
   --ds-library-overlay-backdrop: rgb(8 6 14 / 0.45);
   /* Renderer intensity inputs; retain the historical light/dark appearance exactly. */
   --ds-material-lantern-through-stops: 0 0, .2 0, .5 .22, .8 .38, 1 .46;
@@ -438,7 +418,7 @@
   --ds-title-name-glow-layers: .45 .22, .18 .3, .06 .45;
   --ds-ribbon-highlight-alpha: .55;
 
-  --ds-material-paper-ground: var(--pigment-page-background);
+  --ds-material-paper-ground: var(--ds-page-background);
   --ds-title-name-ink: var(--pigment-title-name-ink-night);
   --ds-title-name-glow: var(--pigment-title-name-glow-night);
   --ds-ribbon-highlight: var(--pigment-ribbon-highlight-night);
@@ -478,15 +458,15 @@
   --ds-material-strategy: light;
   --ds-color-scheme: dark;
   --ds-browser-chrome: var(--pigment-page-background);
-  --ds-admin-surface: var(--pigment-admin-surface);
-  --ds-admin-ink: var(--pigment-admin-ink);
-  --ds-admin-secondary: var(--pigment-admin-secondary);
-  --ds-admin-rule: var(--pigment-admin-rule);
-  --ds-admin-accent: var(--pigment-admin-accent);
-  --ds-admin-danger: var(--pigment-admin-danger);
-  --ds-transcription-accent: var(--pigment-accent);
-  --ds-transcription-warning: var(--pigment-warning);
-  --ds-accent-offline: var(--pigment-accent-offline);
+  --ds-admin-surface: var(--ds-surface);
+  --ds-admin-ink: var(--ds-ink);
+  --ds-admin-secondary: var(--ds-ink-secondary);
+  --ds-admin-rule: var(--ds-rule-strong);
+  --ds-admin-accent: var(--ds-accent);
+  --ds-admin-danger: var(--ds-danger);
+  --ds-transcription-accent: var(--ds-accent);
+  --ds-transcription-warning: var(--ds-warning);
+  --ds-accent-offline: var(--ds-accent);
   --ds-accent-invitation: var(--ds-accent);
   --ds-feedback-wish: var(--pigment-feedback-wish);
   --ds-feedback-idea: var(--pigment-feedback-idea);
@@ -494,22 +474,22 @@
   --ds-feedback-survey: var(--pigment-feedback-survey);
   --ds-score-query: var(--pigment-feedback-idea);
   --ds-score-paper: var(--pigment-ink);
-  --ds-score-past: var(--pigment-score-past);
+  --ds-score-past: var(--ds-surface-sunken);
   --ds-score-past-alpha: .38;
   --ds-score-lyric: var(--pigment-ink);
   --ds-score-ruler: var(--pigment-ink);
-  --ds-canvas-surface-sunken: var(--pigment-score-past);
-  --ds-canvas-surface: var(--pigment-canvas-surface);
-  --ds-canvas-surface-raised: var(--pigment-canvas-surface-raised);
-  --ds-canvas-surface-overlay: var(--pigment-canvas-surface-overlay);
-  --ds-score-stage-top: var(--pigment-score-stage-top);
-  --ds-score-stage-middle: var(--pigment-score-stage-middle);
-  --ds-score-stage-bottom: var(--pigment-score-stage-bottom);
+  --ds-canvas-surface-sunken: var(--ds-surface-sunken);
+  --ds-canvas-surface: var(--ds-surface);
+  --ds-canvas-surface-raised: var(--ds-surface-raised);
+  --ds-canvas-surface-overlay: var(--ds-surface-overlay);
+  --ds-score-stage-top: var(--ds-surface-raised);
+  --ds-score-stage-middle: var(--ds-surface);
+  --ds-score-stage-bottom: var(--ds-surface-sunken);
   --ds-voice-fallback-saturation: 70;
   --ds-voice-fallback-lightness: 72;
-  --ds-material-gold-deep: var(--pigment-material-gold-deep);
-  --ds-material-gold-mid: var(--pigment-material-wordmark-gold-mid);
-  --ds-material-gold-light: var(--pigment-material-wordmark-gold-deep);
+  --ds-material-gold-deep: var(--ds-gold-ink-deep);
+  --ds-material-gold-mid: var(--ds-gold-ink);
+  --ds-material-gold-light: var(--ds-gold-ink-deep);
   --ds-material-light-hot: var(--pigment-lamp-hot-night);
   --ds-material-lamp: var(--pigment-material-lamp);
   --ds-material-paper-fibre-light: var(--pigment-fibre-night);
@@ -575,14 +555,14 @@
     0 var(--ds-space-control) var(--ds-space-section) calc(-1 * var(--ds-space-row)) rgb(0 0 0 / 0.9);
   --ds-range-thumb-shadow: var(--ds-volume-thumb-shadow);
   --ds-material-stage-background: var(--ds-material-fibre), #1b1621;
-  --ds-material-domain-gold-color: var(--ds-accent, #d4ad65);
-  --ds-wordmark-surface: linear-gradient(180deg, #8c6a2e 5%, #c49e54 50%, #8c6a2e 95%);
+  --ds-material-domain-gold-color: var(--ds-accent);
+  --ds-wordmark-surface: linear-gradient(180deg, var(--ds-gold-ink-deep) 5%, var(--ds-gold-ink-light) 50%, var(--ds-gold-ink-deep) 95%);
   --ds-wordmark-vendor-clip: text;
   --ds-wordmark-clip: text;
   --ds-material-title-l-color: #fff6e6;
   --ds-material-title-l-text-shadow: 0 0 var(--ds-tracking-label) rgb(255 200 130 / 0.7),
     0 0 0.35em rgb(255 190 120 / 0.35);
-  --ds-material-ded-name-background: linear-gradient(180deg, #8c6a2e 8%, #d2ad62 52%, #8c6a2e 96%);
+  --ds-material-ded-name-background: linear-gradient(180deg, var(--ds-gold-ink-deep) 8%, var(--ds-gold-ink) 52%, var(--ds-gold-ink-deep) 96%);
   --ds-material-ded-name-vendor-background-clip: text;
   --ds-material-ded-name-background-clip: text;
   --ds-material-ded-name-filter: drop-shadow(0 var(--ds-space-hairline) 0 rgb(255 236 200 / 0.08)) drop-shadow(0 calc(-1 * var(--ds-space-hairline)) var(--ds-space-hairline) rgb(0 0 0 / 0.5));
@@ -643,8 +623,8 @@
   --ds-score-key-shadow: var(--pigment-score-key-shadow);
   --ds-material-paper-strand-light: var(--pigment-material-paper-strand-light);
   --ds-material-paper-warm-fleck: var(--pigment-material-paper-warm-fleck);
-  --ds-artwork-cover-ground: var(--pigment-artwork-cover-ground);
-  --ds-brand-mark-tile: var(--pigment-brand-mark-tile);
+  --ds-artwork-cover-ground: var(--ds-surface-sunken);
+  --ds-brand-mark-tile: var(--ds-surface);
   --ds-backdrop-wave-1: var(--pigment-backdrop-wave-1);
   --ds-backdrop-wave-2: var(--pigment-backdrop-wave-2);
   --ds-backdrop-wave-3: var(--pigment-backdrop-wave-3);
@@ -656,8 +636,8 @@
   --ds-shadow-material-lift: 0 var(--ds-space-action) var(--ds-space-touch) calc(-1 * var(--ds-space-group)) var(--pigment-shadow-material-lift);
   --ds-focus: var(--ds-accent);
   --ds-backdrop: var(--pigment-backdrop);
-  --ds-admin-header-rule: var(--pigment-admin-header-rule);
-  --ds-admin-system-surface: var(--pigment-admin-system-surface);
+  --ds-admin-header-rule: var(--ds-danger);
+  --ds-admin-system-surface: var(--ds-surface);
   --ds-shadow-menu: 0 var(--ds-space-small) var(--ds-space-section) var(--pigment-shadow-menu);
   --ds-shadow-admin-detail: calc(-1 * var(--ds-space-content)) 0 80px var(--pigment-shadow-admin-detail);
   --ds-shadow-admin-confirm: 0 0 0 100vmax var(--pigment-backdrop);
@@ -667,9 +647,9 @@
   --ds-score-key-light-ink: var(--pigment-key-label);
   --ds-score-key-dark-ink: var(--pigment-key-label);
   --ds-material-wordmark-ink: var(--pigment-material-wordmark-ink);
-  --ds-material-wordmark-gold-deep: var(--pigment-material-wordmark-gold-deep);
-  --ds-material-wordmark-gold-mid: var(--pigment-material-wordmark-gold-mid);
-  --ds-material-wordmark-gold-light: var(--pigment-material-wordmark-gold-light);
+  --ds-material-wordmark-gold-deep: var(--ds-gold-ink-deep);
+  --ds-material-wordmark-gold-mid: var(--ds-gold-ink);
+  --ds-material-wordmark-gold-light: var(--ds-gold-ink-light);
   --ds-material-light-warm: var(--pigment-material-light-warm);
   --ds-canvas-mask: var(--pigment-canvas-mask);
   --ds-material-gel-gloss-color: var(--pigment-gel-gloss);
@@ -747,7 +727,7 @@
     --ds-player-chips-mixer-background-light: linear-gradient(90deg, rgb(232 216 182 / 0), rgb(232 216 182 / 0.9) 45%);
     --ds-player-header-box-shadow-light: inset 0 calc(-1 * var(--ds-space-hairline)) 0 rgb(90 60 25 / 0.14);
     --ds-player-badge-leading-rule-light: rgb(156 109 26 / 0.45);
-    --ds-player-badge-is-leading-color: #7a5414;
+    --ds-player-badge-is-leading-color: var(--pigment-accent-invitation);
     --ds-player-badge-is-leading-background-light: linear-gradient(180deg, rgb(214 160 70 / 0.16), rgb(214 160 70 / 0.06));
   --ds-material-voice-chip-ground: rgb(22 18 33 / 0.7);
   --ds-material-voice-chip-lamp: #fffaf2;
@@ -908,11 +888,16 @@
   --ds-voice-4: var(--pigment-feedback-note);
   --ds-voice-5: var(--pigment-voice-5);
   --ds-voice-7: var(--pigment-voice-7);
-  --ds-material-gold-leaf: linear-gradient(180deg, var(--pigment-material-gold-leaf-edge), var(--pigment-material-gold-leaf-warm) 55%, var(--pigment-material-gold-leaf-light));
+  --ds-material-gold-leaf: linear-gradient(180deg, var(--ds-gold-ink-light), var(--ds-gold-ink) 55%, var(--ds-gold-ink-deep));
   --ds-material-velvet-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 .92  0 0 0 0 1  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
 :root[data-theme="parchment"] {
+  /* D07: shared gold ink; brand alone uses the bright highlight stop. */
+  --ds-gold-ink-deep: var(--pigment-material-gold-light);
+  --ds-gold-ink: var(--pigment-accent-invitation);
+  --ds-gold-ink-light: var(--pigment-material-gold-leaf-edge);
+
   --ds-library-overlay-backdrop: rgb(60 40 20 / 0.28);
   /* Renderer intensity inputs; retain the historical light/dark appearance exactly. */
   --ds-material-lantern-through-stops: 0 0, .3 0, .7 .1, 1 .18;
@@ -928,7 +913,7 @@
   --ds-title-name-glow-layers: .45 .16, .16 .2;
   --ds-ribbon-highlight-alpha: .45;
 
-  --ds-material-paper-ground: var(--pigment-page-background-parchment);
+  --ds-material-paper-ground: var(--ds-page-background);
   --ds-title-name-ink: var(--pigment-title-name-ink-parchment);
   --ds-title-name-glow: var(--pigment-title-name-glow-parchment);
   --ds-ribbon-highlight: var(--pigment-ribbon-highlight-parchment);
@@ -968,38 +953,38 @@
   --ds-material-strategy: ink;
   --ds-color-scheme: light;
   --ds-browser-chrome: var(--pigment-browser-chrome);
-  --ds-admin-surface: var(--pigment-admin-surface-parchment);
-  --ds-admin-ink: var(--pigment-admin-ink-parchment);
-  --ds-admin-secondary: var(--pigment-admin-secondary-parchment);
-  --ds-admin-rule: var(--pigment-admin-rule-parchment);
-  --ds-admin-accent: var(--pigment-admin-accent-parchment);
-  --ds-admin-danger: var(--pigment-admin-danger-parchment);
-  --ds-transcription-accent: var(--pigment-transcription-accent);
-  --ds-transcription-warning: var(--pigment-warning-parchment);
-  --ds-accent-offline: var(--pigment-accent-parchment);
-  --ds-accent-invitation: var(--pigment-accent-invitation);
+  --ds-admin-surface: var(--ds-surface);
+  --ds-admin-ink: var(--ds-ink);
+  --ds-admin-secondary: var(--ds-ink-secondary);
+  --ds-admin-rule: var(--ds-rule-strong);
+  --ds-admin-accent: var(--ds-accent);
+  --ds-admin-danger: var(--ds-danger);
+  --ds-transcription-accent: var(--ds-accent);
+  --ds-transcription-warning: var(--ds-warning);
+  --ds-accent-offline: var(--ds-accent);
+  --ds-accent-invitation: var(--ds-accent);
   --ds-feedback-wish: var(--pigment-feedback-wish-parchment);
   --ds-feedback-idea: var(--pigment-feedback-idea-parchment);
   --ds-feedback-note: var(--pigment-feedback-note-parchment);
   --ds-feedback-survey: var(--pigment-feedback-survey-parchment);
   --ds-score-query: var(--pigment-score-query);
   --ds-score-paper: var(--pigment-ink-parchment);
-  --ds-score-past: var(--pigment-score-past-parchment);
+  --ds-score-past: var(--ds-surface-sunken);
   --ds-score-past-alpha: .5;
   --ds-score-lyric: var(--pigment-ink-parchment);
   --ds-score-ruler: var(--pigment-ink-parchment);
-  --ds-canvas-surface-sunken: var(--pigment-canvas-surface-sunken);
-  --ds-canvas-surface: var(--pigment-canvas-surface-parchment);
-  --ds-canvas-surface-raised: var(--pigment-canvas-surface-raised-parchment);
-  --ds-canvas-surface-overlay: var(--pigment-canvas-surface-overlay-parchment);
-  --ds-score-stage-top: var(--pigment-score-stage-top-parchment);
-  --ds-score-stage-middle: var(--pigment-score-stage-middle-parchment);
-  --ds-score-stage-bottom: var(--pigment-score-stage-bottom-parchment);
+  --ds-canvas-surface-sunken: var(--ds-surface-sunken);
+  --ds-canvas-surface: var(--ds-surface);
+  --ds-canvas-surface-raised: var(--ds-surface-raised);
+  --ds-canvas-surface-overlay: var(--ds-surface-overlay);
+  --ds-score-stage-top: var(--ds-surface-raised);
+  --ds-score-stage-middle: var(--ds-surface);
+  --ds-score-stage-bottom: var(--ds-surface-sunken);
   --ds-voice-fallback-saturation: 60;
   --ds-voice-fallback-lightness: 38;
-  --ds-material-gold-deep: var(--pigment-material-gold-deep-parchment);
-  --ds-material-gold-mid: var(--pigment-material-gold-mid);
-  --ds-material-gold-light: var(--pigment-material-gold-light);
+  --ds-material-gold-deep: var(--ds-gold-ink-deep);
+  --ds-material-gold-mid: var(--ds-gold-ink);
+  --ds-material-gold-light: var(--ds-gold-ink-deep);
   --ds-material-light-hot: var(--pigment-lamp-hot-parchment);
   --ds-material-lamp: var(--pigment-material-lamp-parchment);
   --ds-material-paper-fibre-light: var(--pigment-fibre-parchment);
@@ -1064,13 +1049,13 @@
   --ds-stage-choice-recent-shadow: var(--ds-library-mode-btn-last-used-box-shadow);
   --ds-range-thumb-shadow: var(--ds-volume-thumb-shadow-light);
   --ds-material-stage-background: var(--ds-material-fibre), #e8d8b6;
-  --ds-material-domain-gold-color: #795315;
-  --ds-wordmark-surface: linear-gradient(180deg, #6b4912 5%, #a67824 50%, #6b4912 95%);
+  --ds-material-domain-gold-color: var(--ds-accent);
+  --ds-wordmark-surface: linear-gradient(180deg, var(--ds-gold-ink-deep) 5%, var(--ds-gold-ink-light) 50%, var(--ds-gold-ink-deep) 95%);
   --ds-wordmark-vendor-clip: text;
   --ds-wordmark-clip: text;
   --ds-material-title-l-color: #2e2016;
   --ds-material-title-l-text-shadow: 0 0 0.3em rgb(226 150 52 / 0.3);
-  --ds-material-ded-name-background: linear-gradient(180deg, #6b4912 8%, #a67824 52%, #6b4912 96%);
+  --ds-material-ded-name-background: linear-gradient(180deg, var(--ds-gold-ink-deep) 8%, var(--ds-gold-ink) 52%, var(--ds-gold-ink-deep) 96%);
   --ds-material-ded-name-vendor-background-clip: text;
   --ds-material-ded-name-background-clip: text;
   --ds-material-ded-name-filter: drop-shadow(0 var(--ds-space-hairline) 0 rgb(255 255 250 / 0.6));
@@ -1131,8 +1116,8 @@
   --ds-score-key-shadow: var(--pigment-score-key-shadow);
   --ds-material-paper-strand-light: var(--pigment-material-paper-strand-light);
   --ds-material-paper-warm-fleck: var(--pigment-material-paper-warm-fleck);
-  --ds-artwork-cover-ground: var(--pigment-artwork-cover-ground);
-  --ds-brand-mark-tile: var(--pigment-brand-mark-tile);
+  --ds-artwork-cover-ground: var(--ds-surface-sunken);
+  --ds-brand-mark-tile: var(--ds-surface);
   --ds-backdrop-wave-1: var(--pigment-backdrop-wave-1);
   --ds-backdrop-wave-2: var(--pigment-backdrop-wave-2);
   --ds-backdrop-wave-3: var(--pigment-backdrop-wave-3);
@@ -1144,8 +1129,8 @@
   --ds-shadow-material-lift: 0 var(--ds-space-action) var(--ds-space-touch) calc(-1 * var(--ds-space-group)) var(--pigment-shadow-material-lift);
   --ds-focus: var(--ds-accent);
   --ds-backdrop: var(--pigment-backdrop);
-  --ds-admin-header-rule: var(--pigment-admin-header-rule);
-  --ds-admin-system-surface: var(--pigment-admin-system-surface);
+  --ds-admin-header-rule: var(--ds-danger);
+  --ds-admin-system-surface: var(--ds-surface);
   --ds-shadow-menu: 0 var(--ds-space-small) var(--ds-space-section) var(--pigment-shadow-menu);
   --ds-shadow-admin-detail: calc(-1 * var(--ds-space-content)) 0 80px var(--pigment-shadow-admin-detail);
   --ds-shadow-admin-confirm: 0 0 0 100vmax var(--pigment-backdrop);
@@ -1155,9 +1140,9 @@
   --ds-score-key-light-ink: var(--pigment-key-label);
   --ds-score-key-dark-ink: var(--pigment-key-label);
   --ds-material-wordmark-ink: var(--pigment-material-wordmark-ink);
-  --ds-material-wordmark-gold-deep: var(--pigment-material-wordmark-gold-deep);
-  --ds-material-wordmark-gold-mid: var(--pigment-material-wordmark-gold-mid);
-  --ds-material-wordmark-gold-light: var(--pigment-material-wordmark-gold-light);
+  --ds-material-wordmark-gold-deep: var(--ds-gold-ink-deep);
+  --ds-material-wordmark-gold-mid: var(--ds-gold-ink);
+  --ds-material-wordmark-gold-light: var(--ds-gold-ink-light);
   --ds-material-light-warm: var(--pigment-material-light-warm);
   --ds-canvas-mask: var(--pigment-canvas-mask);
   --ds-material-gel-gloss-color: var(--pigment-gel-gloss);
@@ -1235,7 +1220,7 @@
     --ds-player-chips-mixer-background-light: linear-gradient(90deg, rgb(232 216 182 / 0), rgb(232 216 182 / 0.9) 45%);
     --ds-player-header-box-shadow-light: inset 0 calc(-1 * var(--ds-space-hairline)) 0 rgb(90 60 25 / 0.14);
     --ds-player-badge-leading-rule-light: rgb(156 109 26 / 0.45);
-    --ds-player-badge-is-leading-color: #7a5414;
+    --ds-player-badge-is-leading-color: var(--pigment-accent-invitation);
     --ds-player-badge-is-leading-background-light: linear-gradient(180deg, rgb(214 160 70 / 0.16), rgb(214 160 70 / 0.06));
   --ds-material-voice-chip-ground: rgb(22 18 33 / 0.7);
   --ds-material-voice-chip-lamp: #fffaf2;
@@ -1396,11 +1381,16 @@
   --ds-voice-4: var(--pigment-feedback-note-parchment);
   --ds-voice-5: var(--pigment-voice-5-parchment);
   --ds-voice-7: var(--pigment-voice-7-parchment);
-  --ds-material-gold-leaf: linear-gradient(180deg, var(--pigment-material-gold-leaf-edge), var(--pigment-material-gold-leaf-warm) 55%, var(--pigment-material-gold-leaf-light));
+  --ds-material-gold-leaf: linear-gradient(180deg, var(--ds-gold-ink-light), var(--ds-gold-ink) 55%, var(--ds-gold-ink-deep));
   --ds-material-velvet-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 .92  0 0 0 0 1  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
 :root[data-theme="velvet"] {
+  /* D07: shared gold ink; brand alone uses the bright highlight stop. */
+  --ds-gold-ink-deep: var(--pigment-material-wordmark-gold-mid);
+  --ds-gold-ink: var(--ds-accent);
+  --ds-gold-ink-light: var(--pigment-material-wordmark-gold-light);
+
   --ds-library-overlay-backdrop: rgb(8 6 14 / 0.45);
   /* Renderer intensity inputs; retain the historical light/dark appearance exactly. */
   --ds-material-lantern-through-stops: 0 0, .2 0, .5 .22, .8 .38, 1 .46;
@@ -1416,7 +1406,7 @@
   --ds-title-name-glow-layers: .45 .22, .18 .3, .06 .45;
   --ds-ribbon-highlight-alpha: .55;
 
-  --ds-material-paper-ground: var(--pigment-page-background);
+  --ds-material-paper-ground: var(--ds-page-background);
   --ds-title-name-ink: var(--pigment-title-name-ink-night);
   --ds-title-name-glow: var(--pigment-title-name-glow-night);
   --ds-ribbon-highlight: var(--pigment-ribbon-highlight-night);
@@ -1456,15 +1446,15 @@
   --ds-material-strategy: light;
   --ds-color-scheme: dark;
   --ds-browser-chrome: var(--pigment-page-background);
-  --ds-admin-surface: var(--pigment-admin-surface);
-  --ds-admin-ink: var(--pigment-admin-ink);
-  --ds-admin-secondary: var(--pigment-admin-secondary);
-  --ds-admin-rule: var(--pigment-admin-rule);
-  --ds-admin-accent: var(--pigment-admin-accent);
-  --ds-admin-danger: var(--pigment-admin-danger);
-  --ds-transcription-accent: var(--pigment-accent);
-  --ds-transcription-warning: var(--pigment-warning);
-  --ds-accent-offline: var(--pigment-accent-offline);
+  --ds-admin-surface: var(--ds-surface);
+  --ds-admin-ink: var(--ds-ink);
+  --ds-admin-secondary: var(--ds-ink-secondary);
+  --ds-admin-rule: var(--ds-rule-strong);
+  --ds-admin-accent: var(--ds-accent);
+  --ds-admin-danger: var(--ds-danger);
+  --ds-transcription-accent: var(--ds-accent);
+  --ds-transcription-warning: var(--ds-warning);
+  --ds-accent-offline: var(--ds-accent);
   --ds-accent-invitation: var(--ds-accent);
   --ds-feedback-wish: var(--pigment-feedback-wish);
   --ds-feedback-idea: var(--pigment-feedback-idea);
@@ -1472,22 +1462,22 @@
   --ds-feedback-survey: var(--pigment-feedback-survey);
   --ds-score-query: var(--pigment-feedback-idea);
   --ds-score-paper: var(--pigment-ink);
-  --ds-score-past: var(--pigment-score-past);
+  --ds-score-past: var(--ds-surface-sunken);
   --ds-score-past-alpha: .38;
   --ds-score-lyric: var(--pigment-ink);
   --ds-score-ruler: var(--pigment-ink);
-  --ds-canvas-surface-sunken: var(--pigment-score-past);
-  --ds-canvas-surface: var(--pigment-canvas-surface);
-  --ds-canvas-surface-raised: var(--pigment-canvas-surface-raised);
-  --ds-canvas-surface-overlay: var(--pigment-canvas-surface-overlay);
-  --ds-score-stage-top: var(--pigment-score-stage-top);
-  --ds-score-stage-middle: var(--pigment-score-stage-middle);
-  --ds-score-stage-bottom: var(--pigment-score-stage-bottom);
+  --ds-canvas-surface-sunken: var(--ds-surface-sunken);
+  --ds-canvas-surface: var(--ds-surface);
+  --ds-canvas-surface-raised: var(--ds-surface-raised);
+  --ds-canvas-surface-overlay: var(--ds-surface-overlay);
+  --ds-score-stage-top: var(--ds-surface-raised);
+  --ds-score-stage-middle: var(--ds-surface);
+  --ds-score-stage-bottom: var(--ds-surface-sunken);
   --ds-voice-fallback-saturation: 70;
   --ds-voice-fallback-lightness: 72;
-  --ds-material-gold-deep: var(--pigment-material-gold-deep);
-  --ds-material-gold-mid: var(--pigment-material-wordmark-gold-mid);
-  --ds-material-gold-light: var(--pigment-material-wordmark-gold-deep);
+  --ds-material-gold-deep: var(--ds-gold-ink-deep);
+  --ds-material-gold-mid: var(--ds-gold-ink);
+  --ds-material-gold-light: var(--ds-gold-ink-deep);
   --ds-material-light-hot: var(--pigment-lamp-hot-night);
   --ds-material-lamp: var(--pigment-material-lamp);
   --ds-material-paper-fibre-light: var(--pigment-fibre-night);
@@ -1548,14 +1538,14 @@
     0 var(--ds-space-control) var(--ds-space-section) calc(-1 * var(--ds-space-row)) rgb(0 0 0 / 0.9);
   --ds-range-thumb-shadow: var(--ds-volume-thumb-shadow);
   --ds-material-stage-background: transparent;
-  --ds-material-domain-gold-color: var(--ds-accent, #d4ad65);
-  --ds-wordmark-surface: linear-gradient(180deg, #8c6a2e 5%, #c49e54 50%, #8c6a2e 95%);
+  --ds-material-domain-gold-color: var(--ds-accent);
+  --ds-wordmark-surface: linear-gradient(180deg, var(--ds-gold-ink-deep) 5%, var(--ds-gold-ink-light) 50%, var(--ds-gold-ink-deep) 95%);
   --ds-wordmark-vendor-clip: text;
   --ds-wordmark-clip: text;
   --ds-material-title-l-color: #fff6e6;
   --ds-material-title-l-text-shadow: 0 0 var(--ds-tracking-label) rgb(255 200 130 / 0.7),
     0 0 0.35em rgb(255 190 120 / 0.35);
-  --ds-material-ded-name-background: linear-gradient(180deg, #8c6a2e 8%, #d2ad62 52%, #8c6a2e 96%);
+  --ds-material-ded-name-background: linear-gradient(180deg, var(--ds-gold-ink-deep) 8%, var(--ds-gold-ink) 52%, var(--ds-gold-ink-deep) 96%);
   --ds-material-ded-name-vendor-background-clip: text;
   --ds-material-ded-name-background-clip: text;
   --ds-material-ded-name-filter: drop-shadow(0 var(--ds-space-hairline) 0 rgb(255 236 200 / 0.08)) drop-shadow(0 calc(-1 * var(--ds-space-hairline)) var(--ds-space-hairline) rgb(0 0 0 / 0.5));
@@ -1616,8 +1606,8 @@
   --ds-score-key-shadow: var(--pigment-score-key-shadow);
   --ds-material-paper-strand-light: var(--pigment-material-paper-strand-light);
   --ds-material-paper-warm-fleck: var(--pigment-material-paper-warm-fleck);
-  --ds-artwork-cover-ground: var(--pigment-artwork-cover-ground);
-  --ds-brand-mark-tile: var(--pigment-brand-mark-tile);
+  --ds-artwork-cover-ground: var(--ds-surface-sunken);
+  --ds-brand-mark-tile: var(--ds-surface);
   --ds-backdrop-wave-1: var(--pigment-backdrop-wave-1);
   --ds-backdrop-wave-2: var(--pigment-backdrop-wave-2);
   --ds-backdrop-wave-3: var(--pigment-backdrop-wave-3);
@@ -1629,8 +1619,8 @@
   --ds-shadow-material-lift: 0 var(--ds-space-action) var(--ds-space-touch) calc(-1 * var(--ds-space-group)) var(--pigment-shadow-material-lift);
   --ds-focus: var(--ds-accent);
   --ds-backdrop: var(--pigment-backdrop);
-  --ds-admin-header-rule: var(--pigment-admin-header-rule);
-  --ds-admin-system-surface: var(--pigment-admin-system-surface);
+  --ds-admin-header-rule: var(--ds-danger);
+  --ds-admin-system-surface: var(--ds-surface);
   --ds-shadow-menu: 0 var(--ds-space-small) var(--ds-space-section) var(--pigment-shadow-menu);
   --ds-shadow-admin-detail: calc(-1 * var(--ds-space-content)) 0 80px var(--pigment-shadow-admin-detail);
   --ds-shadow-admin-confirm: 0 0 0 100vmax var(--pigment-backdrop);
@@ -1640,9 +1630,9 @@
   --ds-score-key-light-ink: var(--pigment-key-label);
   --ds-score-key-dark-ink: var(--pigment-key-label);
   --ds-material-wordmark-ink: var(--pigment-material-wordmark-ink);
-  --ds-material-wordmark-gold-deep: var(--pigment-material-wordmark-gold-deep);
-  --ds-material-wordmark-gold-mid: var(--pigment-material-wordmark-gold-mid);
-  --ds-material-wordmark-gold-light: var(--pigment-material-wordmark-gold-light);
+  --ds-material-wordmark-gold-deep: var(--ds-gold-ink-deep);
+  --ds-material-wordmark-gold-mid: var(--ds-gold-ink);
+  --ds-material-wordmark-gold-light: var(--ds-gold-ink-light);
   --ds-material-light-warm: var(--pigment-material-light-warm);
   --ds-canvas-mask: var(--pigment-canvas-mask);
   --ds-material-gel-gloss-color: var(--pigment-gel-gloss);
@@ -1720,7 +1710,7 @@
     --ds-player-chips-mixer-background-light: linear-gradient(90deg, rgb(232 216 182 / 0), rgb(232 216 182 / 0.9) 45%);
     --ds-player-header-box-shadow-light: inset 0 calc(-1 * var(--ds-space-hairline)) 0 rgb(90 60 25 / 0.14);
     --ds-player-badge-leading-rule-light: rgb(156 109 26 / 0.45);
-    --ds-player-badge-is-leading-color: #7a5414;
+    --ds-player-badge-is-leading-color: var(--pigment-accent-invitation);
     --ds-player-badge-is-leading-background-light: linear-gradient(180deg, rgb(214 160 70 / 0.16), rgb(214 160 70 / 0.06));
   --ds-material-voice-chip-ground: rgb(22 18 33 / 0.7);
   --ds-material-voice-chip-lamp: #fffaf2;
@@ -1881,7 +1871,7 @@
   --ds-voice-4: var(--pigment-feedback-note);
   --ds-voice-5: var(--pigment-voice-5);
   --ds-voice-7: var(--pigment-voice-7);
-  --ds-material-gold-leaf: linear-gradient(180deg, var(--pigment-material-gold-leaf-edge), var(--pigment-material-gold-leaf-warm) 55%, var(--pigment-material-gold-leaf-light));
+  --ds-material-gold-leaf: linear-gradient(180deg, var(--ds-gold-ink-light), var(--ds-gold-ink) 55%, var(--ds-gold-ink-deep));
   --ds-material-velvet-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 .92  0 0 0 0 1  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
@@ -1900,11 +1890,8 @@
 }
 /* Orthogonal type preset. Auth/admin/canvas text intentionally retain their shorter stacks. */
 :root[data-type="revival"] {
-  --ds-font-body: 'Remington 1888', 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
-  --ds-font-mono: 'Remington 1888', 'Atkinson Hyperlegible Mono Variable', ui-monospace, monospace;
-  --ds-font-heading: 'Baltimore Title 1832', var(--ds-font-display);
+  --ds-font-heading: var(--ds-font-body);
   --ds-font-song-title: 'Modern Antique 1889', var(--ds-font-display);
-  --ds-font-control: 'Remington 1888', 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
   --ds-weight-mark: 400;
   --ds-weight-brand: 400;
   --ds-type-wordmark-font-family: var(--ds-wordmark-font-family);
@@ -1916,7 +1903,7 @@
   --ds-type-library-heading-font-synthesis: none;
   --ds-type-tour-title-font-family: var(--ds-font-heading);
   --ds-type-tour-title-font-weight: var(--ds-weight-body);
-  --ds-type-tour-title-text-transform: uppercase;
+  --ds-type-tour-title-text-transform: none;
   --ds-type-tour-title-font-synthesis: none;
   --ds-type-library-song-font-family: var(--ds-font-song-title);
   --ds-type-library-song-font-weight: var(--ds-weight-body);
@@ -1924,7 +1911,7 @@
   --ds-type-library-meta-white-space: nowrap;
   --ds-type-library-prompt-font-family: var(--ds-font-heading);
   --ds-type-library-prompt-font-weight: var(--ds-weight-body);
-  --ds-type-library-prompt-text-transform: uppercase;
+  --ds-type-library-prompt-text-transform: none;
   --ds-type-library-prompt-font-synthesis: none;
   --ds-type-player-song-font-family: var(--ds-font-song-title);
   --ds-type-player-song-font-weight: var(--ds-weight-body);
