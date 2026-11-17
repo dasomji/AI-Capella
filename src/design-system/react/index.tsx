@@ -571,18 +571,18 @@ export function Dialog({
           ? "alertdialog"
           : "dialog")
       }
-      aria-labelledby={props["aria-labelledby"] ?? titleId}
+      aria-labelledby={props["aria-labelledby"] ?? (title && !props["aria-label"] ? titleId : undefined)}
       aria-describedby={
         props["aria-describedby"] ?? (body ? bodyId : undefined)
       }
       className={r.withLayout(slots.panel, layout)}
     >
       <div className={slots.content}>
-        <header className={slots.header}>
+        {title && <header className={slots.header}>
           <h2 id={titleId} className={slots.title}>
             {title}
           </h2>
-        </header>
+        </header>}
         {body && (
           <p id={bodyId} className={slots.body}>
             {body}

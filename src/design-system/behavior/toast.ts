@@ -2,7 +2,7 @@ import {
   toastRecipe,
   toastPlacementRecipe,
   type ToastOptions,
-} from "../recipes";
+} from "../recipes/overlays";
 import { toastPart } from "../parts";
 export interface ToastMessage {
   text: string;

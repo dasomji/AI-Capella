@@ -216,3 +216,42 @@ describe('client theme lifecycle API', () => {
     expect(()=>subscribeTheme(()=>{}, {immediate:true})()).not.toThrow();
   });
 });
+
+it('keeps bootstrap color schemes equal to the authored theme roles', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { default: postcss } = await import('postcss');
+  const css = postcss.parse(readFileSync('src/design-system/tokens.css', 'utf8'));
+  for (const theme of themeRegistry) {
+    let scheme;
+    css.walkRules(rule => {
+      if (rule.selectors.includes(`:root[data-theme="${theme.id}"]`))
+        rule.walkDecls('--ds-color-scheme', d => { scheme = d.value; });
+    });
+    expect(scheme, theme.id).toBe(theme.colorScheme);
+  }
+});
+it('leaves theme-color ownership to the idempotent bootstrap', async () => {
+  const { readFileSync } = await import('node:fs');
+  expect(readFileSync('src/routes/__root.tsx', 'utf8')).not.toMatch(/name:\s*['"]theme-color/);
+  const dom = boot();
+  dom.window.eval(themeBootstrapScript);
+  expect(dom.window.document.querySelectorAll('meta[name="theme-color"]')).toHaveLength(1);
+  dom.window.close();
+});
+it('restores inherited typography on reset elements and their pseudo-elements', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { default: postcss } = await import('postcss');
+  const css = postcss.parse(readFileSync('src/design-system/components.css', 'utf8'));
+  for (const selector of ['.ds-reset', '.ds-reset::before', '.ds-reset::after']) {
+    const values = new Map<string, string>();
+    css.walkRules(rule => { if (rule.selectors.includes(selector)) rule.walkDecls(d => { values.set(d.prop, d.value); }); });
+    for (const prop of ['text-align', 'letter-spacing', 'text-transform', 'white-space', 'text-indent', 'word-spacing', 'line-height', 'font-variant', 'direction'])
+      expect(values.get(prop), `${selector}: ${prop}`).toBe('inherit');
+  }
+});
+it('keeps the eager toast import graph limited to overlay recipes', async () => {
+  const { readFileSync } = await import('node:fs');
+  const source = readFileSync('src/design-system/behavior/toast.ts', 'utf8');
+  expect(source).toContain('from "../recipes/overlays"');
+  expect(source).not.toMatch(/from ["']\.\.\/recipes["']/);
+});

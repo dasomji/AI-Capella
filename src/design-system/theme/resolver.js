@@ -39,6 +39,12 @@ export default function bootstrapTheme(next) {
     if (start === 'zeile' || start === 'buehne') root.dataset.title = start;
     else delete root.dataset.title;
     const chrome = getComputedStyle(root).getPropertyValue('--ds-browser-chrome').trim();
-    if (chrome) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', chrome);
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute('name', 'theme-color');
+        document.head.append(meta);
+    }
+    if (chrome) meta.setAttribute('content', chrome);
     return { id: theme.id, preference: selected, revival: type !== 'bodoni' && type !== 'heute', start };
 }
