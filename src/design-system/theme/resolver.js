@@ -2,7 +2,7 @@
 export const themeRegistry = /** @type {const} */ ([
     { id: 'night-paper', menuLabel: 'designNight', label: 'Night paper', aliases: ['papier'], storage: 'papier', defaultStart: null, system: 'dark' },
     { id: 'parchment', menuLabel: 'designParchment', label: 'Parchment', aliases: ['pergament'], storage: 'pergament', defaultStart: null, system: 'light' },
-    { id: 'velvet', menuLabel: null, label: 'Velvet (experimental)', aliases: ['samt'], storage: 'samt', defaultStart: null, system: null },
+    { id: 'velvet', menuLabel: null, label: 'Velvet (experimental)', aliases: ['samt'], storage: 'samt', defaultStart: 'heute', system: null },
 ]);
 /** Retained only as named experimental device presets; never main appearance choices. */
 export const experimentalPresets = /** @type {const} */ ([
@@ -41,7 +41,7 @@ export default function bootstrapTheme(next) {
     try { light = matchMedia('(prefers-color-scheme: light)').matches; } catch { /* Dark default. */ }
     const theme = themeRegistry.find(theme => selected === 'system' ? theme.system === (light ? 'light' : 'dark') : theme.id === selected) ?? themeRegistry[0];
     const type = choice('schrift', 'ai-capella-schrift', ['neu', 'bodoni', 'heute', 'test'], 'neu');
-    const start = choice('start', 'ai-capella-start', ['neu', 'heute', 'zeile', 'buehne'], 'neu');
+    const start = theme.defaultStart ?? choice('start', 'ai-capella-start', ['neu', 'heute', 'zeile', 'buehne'], 'neu');
     root.dataset.theme = theme.id;
     // tokens.css owns the scheme; a stale inline value would override theme edits.
     root.style.removeProperty('color-scheme');
