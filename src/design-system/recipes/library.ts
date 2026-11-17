@@ -5,7 +5,7 @@ const librarySlots = {
   "ds-library-button":
     "tw:font-inherit tw:color-inherit tw:background-library-clear tw:border-0 tw:p-0 tw:cursor-pointer " +
     "tw:library-button-disabled:cursor-default tw:library-button-disabled:opacity-library-opacity-disabled " +
-    "tw:library-button-focus-visible:outline-library-button-outline tw:library-button-focus-visible:outline-offset-2",
+    "tw:library-button-focus-visible:outline-library-button-outline tw:library-button-focus-visible:outline-offset-(--ds-space-2)",
   "ds-library-mode-btn":
     "tw:library-mode-btn-last-used:border-library-mode-btn-last-used-border-color " +
     "tw:library-mode-btn-last-used:shadow-library-mode-btn-last-used-box-shadow tw:inline-flex tw:items-center " +
@@ -114,7 +114,7 @@ const librarySlots = {
     "tw:library-song-card-lifted:transition-library-song-card-lifted-transition",
   "ds-library-song-open":
     "tw:block tw:w-full tw:text-left " +
-    "tw:library-song-open-focus-visible:outline-offset-library-song-open-focus-visible-outline-offset " +
+    "tw:library-song-open-focus-visible:outline-offset-(--ds-library-song-open-focus-visible-outline-offset) " +
     "tw:library-song-open-base-max-compact:grid " +
     "tw:library-song-open-base-max-compact:grid-cols-library-song-open-grid-template-columns " +
     "tw:library-song-open-base-max-compact:items-center " +
@@ -268,7 +268,7 @@ const librarySlots = {
     "tw:library-menu-item-ds-library-menu-chevron:transition-library-menu-item-transition-phone " +
     "tw:library-menu-item-aria-expanded-true-ds-library-menu-chevron:transform-library-menu-item-transform",
   "ds-library-menu-check":
-    "tw:ml-auto tw:text-ink-secondary tw:font-inherit tw:cursor-inherit tw:text-inherit tw:select-text " +
+    "tw:ml-auto tw:text-ink-secondary tw:font-inherit tw:cursor-library-inherit tw:text-inherit tw:select-text " +
     "tw:webkit-font-smoothing-inherit tw:webkit-locale-inherit tw:webkit-tap-highlight-color-inherit",
   "ds-library-menu-value":
     "tw:ml-auto tw:text-ink-secondary tw:font-emphasis",
