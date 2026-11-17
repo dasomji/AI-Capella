@@ -1,4 +1,4 @@
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+/* The entrance animation interpolates opacity and rise distance, which requires keyframe stops. */
 
 @keyframes rise {
   from {
@@ -11,7 +11,7 @@
   }
 }
 
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+/* The loading sheen moves its background position through a keyframe endpoint. */
 
 @keyframes shimmer {
   to {
@@ -27,7 +27,7 @@
   initial-value: 108%;
 }
 
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+/* The notation title fades in after engraving completes without replacing the SVG. */
 @keyframes ls-appear {
   from {
     opacity: 0;
@@ -36,7 +36,7 @@
     opacity: var(--ds-title-appear-opacity);
   }
 }
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+/* The illuminated title breathes through a midpoint opacity, requiring keyframes. */
 @keyframes ls-breathe {
   0%,
   100% {
@@ -46,7 +46,7 @@
     opacity: var(--ds-title-breathe-opacity-dim);
   }
 }
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+/* The typed writing percentage must interpolate from hidden to completed ink. */
 
 @keyframes ink-write {
   from {
@@ -57,7 +57,7 @@
   }
 }
 
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+/* The completed ink oscillates vertically around its original anchor. */
 
 @keyframes ink-float {
   0%,
@@ -69,7 +69,7 @@
   }
 }
 
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+/* The written title briefly peaks in brightness and returns to its settled filter. */
 @keyframes ls-flare {
   0% {
     filter: var(--ds-title-flare-filter);
@@ -81,7 +81,7 @@
     filter: var(--ds-title-flare-filter);
   }
 }
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+/* The stage ignition uses several timed opacity/filter stops rather than a state transition. */
 @keyframes stage-ignite {
   0% {
     opacity: var(--ds-stage-ignite-opacity-start);
@@ -112,9 +112,9 @@
     filter: var(--ds-stage-ignite-filter-end);
   }
 }
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+/* The review target flashes from highlighted to resting wash opacity. */
 @keyframes tx-flash {from{opacity:var(--ds-transcription-flash-opacity)}to{opacity:var(--ds-transcription-flash-opacity-end)}}
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
+/* The running transcription segment pulses through its intermediate opacity. */
 @keyframes tx-pulse {50%{opacity:var(--ds-transcription-pulse-opacity)}}
 
 /* Verovio creates these SVG label nodes; retain their typography before review getBBox measurement. */

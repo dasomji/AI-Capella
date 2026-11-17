@@ -1,17 +1,17 @@
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+/* The player grid must size its canvas tracks before the renderer measures them. */
 #player {
     grid-template-columns: var(--ds-player-grid-template-columns);
     grid-template-rows: var(--ds-player-grid-template-rows);
     grid-template-areas: var(--ds-player-grid-template-areas)
 }
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+/* The stage establishes the canvas grid area and a shrinkable measurement box. */
 .stage {
     grid-area: stage;
     position: relative;
     min-height: 0;
     min-width: 0
 }
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+/* Both notation canvases need a full-size compositor layer and exclusive pointer gestures before drawing. */
 #roll,
 #staff {
     position: absolute;
@@ -24,21 +24,25 @@
     will-change: transform;
     transform: var(--ds-roll-staff-transform)
 }
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+/* The piano roll advertises its drag affordance before gesture handling starts. */
 #roll {
     cursor: grab
 }
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+/* The active roll gesture changes only the native cursor hook. */
 #roll.dragging {
     cursor: grabbing
 }
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+/* The overview’s grid area and top divider must exist before its canvas measures the available strip. */
 .overview {
     grid-area: ov;
     position: relative;
-    border-top: var(--ds-overview-border-top)
+    border-top: var(--ds-overview-border-top);
+    background: var(--ds-material-vellum);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: var(--ds-shadow-material-highlight)
 }
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+/* The overview canvas fills its measured strip and owns its seek pointer gesture. */
 #overview {
     display: block;
     width: 100%;
@@ -47,7 +51,7 @@
     touch-action: none
 }
 @media (width < theme(--breakpoint-panel)) {
-    /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+    /* Phone grid tracks must settle before roll/staff viewport measurement. */
     #player {
         grid-template-columns: var(--ds-player-grid-template-columns-phone);
         grid-template-rows: var(--ds-player-grid-template-rows-phone);
@@ -55,48 +59,38 @@
     }
 }
 @media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) {
-    /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+    /* Short landscape omits the voice-chip track before measuring the notation viewport. */
     #player {
         grid-template-rows: var(--ds-player-grid-template-rows-landscape);
         grid-template-areas: var(--ds-player-grid-template-areas-landscape)
     }
 }
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+/* Following mode dims the existing overview canvas without replacing its rendering surface. */
 .following #overview {
     opacity: var(--ds-following-overview-opacity)
 }
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+/* Sing-along removes the overview track from the measured grid entirely. */
 #app.sing-along .overview {
     display: none !important
 }
 @media (min-width: theme(--breakpoint-panel)) {
-    /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+    /* Desktop sing-along retains sidebar/stage areas while removing the transport tracks. */
     #app.sing-along #player {
         grid-template-rows: var(--ds-app-sing-along-player-grid-template-rows);
         grid-template-areas: var(--ds-app-sing-along-player-grid-template-areas)
     }
 }
 @media (width < theme(--breakpoint-panel)) {
-    /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+    /* Phone sing-along puts the voice chips below the stage before measuring either area. */
     #app.sing-along #player {
         grid-template-rows: var(--ds-app-sing-along-player-grid-template-rows-phone);
         grid-template-areas: var(--ds-app-sing-along-player-grid-template-areas-phone)
     }
 }
 @media (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape) {
-    /* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
+    /* Short-landscape sing-along reserves only title and score tracks. */
     #app.sing-along #player {
         grid-template-rows: var(--ds-app-sing-along-player-grid-template-rows-landscape);
         grid-template-areas: var(--ds-app-sing-along-player-grid-template-areas-landscape)
     }
-}
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
-.overview {
-    background: var(--ds-material-vellum);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none
-}
-/* Renderer sizing/compositor hook must exist before canvas measurement and retain its stable DOM selector. */
-.overview {
-    box-shadow: var(--ds-shadow-material-highlight)
 }

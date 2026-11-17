@@ -1,11 +1,8 @@
-/* Generated decoration preserves native pseudo-element rendering. */
+/* The other-ensemble divider is generated content that must follow its button’s inherited font, ink and interaction policy. */
 .ds-navigation-other::before {
   content:var(--ds-content-empty);display:inline-block;width:var(--ds-navigation-other-rule-width);
   height:var(--ds-stroke-thin);margin:var(--ds-navigation-other-rule-margin);vertical-align:middle;
   background:currentColor;opacity:var(--ds-opacity-half);
-}
-/* Generated decoration preserves native pseudo-element rendering. */
-.ds-navigation-other::before {
  font:inherit;color:inherit;box-sizing:border-box;cursor:inherit;text-align:inherit;user-select:inherit;
  -webkit-font-smoothing:inherit;-webkit-locale:inherit;-webkit-tap-highlight-color:inherit;
 }

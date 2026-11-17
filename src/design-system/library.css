@@ -1,23 +1,20 @@
-/* Generated decoration preserves native pseudo-element rendering. */
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+/* The card spotlight uses pointer coordinates on a generated overlay; it has no element to receive recipe classes. */
 .ds-library-song-card::after {
+  background: radial-gradient(circle at var(--mx, var(--ds-library-spotlight-x)) var(--my, var(--ds-library-spotlight-y)), var(--ds-library-card-spotlight), var(--ds-library-spotlight-clear) var(--ds-library-spotlight-stop));
+  /* Only a precise pointer with motion enabled creates and animates the spotlight. */
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
     content: var(--ds-content-empty);
     position: absolute;
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    background: radial-gradient(circle at var(--mx, var(--ds-library-spotlight-x)) var(--my, var(--ds-library-spotlight-y)), var(--ds-library-card-spotlight), var(--ds-library-spotlight-clear) var(--ds-library-spotlight-stop));
     opacity: 0;
     transition: var(--ds-library-pointer-song-card-after-transition);
   }
 }
-/* Generated decoration preserves native pseudo-element rendering. */
+/* The generated spotlight becomes visible only while the pointer-tilt behavior owns the card. */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
 .ds-library-song-card.is-tilted::after {
     opacity: var(--ds-layer-content);
   }
-}
-/* Generated decoration preserves native pseudo-element rendering. */
-.ds-library-song-card::after {
-  background: radial-gradient(circle at var(--mx, var(--ds-library-spotlight-x)) var(--my, var(--ds-library-spotlight-y)), var(--ds-library-card-spotlight), var(--ds-library-spotlight-clear) var(--ds-library-spotlight-stop));
 }
