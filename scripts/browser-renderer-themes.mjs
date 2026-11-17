@@ -148,7 +148,9 @@ try {
         }
       } finally { await page.close(); }
     }
-    assert.deepEqual(await fs.readFile(path.join(evidence, 'print-mid-swap.pdf.png')), await fs.readFile(path.join(evidence, 'print-at-start.pdf.png')), 'PDF must retain the print inputs captured at job start');
+    // Avoid formatting a binary array diff on failure: it can overwhelm the runner on the
+    // print mutant. Buffer.equals still checks every byte and reports a bounded assertion.
+    assert.ok((await fs.readFile(path.join(evidence, 'print-mid-swap.pdf.png'))).equals(await fs.readFile(path.join(evidence, 'print-at-start.pdf.png'))), 'PDF must retain the print inputs captured at job start');
     results.push({ label: 'PDF mid-job print override and theme swap', equal: true });
   }
   if (mutant) assert.ok(mutated, 'Mutant was applied');
