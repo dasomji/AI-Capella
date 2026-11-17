@@ -1,13 +1,14 @@
-import { matchBreakpoint } from './design-system/theme';
-import { VOICE_SPECTRUM } from './palette';
-import { PAPER_DESIGN } from './design';
+import { matchBreakpoint, readTheme, subscribeTheme } from './design-system/theme';
+
+
 
 // The velvet ground behind the whole app: layered waves in close shades of the ink colour, drifting
 // slowly, with a faint rim of voice colour along each crest -- felt more than seen. Drawn at half
 // resolution (it's soft anyway) and at most 30 times a second; it stands still in a background tab,
 // when the system asks for reduced motion, and on phones while music plays (battery). On a laptop
 // it only slows down while playing.
-const TONES = ['#110d1b', '#141020', '#181326', '#1c162d', '#211934', '#261c3a'];
+// TODO(AICAP-28 role): six velvet wave shades and the two backdrop grounds.
+const waveRoles = ['score-stage-top', 'score-stage-middle', 'canvas-surface', 'canvas-surface-raised', 'canvas-surface-overlay', 'surface-hover'] as const;
 const FRAME_MS = 1000 / 30;
 const SCALE = 0.5;
 
@@ -19,6 +20,7 @@ export class WaveBackdrop {
   private raf: number | null = null;
   private playing = false;
   private shown = true;
+  private requestedShown = true;
   private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private readonly narrow = matchBreakpoint('panel', 'below');
 
@@ -27,7 +29,7 @@ export class WaveBackdrop {
     this.canvas.id = 'bg-waves';
     this.canvas.setAttribute('aria-hidden', 'true');
     // The paper design lies still: no waves at all.
-    if (PAPER_DESIGN) this.shown = false;
+    if ((readTheme().material.surface === 'paper')) this.shown = false;
     this.canvas.hidden = !this.shown;
     document.body.prepend(this.canvas);
     this.ctx = this.canvas.getContext('2d')!;
@@ -35,13 +37,16 @@ export class WaveBackdrop {
     document.addEventListener('visibilitychange', () => this.update());
     this.reduceMotion.addEventListener('change', () => this.update());
     this.narrow.addEventListener('change', () => this.update());
+    subscribeTheme(() => { this.shown = this.requestedShown && readTheme().material.surface === 'waves'; this.canvas.hidden = !this.shown; this.draw(); this.update(); });
     this.draw();
     this.update();
   }
 
   /** Hides the waves (the title screen keeps its plain ground) and stops drawing them meanwhile. */
   setShown(shown: boolean) {
-    if (PAPER_DESIGN || shown === this.shown) return;
+    this.requestedShown = shown;
+    shown = shown && readTheme().material.surface === 'waves';
+    if (shown === this.shown) return;
     this.shown = shown;
     this.canvas.hidden = !shown;
     if (shown) this.draw();
@@ -89,13 +94,13 @@ export class WaveBackdrop {
     }
     const ctx = this.ctx;
     const ground = ctx.createLinearGradient(0, 0, 0, h);
-    ground.addColorStop(0, '#0c0a14');
-    ground.addColorStop(1, '#120e1c');
+    ground.addColorStop(0, readTheme().color('score-stage-bottom').css);
+    ground.addColorStop(1, readTheme().color('score-stage-top').css);
     ctx.fillStyle = ground;
     ctx.fillRect(0, 0, w, h);
     const t = this.t;
     const step = Math.max(6, Math.round(w / 90));
-    for (let i = 0; i < TONES.length; i++) {
+    for (let i = 0; i < waveRoles.length; i++) {
       const base = h * (0.3 + i * 0.11);
       const amp = h * (0.035 + i * 0.008);
       // Wave lengths as in the design draft; a narrow screen gets somewhat shorter waves so a few
@@ -113,7 +118,7 @@ export class WaveBackdrop {
       }
       ctx.lineTo(w, h);
       ctx.closePath();
-      ctx.fillStyle = TONES[i];
+      ctx.fillStyle = readTheme().color(waveRoles[i]).css;
       ctx.fill();
       // The crest's rim of light: the same curve, stroked thin in a voice colour.
       ctx.beginPath();
@@ -121,7 +126,7 @@ export class WaveBackdrop {
       for (let x = step; x <= w + step; x += step) {
         ctx.lineTo(x, base + Math.sin(x * k1 + t * (0.16 + i * 0.03) + i * 1.3) * amp + Math.sin(x * k2 - t * (0.1 + i * 0.02) + i * 0.7) * amp * 0.45);
       }
-      ctx.strokeStyle = VOICE_SPECTRUM[(i * 3) % VOICE_SPECTRUM.length] + '14';
+      ctx.strokeStyle = readTheme().spectrum[(i * 3) % readTheme().spectrum.length].rgba(20 / 255);
       ctx.lineWidth = 1;
       ctx.stroke();
     }

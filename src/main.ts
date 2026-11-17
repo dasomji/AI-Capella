@@ -32,9 +32,10 @@ const serverLibraryEnabled = true;
 import { animateRibbons, coverDataFromScore, drawCover, drawMark, prepareCanvas, type CoverData } from './artwork';
 import { icon } from './icons';
 import { countLabel, keyName, lang, setLang, t, type MessageKey } from './i18n';
+import { subscribeTheme, getThemeRevision } from './design-system/theme';
 import { canvasFontsReady } from './theme';
 import { WaveBackdrop } from './backdrop';
-import { DESIGN_CHOICE, onSystemDesignChange, PAPER_DESIGN, PARCHMENT, setDesignChoice, START_DRAFT, START_STAFF, START_STAGE, type DesignChoice } from './design';
+import { DESIGN_CHOICE, PAPER_DESIGN, PARCHMENT, setDesignChoice, START_DRAFT, START_STAFF, START_STAGE, type DesignChoice } from './design';
 import { initPaper, paintSwatch, PAPER_KINDS, paperKind, setPaperKind, type PaperKind } from './paper';
 import { applyPercussion } from './percussion';
 import { lightScoreName, type TitleName } from './lightName';
@@ -359,7 +360,6 @@ function setViewMode(mode: 'landing' | 'library' | 'player') {
   backdrop.setShown(mode !== 'landing');
   closeOverlay();
   // Back in the repertoire: a look the device turned to meanwhile can be shown now.
-  if (mode === 'library') setTimeout(applyPendingDesign, 0);
   if (mode === 'landing' && !stopLandingRibbons && START_STAGE && titleName) {
     // Draft: the dark stage and its spotlight (titleStage.ts).
     stopLandingRibbons = animateStage(document.querySelector<HTMLCanvasElement>('#landing-ribbons')!, titleName);
@@ -535,7 +535,7 @@ window.setInterval(()=>{
   if(Math.abs(lastSharedDrift)>1000 || (playerSession.clock.diagnostics!.uncertaintyMs<15 && Math.abs(lastSharedDrift)>30)){const beat=positionAt(sharedState,now,timing);const delta=(secondsAt(Math.ceil(beat+.01),timing)-secondsAt(beat,timing))*timing.baseBpm/sharedState.bpm*1000;scheduleSharedAudio(now+(delta>=80 && delta<=300?delta:80));}
  }
  if(joined.status==='stopped')syncPlayButtons(false);
- if(syncDebug){let el=document.querySelector<HTMLElement>('#sync-debug');if(!el){el=document.createElement('pre');el.id='sync-debug';el.style.cssText='position:fixed;bottom:0;left:0;z-index:10000;background:var(--bg,#16151c);color:var(--ink,#eee);padding:8px;pointer-events:none';document.body.append(el);}el.textContent=JSON.stringify({offset:playerSession.clock.diagnostics?.offsetMs,uncertainty:playerSession.clock.diagnostics?.uncertaintyMs,drift:lastSharedDrift,revision:sharedState.revision});}
+ if(syncDebug){let el=document.querySelector<HTMLElement>('#sync-debug');if(!el){el=document.createElement('pre');el.id='sync-debug';el.style.cssText='position:fixed;bottom:0;left:0;z-index:10000;background:var(--ds-surface);color:var(--ds-ink);padding:8px;pointer-events:none';document.body.append(el);}el.textContent=JSON.stringify({offset:playerSession.clock.diagnostics?.offsetMs,uncertainty:playerSession.clock.diagnostics?.uncertaintyMs,drift:lastSharedDrift,revision:sharedState.revision});}
 },2000);
 function syncEnabled(): boolean {
   return serverLibraryEnabled && sessionMode === 'ensemble';
@@ -868,6 +868,8 @@ function openExportSheet(opener: HTMLElement | null) {
   const rows = sources.map((source) => {
     const li = document.createElement('li');
     li.style.setProperty('--c', source.color);
+    li.dataset.themeVoice = String(score.parts.findIndex(part => (part.sourceId ?? part.id) === source.id));
+    li.dataset.themeVoiceCount = String(score.parts.length);
     const check = document.createElement('input');
     check.type = 'checkbox';
     check.checked = true;
@@ -960,8 +962,7 @@ function soundItems() {
 
 /**
  * Erscheinungsbild: the look on this device -- following its light or dark mode (night paper in
- * dark mode, parchment in light mode), or one of the two. The canvases take their colours when the
- * app starts, so a change loads it again, straight back into the repertoire (as a mode switch does).
+ * dark mode, parchment in light mode), or one of the two. Retained canvases repaint live.
  */
 function appearanceItems() {
   const choose = (next: DesignChoice) => () => {
@@ -976,29 +977,14 @@ function appearanceItems() {
   return [{ label: t('appearance'), icon: 'sheet' as const, value: options.find((o) => o.checked)?.label ?? '', options, onSelect: () => {} }];
 }
 
-async function reloadForDesign() {
-  if(syncEnabled()){leavePlaybackSession();audioEngine?.stop();}else stopPlayback();
-  if (!app.classList.contains('mode-landing')) sessionStorage.setItem(MODE_SWITCH_KEY, transcriptionPreviewMode??sessionMode);
-  location.reload();
+// Theme changes repaint retained resources without touching the audio/session lifecycle.
+// Font completion uses the same repaint path.
+function repaintForTheme() {
+  pianoRoll?.repaint();
+  drawAllCovers();
+  drawMarks();
+  renderNow();
 }
-
-// Following the device: when it turns to light or dark mode the app changes its look -- not in the
-// middle of something, though: not in the player, while music plays, in a sheet or dialog, or
-// while something is being typed. Then at the next quiet moment (back in the repertoire, or the app
-// coming back to the front).
-let designPending = false;
-function applyPendingDesign() {
-  if (!designPending) return;
-  const busy = app.classList.contains('mode-player') || !!audioEngine?.isPlaying() || !!document.querySelector('.sheet-root.open, .dialog-root.open') || document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement;
-  if (busy || document.visibilityState === 'hidden') return;
-  designPending = false;
-  void reloadForDesign();
-}
-onSystemDesignChange(() => {
-  designPending = true;
-  applyPendingDesign();
-});
-document.addEventListener('visibilitychange', applyPendingDesign);
 
 function languageItems() {
   return [
@@ -1212,6 +1198,7 @@ function voiceDots(count: number): HTMLSpanElement {
   for (let i = 0; i < Math.min(count, 8); i++) {
     const d = document.createElement('i');
     d.style.setProperty('--c', colorForPart(i, count));
+    d.dataset.themeVoice = String(i); d.dataset.themeVoiceCount = String(count);
     dots.appendChild(d);
   }
   return dots;
@@ -3651,7 +3638,23 @@ window.addEventListener('resize', () => {
 
 // The paper design's paper (paper.ts): on the CSS surfaces from the start; another one chosen on
 // this device is painted everywhere at once.
-if (PAPER_DESIGN) initPaper();
+initPaper();
+subscribeTheme(theme => {
+  // Reassign runtime part data as well as canvas inputs. Preserve focus, mix and open sheets.
+  document.querySelectorAll<HTMLElement>('[data-part]').forEach(el => {
+    const index = currentScore?.parts.findIndex(part => part.id === el.dataset.part) ?? -1;
+    if (index >= 0 && currentScore) el.style.setProperty('--c', colorForPart(index, currentScore.parts.length, theme));
+  });
+  document.querySelectorAll<HTMLElement>('[data-theme-voice]').forEach(el => {
+    el.style.setProperty('--c', colorForPart(Number(el.dataset.themeVoice), Number(el.dataset.themeVoiceCount), theme));
+  });
+  repaintForTheme();
+  // Fonts may arrive after a theme/type swap; invalidate metrics and baked syllables only
+  // after those faces are available. A superseded load must not repaint an earlier theme.
+  const revision = theme.revision;
+  void canvasFontsReady().then(() => { if (getThemeRevision() === revision) { resizeCanvases(); repaintForTheme(); } });
+});
+document.fonts?.addEventListener('loadingdone', () => { resizeCanvases(); repaintForTheme(); });
 window.addEventListener('paperchange', () => {
   pianoRoll?.repaint();
   drawAllCovers();

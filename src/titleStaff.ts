@@ -1,3 +1,5 @@
+// TODO(AICAP-28 role): retain distinct authored light temperatures as roles; using closest warm/hot inputs.
+import { readTheme, subscribeTheme } from './design-system/theme';
 // "Die erste Zeile" -- the title screen as the first line of a score (design.ts START_STAFF).
 //
 // The app is a score with light passing through it; the title shows that once, in miniature:
@@ -59,9 +61,9 @@ function readingLine(ctx: CanvasRenderingContext2D, x: number, cy: number, staff
     ctx.translate(x, cy);
     ctx.scale(1, tall);
     const g = ctx.createRadialGradient(0, 0, 0, 0, 0, reach);
-    g.addColorStop(0, `rgba(255,214,166,${0.2 * alpha})`);
-    g.addColorStop(0.35, `rgba(255,200,150,${0.09 * alpha})`);
-    g.addColorStop(1, 'rgba(255,200,150,0)');
+    g.addColorStop(0, readTheme().color('material-light-warm').rgba(0.2 * alpha));
+    g.addColorStop(0.35, readTheme().color('material-light-warm').rgba(0.09 * alpha));
+    g.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
     ctx.fillStyle = g;
     ctx.fillRect(-reach, -reach, reach * 2, reach * 2);
     ctx.restore();
@@ -69,9 +71,9 @@ function readingLine(ctx: CanvasRenderingContext2D, x: number, cy: number, staff
   const half = staffH * 1.1 * height;
   if (half < 1) return;
   const line = ctx.createLinearGradient(0, cy - half, 0, cy + half);
-  line.addColorStop(0, 'rgba(255,240,214,0)');
-  line.addColorStop(0.5, `rgba(255,240,214,${0.6 * alpha})`);
-  line.addColorStop(1, 'rgba(255,240,214,0)');
+  line.addColorStop(0, readTheme().color('material-light-warm').rgba(0));
+  line.addColorStop(0.5, readTheme().color('material-light-warm').rgba(0.6 * alpha));
+  line.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
   ctx.fillStyle = line;
   ctx.fillRect(x - 0.5, cy - half, 1, half * 2);
 }
@@ -92,7 +94,7 @@ function note(ctx: CanvasRenderingContext2D, x: number, end: number, y: number, 
   ctx.fillStyle = withAlpha(color, 0.85 * alpha);
   ctx.fill(slot);
   if (hot > 0.01) {
-    ctx.fillStyle = `rgba(255,250,240,${0.8 * hot * alpha})`;
+    ctx.fillStyle = readTheme().color('material-light-hot').rgba(0.8 * hot * alpha);
     const core = new Path2D();
     core.roundRect(x + r * 0.4, y - r * 0.35, Math.max(0, end - x - r * 0.8), r * 0.7, r * 0.35);
     ctx.fill(core);
@@ -196,11 +198,11 @@ export function animateStaff(canvas: HTMLCanvasElement, name: TitleName): () => 
       // little of its light lingering behind it.
       const span = x1 - x0;
       const at = (x: number) => clamp01((x - x0) / span);
-      const ink = 'rgba(239,231,218,0.34)';
+      const ink = readTheme().color('score-paper').rgba(0.34);
       const g = ctx.createLinearGradient(x0, 0, x1, 0);
       if (lampOn) {
-        const hot = `rgba(255,240,214,${(0.34 + 0.6 * fade * rise).toFixed(3)})`;
-        const after = `rgba(255,232,200,${(0.34 + 0.16 * fade).toFixed(3)})`;
+        const hot = readTheme().color('material-light-warm').rgba(Number((0.34 + 0.6 * fade * rise).toFixed(3)));
+        const after = readTheme().color('material-light-warm').rgba(Number((0.34 + 0.16 * fade).toFixed(3)));
         g.addColorStop(0, ink);
         g.addColorStop(at(lamp - 320), ink);
         g.addColorStop(at(lamp - 90), after);
@@ -215,7 +217,7 @@ export function animateStaff(canvas: HTMLCanvasElement, name: TitleName): () => 
 
       // The rastral's nib, one of five, while it rules.
       if (ruled < 1) {
-        ctx.fillStyle = 'rgba(255,246,230,0.9)';
+        ctx.fillStyle = readTheme().color('material-light-hot').rgba(0.9);
         ctx.beginPath();
         ctx.arc(xr, yAt(xr), 1.6, 0, Math.PI * 2);
         ctx.fill();
@@ -231,8 +233,8 @@ export function animateStaff(canvas: HTMLCanvasElement, name: TitleName): () => 
           if (x < x0 || x > xr) continue;
           const y = yAt(x);
           const spot = ctx.createRadialGradient(x, y, 0, x, y, 14);
-          spot.addColorStop(0, `rgba(255,244,224,${0.75 * a})`);
-          spot.addColorStop(1, 'rgba(255,230,190,0)');
+          spot.addColorStop(0, readTheme().color('material-light-hot').rgba(0.75 * a));
+          spot.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
           ctx.fillStyle = spot;
           ctx.fillRect(x - 14, y - 14, 28, 28);
         }
@@ -258,8 +260,8 @@ export function animateStaff(canvas: HTMLCanvasElement, name: TitleName): () => 
       [x1 + 2, x1 - 26],
     ]) {
       const f = ctx.createLinearGradient(from, 0, to, 0);
-      f.addColorStop(0, 'rgba(0,0,0,1)');
-      f.addColorStop(1, 'rgba(0,0,0,0)');
+      f.addColorStop(0, readTheme().print.paper.rgba(1));
+      f.addColorStop(1, readTheme().print.paper.rgba(0));
       ctx.fillStyle = f;
       ctx.fillRect(Math.min(from, to), top - space * 3, Math.abs(to - from), space * 10);
     }
@@ -273,9 +275,13 @@ export function animateStaff(canvas: HTMLCanvasElement, name: TitleName): () => 
     if (still) requestAnimationFrame(draw);
   };
   window.addEventListener('resize', onResize);
+  window.addEventListener('design-title-layout', onResize);
+  const stopTheme = subscribeTheme(onResize);
   return () => {
+    stopTheme();
     cancelAnimationFrame(raf);
     window.removeEventListener('resize', onResize);
+    window.removeEventListener('design-title-layout', onResize);
     canvas.parentElement?.removeEventListener('pointerdown', onDown);
   };
 }

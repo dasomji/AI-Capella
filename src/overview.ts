@@ -1,8 +1,9 @@
+import { readTheme, getThemeRevision } from './design-system/theme';
 import { backingSize } from './pixels';
 import type { Score } from './score';
 import type { LoopRegion } from './pianoRoll';
 import { PAPER, paper, withAlpha } from './theme';
-import { PARCHMENT } from './design';
+
 
 const PAD_X = 16;
 
@@ -18,6 +19,7 @@ export class OverviewStrip {
   private partColor: (partId: string) => string;
   private notesLayer: HTMLCanvasElement | null = null;
   private dirty = true;
+  private themeRevision = -1;
   private cssWidth = 0;
   private cssHeight = 0;
   private dpr = 1;
@@ -109,6 +111,7 @@ export class OverviewStrip {
   }
 
   render(playheadBeat: number) {
+    if (this.themeRevision !== getThemeRevision()) { this.themeRevision = getThemeRevision(); this.dirty = true; }
     if (this.cssWidth <= 0 || this.cssHeight <= 0) return;
     if (this.dirty || !this.notesLayer) this.buildNotesLayer();
     const ctx = this.canvas.getContext('2d');
@@ -131,7 +134,7 @@ export class OverviewStrip {
     }
     if (this.notesLayer) ctx.drawImage(this.notesLayer, 0, 0, this.cssWidth, this.cssHeight);
     const px = Math.round(this.beatToX(playheadBeat));
-    ctx.fillStyle = PARCHMENT ? 'rgba(232,216,182,0.6)' : 'rgba(19,18,30,0.55)';
+    ctx.fillStyle = readTheme().material.onLight ? readTheme().color('page-background').rgba(0.6) : readTheme().color('canvas-surface').rgba(0.55);
     ctx.fillRect(PAD_X, top - 4, Math.max(0, px - PAD_X), bottom - top + 8);
     ctx.fillStyle = PAPER;
     ctx.fillRect(px - 1, 2, 2, this.cssHeight - 4);

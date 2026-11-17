@@ -1,9 +1,10 @@
+import { readTheme } from './design-system/theme';
 // Time and key signatures in the ruler of both views: at the first bar and wherever the metre or
 // the key changes, a small stacked time signature (as engraved) and the new key as a row of
 // sharps or flats, next to the bar number.
 
 import type { MeasureInfo } from './score';
-import { FONT_MUSIC } from './theme';
+
 
 export interface SignatureChange {
   beat: number;
@@ -58,7 +59,7 @@ export function drawRulerSignature(ctx: CanvasRenderingContext2D, change: Signat
   ctx.textBaseline = 'alphabetic';
   let at = x;
   if (fifths !== undefined && (fifths !== 0 || change.keyChange)) {
-    ctx.font = `21px ${FONT_MUSIC}`;
+    ctx.font = `21px ${readTheme().fonts.music}`;
     const glyph = fifths > 0 ? SHARP : fifths < 0 ? FLAT : NATURAL;
     const count = Math.max(1, Math.min(7, Math.abs(fifths)));
     for (let i = 0; i < count; i++) {
@@ -70,7 +71,7 @@ export function drawRulerSignature(ctx: CanvasRenderingContext2D, change: Signat
     at += 8;
   }
   if (change.time) {
-    ctx.font = `21px ${FONT_MUSIC}`;
+    ctx.font = `21px ${readTheme().fonts.music}`;
     const top = timeSigText(change.time.beats);
     const bottom = timeSigText(change.time.beatType);
     const w = Math.max(ctx.measureText(top).width, ctx.measureText(bottom).width);

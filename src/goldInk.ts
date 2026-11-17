@@ -1,3 +1,4 @@
+import { readTheme } from './design-system/theme';
 // Performance markings -- dynamics, hairpins, tempo, printed words (Score.marks) -- written above
 // the staves of the sheet view in gold ink with a pen, in a tall, narrow script (Italianno), as if
 // added to the score by hand. Ink on the paper: no glow, nothing lights up as the reading line
@@ -6,18 +7,18 @@
 // the top staff; dynamics and hairpins stand over each staff as in a printed choral score; words
 // repeated bar after bar are written the first time only.
 
-import { deviceChoice, PARCHMENT } from './design';
+import { deviceChoice } from './design';
 import type { Score, ScoreMark } from './score';
-import { FONT_MUSIC } from './theme';
+
 
 export const MARKS_ON = deviceChoice('zeichen', 'ai-capella-marks', ['aus', 'feder'] as const, 'feder') === 'feder';
 
 /** The pen script (Italianno, bundled -- see main.ts; also the "Light" of the LightScore name). */
-export const FONT_SCRIPT = '"Italianno", cursive';
+
 
 /** Resolves once the pen script and the metronome glyphs can be drawn on a canvas. */
 export function loadScriptFont(): Promise<void> {
-  return Promise.all([document.fonts.load(`20px ${FONT_SCRIPT}`, 'Light'), document.fonts.load(`20px ${FONT_MUSIC}`, '\uECA5')]).then(
+  return Promise.all([document.fonts.load(`20px ${readTheme().fonts.script}`, 'Light'), document.fonts.load(`20px ${readTheme().fonts.music}`, '\uECA5')]).then(
     () => undefined,
     () => undefined,
   );
@@ -74,10 +75,10 @@ const METRONOME_NOTE: Record<string, string> = { half: '', quarter: '', ei
 function goldInk(ctx: CanvasRenderingContext2D, x0: number, x1: number, top: number, bottom: number): CanvasGradient {
   const g = ctx.createLinearGradient(x0, top, x1 + (bottom - top), bottom);
   // (On parchment a darker gold, to stand on the light ground as gold leaf does.)
-  const [a, b, c] = PARCHMENT ? ['rgb(112,78,22)', 'rgb(160,116,40)', 'rgb(104,72,20)'] : ['rgb(150,114,50)', 'rgb(196,158,84)', 'rgb(140,106,46)'];
-  g.addColorStop(0, a);
-  g.addColorStop(0.45, b);
-  g.addColorStop(1, c);
+  const theme = readTheme();
+  g.addColorStop(0, theme.color('material-gold-deep').css);
+  g.addColorStop(Number(theme.roles['material-gold-mid-stop']), theme.color('material-gold-mid').css);
+  g.addColorStop(1, theme.color('material-gold-light').css);
   return g;
 }
 
@@ -118,22 +119,22 @@ export function drawInkMark(ctx: CanvasRenderingContext2D, mark: ScoreMark, plac
     return x2 - x1;
   }
 
-  const pieces: { text: string; font: string; dy?: number }[] = [];
+  const pieces: { text: string; size: number; family: 'script' | 'music'; dy?: number }[] = [];
   const size = mark.kind === 'dynamic' ? 38 : mark.kind === 'tempo' ? 34 : 29;
-  const font = `${Math.round(size * s)}px ${FONT_SCRIPT}`;
+  const face = { size: Math.round(size * s), family: 'script' as const };
   // Typed-in separators become space; a metronome mark already spelled out in the words isn't doubled.
   const text = mark.text.replace(/\s*[·•]\s*/g, '  ');
-  if (text) pieces.push({ text, font });
+  if (text) pieces.push({ text, ...face });
   if (mark.kind === 'tempo' && mark.metronome && !/=\s*(ca\.?\s*)?\d/.test(text)) {
     const glyph = METRONOME_NOTE[mark.metronome.unit] ?? METRONOME_NOTE.quarter;
     const dots = mark.metronome.dots ? ''.repeat(mark.metronome.dots) : '';
-    if (text) pieces.push({ text: '  ', font });
-    pieces.push({ text: glyph + dots, font: `${Math.round(22 * s)}px ${FONT_MUSIC}`, dy: -1 });
-    pieces.push({ text: ` = ${mark.metronome.perMinute}`, font });
+    if (text) pieces.push({ text: '  ', ...face });
+    pieces.push({ text: glyph + dots, size: Math.round(22 * s), family: 'music', dy: -1 });
+    pieces.push({ text: ` = ${mark.metronome.perMinute}`, ...face });
   }
   let width = 0;
   for (const p of pieces) {
-    ctx.font = p.font;
+    ctx.font = `${p.size}px ${readTheme().fonts[p.family]}`;
     width += ctx.measureText(p.text).width;
   }
   if (!measure) {
@@ -141,7 +142,7 @@ export function drawInkMark(ctx: CanvasRenderingContext2D, mark: ScoreMark, plac
     ctx.fillStyle = goldInk(ctx, place.x, place.x + width, place.y - height, place.y);
     let x = place.x;
     for (const p of pieces) {
-      ctx.font = p.font;
+      ctx.font = `${p.size}px ${readTheme().fonts[p.family]}`;
       ctx.fillText(p.text, x, place.y + (p.dy ?? 0));
       x += ctx.measureText(p.text).width;
     }

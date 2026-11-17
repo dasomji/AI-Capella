@@ -1,10 +1,11 @@
+import { readTheme, subscribeTheme, getThemeRevision } from './design-system/theme';
 import { backingSize } from './pixels';
 import type { NoteEvent, Score, SlurArc } from './score';
 import { getBeatMarkers } from './score';
-import { FONT_MARK, FONT_MONO, FONT_TEXT, MARK_WEIGHT, INK0, INK1, PAPER, paper, towardPaper, withAlpha, stageFill, gelPill, playheadBeam, drawQueryMark } from './theme';
+import { MARK_WEIGHT, INK0, INK1, PAPER, paper, towardPaper, withAlpha, stageFill, gelPill, playheadBeam, drawQueryMark } from './theme';
 import { backlight, BACKLIGHT_REACH, NIGHT_PAPER, paintPaper, type PaperFrame } from './paper';
 import { Lantern, type Flare } from './lantern';
-import { deviceChoice, PAPER_DESIGN, PARCHMENT } from './design';
+import { deviceChoice } from './design';
 import { drawRulerSignature, signatureChanges, transposeFifths, type SignatureChange } from './signatures';
 
 export const BASE_PIXELS_PER_BEAT = 70;
@@ -37,13 +38,16 @@ const LYRIC_STYLE: 'score' | 'plain' = 'score';
 // lantern.ts) -- the piano roll's origin, the perforated player-piano roll. 'gel': glossy beads on
 // the stage. The paper design (design.ts) comes with the lantern; a device can also pick either with
 // ?roll=lantern or ?roll=gel.
-type NoteStyle = 'lantern' | 'gel';
-const NOTE_STYLE: NoteStyle = deviceChoice('roll', 'ai-capella-roll', ['lantern', 'gel'] as const, PAPER_DESIGN ? 'lantern' : 'gel');
-const LANTERN = NOTE_STYLE === 'lantern';
-const LANTERN_PAPER = NIGHT_PAPER;
+const noteStyle = () => deviceChoice('roll', 'ai-capella-roll', ['lantern', 'gel'] as const, readTheme().material.surface === 'paper' ? 'lantern' : 'gel');
+let LANTERN: boolean, LANTERN_PAPER: string, LANTERN_VOID: string, PAST_SHADE: string;
+subscribeTheme(theme => {
+  LANTERN = noteStyle() === 'lantern'; LANTERN_PAPER = theme.color('page-background').css;
+  // TODO(AICAP-28 role): dedicated lantern cavity color.
+  LANTERN_VOID = theme.color('material-paper-fibre-ink').css;
+  PAST_SHADE = theme.color('score-past').rgba(Number(theme.roles['score-past-alpha']));
+}, { immediate: true });
 // How strongly the lamp shows the paper's inside around the reading line (paper.ts backlight).
 const PAPER_BACKLIGHT = 0.3;
-const LANTERN_VOID = PARCHMENT ? '#6b5236' : '#08060c'; // behind the paper, where no light reaches
 // The voices' colour filters behind the holes are soft anyway -- painted at reduced resolution.
 const GLASS_SCALE = 0.75;
 // The lamp sits at the playhead. After a jump the view itself travels there (main.ts), which
@@ -102,8 +106,6 @@ type LaidPart = { partId: string; dimmed: boolean; color: string; pills: [number
 // to read as one soft fade.
 const WORD_CLEARANCE_PX = [1, 2.2, 3.4, 4.6, 5.8, 7];
 // Laid over everything left of the playhead: played notes step back (on parchment they fade, as old ink does).
-const PAST_RGB = PARCHMENT ? '232,216,182' : '13,12,22';
-const PAST_SHADE = `rgba(${PAST_RGB},${PARCHMENT ? 0.5 : 0.38})`;
 const PAST_FADE_PX = 72; // lantern: the shade fades in over this width left of the playhead
 const MAX_DPR = 2; // native Retina density; only caps 3x phones, doesn't soften a normal laptop screen
 const BUFFER_SPAN_MULTIPLIER = 3; // scrolling-content buffer covers this many viewport-widths of beats
@@ -176,6 +178,7 @@ export class PianoRoll {
   private slursByPart: Map<string, SlurArc[]>;
   private dpr = 1;
   private previewNote: { startBeat: number; midi: number } | null = null;
+  private themeRevision = -1;
   private lyricBitmaps = new Map<string, { canvas: HTMLCanvasElement; cssWidth: number; cssHeight: number }>();
   private lyricMeasureCtx: CanvasRenderingContext2D | null = null;
   private cssWidth = 0;
@@ -654,6 +657,11 @@ export class PianoRoll {
   }
 
   render(displayBeat: number, playheadBeat: number) {
+    if (this.themeRevision !== getThemeRevision()) {
+      this.themeRevision = getThemeRevision();
+      this.lyricBitmaps.clear();
+      this.invalidateBuffers();
+    }
     // Cached in resize() rather than read from getBoundingClientRect() here: this runs every
     // animation frame (and on every wheel/pointer event), and a layout read interleaved with the
     // position-display text write each frame forces the browser into synchronous layout thrashing.
@@ -805,7 +813,7 @@ export class PianoRoll {
       if (LANTERN && end > fadeFrom) {
         const fade = ctx.createLinearGradient(playheadXPos - PAST_FADE_PX, 0, playheadXPos, 0);
         fade.addColorStop(0, PAST_SHADE);
-        fade.addColorStop(1, `rgba(${PAST_RGB},0)`);
+        fade.addColorStop(1, readTheme().color('score-past').rgba(0));
         ctx.fillStyle = fade;
         ctx.fillRect(fadeFrom, 0, end - fadeFrom, contentAreaHeight);
       }
@@ -835,7 +843,7 @@ export class PianoRoll {
       const y = (this.rowY(this.previewNote.midi) - rowHeight - this.scrollY) * scale;
       if (x >= -60 && x <= width + 10 && y >= -20 && y <= contentAreaHeight) {
         const label = midiName(this.previewNote.midi);
-        ctx.font = `600 12px ${FONT_MONO}`;
+        ctx.font = `600 12px ${readTheme().fonts['canvas-mono']}`;
         const textWidth = ctx.measureText(label).width;
         ctx.fillStyle = PAPER;
         roundedRect(ctx, x, y - 22, textWidth + 14, 20, 6);
@@ -1109,7 +1117,7 @@ export class PianoRoll {
           // A rehearsal letter as printed in the score: bold serif capital in a square box.
           rctx.strokeStyle = PAPER;
           rctx.lineWidth = 1.3;
-          rctx.font = `${MARK_WEIGHT} 12px ${FONT_MARK}`;
+          rctx.font = `${MARK_WEIGHT} 12px ${readTheme().fonts.mark}`;
           const boxW = Math.max(17, rctx.measureText(section.label).width + 8);
           rctx.strokeRect(x + 5.5, 5.5, boxW, 17);
           rctx.fillStyle = PAPER;
@@ -1118,7 +1126,7 @@ export class PianoRoll {
           rctx.textAlign = 'start';
           textX = x + boxW + 11;
         }
-        rctx.font = `600 11px ${FONT_MONO}`;
+        rctx.font = `600 11px ${readTheme().fonts['canvas-mono']}`;
         rctx.fillStyle = paper(0.62);
         rctx.fillText(String(marker.measureNumber), textX, 18);
         let after = textX + rctx.measureText(String(marker.measureNumber)).width;
@@ -1137,7 +1145,7 @@ export class PianoRoll {
         rctx.strokeStyle = PAPER;
         rctx.lineWidth = 1.3;
         rctx.strokeRect(x + 0.5, 5.5, 17, 17);
-        rctx.font = `${MARK_WEIGHT} 12px ${FONT_MARK}`;
+        rctx.font = `${MARK_WEIGHT} 12px ${readTheme().fonts.mark}`;
         rctx.fillStyle = PAPER;
         rctx.textAlign = 'center';
         rctx.fillText(section.label, x + 9, 18.5);
@@ -1164,7 +1172,7 @@ export class PianoRoll {
       const pc = ((midi % 12) + 12) % 12;
       const y = this.rowY(midi) - rowHeight;
       if (BLACK_KEY_PITCH_CLASSES.has(pc)) {
-        ctx.fillStyle = PARCHMENT ? 'rgba(90,60,25,0.07)' : LANTERN ? 'rgba(0,0,0,0.13)' : 'rgba(0,0,0,0.26)';
+        ctx.fillStyle = readTheme().material.onLight ? readTheme().color('material-paper-fibre-ink').rgba(0.07) : LANTERN ? readTheme().color('backdrop').rgba(0.13) : readTheme().color('backdrop').rgba(0.26);
         ctx.fillRect(0, y, widthCss, rowHeight);
       }
       if (pc === 0) {
@@ -1280,7 +1288,7 @@ export class PianoRoll {
       }
       ctx.globalAlpha = dimmed ? DIMMED_ALPHA : 1;
       if (!LANTERN) for (const [px, py, pw] of pills) gelPill(ctx, px, py, pw, pillH, color);
-      if (NOTE_STYLE === 'gel') this.paintSlurThreads(ctx, partId, localBeatToX, widthCss, rowHeight, color, dimmed, clear);
+      if (!LANTERN) this.paintSlurThreads(ctx, partId, localBeatToX, widthCss, rowHeight, color, dimmed, clear);
       ctx.globalAlpha = 1;
       for (const w of words) {
         if (w.bmp) ctx.drawImage(w.bmp.canvas, w.x, w.y, w.w, w.h);
@@ -1427,9 +1435,9 @@ export class PianoRoll {
     const rowTop = (midi: number) => this.rowY(midi) - rowHeight;
     const yTop = rowTop(this.maxMidi);
     const yBottom = rowTop(this.minMidi) + rowHeight;
-    ctx.fillStyle = '#E8E0D2';
+    ctx.fillStyle = readTheme().color('score-key-light').css;
     ctx.fillRect(x0, yTop, KEYBOARD_WIDTH_PX, yBottom - yTop);
-    ctx.fillStyle = 'rgba(13,12,22,0.3)';
+    ctx.fillStyle = readTheme().color('score-past').rgba(0.3);
     for (let midi = this.minMidi; midi <= this.maxMidi; midi++) {
       const pc = ((midi % 12) + 12) % 12;
       if (BLACK_KEY_PITCH_CLASSES.has(pc)) continue;
@@ -1438,32 +1446,32 @@ export class PianoRoll {
       if (BLACK_KEY_PITCH_CLASSES.has((pc + 1) % 12)) ctx.fillRect(x0, Math.round(rowTop(midi + 1) + rowHeight / 2), KEYBOARD_WIDTH_PX, 1);
       else ctx.fillRect(x0, Math.round(rowTop(midi)), KEYBOARD_WIDTH_PX, 1);
     }
-    ctx.fillStyle = '#17151F';
+    ctx.fillStyle = readTheme().color('score-key-dark').css;
     for (let midi = this.minMidi; midi <= this.maxMidi; midi++) {
       if (!BLACK_KEY_PITCH_CLASSES.has(((midi % 12) + 12) % 12)) continue;
       roundedRect(ctx, x0 - 3, rowTop(midi) + 1.5, KEYBOARD_WIDTH_PX * 0.62 + 3, rowHeight - 3, 3);
       ctx.fill();
     }
-    ctx.font = `600 9px ${FONT_MONO}`;
-    ctx.fillStyle = 'rgba(13,12,22,0.62)';
+    ctx.font = `600 9px ${readTheme().fonts['canvas-mono']}`;
+    ctx.fillStyle = readTheme().color('score-key-light-ink').css;
     ctx.textBaseline = 'middle';
     for (let midi = this.minMidi; midi <= this.maxMidi; midi++) {
       if (((midi % 12) + 12) % 12 === 0) ctx.fillText(midiName(midi), x0 + KEYBOARD_WIDTH_PX - 19, rowTop(midi) + rowHeight / 2);
     }
     const shadow = ctx.createLinearGradient(x0 + KEYBOARD_WIDTH_PX, 0, x0 + KEYBOARD_WIDTH_PX + 10, 0);
-    shadow.addColorStop(0, 'rgba(0,0,0,0.45)');
-    shadow.addColorStop(1, 'rgba(0,0,0,0)');
+    shadow.addColorStop(0, readTheme().color('backdrop').rgba(0.45));
+    shadow.addColorStop(1, readTheme().color('backdrop').rgba(0));
     ctx.fillStyle = shadow;
     ctx.fillRect(x0 + KEYBOARD_WIDTH_PX, yTop, 10, yBottom - yTop);
   }
 
   /** A syllable rendered once and cached, in the given colour, size and weight. */
   private getLyricBitmap(text: string, color: string, fontPx: number, weight: number): { canvas: HTMLCanvasElement; cssWidth: number; cssHeight: number } {
-    const key = `${color}|${fontPx.toFixed(1)}|${weight}|${text}`;
+    const key = `${getThemeRevision()}|${color}|${fontPx.toFixed(1)}|${weight}|${text}`;
     const cached = this.lyricBitmaps.get(key);
     if (cached) return cached;
 
-    const font = `${weight} ${fontPx.toFixed(1)}px ${FONT_TEXT}`;
+    const font = `${weight} ${fontPx.toFixed(1)}px ${readTheme().fonts['canvas-text']}`;
     const measurer = (this.lyricMeasureCtx ??= document.createElement('canvas').getContext('2d')!);
     measurer.font = font;
     const cssWidth = Math.ceil(measurer.measureText(text).width) + 2;
@@ -1562,10 +1570,10 @@ function cutHoles(ctx: CanvasRenderingContext2D, pills: [number, number, number]
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'destination-out';
-  ctx.fillStyle = '#000'; // any opaque colour: it's the coverage that cuts
+  ctx.fillStyle = readTheme().print.paper.css; // any opaque colour: it's the coverage that cuts
   ctx.fill(holes);
   ctx.globalCompositeOperation = 'source-over';
-  ctx.strokeStyle = PARCHMENT ? 'rgba(70,45,20,0.4)' : 'rgba(6,4,10,0.35)';
+  ctx.strokeStyle = readTheme().material.onLight ? readTheme().color('material-paper-fibre-ink').rgba(0.4) : readTheme().color('material-paper-fibre-ink').rgba(0.35);
   ctx.lineWidth = 1;
   ctx.stroke(holes);
   ctx.restore();

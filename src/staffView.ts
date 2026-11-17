@@ -1,10 +1,10 @@
-import { breakpoint } from './design-system/theme';
+import { readTheme, subscribeTheme, breakpoint } from './design-system/theme';
 import { backingSize } from './pixels';
 import type { MeasureInfo, NoteEvent, PartInfo, Score } from './score';
 import type { PartMixState } from './audioEngine';
-import { FONT_MARK, FONT_MONO, FONT_MUSIC, FONT_TEXT, MARK_WEIGHT, INK1, PAPER, paper, stageFill, playheadBeam, readingStrip, drawQueryMark } from './theme';
+import { MARK_WEIGHT, INK1, PAPER, paper, stageFill, playheadBeam, readingStrip, drawQueryMark } from './theme';
 import { backlight, NIGHT_PAPER, paintPaper, STILL } from './paper';
-import { PAPER_DESIGN, PARCHMENT } from './design';
+
 import { drawRulerSignature, signatureChanges, type SignatureChange } from './signatures';
 import { drawInkMark, layoutMarks, MARKS_ON, type MarkLayout } from './goldInk';
 
@@ -31,8 +31,8 @@ const MIN_STAFF_GAP_PX = 58;
 const FIRST_STAFF_TOP_PX = 44; // room for the first voice's label and ledger lines above it
 const DIMMED_ALPHA = 0.3; // matches PianoRoll's dimmed-part alpha
 // Over everything left of the playhead, as in the piano roll (on parchment the played music fades).
-const PAST_RGB = PARCHMENT ? '232,216,182' : '13,12,22';
-const PAST_SHADE = `rgba(${PAST_RGB},${PARCHMENT ? 0.5 : 0.38})`;
+let PAST_SHADE: string;
+subscribeTheme(theme => { PAST_SHADE = theme.color('score-past').rgba(Number(theme.roles['score-past-alpha'])); });
 // A note starting exactly at a measure's startBeat would otherwise land its notehead on the
 // barline (both computed via the same beatToX) -- nudged right so it sits just after the barline.
 // Applied only in drawNote's own local x, never in beatToX itself.
@@ -55,7 +55,7 @@ const FILL_BOTTOM_PX = 12;
 // fonts are drawn at 4 staff spaces per em, with each glyph's origin at its musical reference point
 // (a notehead's centre line, a G clef's G line, a rest's staff line), so fillText at a staff
 // position places the glyph exactly where an engraver would.
-const MUSIC_FONT = `${SP * 4}px ${FONT_MUSIC}`;
+
 const GLYPH = {
   gClef: '\uE050',
   gClef8vb: '\uE052',
@@ -808,6 +808,7 @@ export class StaffView {
   }
 
   render(displayBeat: number, playheadBeat: number) {
+    PAST_SHADE = readTheme().color('score-past').rgba(Number(readTheme().roles['score-past-alpha']));
     const ctx = this.ctx2d;
     if (this.fill === 1) {
       this.renderLogical(displayBeat, playheadBeat);
@@ -834,7 +835,7 @@ export class StaffView {
     const layouts = this.visibleLayouts();
     const playheadPx = Math.round(this.beatToX(playheadBeat, displayBeat));
 
-    if (PAPER_DESIGN) {
+    if ((readTheme().material.surface === 'paper')) {
       // The music is printed on the paper: it lies under the notes anchored to beat 0 and the top
       // of the staves, moving and stretching with them; around the reading line the lamp behind it
       // shows its inside.
@@ -859,11 +860,11 @@ export class StaffView {
 
     // Played music steps back, as in the piano roll.
     if (playheadPx > G) {
-      if (PAPER_DESIGN) {
+      if ((readTheme().material.surface === 'paper')) {
         // A soft edge, as on the punched roll, so the lamp's strip isn't cut in half.
         const fade = ctx.createLinearGradient(playheadPx - 72, 0, playheadPx, 0);
         fade.addColorStop(0, PAST_SHADE);
-        fade.addColorStop(1, `rgba(${PAST_RGB},0)`);
+        fade.addColorStop(1, readTheme().color('score-past').rgba(0));
         ctx.fillStyle = fade;
       } else ctx.fillStyle = PAST_SHADE;
       ctx.fillRect(G, STAFF_RULER_HEIGHT_PX, Math.min(width, playheadPx) - G, height - STAFF_RULER_HEIGHT_PX);
@@ -874,7 +875,7 @@ export class StaffView {
 
     // Playhead, positioned from playheadBeat (the actual sounding position), not displayBeat.
     if (playheadPx >= G - 16 && playheadPx <= width + 16) {
-      if (PAPER_DESIGN) {
+      if ((readTheme().material.surface === 'paper')) {
         // As on the punched roll: the lamp behind the paper shows as a faint strip along the line.
         readingStrip(ctx, playheadPx, 0, height);
         ctx.fillStyle = paper(0.72);
@@ -897,17 +898,17 @@ export class StaffView {
   /** The pinned left margin: voice name above each staff, then clef and key signature on it. */
   private drawMargin(ctx: CanvasRenderingContext2D, layouts: PartLayout[], startBeat: number, height: number) {
     const G = this.gutterPx;
-    const ground = PARCHMENT ? '232,216,182' : PAPER_DESIGN ? '27,22,33' : '19,18,30';
+    const ground = readTheme().color(readTheme().material.surface === 'paper' ? 'page-background' : 'canvas-surface');
     // The pinned margin is a strip of its own: its paper stays put.
-    if (PAPER_DESIGN) paintPaper(ctx, 0, STAFF_RULER_HEIGHT_PX, G, height - STAFF_RULER_HEIGHT_PX, STILL, 'surface', NIGHT_PAPER);
+    if ((readTheme().material.surface === 'paper')) paintPaper(ctx, 0, STAFF_RULER_HEIGHT_PX, G, height - STAFF_RULER_HEIGHT_PX, STILL, 'surface', NIGHT_PAPER);
     else {
-      ctx.fillStyle = `rgb(${ground})`;
+      ctx.fillStyle = ground.css;
       ctx.fillRect(0, STAFF_RULER_HEIGHT_PX, G, height - STAFF_RULER_HEIGHT_PX);
     }
     // Music scrolling into the margin fades out instead of stopping at a hard edge.
     const fade = ctx.createLinearGradient(G, 0, G + 28, 0);
-    fade.addColorStop(0, `rgba(${ground},1)`);
-    fade.addColorStop(1, `rgba(${ground},0)`);
+    fade.addColorStop(0, ground.rgba(1));
+    fade.addColorStop(1, ground.rgba(0));
     ctx.fillStyle = fade;
     ctx.fillRect(G, STAFF_RULER_HEIGHT_PX, 28, height - STAFF_RULER_HEIGHT_PX);
 
@@ -925,7 +926,7 @@ export class StaffView {
       ctx.fillStyle = paper(0.22);
       for (let i = 0; i < 5; i++) ctx.fillRect(0, Math.round(layout.topY + i * SP), G + 28, 1);
       ctx.fillStyle = paper(0.8);
-      ctx.font = MUSIC_FONT;
+      ctx.font = `${SP * 4}px ${readTheme().fonts.music}`;
       ctx.textBaseline = 'alphabetic';
       const clefX = 12;
       if (layout.percussion) ctx.fillText(GLYPH.percussionClef, clefX + 6, bottomLineY - 4 * HALF_SPACE_PX);
@@ -949,7 +950,7 @@ export class StaffView {
       ctx.beginPath();
       ctx.arc(16, labelY, 3.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.font = `600 12px ${FONT_TEXT}`;
+      ctx.font = `600 12px ${readTheme().fonts['canvas-text']}`;
       ctx.fillStyle = paper(dimmed ? 0.5 : 0.9);
       ctx.textBaseline = 'middle';
       ctx.fillText(name, 25, labelY + 0.5);
@@ -988,7 +989,7 @@ export class StaffView {
       let textX = x + 6;
       const section = this.sections.find((s) => Math.abs(s.beat - measure.startBeat) < 1e-6);
       if (section) {
-        ctx.font = `${MARK_WEIGHT} 12px ${FONT_MARK}`;
+        ctx.font = `${MARK_WEIGHT} 12px ${readTheme().fonts.mark}`;
         const boxW = Math.max(17, ctx.measureText(section.label).width + 8);
         ctx.strokeStyle = PAPER;
         ctx.lineWidth = 1.3;
@@ -999,7 +1000,7 @@ export class StaffView {
         ctx.textAlign = 'start';
         textX = x + boxW + 11;
       }
-      ctx.font = `600 11px ${FONT_MONO}`;
+      ctx.font = `600 11px ${readTheme().fonts['canvas-mono']}`;
       ctx.fillStyle = paper(0.62);
       ctx.fillText(String(measure.number), textX, 18);
       let after = textX + ctx.measureText(String(measure.number)).width;
@@ -1248,7 +1249,7 @@ export class StaffView {
   /** Splits one silent gap into notated segments and draws each as a rest glyph. */
   private drawRestGap(ctx: CanvasRenderingContext2D, gap: { startBeat: number; durationBeats: number }, bottomLineY: number, displayBeat: number, color: string) {
     const segments = splitIntoNotatedSegments(gap.startBeat, gap.durationBeats, this.score.measures);
-    ctx.font = MUSIC_FONT;
+    ctx.font = `${SP * 4}px ${readTheme().fonts.music}`;
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = color;
     for (const seg of segments) {
@@ -1416,7 +1417,7 @@ export class StaffView {
     const sounding = !dimmed && this.soundAt(note.startBeat) <= playheadBeat && playheadBeat < this.soundAt(note.startBeat + note.durationBeats);
 
     ctx.fillStyle = color;
-    ctx.font = MUSIC_FONT;
+    ctx.font = `${SP * 4}px ${readTheme().fonts.music}`;
     ctx.textBaseline = 'alphabetic';
 
     // A tie-merged note is split back into individually-notatable segments, each with its own
@@ -1507,7 +1508,7 @@ export class StaffView {
     // colour) so it stays legible against every voice colour. Skipped for dimmed (ducked) parts.
     const lyricLine = this.lyricLineOf.get(note) ?? 0;
     if (note.lyric && !dimmed && lyricLine >= 0) {
-      ctx.font = `500 12px ${FONT_TEXT}`;
+      ctx.font = `500 12px ${readTheme().fonts['canvas-text']}`;
       ctx.fillStyle = paper(sounding ? 1 : 0.84);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';

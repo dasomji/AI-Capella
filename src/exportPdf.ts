@@ -1,3 +1,4 @@
+import { readTheme, type ThemeSnapshot } from './design-system/theme';
 import { safeSvg } from "./safe-svg";
 // The sheet music as a PDF: the song's own MusicXML, engraved by Verovio (verovio.org, LGPL) as A4
 // pages in the key it plays in now, with the voices chosen (all, unless some are left out) under the
@@ -20,7 +21,8 @@ import liberationBoldItalic from './assets/fonts/pdf/LiberationSerif-BoldItalic.
 import musicText from './assets/fonts/pdf/MusicText.ttf?url';
 import engravingFont from './assets/fonts/pdf/LightScoreEngraving.zip?url';
 
-const MUSIC_FONT = 'LightScoreEngraving';
+// Embedded asset identities are registrations; selected families come from the print snapshot.
+const primaryFamily = (stack: string) => stack.split(',')[0].trim().replace(/^["']|["']$/g, '');
 /**
  * Eugene's own line weights and spacings (its engravingDefaults, in staff spaces) -- those Verovio
  * takes: the thickness of staff lines, stems, ledger lines, slurs and ties, as the font was drawn for.
@@ -64,6 +66,8 @@ export interface PdfRequest {
   title: string;
   semitones: number; // the transposition playing now
   voices: PdfVoice[];
+  /** Defaults to stable dark notation on white. Explicit print roles keep themed export switchable. */
+  print?: ThemeSnapshot['print'];
 }
 
 const PAGE_W_MM = 210;
@@ -213,6 +217,8 @@ async function fontBase64(url: string): Promise<string> {
 
 /** Engraves the request and returns the PDF; `progress` hears what's happening. */
 export async function makePdf(req: PdfRequest, progress: (step: 'engraver' | 'engraving' | 'pages', page?: number, pages?: number) => void = () => {}): Promise<Blob> {
+  const print = Object.freeze({ ...(req.print ?? readTheme().print) });
+  const textFamily = primaryFamily(print.textFont), musicFamily = primaryFamily(print.musicFont);
   progress('engraver');
   const [{ default: createVerovioModule }, { VerovioToolkit }, { jsPDF }] = await Promise.all([
     import('verovio/wasm'),
@@ -228,7 +234,7 @@ export async function makePdf(req: PdfRequest, progress: (step: 'engraver' | 'en
     // staves and lyrics at a comfortable reading size.
     pageWidth: 2100,
     pageHeight: 2970,
-    scale: 42,
+    scale: print.notationScale,
     pageMarginTop: 120,
     pageMarginBottom: 120,
     pageMarginLeft: 120,
@@ -238,7 +244,7 @@ export async function makePdf(req: PdfRequest, progress: (step: 'engraver' | 'en
     header: 'auto',
     footer: 'none',
     fontAddCustom: [music],
-    font: MUSIC_FONT,
+    font: musicFamily,
     fontFallback: 'Bravura',
     engravingDefaults: JSON.stringify(MUSIC_LINES),
     transpose: transposeInterval(req.semitones),
@@ -250,10 +256,10 @@ export async function makePdf(req: PdfRequest, progress: (step: 'engraver' | 'en
 
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
   const fonts: [string, string, string][] = [
-    [liberationRegular, 'LiberationSerif', 'normal'],
-    [liberationItalic, 'LiberationSerif', 'italic'],
-    [liberationBold, 'LiberationSerif', 'bold'],
-    [liberationBoldItalic, 'LiberationSerif', 'bolditalic'],
+    [liberationRegular, textFamily, 'normal'],
+    [liberationItalic, textFamily, 'italic'],
+    [liberationBold, textFamily, 'bold'],
+    [liberationBoldItalic, textFamily, 'bolditalic'],
     [musicText, 'LightScoreMusicText', 'normal'],
   ];
   await Promise.all(
@@ -274,19 +280,32 @@ export async function makePdf(req: PdfRequest, progress: (step: 'engraver' | 'en
       progress('pages', page, pages);
       const svgText = toolkit
         .renderToSVG(page)
-        .replace(/font-family="Times, serif"/g, 'font-family="LiberationSerif"')
+        .replace(/font-family="Times, serif"/g, `font-family="${textFamily}"`)
         .replace(/(<tspan\b[^>]*font-family="(?:LightScoreEngraving|Bravura|Leipzig)"[^>]*>)([^<]*)/g, (_, tspan: string, glyphs: string) => musicInText(tspan, glyphs) + glyphs);
       const svg = safeSvg(svgText);
+      // Map only sanitized, generated notation presentation. The sanitizer's exact expected
+      // Verovio CSS remains unchanged; these are controlled concrete export roles afterward.
+      svg.style.color = print.ink.css;
+      svg.style.fill = print.ink.css;
+      for (const node of [svg, ...svg.querySelectorAll('*')]) {
+        for (const attribute of ['fill', 'stroke']) {
+          const value = node.getAttribute(attribute);
+          if (value && value !== 'none' && !value.startsWith('url(')) node.setAttribute(attribute, print.ink.css);
+        }
+      }
       host.replaceChildren(svg);
       const drawing = flattenInnerSvg(svg);
       if (drawing) fitToWidth(svg, drawing);
       if (page > 1) pdf.addPage('a4', 'portrait');
+      pdf.setFillColor(print.paper.r, print.paper.g, print.paper.b);
+      pdf.rect(0, 0, PAGE_W_MM, PAGE_H_MM, 'F');
+      pdf.setTextColor(print.ink.r, print.ink.g, print.ink.b);
       await pdf.svg(svg, { x: 0, y: 0, width: PAGE_W_MM, height: PAGE_H_MM });
       // Let the page breathe between pages (a long piece is many).
       await new Promise((r) => setTimeout(r, 0));
     }
     // Page numbers, from the second page on, small at the foot.
-    pdf.setFont('LiberationSerif', 'normal');
+    pdf.setFont(textFamily, 'normal');
     pdf.setFontSize(9);
     for (let page = 2; page <= pages; page++) {
       pdf.setPage(page);

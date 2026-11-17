@@ -1,9 +1,11 @@
+// TODO(AICAP-28 role): retain distinct authored light temperatures as roles; using closest warm/hot inputs.
+import { readTheme } from './design-system/theme';
 // The title screen's voice lines (design.ts START_DRAFT), written by the pen and then turned into
 // figures of light -- a thin bright core in each voice's colour inside a soft glow that fades out
 // gently (composed at a quarter of the resolution and scaled up, so it has no hard edge). A click or
 // tap draws them toward it for a moment, with a brief flare of light where it landed.
 
-import { PARCHMENT } from './design';
+
 import { colorForPart } from './palette';
 import { withAlpha } from './theme';
 import { pointAlong, pointedPen, type Pt } from './pen';
@@ -126,9 +128,9 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
       if (f.k < 0.01) continue;
       const r = Math.min(90, h * 0.14);
       const flare = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
-      flare.addColorStop(0, `rgba(255,226,186,${0.75 * f.k})`);
-      flare.addColorStop(0.3, `rgba(255,200,150,${0.22 * f.k})`);
-      flare.addColorStop(1, 'rgba(255,200,150,0)');
+      flare.addColorStop(0, readTheme().color('material-light-warm').rgba(0.75 * f.k));
+      flare.addColorStop(0.3, readTheme().color('material-light-warm').rgba(0.22 * f.k));
+      flare.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
       g.fillStyle = flare;
       g.fillRect(f.x - r, f.y - r, r * 2, r * 2);
     }
@@ -136,10 +138,10 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
   ctx.save();
   // On parchment light can't be added to the light ground: the glow is ink soaking into it, the
   // lines are laid on.
-  ctx.globalCompositeOperation = PARCHMENT ? 'multiply' : 'lighter';
+  ctx.globalCompositeOperation = readTheme().material.composite;
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(layer, 0, 0, gw, gh, 0, 0, gw / GLOW_SCALE, gh / GLOW_SCALE);
-  if (PARCHMENT) ctx.globalCompositeOperation = 'source-over';
+  if (readTheme().material.onLight) ctx.globalCompositeOperation = 'source-over';
 
   // The lines themselves: pen strokes in the voice colour with a thin bright core, like a trace of
   // light in a long exposure.
@@ -155,7 +157,7 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
       const upTo = Math.max(2, Math.round(p * steps));
       ctx.beginPath();
       for (let j = 0; j <= upTo; j++) (j ? ctx.lineTo : ctx.moveTo).call(ctx, pts[j][0], pts[j][1]);
-      ctx.strokeStyle = PARCHMENT ? `rgba(255,236,190,${0.45 * lit})` : `rgba(255,250,242,${0.55 * lit})`;
+      ctx.strokeStyle = readTheme().material.onLight ? readTheme().color('material-light-warm').rgba(0.45 * lit) : readTheme().color('material-light-hot').rgba(0.55 * lit);
       ctx.lineWidth = Math.max(0.6, line * 0.3);
       ctx.stroke();
     }
@@ -167,7 +169,7 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
       spot.addColorStop(1, withAlpha(color, 0));
       ctx.fillStyle = spot;
       ctx.fillRect(px - line * 7, py - line * 7, line * 14, line * 14);
-      ctx.fillStyle = PARCHMENT ? 'rgba(255,228,160,0.95)' : 'rgba(255,250,242,0.95)';
+      ctx.fillStyle = readTheme().material.onLight ? readTheme().color('material-light-warm').rgba(0.95) : readTheme().color('material-light-hot').rgba(0.95);
       ctx.beginPath();
       ctx.arc(px, py, Math.max(1.3, line * 0.65), 0, Math.PI * 2);
       ctx.fill();
@@ -182,7 +184,7 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
         const a = Math.sin(Math.PI * u) * lit;
         const r = (o.bead ?? 3.2) * (0.6 + 0.4 * a);
         const spark = ctx.createRadialGradient(bx, by, 0, bx, by, r * 3.5);
-        spark.addColorStop(0, `rgba(255,250,242,${0.9 * a})`);
+        spark.addColorStop(0, readTheme().color('material-light-hot').rgba(0.9 * a));
         spark.addColorStop(0.3, withAlpha(color, 0.6 * a));
         spark.addColorStop(1, withAlpha(color, 0));
         ctx.fillStyle = spark;

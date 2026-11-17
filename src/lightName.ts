@@ -1,4 +1,5 @@
-import { matchBreakpoint } from './design-system/theme';
+// TODO(AICAP-28 role): retain distinct authored light temperatures as roles; using closest warm/hot inputs.
+import { matchBreakpoint, readTheme, subscribeTheme, getThemeRevision } from './design-system/theme';
 // The title screen's name, LightScore: "Light" moves, "Score" holds. "Score" appears in the middle,
 // in embossed gold; the voice lines of light come in with it, a loose swarm, and as their tips reach
 // its S they push it aside to its place (push(), called from main.ts). Meanwhile "Light" is written
@@ -7,11 +8,11 @@ import { matchBreakpoint } from './design-system/theme';
 // at a writing hand's pace, slower through the curves, easing in and out of every stroke, with a
 // short lift between them. A bright point marks the nib; what it has written glows.
 
-import { PARCHMENT } from './design';
-import { FONT_SCRIPT, loadScriptFont } from './goldInk';
+
+import { loadScriptFont } from './goldInk';
 import { renderInk } from './inkWordmark';
 import { LIGHT_STROKES } from './lightStrokes';
-import { BRAND_WEIGHT, FONT_BRAND } from './theme';
+import { BRAND_WEIGHT } from './theme';
 
 const LIGHT_SCALE = 1.62; // the pen script is small for its size: its "Light" stands as tall as "Score" at this
 const GAP = 0.1; // between the two words, in em of Score
@@ -48,7 +49,7 @@ interface PenPoint {
 }
 
 function renderLight(size: number, dpr: number): LightArt {
-  const font = `400 ${size}px ${FONT_SCRIPT}`;
+  const font = `400 ${size}px ${readTheme().fonts.script}`;
   const probe = document.createElement('canvas').getContext('2d')!;
   probe.font = font;
   const width = probe.measureText('Light').width;
@@ -67,7 +68,7 @@ function renderLight(size: number, dpr: number): LightArt {
   };
   const [core, c] = canvas();
   // (On parchment written in iron-gall ink, the lamp's warmth still around it.)
-  c.fillStyle = PARCHMENT ? 'rgb(46,32,22)' : 'rgb(255,252,244)';
+  c.fillStyle = readTheme().material.onLight ? readTheme().color('ink').css : readTheme().color('material-light-hot').css;
   c.fillText('Light', pad, baseline);
   const [full, f] = canvas();
   glow(f, core, dpr, size);
@@ -78,7 +79,7 @@ function renderLight(size: number, dpr: number): LightArt {
 function glow(ctx: CanvasRenderingContext2D, letters: HTMLCanvasElement, dpr: number, size: number) {
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  for (const [blur, a] of PARCHMENT
+  for (const [blur, a] of readTheme().material.onLight
     ? [
         [size * 0.45, 0.16],
         [size * 0.16, 0.2],
@@ -88,7 +89,7 @@ function glow(ctx: CanvasRenderingContext2D, letters: HTMLCanvasElement, dpr: nu
         [size * 0.18, 0.3],
         [size * 0.06, 0.45],
       ]) {
-    ctx.shadowColor = PARCHMENT ? `rgba(226,150,52,${a})` : `rgba(255,190,112,${a})`;
+    ctx.shadowColor = readTheme().color('material-light-warm').rgba(a);
     ctx.shadowBlur = blur * dpr;
     ctx.drawImage(letters, 0, 0);
   }
@@ -239,7 +240,7 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
     const dpr = art.dpr;
     // What the nib has covered since the last frame joins the written part.
     const m = mask.getContext('2d')!;
-    m.fillStyle = '#000';
+    m.fillStyle = readTheme().print.paper.css;
     while (masked < path.length && path[masked].t <= t) {
       const p = path[masked];
       m.beginPath();
@@ -282,12 +283,12 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
       const y = nib.y * dpr;
       const r = art.size * 0.09 * dpr;
       const spot = ctx.createRadialGradient(x, y, 0, x, y, r);
-      spot.addColorStop(0, `rgba(255,236,200,${0.8 * k})`);
-      spot.addColorStop(0.3, `rgba(255,200,140,${0.25 * k})`);
-      spot.addColorStop(1, 'rgba(255,200,140,0)');
+      spot.addColorStop(0, readTheme().color('material-light-warm').rgba(0.8 * k));
+      spot.addColorStop(0.3, readTheme().color('material-light-warm').rgba(0.25 * k));
+      spot.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
       ctx.fillStyle = spot;
       ctx.fillRect(x - r, y - r, r * 2, r * 2);
-      ctx.fillStyle = `rgba(255,253,246,${k})`;
+      ctx.fillStyle = readTheme().color('material-light-hot').rgba(k);
       ctx.beginPath();
       ctx.arc(x, y, Math.max(1.6, art.size * 0.007) * dpr, 0, Math.PI * 2);
       ctx.fill();
@@ -300,7 +301,7 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     // The name fits the screen: shrink it on a narrow one.
     const probe = document.createElement('canvas').getContext('2d')!;
-    probe.font = `400 ${base * LIGHT_SCALE}px ${FONT_SCRIPT}`;
+    probe.font = `400 ${base * LIGHT_SCALE}px ${readTheme().fonts.script}`;
     const lightW = probe.measureText('Light').width;
     // On a phone's staff the name starts the line and leaves its end to the voices (titleStaff.ts).
     const narrowStaff = mode === 'staff' && matchBreakpoint('wordmark', 'below').matches;
@@ -309,12 +310,12 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
     host.style.alignSelf = narrowStaff ? 'stretch' : '';
     const size = base * fit;
 
-    const ink = renderInk(score, 'Score', size, BRAND_WEIGHT, 'gold');
+    const ink = renderInk(score, 'Score', size, BRAND_WEIGHT, 'gold-ink');
     inkPad = ink.pad;
     leftCache = null;
     rects = null;
     scoreBaseline = ink.baseline;
-    probe.font = `${BRAND_WEIGHT} ${size}px ${FONT_BRAND}`;
+    probe.font = `${BRAND_WEIGHT} ${size}px ${readTheme().fonts.brand}`;
     capAscent = probe.measureText('S').actualBoundingBoxAscent;
     art = renderLight(size * LIGHT_SCALE, dpr);
     path = penPath(art);
@@ -342,9 +343,10 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
     // In the middle of the name's box, before it glides aside.
     scoreShift = staff ? 0 : (art.width + size * GAP + scoreW) / 2 - (art.width + size * GAP + scoreW / 2);
     if (!glided) score.style.transform = `translateX(${scoreShift}px)`;
+    window.dispatchEvent(new Event('design-title-layout'));
   };
 
-  const fonts = Promise.all([loadScriptFont(), document.fonts.load(`${BRAND_WEIGHT} 100px ${FONT_BRAND}`).catch(() => undefined)]);
+  const fonts = Promise.all([loadScriptFont(), document.fonts.load(`${BRAND_WEIGHT} 100px ${readTheme().fonts.brand}`).catch(() => undefined)]);
   void fonts.then(() => {
     if (disposed) return;
     layout();
@@ -375,8 +377,15 @@ export function lightScoreName(host: HTMLElement, mode: TitleMode = 'swarm'): Ti
     }, 120);
   };
   window.addEventListener('resize', onResize);
+  const stopTheme = subscribeTheme(() => {
+    const revision = getThemeRevision();
+    void Promise.all([loadScriptFont(), document.fonts.load(`${BRAND_WEIGHT} 100px ${readTheme().fonts.brand}`).catch(() => undefined)]).then(() => {
+      if (disposed || revision !== getThemeRevision()) return;
+      layout(); if (done) finish();
+    });
+  });
   return {
-    dispose: () => { disposed = true; done = true; cancelAnimationFrame(raf); clearTimeout(timer); clearTimeout(fallbackTimer); clearTimeout(shownTimer); window.removeEventListener('resize', onResize); },
+    dispose: () => { stopTheme(); disposed = true; done = true; cancelAnimationFrame(raf); clearTimeout(timer); clearTimeout(fallbackTimer); clearTimeout(shownTimer); window.removeEventListener('resize', onResize); },
     shown,
     written,
     scoreLeft: () => (leftCache ??= score.getBoundingClientRect().left + inkPad),

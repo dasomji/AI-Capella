@@ -1,4 +1,4 @@
-import { readTheme, subscribeTheme, type ThemeSnapshot } from './design-system/theme';
+import { readTheme, type ThemeSnapshot } from './design-system/theme';
 /**
  * Colour for voice `index` of `count` voices. Colours are spread across the whole spectrum rather
  * than handed out in list order, so a four-voice SATB song gets rose/honey/sky/orchid (maximally

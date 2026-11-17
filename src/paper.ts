@@ -1,4 +1,4 @@
-import { notifyThemeMaterialChange } from './design-system/theme';
+import { notifyThemeMaterialChange, readTheme, subscribeTheme } from './design-system/theme';
 // The paper of the paper design (design.ts). One texture, made on the device when the app starts
 // (seeded, so the same everywhere), and used by every paper surface: the CSS ones -- the ground,
 // the song cards, the bars, the sheets -- as a background image (--fibre), the canvases -- the
@@ -20,7 +20,7 @@ import { notifyThemeMaterialChange } from './design-system/theme';
 // has its own: Pergament -- skin, not pulp: cloudy, with the pores where hair was and faint veins,
 // glowing amber against the lamp.
 
-import { deviceChoice, PARCHMENT } from './design';
+import { deviceChoice } from './design';
 
 export type PaperKind = 'nacht' | 'buetten' | 'verge' | 'washi' | 'pergament';
 /** The kinds of night paper a device can choose (the parchment design has only parchment). */
@@ -29,12 +29,13 @@ export const PAPER_KINDS: readonly PaperKind[] = ['verge', 'nacht', 'buetten', '
 export const DEFAULT_PAPER: PaperKind = 'verge';
 
 /** The paper's own colour (the roll, the sheet view, the covers): night paper, or parchment. */
-export const NIGHT_PAPER = PARCHMENT ? '#E8D8B6' : '#1b1621';
+export let NIGHT_PAPER: string;
 
 const N = 512; // the tile, in texture pixels
 const TS = 0.5; // CSS px per texture pixel: a tile is 256 px wide, and crisp on a 2x screen
 
-let kind: PaperKind = PARCHMENT ? 'pergament' : deviceChoice('papier', 'ai-capella-papier', PAPER_KINDS, DEFAULT_PAPER);
+let preferredKind = deviceChoice('papier', 'ai-capella-papier', PAPER_KINDS, DEFAULT_PAPER);
+let kind: PaperKind = preferredKind;
 type Tiles = { surface: HTMLCanvasElement; light: HTMLCanvasElement };
 const made = new Map<PaperKind, Tiles>();
 
@@ -45,7 +46,7 @@ export function paperKind(): PaperKind {
 /** Switches this device to another paper (remembered), and tells the views to paint it. */
 export function setPaperKind(next: PaperKind) {
   if (next === kind) return;
-  kind = next;
+  kind = preferredKind = next;
   try {
     if (next === DEFAULT_PAPER) localStorage.removeItem('ai-capella-papier');
     else localStorage.setItem('ai-capella-papier', next);
@@ -230,14 +231,8 @@ const RECIPES: Record<PaperKind, Recipe> = {
 
 // How far a texture pixel may lighten or darken what is under it (alpha at full strength).
 // (Kept quiet: the paper is felt more than seen -- it mustn't draw the eye from the music.)
-const SURFACE_LIGHT = 0.055;
-const SURFACE_DARK = 0.085;
-// Against the lamp the paper only lets light through, more where it is thinner: light only.
-const LIGHT_BRIGHT = 0.3;
-const LIGHT_BASE = 0.35; // what passes even where it is thickest (relative)
-
 /** One field (-1..1 or so) into a tile: lighter as warm white, darker as shade, both as alpha. */
-function fieldTile(field: Float32Array, bright: [number, number, number], brightMax: number, darkMax: number, dark: [number, number, number] = [6, 4, 10]): HTMLCanvasElement {
+function fieldTile(field: Float32Array, bright: readonly number[], brightMax: number, darkMax: number, dark: readonly number[] = channels('material-paper-fibre-ink')): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = c.height = N;
   const ctx = c.getContext('2d')!;
@@ -291,6 +286,11 @@ function path(ctx: CanvasRenderingContext2D, pts: [number, number][]) {
 }
 
 function make(k: PaperKind) {
+  const theme = readTheme();
+  const SURFACE_LIGHT = Number(theme.roles['material-paper-surface-light']);
+  const SURFACE_DARK = Number(theme.roles['material-paper-surface-dark']);
+  const LIGHT_BRIGHT = Number(theme.roles['material-paper-light-bright']);
+  const LIGHT_BASE = Number(theme.roles['material-paper-light-base']);
   const r = RECIPES[k];
   const rnd = random(r.seed);
   const formation = fbm(r.formation, rnd);
@@ -325,10 +325,11 @@ function make(k: PaperKind) {
   const lightField = new Float32Array(N * N);
   for (let i = 0; i < lightField.length; i++) lightField[i] = Math.max(0, LIGHT_BASE - (flocs[i] + formation[i] * 0.4) * r.light.formation - tooth[i] * r.light.tooth + laid[i] * r.light.laid + chain[i] * r.light.chain);
   // (On parchment the shades are umber, the light through it amber.)
-  const shadow: [number, number, number] = r.onLight ? [96, 62, 28] : [6, 4, 10];
-  const surface = r.onLight ? fieldTile(sum(r.surface), [255, 250, 236], SURFACE_LIGHT * 1.2, SURFACE_DARK, shadow) : fieldTile(sum(r.surface), [255, 244, 228], SURFACE_LIGHT, SURFACE_DARK);
-  const light = fieldTile(lightField, r.onLight ? [238, 162, 66] : [255, 204, 150], LIGHT_BRIGHT, 0); // the lamp's warm light
-  const darkFibre = r.onLight ? '96,62,28' : '4,2,8';
+  // TODO(AICAP-28 role): separate fibre-strand, warm-fleck and transmitted-light colors.
+  const shadow = channels('material-paper-fibre-ink');
+  const surface = fieldTile(sum(r.surface), channels('material-paper-fibre-light'), SURFACE_LIGHT * (r.onLight ? 1.2 : 1), SURFACE_DARK, shadow);
+  const light = fieldTile(lightField, channels('material-lamp'), LIGHT_BRIGHT, 0);
+  const darkFibre = theme.color('material-paper-fibre-ink');
 
   const sctx = surface.getContext('2d')!;
   const lctx = light.getContext('2d')!;
@@ -337,7 +338,7 @@ function make(k: PaperKind) {
     wrapped(sctx, f.pts, () => {
       path(sctx, f.pts);
       sctx.lineWidth = f.width;
-      sctx.strokeStyle = f.shade > 0 ? `rgba(255,244,228,${(0.032 * f.shade).toFixed(3)})` : `rgba(${darkFibre},${(0.06 * -f.shade).toFixed(3)})`;
+      sctx.strokeStyle = f.shade > 0 ? readTheme().color('material-paper-fibre-light').rgba(Number((0.032 * f.shade).toFixed(3))) : darkFibre.rgba(Number((0.06 * -f.shade).toFixed(3)));
       sctx.stroke();
     });
     wrapped(lctx, f.pts, () => {
@@ -345,7 +346,7 @@ function make(k: PaperKind) {
       // A fibre holds the light back: it takes away what the paper lets through there.
       lctx.globalCompositeOperation = 'destination-out';
       lctx.lineWidth = f.width * 1.3;
-      lctx.strokeStyle = `rgba(0,0,0,${(0.7 * f.block).toFixed(3)})`;
+      lctx.strokeStyle = readTheme().print.paper.rgba(Number((0.7 * f.block).toFixed(3)));
       lctx.stroke();
       lctx.globalCompositeOperation = 'source-over';
     });
@@ -359,7 +360,7 @@ function make(k: PaperKind) {
     const draw = (ctx: CanvasRenderingContext2D, alpha: number) => () => {
       ctx.beginPath();
       ctx.ellipse(pts[0][0], pts[0][1], size, size * pick(rnd, 0.5, 1), rnd() * Math.PI, 0, Math.PI * 2);
-      ctx.fillStyle = dark ? (warm ? `rgba(70,40,20,${alpha})` : `rgba(${darkFibre},${alpha})`) : `rgba(255,244,228,${alpha * 0.6})`;
+      ctx.fillStyle = dark ? (warm ? readTheme().color('material-paper-fibre-ink').rgba(alpha) : darkFibre.rgba(alpha)) : readTheme().color('material-paper-fibre-light').rgba(alpha * 0.6);
       ctx.fill();
     };
     wrapped(sctx, pts, draw(sctx, 0.2));
@@ -380,19 +381,28 @@ function tilesOf(k: PaperKind = kind): Tiles {
 }
 
 /** The paper for CSS surfaces: --fibre, a 256 px tile (the same paper as on the canvases). */
+let appliedFibre = '';
 function applyCss() {
-  if (document.documentElement.dataset.design !== 'papier') return;
+  if (readTheme().material.surface !== 'paper') {
+    appliedFibre = ''; document.documentElement.style.removeProperty('--ds-material-fibre-live'); return;
+  }
   const small = document.createElement('canvas');
   small.width = small.height = N * TS;
   const ctx = small.getContext('2d')!;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(tilesOf().surface, 0, 0, small.width, small.height);
-  document.documentElement.style.setProperty('--ds-material-fibre-live', `url(${small.toDataURL('image/png')})`);
-  notifyThemeMaterialChange();
+  const value = `url(${small.toDataURL('image/png')})`;
+  if (appliedFibre !== value) {
+    appliedFibre = value;
+    document.documentElement.style.setProperty('--ds-material-fibre-live', value);
+    notifyThemeMaterialChange();
+  }
 }
 
 /** Puts the paper's texture onto the CSS surfaces; called once at start (paper design only). */
+let paperInitialized = false;
 export function initPaper() {
+  paperInitialized = true;
   applyCss();
 }
 
@@ -423,7 +433,7 @@ function fold(s: number): { a: number; f: number } {
 // so the screen needs one fill per frame. Composed again only when the stretch moves on (weights in
 // steps of 1/48, too fine to see).
 const composed = new Map<string, HTMLCanvasElement>();
-const patterns = new WeakMap<CanvasRenderingContext2D, Map<HTMLCanvasElement, CanvasPattern>>();
+let patterns = new WeakMap<CanvasRenderingContext2D, Map<HTMLCanvasElement, CanvasPattern>>();
 
 function composedTile(of: PaperKind, which: 'surface' | 'light', base: string | null, fx: number, fy: number): HTMLCanvasElement {
   const qx = Math.round(fx * 48) / 48;
@@ -518,12 +528,12 @@ export function backlight(ctx: CanvasRenderingContext2D, x: number, top: number,
   // Strongest at the lamp, fading out over the music to come and, sooner, over what was played.
   s.globalCompositeOperation = 'destination-in';
   const g = s.createLinearGradient(0, 0, w, 0);
-  g.addColorStop(0, 'rgba(0,0,0,0)');
-  g.addColorStop(behind / w / 2, 'rgba(0,0,0,0.35)');
-  g.addColorStop(behind / w, 'rgba(0,0,0,1)');
-  g.addColorStop((behind + ahead * 0.35) / w, 'rgba(0,0,0,0.55)');
-  g.addColorStop((behind + ahead * 0.7) / w, 'rgba(0,0,0,0.18)');
-  g.addColorStop(1, 'rgba(0,0,0,0)');
+  g.addColorStop(0, readTheme().print.paper.rgba(0));
+  g.addColorStop(behind / w / 2, readTheme().print.paper.rgba(0.35));
+  g.addColorStop(behind / w, readTheme().print.paper.rgba(1));
+  g.addColorStop((behind + ahead * 0.35) / w, readTheme().print.paper.rgba(0.55));
+  g.addColorStop((behind + ahead * 0.7) / w, readTheme().print.paper.rgba(0.18));
+  g.addColorStop(1, readTheme().print.paper.rgba(0));
   s.fillStyle = g;
   s.fillRect(0, 0, w, height);
   if (mask) mask(s, left);
@@ -547,12 +557,29 @@ export function paintSwatch(canvas: HTMLCanvasElement, of: PaperKind, w: number,
   paintPaper(ctx, 0, 0, w, h, STILL, 'surface', NIGHT_PAPER, of);
   const lamp = Math.round(w * 0.42);
   const glow = ctx.createLinearGradient(lamp - 60, 0, lamp + 140, 0);
-  glow.addColorStop(0, 'rgba(255,208,156,0)');
-  glow.addColorStop(0.3, 'rgba(255,208,156,0.1)');
-  glow.addColorStop(1, 'rgba(255,208,156,0)');
+  glow.addColorStop(0, readTheme().color('material-paper-lamp').rgba(0));
+  glow.addColorStop(0.3, readTheme().color('material-paper-lamp').rgba(0.1));
+  glow.addColorStop(1, readTheme().color('material-paper-lamp').rgba(0));
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, w, h);
   backlight(ctx, lamp, 0, h, STILL, 0.6, undefined, of);
-  ctx.fillStyle = 'rgba(239,231,218,0.72)';
+  ctx.fillStyle = readTheme().color('score-paper').rgba(0.72);
   ctx.fillRect(lamp - 0.5, 0, 1, h);
 }
+
+function channels(role: 'material-paper-fibre-ink' | 'material-paper-fibre-light' | 'material-lamp') {
+  const color = readTheme().color(role); return [color.r, color.g, color.b];
+}
+// Ignore our own generated CSS image notification. Set the input key before publishing, so
+// the nested revision never recursively regenerates the texture or repaints an old theme.
+let materialKey = '';
+subscribeTheme(theme => {
+  NIGHT_PAPER = theme.color('page-background').css;
+  const key = JSON.stringify([theme.material, ['material-paper-fibre-ink', 'material-paper-fibre-light', 'material-lamp'].map(role => theme.color(role as 'material-lamp').css),
+    ['material-paper-surface-light', 'material-paper-surface-dark', 'material-paper-light-bright', 'material-paper-light-base'].map(role => theme.roles[role])]);
+  if (materialKey === key) return;
+  materialKey = key;
+  kind = theme.material.onLight ? 'pergament' : preferredKind;
+  made.clear(); composed.clear(); patterns = new WeakMap();
+  if (paperInitialized) applyCss();
+}, { immediate: true });

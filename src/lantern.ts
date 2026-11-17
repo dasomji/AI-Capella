@@ -1,3 +1,4 @@
+import { readTheme, memoizeByTheme, type Color } from './design-system/theme';
 // The piano roll's "lantern" look: the roll is dark paper with round holes, and a lamp some way
 // behind it shines through them from the reading line. Two passes per frame, both composed at a
 // fraction of the screen's resolution (light is soft; the crisp hole edges come from the
@@ -16,7 +17,7 @@
 // the reading line, falling off quickly over the music already played and reaching far ahead over
 // the music to come.
 
-import { PARCHMENT } from './design';
+
 
 export type Flare = { x: number; y: number; w: number; h: number; color: string };
 
@@ -32,44 +33,27 @@ const WIDEST_SCALE = 0.0625;
 // in the spot, darkening with distance.
 // (On parchment the inks are dark already: away from the lamp they only pale a little, as
 // coloured glass does out of the light.)
-const THROUGH_STOPS: [number, string][] = PARCHMENT
-  ? [
-      [0, 'rgba(232,216,182,0)'],
-      [0.3, 'rgba(232,216,182,0)'],
-      [0.7, 'rgba(232,216,182,0.1)'],
-      [1, 'rgba(232,216,182,0.18)'],
-    ]
-  : [
-      [0, 'rgba(6,4,12,0)'],
-      [0.2, 'rgba(6,4,12,0)'],
-      [0.5, 'rgba(6,4,12,0.22)'],
-      [0.8, 'rgba(6,4,12,0.38)'],
-      [1, 'rgba(6,4,12,0.46)'],
-    ];
 // The reading line itself: a narrow band where the holes go white-hot (px before and after it).
 const HOT_BEHIND_PX = 22;
 const HOT_AHEAD_PX = 34;
 // (On parchment not white-hot -- that would vanish into the light ground -- but lit through, like
 // stained glass in the sun: brighter, the colour kept.)
-const HOT_WHITE = PARCHMENT ? 'rgba(255,226,166,' : 'rgba(255,249,240,';
-// Before the line, at it, and after it.
-const HOT_STOPS = PARCHMENT ? [0.08, 0.22, 0.11] : [0.3, 0.82, 0.4];
 // In front of the paper the light stays close to the reading line: a tall, narrow strip along it
 // (half-widths below, as a fraction of the roll's width, with limits in px), fading fast to the
 // sides and a little toward the top and bottom.
 const STRIP_HEIGHT = 1.2; // vertical reach of the strip, as a multiple of the roll's height
 // How much of the holes' light spills onto the paper around them.
 const HALO_REACH = [0.16, 110, 240] as const;
-const HALO_STOPS = bell('0,0,0', 1);
+const HALO_STOPS = bell(null, 1); // Alpha-only destination-in coverage mask.
 // The lamp seen through the paper itself: faint, as light from behind is.
 const PAPER_GLOW_REACH = [0.08, 64, 130] as const;
-const PAPER_GLOW_STOPS = PARCHMENT ? bell('236,150,52', 0.24) : bell('255,208,156', 0.11);
+
 
 /** Gradient stops for a bell-shaped fall-off (no visible edge), from `peak` opacity down to none. */
-function bell(rgb: string, peak: number): [number, string][] {
+function bell(color: Color | null, peak: number): [number, string][] {
   return [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1].map((t) => {
     const a = t === 1 ? 0 : peak * Math.exp(-((t / 0.4) ** 2));
-    return [t, `rgba(${rgb},${a.toFixed(4)})`];
+    return [t, color ? color.rgba(Number(a.toFixed(4))) : readTheme().print.paper.rgba(Number(a.toFixed(4)))];
   });
 }
 // How much of the holes' light reaches the paper around them, from the sharpest to the widest blur.
@@ -78,7 +62,28 @@ const HALO_WEIGHTS = [0.3, 0.32, 0.3];
 const FLARE_HALO_ALPHA = 0.5;
 // How much of that light is added back into the holes it comes from.
 // (Not on parchment: light added to its light inks only pales them.)
-const HOLE_BOOST = PARCHMENT ? 0 : 1.3;
+// TODO(AICAP-28 role): through-hole occlusion and dedicated lamp glow temperature.
+const lanternInputs = memoizeByTheme(theme => {
+  const throughStops: [number, string][] = theme.material.onLight
+  ? [
+      [0, theme.color('page-background').rgba(0)],
+      [0.3, theme.color('page-background').rgba(0)],
+      [0.7, theme.color('page-background').rgba(0.1)],
+      [1, theme.color('page-background').rgba(0.18)],
+    ]
+  : [
+      [0, theme.color('material-paper-fibre-ink').rgba(0)],
+      [0.2, theme.color('material-paper-fibre-ink').rgba(0)],
+      [0.5, theme.color('material-paper-fibre-ink').rgba(0.22)],
+      [0.8, theme.color('material-paper-fibre-ink').rgba(0.38)],
+      [1, theme.color('material-paper-fibre-ink').rgba(0.46)],
+    ];
+
+  return { THROUGH_STOPS: throughStops, HOT_WHITE: theme.color('material-light-hot'),
+    HOT_STOPS: theme.material.onLight ? [0.08, 0.22, 0.11] : [0.3, 0.82, 0.4],
+    PAPER_GLOW_STOPS: bell(theme.color('material-paper-lamp'), theme.material.onLight ? 0.24 : 0.11),
+    HOLE_BOOST: theme.material.onLight ? 0 : 1.3 };
+});
 
 function cone(width: number, height: number, x: number): Cone {
   const r = Math.max(width * 0.75, 300);
@@ -162,6 +167,7 @@ export class Lantern {
    * is where the lamp is (the reading line). Draw the paper over this, then call over().
    */
   under(ctx: CanvasRenderingContext2D, width: number, height: number, lampX: number, drawFilters: (ctx: CanvasRenderingContext2D) => void, flares: Flare[]) {
+    const { THROUGH_STOPS, HOT_WHITE, HOT_STOPS, PAPER_GLOW_STOPS, HOLE_BOOST } = lanternInputs();
     this.width = width;
     this.height = height;
     const spot = cone(width, height, lampX);
@@ -174,11 +180,11 @@ export class Lantern {
     fillCone(t, spot, THROUGH_STOPS, width, height);
     const hot = t.createLinearGradient(lampX - HOT_BEHIND_PX, 0, lampX + HOT_AHEAD_PX, 0);
     const at = HOT_BEHIND_PX / (HOT_BEHIND_PX + HOT_AHEAD_PX);
-    hot.addColorStop(0, HOT_WHITE + '0)');
-    hot.addColorStop(at * 0.6, HOT_WHITE + HOT_STOPS[0] + ')');
-    hot.addColorStop(at, HOT_WHITE + HOT_STOPS[1] + ')');
-    hot.addColorStop(at + (1 - at) * 0.35, HOT_WHITE + HOT_STOPS[2] + ')');
-    hot.addColorStop(1, HOT_WHITE + '0)');
+    hot.addColorStop(0, HOT_WHITE.rgba(0));
+    hot.addColorStop(at * 0.6, HOT_WHITE.rgba(HOT_STOPS[0]));
+    hot.addColorStop(at, HOT_WHITE.rgba(HOT_STOPS[1]));
+    hot.addColorStop(at + (1 - at) * 0.35, HOT_WHITE.rgba(HOT_STOPS[2]));
+    hot.addColorStop(1, HOT_WHITE.rgba(0));
     t.fillStyle = hot;
     t.fillRect(lampX - HOT_BEHIND_PX, 0, HOT_BEHIND_PX + HOT_AHEAD_PX, height);
 
@@ -247,9 +253,9 @@ export class Lantern {
     // against a lamp glows a deeper amber, the inks around a sounding note taking on its colour.
     const smoothing = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true;
-    if (PARCHMENT) ctx.globalCompositeOperation = 'multiply';
+    ctx.globalCompositeOperation = readTheme().material.onLight ? 'multiply' : 'source-over';
     ctx.drawImage(this.glow, 0, 0, this.width * HALO_SCALE, this.height * HALO_SCALE, 0, 0, this.width, this.height);
-    if (PARCHMENT) ctx.globalCompositeOperation = 'source-over';
+    if (readTheme().material.onLight) ctx.globalCompositeOperation = 'source-over';
     ctx.imageSmoothingEnabled = smoothing;
   }
 }

@@ -1,3 +1,4 @@
+import { readTheme } from './design-system/theme';
 // Letters written in ink, for the title screen's name (lightName.ts: the "Score" of LightScore).
 // The letters are the app's Bodoni -- itself a pointed-pen letter, thick downstrokes and hairlines --
 // traced as if with a fountain pen: each letter set down by hand (a hair of tilt and lift), the ink
@@ -5,12 +6,8 @@
 // drying. Rendered once into a canvas (and again on resize); the page shows it with a soft shadow
 // beneath, so it hovers (style.css).
 
-import { FONT_BRAND } from './theme';
 
-const INK: [number, number, number] = [239, 230, 216];
-const GOLD_DEEP = [140, 106, 46]; // the markings' gold (goldInk.ts)
-const GOLD = [196, 158, 84];
-const GOLD_LIGHT = [246, 222, 160];
+
 
 function rng(seed: number) {
   let s = seed >>> 0 || 1;
@@ -80,9 +77,14 @@ export interface InkMetrics {
  * Traces `text` in simulated ink into `canvas` at `size` px (`weight` of the name's face, FONT_BRAND) and
  * sizes the canvas to fit; the canvas extends `pad` px beyond the letters on every side.
  */
-export function renderInk(canvas: HTMLCanvasElement, text: string, size: number, weight = 500, tone: 'ink' | 'gold' = 'ink'): InkMetrics {
+export function renderInk(canvas: HTMLCanvasElement, text: string, size: number, weight = 500, tone: 'ink' | 'gold-ink' = 'ink'): InkMetrics {
+  const theme = readTheme();
+  const channels = (role: 'material-wordmark-ink' | 'material-wordmark-gold-deep' | 'material-wordmark-gold-mid' | 'material-wordmark-gold-light') => { const c = theme.color(role); return [c.r, c.g, c.b]; };
+  const INK = channels('material-wordmark-ink'), GOLD_DEEP = channels('material-wordmark-gold-deep'), GOLD = channels('material-wordmark-gold-mid'), GOLD_LIGHT = channels('material-wordmark-gold-light');
+  // TODO(AICAP-28 role): distinct warm ink rim highlight.
+  const rimLight = theme.color('material-light-hot');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const font = `${weight} ${size}px ${FONT_BRAND}`;
+  const font = `${weight} ${size}px ${readTheme().fonts.brand}`;
   const measure = document.createElement('canvas').getContext('2d')!;
   measure.font = font;
   const track = -0.015 * size;
@@ -102,9 +104,9 @@ export function renderInk(canvas: HTMLCanvasElement, text: string, size: number,
   const m = mask.getContext('2d')!;
   m.scale(dpr, dpr);
   m.font = font;
-  m.fillStyle = '#fff';
+  m.fillStyle = readTheme().print.paper.css;
   // A pen's ink line is never as fine as the typeface's display hairlines: a little width all round.
-  m.strokeStyle = '#fff';
+  m.strokeStyle = readTheme().print.paper.css;
   m.lineWidth = Math.max(1, size * 0.014);
   m.lineJoin = 'round';
   m.textBaseline = 'alphabetic';
@@ -143,7 +145,7 @@ export function renderInk(canvas: HTMLCanvasElement, text: string, size: number,
     const rim = cover * (1 - smooth(0.6, 0.97, b));
     const density = Math.min(1, 0.84 + 0.16 * rim + (grain[i] - 0.5) * 0.14);
     out.data[i * 4 + 3] = 255 * cover * density;
-    if (tone === 'gold') {
+    if (tone === 'gold-ink') {
       const y = (i / W) | 0;
       const u = Math.min(1, Math.max(0, (y - top) / (foot - top)));
       const g = u < 0.45 ? u / 0.45 : 1 - (u - 0.45) / 0.55;
@@ -156,9 +158,9 @@ export function renderInk(canvas: HTMLCanvasElement, text: string, size: number,
       continue;
     }
     const lift = 0.3 * rim; // pooled ink catches a little more light
-    out.data[i * 4] = INK[0] + (255 - INK[0]) * lift;
-    out.data[i * 4 + 1] = INK[1] + (252 - INK[1]) * lift;
-    out.data[i * 4 + 2] = INK[2] + (246 - INK[2]) * lift;
+    out.data[i * 4] = INK[0] + (rimLight.r - INK[0]) * lift;
+    out.data[i * 4 + 1] = INK[1] + (rimLight.g - INK[1]) * lift;
+    out.data[i * 4 + 2] = INK[2] + (rimLight.b - INK[2]) * lift;
   }
   canvas.width = W;
   canvas.height = H;
