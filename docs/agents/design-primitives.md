@@ -99,7 +99,7 @@ and accepts native aria/data/id hooks. Confirm variants default to `role="alertd
 
 Always supply `behavior.opener` when available. Pointer capture also remembers the initiating
 control for Safari, which may leave `activeElement` on body after a click. `onCancel(reason)` is
-for user requests (`escape`, `outside`, `button`, `swipe`); `onClose` reports a completed close.
+for user requests (`escape`, `outside`, `button`); `onClose` reports a completed close.
 Controlled `open=false`, unmount and StrictMode replay dispose silently. Use `requestClose()`
 for cancel buttons and `close()` after successful work. Policies: `escape`/`outside` =
 `close | ignore`, `busyCancel` = `block | allow` (block by default). Explicit close always works.
@@ -130,7 +130,10 @@ the token-defined exit fade. Placement is consistently bottom-center in every co
 informational notices use `toast-duration-info`; errors persist with a translated dismissal
 button. `toast(text, kind, {action: {label, onSelect}})` and `{persistent: true}` also stay until
 dismissed. Subsequent notices queue behind persistent messages, so a success cannot erase an
-unresolved error. Errors use `role="alert"`, others `status`. Screen operation errors should
+unresolved error. Identical active/queued notices coalesce (including action callback identity); at
+most ten distinct notices wait, with the oldest pending notice dropped on overflow. The active
+message always remains. Phone placement uses the 150px bottom role to clear the player controls;
+the host uses the token maximum width and viewport gutters, with wrapping message text. Errors use `role="alert"`, others `status`. Screen operation errors should
 stay within the active panel; field errors use Field's adjacent error slot. Static `Toast` /
 `createToast` consume the same appearance recipe; host geometry uses `toastPlacementRecipe`.
 
@@ -157,7 +160,7 @@ pointer-events, accent-color and print-color-adjust despite the opt-in reset.
 4. Update state with updateButton/updateSwitch/updateField, retaining element identity and
    focus. Clear errors with `updateField(field, {error: undefined})`.
 5. Use onCancel for requested cancellation and onClose only for completed-close notification.
-   Give dialogs an opener; confirm dialogs may stack above drawers. Never add manual inert
+   Give dialogs an opener; confirm dialogs may stack above other dialogs. Never add manual inert
    observers. Toast-then-close is supported.
 6. Use independent intent and size choices for ordinary actions. Named domain composition slots
    preserve behavior hooks; they do not introduce another ordinary button family.
@@ -240,8 +243,7 @@ sheets, floating popovers or swiping. Focus, scroll lock and Escape/busy policie
 ### Account/ensemble/offline parity
 
 `ensemble-switch` / `ensemble-other`, `device-link` and `account-delete-confirm` keep the
-navigation and deletion action appearances. The final deletion command retains its historical
-text-button shape pending D14. `shared-device` is a native checkbox appearance of Switch:
+navigation and deletion action appearances. The final deletion command uses the shared danger intent and destructive confirmation treatment (D14). `shared-device` is a native checkbox appearance of Switch:
 use `mode:"checkbox"` and `updateSwitch`; its 24-hour policy remains in offline-store.ts.
 `account-password` supplies the ruled password field. `createAccountPart` owns account body,
 email, note, heading and Administration-link composition; `Status`'s `account-delete` variant
@@ -307,3 +309,24 @@ and animation definitions, each with an adjacent reason.
 
 Add a theme through one complete token block and one registry entry. Run
 `npm run test:browser:theme-extension` for the non-shipped fourth-theme proof.
+
+
+## Applied responsive and integration decisions
+
+**D06.** Administration uses the same LightScore paper, accent, typography and shared controls in a deliberately compact work layout. Its former independent palette is retired; admin detail-page presentation remains pending owner confirmation.
+
+**D12 B.** Settings, prompts and main menus use centered native dialogs with safe viewport margins and a shared fade; transcription score review alone remains full-screen. Historical Sheet names are centered compatibility aliases; drag handles and swipe/slide behavior are retired. The desktop main-menu placement question remains pending owner approval.
+
+**D13 B.** Compact member and transcription-job row menus remain anchored popovers at every width, including phones. Shared placement bounds their geometry and keeps long menus internally scrollable; main menus retain the D12 dialog transport.
+
+**D16.** People and membership tables use labeled records below the account breakpoint. Comparison and metric tables retain contained horizontal scrolling, while administration navigation scrolls horizontally. These table/navigation choices do not settle the pending admin detail-page presentation.
+
+**D23.** The tablet library uses fixed 280px comfortable card columns between the compact and transport breakpoints, showing fewer, wider covers instead of squeezing extra columns. Below the compact breakpoint the existing single-column phone records remain.
+
+**D24.** An open menu retains its chosen presentation and DOM identity through rotation. Shared viewport handling re-bounds and scrolls its contents; presentation is chosen again only for a later opening.
+
+**D25.** At narrow panel widths, score review switches between score and original with one toggle above the panes. Wide layouts retain the side-by-side comparison switch; narrow layouts show only the selected pane and keep the return control reachable.
+
+**D26 interim.** Until room permissions are designed separately, the EN/DE introduction describes the current Together behavior: everyone controls shared playback on every device; volume, mute and solo remain personal. It promises no missing “take the lead” command and introduces no new session permissions.
+
+**D21 pending owner approval.** An extended voice palette requires owner approval against the current colors before implementation. Existing voice colors, labels and renderer identification cues remain; this round makes no palette change.
