@@ -13,7 +13,7 @@ describe("pure recipes", () => {
       "tw:text-admin-close",
     );
     expect(r.selectRecipe({ variant: "domain" })).toContain("tw:px-small");
-    expect(r.inputRecipe({ variant: "domain" })).toContain("tw:px-none");
+    expect(r.inputRecipe({ variant: "domain" })).toContain("tw:px-flush");
     expect(r.cardRecipe({ variant: "tour" })).toContain("tw:pt-row");
   });
   it("gives the notifier and specimens one recipe plus a named placement", () => {
