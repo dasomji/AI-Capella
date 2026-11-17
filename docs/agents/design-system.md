@@ -212,8 +212,10 @@ belongs in complete theme blocks; only dedicated print paper/ink remain fixed (D
 
 Geometry triples alone and measured popup/drag positioning are permitted. This is conservative
 local AST/lexical analysis, **not a security boundary** or an interprocedural color-flow proof.
-Concatenated/joined strings, cross-module/object-field channels, aliased or reflective DOM
-access and arbitrary data flow are not exhaustively resolved. Snapshot-font recognition follows
+Color concatenation and numeric hex at local visual sinks, local theme-ID aliases, dataset
+property/bracket/destructuring access, attribute selectors/writes, arbitrary min/max breakpoint
+variants, container sizes, viewport-unit media sizes and dark variants are guarded. Cross-module
+channels, reflective DOM access and arbitrary data flow are not exhaustively resolved. Snapshot-font recognition follows
 local `.fonts` access and aliases, not a whole-program type proof. Review renderer inputs and
 external SVG output. Do not interpret a green guard as proof of complete theme reactivity.
 
@@ -302,3 +304,7 @@ Each theme authors `--ds-material-strategy: light | ink`, independent of its bro
 lanterns and additive ribbons; `ink` to pergament, multiplied lanterns/glows and
 source-over ribbon lines. Night paper/Velvet select `light`; Parchment selects `ink`.
 These roles preserve the previous pixels without using browser scheme as a material policy.
+
+SVG fill/stroke and style paint are scanned, including named colors. `currentColor` and native
+non-paints are allowed. Fixed brand SVG artwork needs a reviewed path/SHA-256 entry in
+`brandArtworkHashes`, with its reason documented here; no current SVG requires an exception.
