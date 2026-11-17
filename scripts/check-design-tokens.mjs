@@ -12,7 +12,7 @@ const namedColors = new Set(('aliceblue antiquewhite aqua aquamarine azure beige
 const fontStack = /(?:['"](?:Atkinson[^'";]+|Bodoni[^'";]+|Baltimore[^'";]+|Remington[^'";]+|Modern Antique[^'";]+|Italianno|LightScore Engraving|Bravura)['"][^;\n]*|(?:system-ui|ui-monospace|sans-serif|monospace|\bserif\b|\bcursive\b))/g;
 const paletteClass = /(?:^|\s)tw:(?:[\w-]+:)*(?:bg|text|border|outline|ring|fill|stroke|shadow|from|via|to|decoration|accent|caret)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(?:-\d+)?(?:\/\d+)?\b/g;
 // Every arbitrary-valued utility is covered, including nested selector variants.
-const arbitraryAesthetic = /tw:(?:[^\s"'`]*:)?-?[a-z][\w-]*-(?:\[[^\]]+\]|\([^)]*\))|tw:(?:[^\s"'`]*:)?\[[^\]]+\]/g;
+
 const numberedName = /(?:-\d{4}-\d+|-\d{2,}|-\d+(?:px|rem|em|ms))(?:$|[^\w-])/;
 // The semantic migration is complete: generated/value-encoding names cannot return.
 export const enforceSemanticNames = true;
@@ -108,6 +108,7 @@ export function scanDesignFile(file, source, options = {}) {
     for (const match of text.matchAll(paletteClass)) add('palette-utility', context, match[0]);
     for (const word of text.match(/tw:[^\s\"'`]+/g) ?? []) {
       if (/data-(?:theme|type|design|ground)\s*[=\]]/.test(word)) add('legacy-theme-selector', context, word);
+      if (/@media/.test(word) && /(?:width|height)[^)]*\d+(?:px|rem|em)\b/.test(word)) add('raw-media-query', context, word);
       // A variant's brackets can contain colons and nested attribute selectors.
       let depth = 0, lastColon = 2;
       for (let i = 3; i < word.length; i++) {
@@ -147,12 +148,12 @@ export function scanDesignFile(file, source, options = {}) {
       if (/--pigment-/.test(decl.value)) add('primitive-import', context, decl.value);
     });
     tree.walkAtRules(rule => {
-      if (rule.name === 'import' && !/\blayer(?:\s*\(|\s*;|$)/.test(rule.params)) add('unlayered-css-import', '@import', rule.params);
+      if (rule.name === 'import' && !/\blayer\s*\(\s*[\w.-]+\s*\)/.test(rule.params)) add('unlayered-css-import', '@import', rule.params);
       if (['media', 'custom-variant'].includes(rule.name) && /(?:\b(?:width|height)\s*[:<>=][^)]*\d+(?:px|rem|em)\b|\d+(?:px|rem|em)\s*[<>=]+\s*(?:width|height)\b)/.test(rule.params)) add('raw-media-query', '@' + rule.name, rule.params);
       if (enforceNames && ['utility', 'custom-variant'].includes(rule.name) && checkSemanticName(rule.params.split(/[\s({]/)[0])) add('value-encoding-name', '@' + rule.name, rule.params);
     });
     tree.walkRules(rule => {
-      if (!tokenSource && /data-(?:theme|type|design|ground)\s*[=\]]/.test(rule.selector)) add('legacy-theme-selector', rule.selector, rule.selector);
+      if (/data-(?:design|ground)\s*[=\]]/.test(rule.selector) || (!tokenSource && /data-(?:theme|type)\s*[=\]]/.test(rule.selector))) add('legacy-theme-selector', rule.selector, rule.selector);
       if (file.startsWith('src/design-system/')) return;
       if (/(?:^|[\s>+~])(?:button|input|select|textarea)(?:[\s.:[>#]|$)/.test(rule.selector) && /[.#][\w-]+/.test(rule.selector)) add('screen-control-selector', rule.selector, rule.selector);
     });
@@ -263,6 +264,10 @@ export function scanDesignFile(file, source, options = {}) {
       fontStack.lastIndex = 0;
       classes(text, owner);
       if (/--pigment-/.test(text)) add('primitive-import', owner, text);
+    }
+    if (ts.isPropertyAssignment(node)) {
+      const prop = node.name.getText(ast).replace(/^['"]|['"]$/g, '');
+      if (sinkName.test(prop)) checkSink(node.initializer);
     }
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
       const left = node.left.getText(ast), prop = ts.isElementAccessExpression(node.left) ? node.left.argumentExpression.text : left.split('.').at(-1);
