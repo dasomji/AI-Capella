@@ -25,7 +25,8 @@ export function fill(text: string, values: Record<string, string | number>) {
 }
 
 /** Server vocabulary (states, failure reasons, field names) in the selected language. */
-export function vocabulary(key: string, language: Lang) {
+export function vocabulary(key: string | null | undefined, language: Lang) {
+  if (key === null || key === undefined || key === "") return "—";
   for (const table of [adminManagementMessages, adminPolishMessages, adminFieldMessages, adminMessages] as const) {
     const value = (table[language] as Record<string, string>)[key];
     if (value) return value;
