@@ -1157,7 +1157,7 @@
   --ds-workspace-confirm-height: 90dvh;
   --ds-content-empty: '';
   --ds-size-metric: 26px;
-  --ds-size-wordmark: 22px;
+  --ds-size-workspace-wordmark: 22px;
   --ds-table-cell-min: 140px;
   --ds-table-cell-mono-min: 110px;
   --ds-table-cell-max: 320px;
@@ -1166,7 +1166,7 @@
 }
 @theme inline {
   --text-metric: var(--ds-size-metric);
-  --text-wordmark: var(--ds-size-wordmark);
+  --text-workspace-wordmark: var(--ds-size-workspace-wordmark);
   --color-table-row-hover: var(--ds-table-row-hover);
 }
 
