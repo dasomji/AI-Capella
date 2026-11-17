@@ -43,7 +43,7 @@ export const buttonVariants = [
 
   "ensemble-switch", "ensemble-other", "device-link", "account-delete-confirm",
   "landing-create", "library-action", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update",
-  "standard",
+  "standard", "job-action",
   "cta",
   "pill",
   "tour",
@@ -90,6 +90,7 @@ const parityButtonShapes = {
   hint: "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-none tw:text-button tw:font-weight-label tw:font-control tw:leading-leading-body tw:border-rule-strong tw:hover:border-ink-secondary tw:bg-transparent tw:text-surface-sunken",
 } as const;
 const buttonShapes: Record<Exclude<ButtonVariant, "scan-mark-go" | "scan-mark-ok" | keyof typeof panelButtons | keyof typeof parityButtonShapes>, string> = {
+  "job-action": "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-none tw:text-button tw:font-weight-label tw:font-auth-body",
   standard:
     "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-none tw:text-button tw:font-weight-label tw:font-control",
   cta: "tw:min-h-control-height-touch tw:rounded-card tw:px-action tw:py-none tw:w-full tw:text-button tw:font-weight-label tw:font-auth-body",
@@ -172,7 +173,7 @@ function buttonRecipeStyles({
         : buttonIntents[intent];
   return [
     variant.startsWith("dense") ? adminControlBase : controlBase,
-    variant.startsWith("dense") ? denseDisabled : ["standard", "pill", "tour"].includes(variant) ? actionDisabled : disabledRecipe,
+    variant.startsWith("dense") ? denseDisabled : ["standard", "job-action", "pill", "tour"].includes(variant) ? actionDisabled : disabledRecipe,
     variant.startsWith("dense") ? "tw:leading-leading-admin tw:normal-nums" : "tw:leading-leading-body",
     (variant.startsWith("dense") ? (variant==="dense-sort"?"tw:inline-block ":"tw:inline-block tw:text-center ") : "tw:inline-flex tw:items-center tw:justify-center tw:gap-small ") + "tw:border-solid tw:whitespace-nowrap tw:cursor-pointer " + (variant === "dense-sort" ? "tw:border-0 tw:text-left" : "tw:border-(length:--ds-stroke-thin)"),
     buttonShapes[variant as keyof typeof buttonShapes],
@@ -345,7 +346,7 @@ function switchRecipeStyles({
   return {
     label:
       (variant === "comparison" ? "tw:relative tw:flex" : "tw:relative tw:inline-flex") + " tw:items-center tw:gap-small tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-panel tw:flex-nowrap tw:leading-leading-admin" : variant === "comparison" ? " tw:min-h-toolbar-dense tw:my-section tw:text-label" : ""),
-    input: variant === "capability" || variant === "comparison" ? "tw:absolute tw:opacity-hidden tw:w-heading tw:h-section tw:m-none tw:peer" : "tw:sr-only tw:peer",
+    input: variant === "capability" || variant === "comparison" ? "tw:absolute tw:opacity-opacity-hidden tw:w-heading tw:h-section tw:m-none tw:peer" : "tw:sr-only tw:peer",
     root:
       controlBase +
       " " +

@@ -147,17 +147,11 @@
   --pigment-shadow-emboss-raised-2: rgb(0 0 0 / 0.55);
   --pigment-shadow-emboss-raised-3: rgb(255 244 228 / 0.13);
   --pigment-shadow-emboss-raised-4: rgb(0 0 0 / 0.35);
-  --pigment-material-gold-leaf: #d1a548;
-  --pigment-material-gold-leaf-2: #a87920;
-  --pigment-material-gold-leaf-3: #8a5e14;
   --pigment-canvas-mask: #ffffff;
   --pigment-gel-gloss: #ffffff;
   --pigment-print-paper: #ffffff;
   --pigment-print-ink: #000000;
   --pigment-voice-1: #F4879B;
-  --pigment-voice-2: #F6A77A;
-  --pigment-voice-5: #6FD3BE;
-  --pigment-voice-7: #9A9CF5;
   --pigment-surface-sunken-2: #e3d2ae;
   --pigment-page-background-2: #e8d8b6;
   --pigment-surface-raised-2: #eee2c6;
@@ -212,9 +206,6 @@
   --pigment-shadow-emboss-raised-8: rgb(110 75 35 / 0.14);
   --pigment-shadow-emboss-pressed: rgb(90 60 25 / 0.28);
   --pigment-voice-1-2: #B8384F;
-  --pigment-voice-2-2: #BF5A26;
-  --pigment-voice-5-2: #1E7F70;
-  --pigment-voice-7-2: #4E4EB4;
   --pigment-surface-hover-3: #302c44;
   --pigment-rule-3: rgba(239, 231, 218, 0.09);
   --pigment-rule-strong-3: rgba(239, 231, 218, 0.17);
@@ -230,7 +221,6 @@
   --pigment-material-card-2: #1d1629;
   --pigment-material-card-3: #120e1b;
   --ds-tracking-zero: 0;
-  --ds-leading-zero: 0;
   --ds-grid-offset-control: auto 1fr auto;
   --ds-ease-writing: cubic-bezier(0.45, 0.1, 0.4, 1);
   --ds-material-clear: none;
@@ -266,6 +256,69 @@
   --ds-size-headline-small: 18px;
   --ds-opacity-hidden: 0;
   --ds-opacity-visible: 1;
+  --pigment-material-gold-leaf: #d1a548;
+  --pigment-material-gold-leaf-2: #a87920;
+  --pigment-material-gold-leaf-3: #8a5e14;
+  --pigment-voice-2: #F6A77A;
+  --pigment-voice-5: #6FD3BE;
+  --pigment-voice-7: #9A9CF5;
+  --pigment-voice-2-2: #BF5A26;
+  --pigment-voice-5-2: #1E7F70;
+  --pigment-voice-7-2: #4E4EB4;
+  --ds-font-display: 'Bodoni Moda Variable', 'Bodoni 72', Didot, Georgia, serif;
+  --ds-font-body: 'Atkinson Hyperlegible Next Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ds-font-mono: 'Atkinson Hyperlegible Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+  --ds-material-velvet-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 .92  0 0 0 0 1  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  --ds-font-heading: var(--ds-font-display);
+  --ds-font-song-title: var(--ds-font-display);
+  --ds-font-control: var(--ds-font-body);
+  --ds-font-auth-body: 'Atkinson Hyperlegible Next Variable',sans-serif;
+  --ds-font-auth-display: 'Bodoni Moda Variable',serif;
+  --ds-font-auth-mono: 'Atkinson Hyperlegible Mono Variable',monospace;
+  --ds-font-canvas-text: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --ds-font-canvas-mono: "Atkinson Hyperlegible Mono Variable", "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+  --ds-font-canvas-display: "Bodoni Moda Variable", "Bodoni Moda", Didot, Georgia, serif;
+  --ds-font-mark: var(--ds-font-canvas-display);
+  --ds-font-brand: var(--ds-font-canvas-display);
+  --ds-font-script: "Italianno", cursive;
+  --ds-font-music: "LightScore Engraving", Bravura;
+  --ds-score-ruler-height: 28px;
+  --ds-score-stage-middle-stop: .55;
+  --ds-voice-fallback-hue-step: 47;
+  --ds-material-gold-mid-stop: .45;
+  --ds-material-paper-surface-light: .055;
+  --ds-material-paper-surface-dark: .085;
+  --ds-material-paper-light-bright: .3;
+  --ds-material-paper-light-base: .35;
+  --ds-material-gel-gloss: .75;
+  --ds-material-grain-strength: .065;
+  --pigment-velvet-page: #0c0a14;
+  --pigment-lamp-hot-night: rgb(255,249,240);
+  --pigment-lamp-hot-parchment: rgb(255,226,166);
+  --pigment-key-dark: #17151f;
+  --pigment-key-label: rgba(13,12,22,.62);
+  --pigment-fibre-night: rgb(255,244,228);
+  --pigment-fibre-parchment: rgb(255,250,236);
+  --pigment-fibre-shadow-parchment: rgb(96,62,28);
+  --pigment-paper-lamp-night: rgb(255,204,150);
+  --pigment-paper-lamp-parchment: rgb(238,162,66);
+  --ds-font-close: sans-serif;
+  --ds-voice-solo-tint: 18%;
+  --ds-voice-solo-spread: -2px;
+  --ds-voice-glow-strength: 70%;
+  --ds-voice-chip-tint: 22%;
+  --ds-voice-glow-spread: -4px;
+  --ds-voice-lamp-width: 60%;
+  --ds-voice-lamp-height: 90%;
+  --ds-voice-lamp-position: 50%;
+  --ds-voice-lamp-start: 0%;
+  --ds-voice-lamp-stop: 72%;
+  --ds-voice-paper-glow-strength: 65%;
+  --ds-voice-border-strength: 55%;
+  --ds-voice-paper-tint: 14%;
+  --ds-voice-muted-glow-strength: 45%;
+  --ds-voice-muted-stop: 80%;
+  --ds-voice-muted-tint: 40%;
 }
 
 /* Theme-independent roles, authored once. */
@@ -286,12 +339,6 @@
   --ds-font-auth-body: 'Atkinson Hyperlegible Next Variable',sans-serif;
   --ds-font-auth-display: 'Bodoni Moda Variable',serif;
   --ds-font-auth-mono: 'Atkinson Hyperlegible Mono Variable',monospace;
-  --ds-font-canvas-text: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", system-ui, sans-serif;
-  --ds-font-canvas-mono: "Atkinson Hyperlegible Mono Variable", "Atkinson Hyperlegible Mono", ui-monospace, monospace;
-  --ds-font-canvas-display: "Bodoni Moda Variable", "Bodoni Moda", Didot, Georgia, serif;
-  --ds-font-mark: var(--ds-font-canvas-display);
-  --ds-font-brand: var(--ds-font-canvas-display);
-  --ds-font-script: "Italianno", cursive;
   --ds-font-music: "LightScore Engraving", Bravura;
   --ds-weight-body: 400;
   --ds-weight-medium: 500;
@@ -301,7 +348,6 @@
   --ds-weight-brand: 600;
   --ds-leading-body: 1.45;
   --ds-leading-label: 1.2;
-  --ds-leading-song: 1.2;
   --ds-leading-song-player: 1.15;
   --ds-leading-heading: 1.05;
   --ds-leading-dialog: 1.25;
@@ -310,11 +356,7 @@
   --ds-tracking-heading: .07em;
   --ds-tracking-song: .01em;
   --ds-size-library-title: clamp(32px, 4.2vw, 46px);
-  --ds-size-wordmark: clamp(52px, 8vw, 80px);
   --ds-control-height: 42px;
-  --ds-control-height-compact: 32px;
-  --ds-toolbar-height: 60px;
-  --ds-score-ruler-height: 28px;
   --ds-radius-field: 0px;
   --ds-radius-sheet: 24px;
   --ds-radius-menu: 8px;
@@ -323,37 +365,20 @@
   --ds-stroke-focus: 2px;
   --ds-focus-offset: 4px;
   --ds-layer-behind: -1;
-  --ds-layer-base: 0;
   --ds-layer-content: 1;
   --ds-layer-transcription: 2;
   --ds-layer-stage: 3;
-  --ds-layer-control: 5;
-  --ds-layer-admin-detail: 20;
-  --ds-layer-admin-dialog: 30;
-  --ds-layer-update: 40;
   --ds-layer-toolbar: 60;
-  --ds-layer-menu: 800;
-  --ds-layer-sheet: 900;
   --ds-layer-dialog: 1100;
   --ds-layer-toast: 1200;
-  --ds-layer-hint: 2000;
-  --ds-layer-debug: 10000;
   --ds-duration-switch: 150ms;
-  --ds-duration-slow: 420ms;
-  --ds-duration-transcription-pulse: 1.5s;
-  --ds-duration-transcription-flash: 1.2s;
   --ds-duration-dedication: 1.1s;
   --ds-duration-dedication-staff: 3.2s;
-  --ds-duration-dedication-stage: 3.4s;
   --ds-duration-dedication-night: 3.1s;
-  --ds-duration-dedication-parchment: 3.3s;
-  --ds-ease-enter: ease-out;
-  --ds-ease-exit: ease-in;
   --ds-opacity-disabled: .4;
   --ds-opacity-disabled-admin: .55;
   --ds-opacity-disabled-auth: .6;
   --ds-opacity-disabled-offline: .45;
-  --ds-opacity-voice-dimmed: .3;
   --ds-score-stage-middle-stop: .55;
   --ds-voice-fallback-hue-step: 47;
   --ds-material-gold-mid-stop: .45;
@@ -362,7 +387,6 @@
   --ds-material-paper-light-bright: .3;
   --ds-material-paper-light-base: .35;
   --ds-material-gel-gloss: .75;
-  --ds-material-grain-strength: .065;
   /* Theme-independent print contract (D18): exported paper and engraving ink do not follow the display theme. */
   --ds-print-paper: var(--pigment-print-paper);
   /* Theme-independent print contract (D18): exported paper and engraving ink do not follow the display theme. */
@@ -389,26 +413,25 @@
   --ds-space-none: 0px;
   --ds-space-hairline: 1px;
   --ds-space-micro: 2px;
-  --ds-space-tight: 3px;
+  --ds-space-tight: calc(var(--ds-space-micro) + var(--ds-space-hairline));
   --ds-space-compact: 4px;
-  --ds-space-control-dense: 5px;
+  --ds-space-control-dense: calc(var(--ds-space-compact) + var(--ds-space-hairline));
   --ds-space-snug: 6px;
-  --ds-space-segment: 7px;
+  --ds-space-segment: calc(var(--ds-space-snug) + var(--ds-space-hairline));
   --ds-space-small: 8px;
-  --ds-space-segment-dense: 9px;
-  --ds-space-inline: 10px;
-  --ds-space-copy-inset: 11px;
+  --ds-space-segment-dense: calc(var(--ds-space-small) + var(--ds-space-hairline));
+  --ds-space-inline: calc(var(--ds-space-small) + var(--ds-space-micro));
   --ds-space-control: 12px;
-  --ds-space-row: 14px;
+  --ds-space-row: calc(var(--ds-space-control) + var(--ds-space-micro));
   --ds-space-content: 16px;
-  --ds-space-action: 18px;
-  --ds-space-group: 20px;
-  --ds-space-section-dense: 22px;
+  --ds-space-action: calc(var(--ds-space-content) + var(--ds-space-micro));
+  --ds-space-group: calc(var(--ds-space-content) + var(--ds-space-compact));
+  --ds-space-section-dense: calc(var(--ds-space-section) - var(--ds-space-micro));
   --ds-space-section: 24px;
-  --ds-space-heading: 28px;
+  --ds-space-heading: calc(var(--ds-space-section) + var(--ds-space-compact));
   --ds-space-panel: 32px;
-  --ds-space-toolbar: 40px;
-  --ds-space-touch: 44px;
+  --ds-space-toolbar: calc(var(--ds-space-panel) + var(--ds-space-small));
+  --ds-space-touch: calc(var(--ds-space-page) - var(--ds-space-compact));
   --ds-space-page: 48px;
   --ds-space-stage: 64px;
 }
@@ -510,12 +533,8 @@
   --ds-shadow-emboss-raised: -1px -1px 0 var(--pigment-shadow-emboss-raised), 1px 2px 4px var(--pigment-shadow-emboss-raised-2), inset 1px 1px 0 var(--pigment-shadow-emboss-raised-3), inset -2px -3px 7px var(--pigment-shadow-emboss-raised-4);
   --ds-shadow-emboss-pressed: inset 1px 2px 4px var(--pigment-shadow-emboss-raised-2), inset -1px -1px 0 var(--pigment-shadow-material-highlight);
   --ds-voice-1: var(--pigment-voice-1);
-  --ds-voice-2: var(--pigment-voice-2);
   --ds-voice-3: var(--pigment-feedback-idea);
-  --ds-voice-4: var(--pigment-feedback-note);
-  --ds-voice-5: var(--pigment-voice-5);
   --ds-voice-6: var(--pigment-feedback-wish);
-  --ds-voice-7: var(--pigment-voice-7);
   --ds-voice-8: var(--pigment-feedback-survey);
   --ds-component-action-hover: var(--ds-action-hover);
   --ds-domain-backdrop: rgb(8 6 14 / 0.45);
@@ -530,7 +549,7 @@
   --ds-component-menu-check: #e2c48c;
   --ds-component-overlay-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
   --ds-component-toast-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  --ds-library-song-card-background-2: var(--ds-material-sheet);
+  --ds-library-card-surface: var(--ds-material-sheet);
   --ds-library-song-card-border-color: rgb(255 244 228 / 0.07);
   --ds-library-song-card-box-shadow: inset 0 1px 0 rgb(255 244 228 / 0.07),
     0 1px 0 rgb(0 0 0 / 0.4),
@@ -539,20 +558,19 @@
   --ds-library-pointer-song-card-is-tilted-box-shadow: inset 0 1px 0 rgb(255 244 228 / 0.08),
       5px 6px 0 -2px #19141f,
       0 34px 50px -30px rgb(0 0 0 / 0.95);
-  --ds-library-mode-btn-background-2: var(--ds-material-vellum);
-  --ds-library-mode-btn-color: var(--ds-ink);
+  --ds-library-mode-surface: var(--ds-material-vellum);
   --ds-library-mode-btn-text-shadow: none;
   --ds-library-mode-btn-box-shadow: var(--ds-shadow-material-highlight);
   --ds-library-mode-btn-ic-filter: none;
   --ds-library-mode-btn-hover-background: var(--ds-surface-overlay);
   --ds-library-mode-btn-hover-box-shadow: var(--ds-library-mode-btn-box-shadow);
   --ds-library-mode-btn-last-used-box-shadow: var(--ds-library-mode-btn-box-shadow);
-  --ds-library-song-card-hover-border-color-2: rgb(255 244 230 / 0.2);
-  --ds-library-song-card-skeleton-background-2: var(--ds-material-sheet);
+  --ds-library-card-hover-edge: rgb(255 244 230 / 0.2);
+  --ds-library-loading-surface: var(--ds-material-sheet);
   --ds-library-song-card-lifted-box-shadow: 0 22px 48px rgb(0 0 0 / 0.55);
   --ds-library-song-more-background: rgba(13, 12, 22, 0.72);
   --ds-library-song-card-tag-background: rgba(13, 12, 22, 0.72);
-  --ds-library-cover-background-2: transparent;
+  --ds-library-cover-overlay: transparent;
   --ds-library-sound-prompt-box-shadow: 0 0 0 6px rgba(200, 161, 90, 0.25), 0 16px 40px rgba(0, 0, 0, 0.5);
   --ds-library-card-spotlight: rgb(255 250 240 / 0.13);
   --ds-library-phone-more-background: none;
@@ -668,61 +686,22 @@
   --ds-material-light-warm: var(--pigment-material-light-warm);
   --ds-canvas-mask: var(--pigment-canvas-mask);
   --ds-material-gel-gloss-color: var(--pigment-gel-gloss);
-  --ds-material-gold-leaf: linear-gradient(180deg, var(--pigment-material-gold-leaf), var(--pigment-material-gold-leaf-2) 55%, var(--pigment-material-gold-leaf-3));
   --ds-action-hover: #fff8ee;
   --ds-table-row-hover: color-mix(in srgb,var(--ds-admin-accent) 8%,transparent);
   --ds-transcription-backdrop: #0009;
-  --ds-transcription-focus: 0 1px var(--ds-transcription-accent);
   --ds-transcription-selected: inset 0 0 0 1px var(--ds-transcription-accent);
-  --ds-library-mode-btn-last-used-border-color: var(--ds-ink-secondary);
   --ds-library-mode-btn-border: 1px solid var(--ds-rule-strong);
-  --ds-library-mode-btn-background: rgba(19, 18, 30, 0.72);
-  --ds-library-mode-btn-hover-border-color: var(--ds-ink-secondary);
   --ds-library-search-border: 1px solid var(--ds-rule-strong);
-  --ds-library-search-background: var(--ds-surface);
-  --ds-library-search-color: var(--ds-ink-muted);
-  --ds-library-search-input-color: var(--ds-ink);
-  --ds-library-search-focus-within-border-color: var(--ds-ink-secondary);
-  --ds-library-banner-background: var(--ds-surface-raised);
   --ds-library-banner-border: 1px solid var(--ds-rule-strong);
-  --ds-library-banner-color: var(--ds-ink-secondary);
-  --ds-library-banner-b-color: var(--ds-ink);
-  --ds-library-song-card-background: var(--ds-surface);
   --ds-library-song-card-border: 1px solid var(--ds-rule);
-  --ds-library-song-card-hover-border-color: var(--ds-rule-strong);
-  --ds-library-cover-background: #15131f;
-  --ds-library-song-meta-color: var(--ds-ink-secondary);
-  --ds-library-song-more-color: var(--ds-ink);
-  --ds-library-song-card-skeleton-background: linear-gradient(100deg, var(--ds-surface) 30%, var(--ds-surface-raised) 50%, var(--ds-surface) 70%) 0 0 / 300% 100%;
-  --ds-library-empty-note-color: var(--ds-ink-secondary);
   --ds-library-phone-song-card-border-bottom: 1px solid var(--ds-rule);
-  --ds-library-phone-song-more-color: var(--ds-ink-secondary);
-  --ds-library-sound-prompt-background: var(--ds-ink);
-  --ds-library-sound-prompt-color: var(--ds-surface-sunken);
   --ds-library-paper-option-border: 1px solid var(--ds-rule);
-  --ds-library-paper-option-hover-border-color: var(--ds-rule-strong);
-  --ds-library-paper-option-aria-checked-true-border-color: var(--ds-ink);
   --ds-library-paper-option-aria-checked-true-background: rgb(255 244 228 / 0.04);
   --ds-library-paper-swatch-background: #1b1621;
-  --ds-library-paper-text-color: var(--ds-ink-secondary);
-  --ds-library-paper-text-b-color: var(--ds-ink);
-  --ds-library-banner-background-2: var(--ds-material-vellum);
-  --ds-library-search-background-2: var(--ds-material-vellum);
-  --ds-library-search-border-color: var(--ds-material-edge);
-  --ds-library-search-box-shadow: var(--ds-shadow-material-highlight);
-  --ds-library-banner-border-color: var(--ds-material-edge);
-  --ds-library-banner-box-shadow: var(--ds-shadow-material-highlight);
-  --ds-library-mode-btn-border-color: var(--ds-material-edge);
-  --ds-library-opaque-banner-background: var(--ds-surface-raised);
-  --ds-library-opaque-search-background: var(--ds-surface-raised);
-  --ds-library-opaque-mode-btn-background: var(--ds-surface-raised);
-  --ds-library-neu--mode-btn-active-box-shadow: var(--ds-shadow-emboss-pressed);
   --ds-library-buehne--mode-btn-last-used-background: linear-gradient(180deg, #e6c98a, #c9a05a 55%, #b48a48);
   --ds-library-buehne--mode-btn-last-used-color: #2a2016;
   --ds-library-buehne--mode-btn-last-used-text-shadow: 0 1px 0 rgb(255 240 210 / 0.35);
-  --ds-library-song-card-lifted-background: var(--ds-surface-raised);
   --ds-library-song-card-lifted-border: 1px solid var(--ds-rule-strong);
-  --ds-library-landing-empty-border-top: 1px solid var(--ds-rule-strong);
     --ds-player-segment-border: 1px solid var(--ds-rule);
     --ds-player-live-dot-box-shadow: 0 0 8px var(--ds-success);
     --ds-player-header-border-bottom: 1px solid var(--ds-rule);
@@ -730,11 +709,7 @@
     --ds-player-voices-panel-border-right: 1px solid var(--ds-rule);
     --ds-player-duck-border-top: 1px solid var(--ds-rule);
     --ds-player-input-type-range-vendor-slider-thumb-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    --ds-player-chips-mixer-background: linear-gradient(90deg, rgba(13, 12, 22, 0), var(--ds-surface-sunken) 40%);
-    --ds-player-zoom-background: rgba(19, 18, 30, 0.9);
     --ds-player-transport-command-border: 1px solid transparent;
-    --ds-player-play-button-box-shadow: 0 0 0 7px rgba(239, 231, 218, 0.07);
-    --ds-player-play-button-hover-box-shadow: 0 0 0 9px rgba(239, 231, 218, 0.1);
     --ds-player-app-sing-along-badge-border-color: rgba(255, 214, 150, 0.35);
     --ds-player-app-sing-along-badge-color: #ffe4b8;
     --ds-player-header-box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.25);
@@ -796,10 +771,6 @@
   --ds-material-voice-chip-light-cavity: rgb(70 45 20 / 0.35);
   --ds-material-voice-chip-light-paper: #eee2c6;
   --ds-material-voice-chip-light-muted: #d6c29a;
-    --ds-panel-field-border: 1px solid var(--ds-rule-strong);
-    --ds-panel-section-mark-border: 1.5px solid var(--ds-ink);
-    --ds-panel-stepper-border: 1px solid var(--ds-rule);
-    --ds-panel-ctl-block-border-top: 1px solid var(--ds-rule);
     --ds-panel-scan-mark-img-background: #f4f1ea;
     --ds-panel-stepper-background: rgb(8 6 14 / 0.35);
     --ds-panel-stepper-box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35);
@@ -946,6 +917,11 @@
   --ds-score-overview-edge-alpha: 0.09;
   --ds-score-overview-loop-fill-alpha: 0.12;
   --ds-score-overview-loop-edge-alpha: 0.55;
+  --ds-voice-2: var(--pigment-voice-2);
+  --ds-voice-4: var(--pigment-feedback-note);
+  --ds-voice-5: var(--pigment-voice-5);
+  --ds-voice-7: var(--pigment-voice-7);
+  --ds-material-gold-leaf: linear-gradient(180deg, var(--pigment-material-gold-leaf), var(--pigment-material-gold-leaf-2) 55%, var(--pigment-material-gold-leaf-3));
 }
 
 :root[data-theme="parchment"] {
@@ -1044,12 +1020,8 @@
   --ds-shadow-emboss-raised: -1px -1px 0 var(--pigment-shadow-emboss-raised-5), 1px 2px 3px var(--pigment-shadow-emboss-raised-6), inset 1px 1px 0 var(--pigment-shadow-emboss-raised-7), inset -2px -3px 6px var(--pigment-shadow-emboss-raised-8);
   --ds-shadow-emboss-pressed: inset 1px 2px 4px var(--pigment-shadow-emboss-pressed), inset -1px -1px 0 var(--pigment-shadow-material-highlight-2);
   --ds-voice-1: var(--pigment-voice-1-2);
-  --ds-voice-2: var(--pigment-voice-2-2);
   --ds-voice-3: var(--pigment-feedback-idea-2);
-  --ds-voice-4: var(--pigment-feedback-note-2);
-  --ds-voice-5: var(--pigment-voice-5-2);
   --ds-voice-6: var(--pigment-feedback-wish-2);
-  --ds-voice-7: var(--pigment-voice-7-2);
   --ds-voice-8: var(--pigment-feedback-survey-2);
   --ds-component-action-hover: var(--ds-surface-hover);
   --ds-domain-backdrop: rgb(60 40 20 / 0.28);
@@ -1064,7 +1036,7 @@
   --ds-component-menu-check: #9c6d1a;
   --ds-component-overlay-shadow: var(--ds-shadow-material-highlight), 0 30px 70px -20px rgb(90 60 25 / 0.45);
   --ds-component-toast-shadow: 0 16px 40px rgb(90 60 25 / 0.3);
-  --ds-library-song-card-background-2: var(--ds-material-sheet);
+  --ds-library-card-surface: var(--ds-material-sheet);
   --ds-library-song-card-border-color: rgb(70 46 20 / 0.12);
   --ds-library-song-card-box-shadow: inset 0 1px 0 rgb(255 255 250 / 0.6),
     0 1px 0 rgb(90 60 25 / 0.16),
@@ -1075,25 +1047,24 @@
       5px 6px 0 -2px #e2d0aa,
       5px 6px 0 -1px rgb(90 60 25 / 0.16),
       0 34px 50px -30px rgb(90 60 25 / 0.5);
-  --ds-library-mode-btn-background-2: var(--ds-material-fibre), linear-gradient(180deg, #f2e8d0, #e9dbbb);
-  --ds-library-mode-btn-color: var(--ds-ink);
+  --ds-library-mode-surface: var(--ds-material-fibre), linear-gradient(180deg, #f2e8d0, #e9dbbb);
   --ds-library-mode-btn-text-shadow: 0 1px 0 rgb(255 255 250 / 0.6);
   --ds-library-mode-btn-box-shadow: var(--ds-shadow-emboss-raised), 0 12px 24px -14px rgb(90 60 25 / 0.45);
   --ds-library-mode-btn-ic-filter: drop-shadow(0 1px 0 rgb(255 255 250 / 0.6));
   --ds-library-mode-btn-hover-background: var(--ds-material-fibre), linear-gradient(180deg, #f5ecd6, #ecdfc1);
   --ds-library-mode-btn-hover-box-shadow: var(--ds-shadow-emboss-raised), 0 16px 28px -14px rgb(90 60 25 / 0.5);
   --ds-library-mode-btn-last-used-box-shadow: var(--ds-shadow-emboss-raised), 0 12px 24px -14px rgb(90 60 25 / 0.45), inset 0 -2px 0 rgb(180 120 40 / 0.45), 0 6px 16px -8px rgb(220 150 60 / 0.35);
-  --ds-library-song-card-hover-border-color-2: rgb(70 46 20 / 0.22);
-  --ds-library-song-card-skeleton-background-2: linear-gradient(100deg, rgb(226 210 176 / 0.8) 30%, rgb(238 226 200 / 0.8) 50%, rgb(226 210 176 / 0.8) 70%) 0 0 / 300% 100%;
+  --ds-library-card-hover-edge: rgb(70 46 20 / 0.22);
+  --ds-library-loading-surface: linear-gradient(100deg, rgb(226 210 176 / 0.8) 30%, rgb(238 226 200 / 0.8) 50%, rgb(226 210 176 / 0.8) 70%) 0 0 / 300% 100%;
   --ds-library-song-card-lifted-box-shadow: 0 22px 48px rgb(90 60 25 / 0.35);
   --ds-library-song-more-background: rgb(241 232 210 / 0.85);
   --ds-library-song-card-tag-background: rgb(241 232 210 / 0.85);
-  --ds-library-cover-background-2: #e8d8b6;
+  --ds-library-cover-overlay: #e8d8b6;
   --ds-library-sound-prompt-box-shadow: 0 0 0 6px rgb(180 120 40 / 0.25), 0 16px 40px rgb(90 60 25 / 0.3);
   --ds-library-card-spotlight: rgb(255 252 240 / 0.35);
   --ds-library-phone-more-background: var(--ds-library-song-more-background);
-  --ds-library-neu--mode-btn-background: var(--ds-library-mode-btn-background-2);
-  --ds-library-neu--mode-btn-color: var(--ds-library-mode-btn-color);
+  --ds-library-neu--mode-btn-background: var(--ds-library-mode-surface);
+  --ds-library-neu--mode-btn-color: var(--ds-ink);
   --ds-library-neu--mode-btn-text-shadow: var(--ds-library-mode-btn-text-shadow);
   --ds-library-neu--mode-btn-box-shadow: var(--ds-library-mode-btn-box-shadow);
   --ds-library-neu--mode-btn-ic-filter: var(--ds-library-mode-btn-ic-filter);
@@ -1200,61 +1171,22 @@
   --ds-material-light-warm: var(--pigment-material-light-warm);
   --ds-canvas-mask: var(--pigment-canvas-mask);
   --ds-material-gel-gloss-color: var(--pigment-gel-gloss);
-  --ds-material-gold-leaf: linear-gradient(180deg, var(--pigment-material-gold-leaf), var(--pigment-material-gold-leaf-2) 55%, var(--pigment-material-gold-leaf-3));
   --ds-action-hover: #fff8ee;
   --ds-table-row-hover: color-mix(in srgb,var(--ds-admin-accent) 8%,transparent);
   --ds-transcription-backdrop: #0009;
-  --ds-transcription-focus: 0 1px var(--ds-transcription-accent);
   --ds-transcription-selected: inset 0 0 0 1px var(--ds-transcription-accent);
-  --ds-library-mode-btn-last-used-border-color: var(--ds-ink-secondary);
   --ds-library-mode-btn-border: 1px solid var(--ds-rule-strong);
-  --ds-library-mode-btn-background: rgba(19, 18, 30, 0.72);
-  --ds-library-mode-btn-hover-border-color: var(--ds-ink-secondary);
   --ds-library-search-border: 1px solid var(--ds-rule-strong);
-  --ds-library-search-background: var(--ds-surface);
-  --ds-library-search-color: var(--ds-ink-muted);
-  --ds-library-search-input-color: var(--ds-ink);
-  --ds-library-search-focus-within-border-color: var(--ds-ink-secondary);
-  --ds-library-banner-background: var(--ds-surface-raised);
   --ds-library-banner-border: 1px solid var(--ds-rule-strong);
-  --ds-library-banner-color: var(--ds-ink-secondary);
-  --ds-library-banner-b-color: var(--ds-ink);
-  --ds-library-song-card-background: var(--ds-surface);
   --ds-library-song-card-border: 1px solid var(--ds-rule);
-  --ds-library-song-card-hover-border-color: var(--ds-rule-strong);
-  --ds-library-cover-background: #15131f;
-  --ds-library-song-meta-color: var(--ds-ink-secondary);
-  --ds-library-song-more-color: var(--ds-ink);
-  --ds-library-song-card-skeleton-background: linear-gradient(100deg, var(--ds-surface) 30%, var(--ds-surface-raised) 50%, var(--ds-surface) 70%) 0 0 / 300% 100%;
-  --ds-library-empty-note-color: var(--ds-ink-secondary);
   --ds-library-phone-song-card-border-bottom: 1px solid var(--ds-rule);
-  --ds-library-phone-song-more-color: var(--ds-ink-secondary);
-  --ds-library-sound-prompt-background: var(--ds-ink);
-  --ds-library-sound-prompt-color: var(--ds-surface-sunken);
   --ds-library-paper-option-border: 1px solid var(--ds-rule);
-  --ds-library-paper-option-hover-border-color: var(--ds-rule-strong);
-  --ds-library-paper-option-aria-checked-true-border-color: var(--ds-ink);
   --ds-library-paper-option-aria-checked-true-background: rgb(255 244 228 / 0.04);
   --ds-library-paper-swatch-background: #1b1621;
-  --ds-library-paper-text-color: var(--ds-ink-secondary);
-  --ds-library-paper-text-b-color: var(--ds-ink);
-  --ds-library-banner-background-2: var(--ds-material-vellum);
-  --ds-library-search-background-2: var(--ds-material-vellum);
-  --ds-library-search-border-color: var(--ds-material-edge);
-  --ds-library-search-box-shadow: var(--ds-shadow-material-highlight);
-  --ds-library-banner-border-color: var(--ds-material-edge);
-  --ds-library-banner-box-shadow: var(--ds-shadow-material-highlight);
-  --ds-library-mode-btn-border-color: var(--ds-material-edge);
-  --ds-library-opaque-banner-background: var(--ds-surface-raised);
-  --ds-library-opaque-search-background: var(--ds-surface-raised);
-  --ds-library-opaque-mode-btn-background: var(--ds-surface-raised);
-  --ds-library-neu--mode-btn-active-box-shadow: var(--ds-shadow-emboss-pressed);
   --ds-library-buehne--mode-btn-last-used-background: linear-gradient(180deg, #e6c98a, #c9a05a 55%, #b48a48);
   --ds-library-buehne--mode-btn-last-used-color: #2a2016;
   --ds-library-buehne--mode-btn-last-used-text-shadow: 0 1px 0 rgb(255 240 210 / 0.35);
-  --ds-library-song-card-lifted-background: var(--ds-surface-raised);
   --ds-library-song-card-lifted-border: 1px solid var(--ds-rule-strong);
-  --ds-library-landing-empty-border-top: 1px solid var(--ds-rule-strong);
     --ds-player-segment-border: 1px solid var(--ds-rule);
     --ds-player-live-dot-box-shadow: 0 0 8px var(--ds-success);
     --ds-player-header-border-bottom: 1px solid var(--ds-rule);
@@ -1262,11 +1194,7 @@
     --ds-player-voices-panel-border-right: 1px solid var(--ds-rule);
     --ds-player-duck-border-top: 1px solid var(--ds-rule);
     --ds-player-input-type-range-vendor-slider-thumb-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    --ds-player-chips-mixer-background: linear-gradient(90deg, rgba(13, 12, 22, 0), var(--ds-surface-sunken) 40%);
-    --ds-player-zoom-background: rgba(19, 18, 30, 0.9);
     --ds-player-transport-command-border: 1px solid transparent;
-    --ds-player-play-button-box-shadow: 0 0 0 7px rgba(239, 231, 218, 0.07);
-    --ds-player-play-button-hover-box-shadow: 0 0 0 9px rgba(239, 231, 218, 0.1);
     --ds-player-app-sing-along-badge-border-color: rgba(255, 214, 150, 0.35);
     --ds-player-app-sing-along-badge-color: #ffe4b8;
     --ds-player-header-box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.25);
@@ -1328,10 +1256,6 @@
   --ds-material-voice-chip-light-cavity: rgb(70 45 20 / 0.35);
   --ds-material-voice-chip-light-paper: #eee2c6;
   --ds-material-voice-chip-light-muted: #d6c29a;
-    --ds-panel-field-border: 1px solid var(--ds-rule-strong);
-    --ds-panel-section-mark-border: 1.5px solid var(--ds-ink);
-    --ds-panel-stepper-border: 1px solid var(--ds-rule);
-    --ds-panel-ctl-block-border-top: 1px solid var(--ds-rule);
     --ds-panel-scan-mark-img-background: #f4f1ea;
     --ds-panel-stepper-background: rgb(8 6 14 / 0.35);
     --ds-panel-stepper-box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35);
@@ -1478,6 +1402,11 @@
   --ds-score-overview-edge-alpha: 0.09;
   --ds-score-overview-loop-fill-alpha: 0.12;
   --ds-score-overview-loop-edge-alpha: 0.55;
+  --ds-voice-2: var(--pigment-voice-2-2);
+  --ds-voice-4: var(--pigment-feedback-note-2);
+  --ds-voice-5: var(--pigment-voice-5-2);
+  --ds-voice-7: var(--pigment-voice-7-2);
+  --ds-material-gold-leaf: linear-gradient(180deg, var(--pigment-material-gold-leaf), var(--pigment-material-gold-leaf-2) 55%, var(--pigment-material-gold-leaf-3));
 }
 
 :root[data-theme="velvet"] {
@@ -1576,12 +1505,8 @@
   --ds-shadow-emboss-raised: none;
   --ds-shadow-emboss-pressed: none;
   --ds-voice-1: var(--pigment-voice-1);
-  --ds-voice-2: var(--pigment-voice-2);
   --ds-voice-3: var(--pigment-feedback-idea);
-  --ds-voice-4: var(--pigment-feedback-note);
-  --ds-voice-5: var(--pigment-voice-5);
   --ds-voice-6: var(--pigment-feedback-wish);
-  --ds-voice-7: var(--pigment-voice-7);
   --ds-voice-8: var(--pigment-feedback-survey);
   --ds-component-action-hover: var(--ds-action-hover);
   --ds-domain-backdrop: rgb(8 6 14 / 0.45);
@@ -1596,24 +1521,23 @@
   --ds-component-menu-check: #e2c48c;
   --ds-component-overlay-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
   --ds-component-toast-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  --ds-library-song-card-background-2: var(--ds-material-card);
+  --ds-library-card-surface: var(--ds-material-card);
   --ds-library-song-card-border-color: rgb(255 244 230 / 0.1);
   --ds-library-song-card-box-shadow: 0 24px 44px -30px rgb(0 0 0 / 0.95);
   --ds-library-pointer-song-card-is-tilted-box-shadow: 0 34px 50px -30px rgb(0 0 0 / 0.95);
-  --ds-library-mode-btn-background-2: var(--ds-material-vellum);
-  --ds-library-mode-btn-color: var(--ds-ink);
+  --ds-library-mode-surface: var(--ds-material-vellum);
   --ds-library-mode-btn-text-shadow: none;
   --ds-library-mode-btn-box-shadow: var(--ds-shadow-material-highlight);
   --ds-library-mode-btn-ic-filter: none;
   --ds-library-mode-btn-hover-background: var(--ds-surface-overlay);
   --ds-library-mode-btn-hover-box-shadow: var(--ds-library-mode-btn-box-shadow);
   --ds-library-mode-btn-last-used-box-shadow: var(--ds-library-mode-btn-box-shadow);
-  --ds-library-song-card-hover-border-color-2: rgb(255 244 230 / 0.2);
-  --ds-library-song-card-skeleton-background-2: linear-gradient(100deg, rgb(29 22 41 / 0.7) 30%, rgb(40 32 56 / 0.7) 50%, rgb(29 22 41 / 0.7) 70%) 0 0 / 300% 100%;
+  --ds-library-card-hover-edge: rgb(255 244 230 / 0.2);
+  --ds-library-loading-surface: linear-gradient(100deg, rgb(29 22 41 / 0.7) 30%, rgb(40 32 56 / 0.7) 50%, rgb(29 22 41 / 0.7) 70%) 0 0 / 300% 100%;
   --ds-library-song-card-lifted-box-shadow: 0 22px 48px rgb(0 0 0 / 0.55);
   --ds-library-song-more-background: rgba(13, 12, 22, 0.72);
   --ds-library-song-card-tag-background: rgba(13, 12, 22, 0.72);
-  --ds-library-cover-background-2: transparent;
+  --ds-library-cover-overlay: transparent;
   --ds-library-sound-prompt-box-shadow: 0 0 0 6px rgba(200, 161, 90, 0.25), 0 16px 40px rgba(0, 0, 0, 0.5);
   --ds-library-card-spotlight: rgb(255 250 240 / 0.13);
   --ds-library-phone-more-background: none;
@@ -1729,61 +1653,22 @@
   --ds-material-light-warm: var(--pigment-material-light-warm);
   --ds-canvas-mask: var(--pigment-canvas-mask);
   --ds-material-gel-gloss-color: var(--pigment-gel-gloss);
-  --ds-material-gold-leaf: linear-gradient(180deg, var(--pigment-material-gold-leaf), var(--pigment-material-gold-leaf-2) 55%, var(--pigment-material-gold-leaf-3));
   --ds-action-hover: #fff8ee;
   --ds-table-row-hover: color-mix(in srgb,var(--ds-admin-accent) 8%,transparent);
   --ds-transcription-backdrop: #0009;
-  --ds-transcription-focus: 0 1px var(--ds-transcription-accent);
   --ds-transcription-selected: inset 0 0 0 1px var(--ds-transcription-accent);
-  --ds-library-mode-btn-last-used-border-color: var(--ds-ink-secondary);
   --ds-library-mode-btn-border: 1px solid var(--ds-rule-strong);
-  --ds-library-mode-btn-background: rgba(19, 18, 30, 0.72);
-  --ds-library-mode-btn-hover-border-color: var(--ds-ink-secondary);
   --ds-library-search-border: 1px solid var(--ds-rule-strong);
-  --ds-library-search-background: var(--ds-surface);
-  --ds-library-search-color: var(--ds-ink-muted);
-  --ds-library-search-input-color: var(--ds-ink);
-  --ds-library-search-focus-within-border-color: var(--ds-ink-secondary);
-  --ds-library-banner-background: var(--ds-surface-raised);
   --ds-library-banner-border: 1px solid var(--ds-rule-strong);
-  --ds-library-banner-color: var(--ds-ink-secondary);
-  --ds-library-banner-b-color: var(--ds-ink);
-  --ds-library-song-card-background: var(--ds-surface);
   --ds-library-song-card-border: 1px solid var(--ds-rule);
-  --ds-library-song-card-hover-border-color: var(--ds-rule-strong);
-  --ds-library-cover-background: #15131f;
-  --ds-library-song-meta-color: var(--ds-ink-secondary);
-  --ds-library-song-more-color: var(--ds-ink);
-  --ds-library-song-card-skeleton-background: linear-gradient(100deg, var(--ds-surface) 30%, var(--ds-surface-raised) 50%, var(--ds-surface) 70%) 0 0 / 300% 100%;
-  --ds-library-empty-note-color: var(--ds-ink-secondary);
   --ds-library-phone-song-card-border-bottom: 1px solid var(--ds-rule);
-  --ds-library-phone-song-more-color: var(--ds-ink-secondary);
-  --ds-library-sound-prompt-background: var(--ds-ink);
-  --ds-library-sound-prompt-color: var(--ds-surface-sunken);
   --ds-library-paper-option-border: 1px solid var(--ds-rule);
-  --ds-library-paper-option-hover-border-color: var(--ds-rule-strong);
-  --ds-library-paper-option-aria-checked-true-border-color: var(--ds-ink);
   --ds-library-paper-option-aria-checked-true-background: rgb(255 244 228 / 0.04);
   --ds-library-paper-swatch-background: #1b1621;
-  --ds-library-paper-text-color: var(--ds-ink-secondary);
-  --ds-library-paper-text-b-color: var(--ds-ink);
-  --ds-library-banner-background-2: var(--ds-material-vellum);
-  --ds-library-search-background-2: var(--ds-material-vellum);
-  --ds-library-search-border-color: var(--ds-material-edge);
-  --ds-library-search-box-shadow: var(--ds-shadow-material-highlight);
-  --ds-library-banner-border-color: var(--ds-material-edge);
-  --ds-library-banner-box-shadow: var(--ds-shadow-material-highlight);
-  --ds-library-mode-btn-border-color: var(--ds-material-edge);
-  --ds-library-opaque-banner-background: var(--ds-surface-raised);
-  --ds-library-opaque-search-background: var(--ds-surface-raised);
-  --ds-library-opaque-mode-btn-background: var(--ds-surface-raised);
-  --ds-library-neu--mode-btn-active-box-shadow: var(--ds-shadow-emboss-pressed);
   --ds-library-buehne--mode-btn-last-used-background: linear-gradient(180deg, #e6c98a, #c9a05a 55%, #b48a48);
   --ds-library-buehne--mode-btn-last-used-color: #2a2016;
   --ds-library-buehne--mode-btn-last-used-text-shadow: 0 1px 0 rgb(255 240 210 / 0.35);
-  --ds-library-song-card-lifted-background: var(--ds-surface-raised);
   --ds-library-song-card-lifted-border: 1px solid var(--ds-rule-strong);
-  --ds-library-landing-empty-border-top: 1px solid var(--ds-rule-strong);
     --ds-player-segment-border: 1px solid var(--ds-rule);
     --ds-player-live-dot-box-shadow: 0 0 8px var(--ds-success);
     --ds-player-header-border-bottom: 1px solid var(--ds-rule);
@@ -1791,11 +1676,7 @@
     --ds-player-voices-panel-border-right: 1px solid var(--ds-rule);
     --ds-player-duck-border-top: 1px solid var(--ds-rule);
     --ds-player-input-type-range-vendor-slider-thumb-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    --ds-player-chips-mixer-background: linear-gradient(90deg, rgba(13, 12, 22, 0), var(--ds-surface-sunken) 40%);
-    --ds-player-zoom-background: rgba(19, 18, 30, 0.9);
     --ds-player-transport-command-border: 1px solid transparent;
-    --ds-player-play-button-box-shadow: 0 0 0 7px rgba(239, 231, 218, 0.07);
-    --ds-player-play-button-hover-box-shadow: 0 0 0 9px rgba(239, 231, 218, 0.1);
     --ds-player-app-sing-along-badge-border-color: rgba(255, 214, 150, 0.35);
     --ds-player-app-sing-along-badge-color: #ffe4b8;
     --ds-player-header-box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.25);
@@ -1857,10 +1738,6 @@
   --ds-material-voice-chip-light-cavity: rgb(70 45 20 / 0.35);
   --ds-material-voice-chip-light-paper: #eee2c6;
   --ds-material-voice-chip-light-muted: #d6c29a;
-    --ds-panel-field-border: 1px solid var(--ds-rule-strong);
-    --ds-panel-section-mark-border: 1.5px solid var(--ds-ink);
-    --ds-panel-stepper-border: 1px solid var(--ds-rule);
-    --ds-panel-ctl-block-border-top: 1px solid var(--ds-rule);
     --ds-panel-scan-mark-img-background: #f4f1ea;
     --ds-panel-stepper-background: rgb(8 6 14 / 0.35);
     --ds-panel-stepper-box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35);
@@ -2007,6 +1884,11 @@
   --ds-score-overview-edge-alpha: 0.09;
   --ds-score-overview-loop-fill-alpha: 0.12;
   --ds-score-overview-loop-edge-alpha: 0.55;
+  --ds-voice-2: var(--pigment-voice-2);
+  --ds-voice-4: var(--pigment-feedback-note);
+  --ds-voice-5: var(--pigment-voice-5);
+  --ds-voice-7: var(--pigment-voice-7);
+  --ds-material-gold-leaf: linear-gradient(180deg, var(--pigment-material-gold-leaf), var(--pigment-material-gold-leaf-2) 55%, var(--pigment-material-gold-leaf-3));
 }
 
 /* Additional renderer pigments retained separately from UI ink (P2 inputs). */
@@ -2029,8 +1911,6 @@
   --ds-font-heading: 'Baltimore Title 1832', var(--ds-font-display);
   --ds-font-song-title: 'Modern Antique 1889', var(--ds-font-display);
   --ds-font-control: 'Remington 1888', 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
-  --ds-font-mark: "Baltimore Bold 1832", var(--ds-font-canvas-display);
-  --ds-font-brand: "Baltimore Black Slope 1832", var(--ds-font-canvas-display);
   --ds-weight-mark: 400;
   --ds-weight-brand: 400;
   --ds-type-wordmark-font-family: var(--ds-wordmark-font-family);
@@ -2076,12 +1956,14 @@
   --ds-type-section-mark-font-synthesis: none;
   --ds-type-library-song-phone-size: var(--ds-size-song);
   --ds-type-player-song-phone-size: var(--ds-size-song-player);
+  --ds-font-mark: "Baltimore Bold 1832", var(--ds-font-canvas-display);
+  --ds-font-brand: "Baltimore Black Slope 1832", var(--ds-font-canvas-display);
 }
 
 /* Component dimensions retain legacy roles pending D08–D17. */
 :root {
-  --ds-space-sheet-dense: 26px;
-  --ds-space-switch: 52px;
+  --ds-space-sheet-dense: calc(var(--ds-space-section) + var(--ds-space-micro));
+  --ds-space-switch: calc(var(--ds-space-page) + var(--ds-space-compact));
   --ds-switch-admin-travel: 21px;
   --ds-toast-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   --ds-toast-bottom-phone: calc(150px + env(safe-area-inset-bottom, 0px));
@@ -2148,18 +2030,14 @@
 :root {
   --ds-leading-account: 1.55;
   --ds-leading-account-links: 1.8;
-  --ds-space-action-reserve: 76px;
+  --ds-space-action-reserve: calc(var(--ds-space-stage) + var(--ds-space-control));
 }
 
 /* Isolated domain-control parity geometry (D09/D12/D13/D17). */
 :root {
-  --ds-dialog-transcription-max-width: calc(100vw - 24px);
-  --ds-review-columns: minmax(0,1fr) 320px;
   --ds-upload-tile-height: 140px;
   --ds-upload-tile-phone-height: 130px;
-  --ds-input-field-margin: 24px 0;
   --ds-layer-note: 800;
-  --ds-layer-tour: 1200;
   --ds-menu-member-width: 200px;
   --ds-menu-job-width: 180px;
   --ds-sheet-padding: 8px 20px calc(20px + env(safe-area-inset-bottom,0px));
@@ -2167,7 +2045,7 @@
   --ds-domain-label-tracking: .08em;
 }
 
-:root { --ds-overlay-blur: 5px; --ds-space-voice-row: 50px; }
+:root { --ds-overlay-blur: 5px; --ds-space-voice-row: calc(var(--ds-space-page) + var(--ds-space-micro)); }
 
 /* Inverted note geometry survives the opt-in reset (D17). */
 :root {
@@ -2180,7 +2058,7 @@
 
 :root { --ds-leading-transcription-heading: 1.3; }
 
-:root { --ds-space-toolbar-dense: 36px; }
+:root { --ds-space-toolbar-dense: calc(var(--ds-space-panel) + var(--ds-space-compact)); }
 
 :root { --ds-opacity-disabled-action: .45; }
 
@@ -2189,14 +2067,11 @@
 /* Library parity roles: keep distinct pending owner decisions. */
 :root {
   --ds-library-mode-btn-padding: 0 24px 0 20px;
-  --ds-library-mode-btn-backdrop-filter: blur(8px);
   --ds-library-mode-btn-transition: border-color var(--ds-duration-fast), background var(--ds-duration-fast), transform var(--ds-duration-fast);
   --ds-library-mode-btn-active-transform: scale(0.98);
   --ds-library-search-padding: 0 12px;
-  --ds-library-search-border-radius: var(--ds-radius-card);
   --ds-library-banner-margin: 0 auto 22px;
   --ds-library-banner-padding: 14px 16px;
-  --ds-library-banner-border-radius: var(--ds-radius-card);
   --ds-library-song-grid-margin: 0 auto;
   --ds-library-song-card-transition: border-color var(--ds-duration-fast), transform var(--ds-duration-normal) var(--ds-ease-standard);
   --ds-library-song-card-hover-transform: translateY(-2px);
@@ -2204,7 +2079,6 @@
   --ds-library-song-body-padding: 14px 16px 16px;
   --ds-library-song-title-font: 500 23px/1.15 var(--ds-font-display);
   --ds-library-song-meta-gap: 4px 8px;
-  --ds-library-song-meta-font-size: 13.5px;
   --ds-library-song-card-skeleton-animation: shimmer 1.6s linear infinite;
   --ds-library-empty-note-padding: 12px 0;
   --ds-library-phone-song-open-padding: 12px 44px 12px 0;
@@ -2212,38 +2086,25 @@
   --ds-library-phone-song-more-transform: translateY(-50%);
   --ds-library-phone-song-card-tag-transform: translateY(-50%);
   --ds-library-phone-song-card-tag-padding: 3px 6px;
-  --ds-library-phone-song-card-tag-font-size: 9.5px;
   --ds-library-sound-prompt-top: calc(72px + var(--ds-safe-top, 0px));
   --ds-library-sound-prompt-padding: 12px 18px;
   --ds-library-sound-prompt-font: 600 15px/1.2 var(--ds-font-body, inherit);
   --ds-library-sound-prompt-white-space: nowrap;
   --ds-library-sound-prompt-transform: translateX(-50%);
   --ds-library-sound-prompt-cursor: pointer;
-  --ds-library-paper-option-border-radius: var(--ds-radius-card);
   --ds-library-paper-option-transition: border-color var(--ds-duration-fast), background var(--ds-duration-fast);
-  --ds-library-paper-text-font-size: 13.5px;
   --ds-library-paper-text-line-height: 1.4;
-  --ds-library-banner-webkit-backdrop-filter: var(--ds-material-filter);
-  --ds-library-banner-backdrop-filter: var(--ds-material-filter);
-  --ds-library-search-webkit-backdrop-filter: var(--ds-material-filter);
-  --ds-library-search-backdrop-filter: var(--ds-material-filter);
-  --ds-library-mode-btn-webkit-backdrop-filter: var(--ds-material-filter);
-  --ds-library-mode-btn-backdrop-filter-2: var(--ds-material-filter);
   --ds-library-pointer-song-card-transition: transform 0.6s var(--ds-ease-standard), border-color var(--ds-duration-fast), box-shadow var(--ds-duration-normal);
   --ds-library-pointer-song-card-is-tilted-transition: transform 0.12s linear, border-color var(--ds-duration-fast), box-shadow var(--ds-duration-normal);
   --ds-library-pointer-song-card-after-transition: opacity 0.35s;
   --ds-library-neu--mode-btn-padding: 0 26px 0 22px;
   --ds-library-neu--mode-btn-transition: transform var(--ds-duration-fast), box-shadow var(--ds-duration-normal);
   --ds-library-neu--mode-btn-hover-transform: translateY(-1px);
-  --ds-library-song-card-lifted-scale: 1.03;
   --ds-library-song-card-lifted-transition: scale 0.18s var(--ds-ease-standard), box-shadow 0.18s var(--ds-ease-standard);
   --ds-library-landing-empty-padding-top: 1rem;
   --ds-library-landing-empty-p-first-child-font: 500 28px var(--ds-font-auth-display);
   --ds-library-landing-empty-btn-margin: 18px auto 0;
   --ds-library-landing-empty-link-btn-margin: 18px auto 0;
-  --ds-library-revival--song-title-font-family: var(--ds-font-song-title);
-  --ds-library-revival--song-title-letter-spacing: 0.01em;
-  --ds-library-revival--song-meta-white-space: nowrap;
   --ds-library-prompt-max: calc(100vw - 40px);
   --ds-library-prompt-heading: 500 26px/1.2 var(--ds-font-display);
   --ds-library-popover-min: 220px;
@@ -2341,41 +2202,15 @@
     --ds-player-zoom-sep-margin: 0 3px;
     --ds-player-label-font: 600 11px/1.2 var(--ds-font-mono);
     --ds-player-label-letter-spacing: 0.08em;
-    --ds-player-ctl-block-padding: 14px 0 16px;
-    --ds-player-song-title-letter-spacing: 0.01em}
-:root {
-}
+    --ds-player-ctl-block-padding: 14px 0 16px}
 
 /* Retained P5 numeric/sections/export/utility appearances; owner decisions pending. */
 :root {
-    --ds-panel-label-font: 600 11px/1.2 var(--ds-font-mono);
     --ds-panel-label-letter-spacing: 0.08em;
-    --ds-panel-field-padding: 0 12px;
-    --ds-panel-section-mark-padding: 0 6px;
-    --ds-panel-section-mark-font: 700 17px/33px var(--ds-font-display);
-    --ds-panel-section-marks-section-mark-padding: 0 2px;
-    --ds-panel-section-marks-section-mark-transform: translateX(-1px);
-    --ds-panel-section-add-button-transform: translateY(-50%);
-    --ds-panel-stepper-padding: 0 5px;
-    --ds-panel-stepper-label-padding: 0 4px 0 8px;
-    --ds-panel-stepper-value-padding: 0 8px;
-    --ds-panel-stepper-value-font: 600 16px/1 var(--ds-font-mono);
-    --ds-panel-popover-body-padding: 6px 8px;
-    --ds-panel-ctl-block-padding: 14px 0 16px;
-    --ds-panel-big-value-font: 600 36px/1 var(--ds-font-mono);
-    --ds-panel-big-value-small-font: 500 15px/1 var(--ds-font-body);
-    --ds-panel-tempo-preset-font: 600 14px/1 var(--ds-font-mono);
     --ds-panel-following-section-marks-opacity: 0.4;
-    --ds-panel-scan-mark-list-margin: 0 0 18px;
-    --ds-panel-scan-mark-padding: 12px 12px 14px;
-    --ds-panel-scan-q-text-margin: 0 0 10px;
-    --ds-panel-offset-value-font-variant-numeric: tabular-nums;
-    --ds-panel-export-voice-list-margin: 12px 0 0;
     --ds-panel-export-voice-list-li-off-field-opacity: 0.45;
     --ds-panel-input-type-range-vendor-slider-thumb-margin-top: -7px;
     --ds-panel-section-mark-font-family: 'Baltimore Bold 1832', var(--ds-font-display)}
-
-:root {--ds-debug-font:500 12px/1.3 ui-monospace, monospace;}
 
 /* P6a panels: structural sizes and effects shared by all themes. */
 :root {
@@ -2387,7 +2222,6 @@
   --ds-panel-leading-scan: 1.45;
   --ds-panel-stroke-mark: 1.5px;
   --ds-panel-size-mark: 17px;
-  --ds-panel-size-unit: 15px;
   --ds-panel-leading-debug: 1.3;
   --ds-panel-leading-label: 1.2;
   --ds-panel-leading-single: 1;
@@ -2449,7 +2283,6 @@
   --ds-voice-muted-stop: 80%;
   --ds-voice-muted-tint: 40%;
   --ds-player-badge-box-shadow: none;
-  --ds-player-song-title-line-height: 1.15;
 }
 
 /* P6a library/account utility dimensions; theme-independent parity values. */
@@ -2505,8 +2338,6 @@
   --ds-library-spotlight-y: 0%;
   --ds-library-spotlight-stop: 45%;
 }
-
-:root { }
 /* Shell, artwork and route composition values retained exactly through P6 cleanup. */
 :root {
   --ds-safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -2621,9 +2452,6 @@
   --ds-capability-row-gap: 12px 18px;
   --ds-row-menu-summary-padding: 6px 10px;
   --ds-wordmark-font-family: 'Baltimore Black Slope 1832', var(--ds-font-display);
-  --ds-library-head-h1-intro-card-h2-letter-spacing: 0.07em;
-  --ds-library-head-h1-line-height: 1.05;
-  --ds-intro-card-h2-line-height: 1.25;
   --ds-account-stage-min-height: 100svh;
   --ds-account-content-z-index: 1;
   --ds-account-content-width: min(100% - 48px, 560px);
@@ -2698,8 +2526,6 @@
 }
 
 /* Installed browser artwork uses the stable default-theme roles, generated at the CSS boundary. */
-:root {
-}
 /* Local artwork inputs stay at their consumer; only authored geometry and timing live here. */
 :root {
   --ds-writing-mask-angle: 90deg;
@@ -2709,7 +2535,7 @@
   --ds-delay-dedication-write: 0.25s;
 }
 @theme inline {
-  --surface-clear: var(--ds-material-clear);
+  --surface-material-clear: var(--ds-material-clear);
   --animate-animation-loading: var(--ds-animation-loading);
   --animate-landing-modes-animation: var(--ds-landing-modes-animation);
   --animate-landing-name-animation: var(--ds-landing-name-animation);
@@ -2750,32 +2576,14 @@
   --color-ink: var(--ds-ink);
   --color-ink-muted: var(--ds-ink-muted);
   --color-ink-secondary: var(--ds-ink-secondary);
-  --color-library-banner-b-color: var(--ds-library-banner-b-color);
-  --color-library-banner-border-color: var(--ds-library-banner-border-color);
-  --color-library-banner-color: var(--ds-library-banner-color);
-  --color-library-buehne--mode-btn-last-used-color: var(--ds-library-buehne--mode-btn-last-used-color);
-  --color-library-empty-note-color: var(--ds-library-empty-note-color);
-  --color-library-mode-btn-border-color: var(--ds-library-mode-btn-border-color);
-  --color-library-mode-btn-color: var(--ds-library-mode-btn-color);
-  --color-library-mode-btn-hover-border-color: var(--ds-library-mode-btn-hover-border-color);
-  --color-library-mode-btn-last-used-border-color: var(--ds-library-mode-btn-last-used-border-color);
-  --color-library-neu--mode-btn-color: var(--ds-library-neu--mode-btn-color);
-  --color-library-paper-option-aria-checked-true-border-color: var(--ds-library-paper-option-aria-checked-true-border-color);
-  --color-library-paper-option-hover-border-color: var(--ds-library-paper-option-hover-border-color);
-  --color-library-paper-text-b-color: var(--ds-library-paper-text-b-color);
-  --color-library-paper-text-color: var(--ds-library-paper-text-color);
-  --color-library-phone-song-more-color: var(--ds-library-phone-song-more-color);
-  --color-library-search-border-color: var(--ds-library-search-border-color);
-  --color-library-search-color: var(--ds-library-search-color);
-  --color-library-search-focus-within-border-color: var(--ds-library-search-focus-within-border-color);
-  --color-library-search-input-color: var(--ds-library-search-input-color);
-  --color-library-song-card-border-color: var(--ds-library-song-card-border-color);
-  --color-library-song-card-hover-border-color-2: var(--ds-library-song-card-hover-border-color-2);
-  --color-library-song-meta-color: var(--ds-library-song-meta-color);
-  --color-library-song-more-color: var(--ds-library-song-more-color);
-  --color-library-sound-prompt-color: var(--ds-library-sound-prompt-color);
-  --color-material-domain-gold-color: var(--ds-material-domain-gold-color);
   --color-material-edge: var(--ds-material-edge);
+  --color-library-buehne--mode-btn-last-used-color: var(--ds-library-buehne--mode-btn-last-used-color);
+  --color-library-neu--mode-btn-color: var(--ds-library-neu--mode-btn-color);
+  --color-rule-strong: var(--ds-rule-strong);
+  --color-library-song-card-border-color: var(--ds-library-song-card-border-color);
+  --color-library-card-hover-edge: var(--ds-library-card-hover-edge);
+  --color-surface-sunken: var(--ds-surface-sunken);
+  --color-material-domain-gold-color: var(--ds-material-domain-gold-color);
   --color-material-intro-count-color: var(--ds-material-intro-count-color);
   --color-material-title-l-color: var(--ds-material-title-l-color);
   --color-note-secondary: var(--ds-note-secondary);
@@ -2793,13 +2601,11 @@
   --color-player-play-button-color: var(--ds-player-play-button-color);
   --color-player-transport-command-toggle-pressed-border-color: var(--ds-player-transport-command-toggle-pressed-border-color);
   --color-rule: var(--ds-rule);
-  --color-rule-strong: var(--ds-rule-strong);
   --color-success: var(--ds-success);
   --color-surface: var(--ds-surface);
   --color-surface-hover: var(--ds-surface-hover);
   --color-surface-overlay: var(--ds-surface-overlay);
   --color-surface-raised: var(--ds-surface-raised);
-  --color-surface-sunken: var(--ds-surface-sunken);
   --color-table-row-hover: var(--ds-table-row-hover);
   --color-transcription-accent: var(--ds-transcription-accent);
   --color-transcription-backdrop: var(--ds-transcription-backdrop);
@@ -2836,18 +2642,14 @@
   --font-display: var(--ds-font-display);
   --font-heading: var(--ds-font-heading);
   --font-label: var(--ds-weight-label);
-  --font-library-revival--song-title-font-family: var(--ds-library-revival--song-title-font-family);
   --font-mono: var(--ds-font-mono);
   --font-music: var(--ds-font-music);
   --font-panel-debug-font-family: var(--ds-panel-debug-font-family);
-  --font-panel-section-mark-font-family: var(--ds-panel-section-mark-font-family);
-  --font-song-title: var(--ds-font-song-title);
   --font-weight-weight-body: var(--ds-weight-body);
   --font-weight-weight-close-light: var(--ds-weight-close-light);
   --font-weight-weight-label: var(--ds-weight-label);
   --font-weight-weight-medium: var(--ds-weight-medium);
   --font-weight-weight-strong: var(--ds-weight-strong);
-  --font-wordmark-font-family: var(--ds-wordmark-font-family);
   --frame-bottom-account-input-border-bottom: var(--ds-account-input-border-bottom);
   --frame-bottom-library-phone-song-card-border-bottom: var(--ds-library-phone-song-card-border-bottom);
   --frame-bottom-library-top-border-bottom: var(--ds-library-top-border-bottom);
@@ -2871,7 +2673,6 @@
   --frame-right-player-voices-panel-border-right: var(--ds-player-voices-panel-border-right);
   --frame-top-account-heading-border-top: var(--ds-account-heading-border-top);
   --frame-top-domain-heading-border-top: var(--ds-domain-heading-border-top);
-  --frame-top-library-landing-empty-border-top: var(--ds-library-landing-empty-border-top);
   --frame-top-library-sheet-border-top: var(--ds-library-sheet-border-top);
   --frame-top-player-duck-border-top: var(--ds-player-duck-border-top);
   --frame-top-transcription-review-panel-border-top: var(--ds-transcription-review-panel-border-top);
@@ -2888,17 +2689,14 @@
   --grid-template-columns-player-voice-row-grid-template-columns-actions: var(--ds-player-voice-row-grid-template-columns-actions);
   --leading-account-links-line-height: var(--ds-account-links-line-height);
   --leading-auth-shell-p-line-height: var(--ds-auth-shell-p-line-height);
-  --leading-intro-card-h2-line-height: var(--ds-intro-card-h2-line-height);
   --leading-intro-card-p-line-height: var(--ds-intro-card-p-line-height);
   --leading-leading-account: var(--ds-leading-account);
   --leading-leading-admin: var(--ds-leading-admin);
   --leading-leading-body: var(--ds-leading-body);
   --leading-leading-close: var(--ds-leading-close);
-  --leading-leading-dialog: var(--ds-leading-dialog);
   --leading-leading-field: var(--ds-leading-field);
   --leading-leading-label: var(--ds-leading-label);
   --leading-leading-transcription-heading: var(--ds-leading-transcription-heading);
-  --leading-library-head-h1-line-height: var(--ds-library-head-h1-line-height);
   --leading-library-paper-text-line-height: var(--ds-library-paper-text-line-height);
   --leading-panel-leading-debug: var(--ds-panel-leading-debug);
   --leading-panel-leading-label: var(--ds-panel-leading-label);
@@ -2909,7 +2707,6 @@
   --leading-panel-leading-scan: var(--ds-panel-leading-scan);
   --leading-panel-leading-single: var(--ds-panel-leading-single);
   --leading-player-button-padding: var(--ds-player-button-padding);
-  --leading-player-song-title-line-height: var(--ds-player-song-title-line-height);
   --leading-player-voice-name-line-height: var(--ds-player-voice-name-line-height);
   --leading-power-hint-p-line-height: var(--ds-power-hint-p-line-height);
   --leading-transcription-error-line-height: var(--ds-transcription-error-line-height);
@@ -2947,7 +2744,7 @@
   --motion-player-transport-command-transition: var(--ds-player-transport-command-transition);
   --motion-player-voice-row-transition: var(--ds-player-voice-row-transition);
   --opacity-account-ribbons-opacity: var(--ds-account-ribbons-opacity);
-  --opacity-hidden: var(--ds-opacity-hidden);
+  --opacity-opacity-hidden: var(--ds-opacity-hidden);
   --opacity-navigation-other-opacity: var(--ds-navigation-other-opacity);
   --opacity-navigation-switch-hover-opacity: var(--ds-navigation-switch-hover-opacity);
   --opacity-opacity-disabled: var(--ds-opacity-disabled);
@@ -2955,7 +2752,7 @@
   --opacity-opacity-half: var(--ds-opacity-half);
   --opacity-title-name-title-light-title-name-light-settled-title-light-opacity: var(--ds-title-name-title-light-title-name-light-settled-title-light-opacity);
   --opacity-transcription-wash-opacity: var(--ds-transcription-wash-opacity);
-  --opacity-visible: var(--ds-opacity-visible);
+  --opacity-opacity-visible: var(--ds-opacity-visible);
   --radius-card: var(--ds-radius-card);
   --radius-card-roomy: var(--ds-radius-card-roomy);
   --radius-control: var(--ds-radius-control);
@@ -2982,17 +2779,15 @@
   --shadow-domain-sheet-shadow: var(--ds-domain-sheet-shadow);
   --shadow-emboss-pressed: var(--ds-shadow-emboss-pressed);
   --shadow-focus: var(--ds-shadow-focus);
-  --shadow-library-banner-box-shadow: var(--ds-library-banner-box-shadow);
+  --shadow-material-highlight: var(--ds-shadow-material-highlight);
   --shadow-library-buehne--mode-btn-last-used-box-shadow: var(--ds-library-buehne--mode-btn-last-used-box-shadow);
   --shadow-library-mode-btn-box-shadow: var(--ds-library-mode-btn-box-shadow);
   --shadow-library-mode-btn-hover-box-shadow: var(--ds-library-mode-btn-hover-box-shadow);
   --shadow-library-mode-btn-last-used-box-shadow: var(--ds-library-mode-btn-last-used-box-shadow);
-  --shadow-library-neu--mode-btn-active-box-shadow: var(--ds-library-neu--mode-btn-active-box-shadow);
   --shadow-library-neu--mode-btn-box-shadow: var(--ds-library-neu--mode-btn-box-shadow);
   --shadow-library-neu--mode-btn-hover-box-shadow: var(--ds-library-neu--mode-btn-hover-box-shadow);
   --shadow-library-neu--mode-btn-last-used-box-shadow: var(--ds-library-neu--mode-btn-last-used-box-shadow);
   --shadow-library-pointer-song-card-is-tilted-box-shadow: var(--ds-library-pointer-song-card-is-tilted-box-shadow);
-  --shadow-library-search-box-shadow: var(--ds-library-search-box-shadow);
   --shadow-library-song-card-box-shadow: var(--ds-library-song-card-box-shadow);
   --shadow-library-song-card-lifted-box-shadow: var(--ds-library-song-card-lifted-box-shadow);
   --shadow-library-sound-prompt-box-shadow: var(--ds-library-sound-prompt-box-shadow);
@@ -3226,27 +3021,22 @@
   --surface-danger: var(--ds-danger);
   --surface-ink: var(--ds-ink);
   --surface-ink-secondary: var(--ds-ink-secondary);
-  --surface-library-banner-background-2: var(--ds-library-banner-background-2);
+  --surface-material-vellum: var(--ds-material-vellum);
   --surface-library-buehne--mode-btn-last-used-background: var(--ds-library-buehne--mode-btn-last-used-background);
-  --surface-library-cover-background-2: var(--ds-library-cover-background-2);
-  --surface-library-mode-btn-background-2: var(--ds-library-mode-btn-background-2);
+  --surface-library-cover-overlay: var(--ds-library-cover-overlay);
+  --surface-library-mode-surface: var(--ds-library-mode-surface);
   --surface-library-mode-btn-hover-background: var(--ds-library-mode-btn-hover-background);
   --surface-library-neu--mode-btn-background: var(--ds-library-neu--mode-btn-background);
   --surface-library-neu--mode-btn-hover-background: var(--ds-library-neu--mode-btn-hover-background);
-  --surface-library-opaque-banner-background: var(--ds-library-opaque-banner-background);
-  --surface-library-opaque-mode-btn-background: var(--ds-library-opaque-mode-btn-background);
-  --surface-library-opaque-search-background: var(--ds-library-opaque-search-background);
+  --surface-surface-raised: var(--ds-surface-raised);
   --surface-library-overlay-backdrop: var(--ds-library-overlay-backdrop);
   --surface-library-paper-option-aria-checked-true-background: var(--ds-library-paper-option-aria-checked-true-background);
   --surface-library-paper-swatch-background: var(--ds-library-paper-swatch-background);
   --surface-library-phone-more-background: var(--ds-library-phone-more-background);
-  --surface-library-search-background-2: var(--ds-library-search-background-2);
-  --surface-library-song-card-background-2: var(--ds-library-song-card-background-2);
-  --surface-library-song-card-lifted-background: var(--ds-library-song-card-lifted-background);
-  --surface-library-song-card-skeleton-background-2: var(--ds-library-song-card-skeleton-background-2);
+  --surface-library-card-surface: var(--ds-library-card-surface);
+  --surface-library-loading-surface: var(--ds-library-loading-surface);
   --surface-library-song-card-tag-background: var(--ds-library-song-card-tag-background);
   --surface-library-song-more-background: var(--ds-library-song-more-background);
-  --surface-library-sound-prompt-background: var(--ds-library-sound-prompt-background);
   --surface-material-card: var(--ds-material-card);
   --surface-material-ded-name-background: var(--ds-material-ded-name-background);
   --surface-material-drop-slot-background: var(--ds-material-drop-slot-background);
@@ -3256,7 +3046,6 @@
   --surface-material-intro-spot-background: var(--ds-material-intro-spot-background);
   --surface-material-sheet: var(--ds-material-sheet);
   --surface-material-stage-background: var(--ds-material-stage-background);
-  --surface-material-vellum: var(--ds-material-vellum);
   --surface-material-vellum-strong: var(--ds-material-vellum-strong);
   --surface-material-wordmark-aria-label-lightscore-background: var(--ds-material-wordmark-aria-label-lightscore-background);
   --surface-player-badge-is-leading-background: var(--ds-player-badge-is-leading-background);
@@ -3281,7 +3070,6 @@
   --surface-success: var(--ds-success);
   --surface-surface: var(--ds-surface);
   --surface-surface-hover: var(--ds-surface-hover);
-  --surface-surface-raised: var(--ds-surface-raised);
   --surface-surface-sunken: var(--ds-surface-sunken);
   --surface-transcription-accent: var(--ds-transcription-accent);
   --surface-transcription-job-background: var(--ds-transcription-job-background);
@@ -3303,7 +3091,6 @@
   --text-label: var(--ds-size-label);
   --text-note: var(--ds-size-note);
   --text-overview-word: var(--ds-size-overview-word);
-  --text-library-title: var(--ds-size-library-title);
   --text-metric: var(--ds-size-metric);
   --text-navigation-other-size: var(--ds-navigation-other-size);
   --text-overview-dense: var(--ds-size-overview-dense);
@@ -3323,14 +3110,10 @@
   --tracking-domain-heading-letter-spacing: var(--ds-domain-heading-letter-spacing);
   --tracking-intro-count-letter-spacing: var(--ds-intro-count-letter-spacing);
   --tracking-landing-name-letter-spacing: var(--ds-landing-name-letter-spacing);
-  --tracking-library-head-h1-intro-card-h2-letter-spacing: var(--ds-library-head-h1-intro-card-h2-letter-spacing);
-  --tracking-library-revival--song-title-letter-spacing: var(--ds-library-revival--song-title-letter-spacing);
   --tracking-library-tag-tracking: var(--ds-library-tag-tracking);
   --tracking-panel-label-letter-spacing: var(--ds-panel-label-letter-spacing);
   --tracking-player-label-letter-spacing: var(--ds-player-label-letter-spacing);
-  --tracking-player-song-title-letter-spacing: var(--ds-player-song-title-letter-spacing);
   --tracking-tracking-auth-label: var(--ds-tracking-auth-label);
-  --tracking-tracking-heading: var(--ds-tracking-heading);
   --tracking-wordmark-letter-spacing: var(--ds-wordmark-letter-spacing);
   --transition-duration-note-in: var(--ds-duration-note-in);
   --transition-duration-switch: var(--ds-duration-switch);
