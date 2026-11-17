@@ -53,13 +53,6 @@
     {
       "file": "src/auth.css",
       "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .auth-shell .invitation-title / color",
-      "value": "#795315",
-      "count": 1
-    },
-    {
-      "file": "src/auth.css",
-      "kind": "raw-color",
       "context": ".account-wordmark .ls-score / filter",
       "value": "#0003",
       "count": 1
@@ -67,43 +60,8 @@
     {
       "file": "src/auth.css",
       "kind": "screen-control-selector",
-      "context": ".account-links button:disabled",
-      "value": ".account-links button:disabled",
-      "count": 1
-    },
-    {
-      "file": "src/auth.css",
-      "kind": "screen-control-selector",
-      "context": ".account-links button:hover",
-      "value": ".account-links button:hover",
-      "count": 1
-    },
-    {
-      "file": "src/auth.css",
-      "kind": "screen-control-selector",
-      "context": ".auth-shell input:focus",
-      "value": ".auth-shell input:focus",
-      "count": 1
-    },
-    {
-      "file": "src/auth.css",
-      "kind": "screen-control-selector",
-      "context": ".auth-shell input",
-      "value": ".auth-shell input",
-      "count": 1
-    },
-    {
-      "file": "src/auth.css",
-      "kind": "screen-control-selector",
       "context": ".language-toggle button",
       "value": ".language-toggle button",
-      "count": 1
-    },
-    {
-      "file": "src/auth.css",
-      "kind": "screen-control-selector",
-      "context": ".password-line input",
-      "value": ".password-line input",
       "count": 1
     },
     {
