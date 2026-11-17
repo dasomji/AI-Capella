@@ -798,3 +798,56 @@ it('finishes a sheet through its duration fallback when transitionend is absent'
   expect(dialog.open).toBe(false);
   expect(document.activeElement).toBe(opener);
 });
+
+describe('AICAP-28 overlay decisions', () => {
+  it('keeps actionable prompts and errors until dismissed, then delivers queued notices', () => {
+    vi.useFakeTimers();
+    const selected = vi.fn();
+    toast('Reload available', 'info', {action: {label: 'Reload', onSelect: selected}});
+    toast('Saved');
+    vi.advanceTimersByTime(60000);
+    expect(getToast()?.text).toBe('Reload available');
+    document.querySelector<HTMLButtonElement>('#toast button')!.click();
+    expect(selected).toHaveBeenCalledOnce();
+    expect(getToast()?.text).toBe('Saved');
+    vi.advanceTimersByTime(3200);
+    expect(getToast()).toBeNull();
+  });
+  it('generates a danger confirmation command and alertdialog semantics in both adapters', () => {
+    const confirmed = vi.fn();
+    const options = {title: 'Remove member', destructive: true, confirmAction: {label: 'Remove permanently', onConfirm: confirmed}};
+    const dom = D.createConfirmDialog(options).element;
+    expect(dom.getAttribute('role')).toBe('alertdialog');
+    expect(dom.querySelector('button')?.className).toContain('tw:bg-danger');
+    dom.querySelector('button')!.click();
+    expect(confirmed).toHaveBeenCalledOnce();
+    const root = document.createElement('div');
+    root.innerHTML = renderToString(createElement(R.ConfirmDialog, {...options, open: true, specimen: true}));
+    expect(root.querySelector('dialog')?.getAttribute('role')).toBe('alertdialog');
+    expect(root.querySelector('button')?.className).toContain('tw:bg-danger');
+  });
+  it('fits the visible keyboard viewport and scrolls the focused field without changing the dialog identity', () => {
+    vi.useFakeTimers();
+    const viewport = Object.assign(new EventTarget(), {width: 390, height: 844, offsetTop: 0, offsetLeft: 0});
+    vi.stubGlobal('visualViewport', viewport);
+    try {
+      const {dialog, api} = modal();
+      const focused = dialog.querySelector('button')!;
+      const scroll = vi.fn();
+      focused.scrollIntoView = scroll;
+      focused.focus();
+      viewport.height = 380;
+      viewport.offsetTop = 25;
+      viewport.dispatchEvent(new Event('resize'));
+      vi.advanceTimersByTime(20);
+      expect(dialog.style.maxHeight).toBe('380px');
+      expect(dialog.style.top).toBe('25px');
+      expect(scroll).toHaveBeenCalledWith({block:'nearest', inline:'nearest', behavior:'instant'});
+      api.dispose();
+      scroll.mockClear();
+      viewport.dispatchEvent(new Event('resize'));
+      vi.advanceTimersByTime(20);
+      expect(scroll).not.toHaveBeenCalled();
+    } finally { vi.unstubAllGlobals(); }
+  });
+});
