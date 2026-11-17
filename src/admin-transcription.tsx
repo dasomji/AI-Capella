@@ -4,8 +4,8 @@ import { adminRequest, managementError } from "./admin-request";
 import { ReasonDialog } from "./admin-management";
 import { AdminDataTable, type AdminColumn } from "./admin-data-table";
 import { jobColumns } from "./admin-detail";
-import { Count, Identifier, Instant, Section, ui, useAdmin, vocabulary, type AdminRow } from "./admin-format";
-import { calendarInstant, calendarRange } from "./admin-time";
+import { dayStart, Count, Identifier, Instant, Section, ui, useAdmin, vocabulary, type AdminRow } from "./admin-format";
+import { calendarRange } from "./admin-time";
 import { AdminToolbar } from "./admin-toolbar";
 
 type Query = Record<string, string>;
@@ -21,8 +21,8 @@ export function TranscriptionScreen({ query, setQuery }: { query: Query; setQuer
     [revision, setRevision] = useState(0);
   const opener = useRef<HTMLElement | null>(null);
   const defaults = calendarRange(zone);
-  const from = query.all ? "1970-01-01T00:00:00Z" : calendarInstant(query.from || defaults.from, zone);
-  const to = calendarInstant(query.to || defaults.to, zone);
+  const from = query.all ? "1970-01-01T00:00:00Z" : (dayStart(query.from, zone) ?? dayStart(defaults.from, zone)!);
+  const to = dayStart(query.to, zone) ?? dayStart(defaults.to, zone)!;
   const range = new URLSearchParams({ from, to, ...(query.all ? { all: "true" } : {}), ...(query.ensemble ? { ensemble: query.ensemble } : {}) });
   useEffect(() => {
     let live = true;

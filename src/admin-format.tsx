@@ -2,7 +2,7 @@ import { createContext, useContext, useId, type ReactNode } from "react";
 import { Badge, IconButton, toast } from "./design-system/react";
 import { adminRecipe } from "./design-system/recipes/admin";
 import { adminFieldMessages, adminManagementMessages, adminMessages, adminPolishMessages, adminUiMessages, type Lang } from "./i18n";
-import { adminInstant } from "./admin-time";
+import { adminInstant, calendarInstant } from "./admin-time";
 
 export type AdminRow = Record<string, any>;
 /** Last filters of each list in this tab, so a detail page's breadcrumb returns to the same list. */
@@ -154,4 +154,10 @@ export function Bytes({ value }: { value: number | null | undefined }) {
   let n = Number(value), unit = 0;
   while (n >= 1024 && unit < units.length - 1) { n /= 1024; unit++; }
   return <span title={String(value)}>{new Intl.NumberFormat(language, { maximumFractionDigits: unit ? 1 : 0 }).format(n)} {units[unit]}</span>;
+}
+
+/** First instant of a business-zone calendar day, or undefined for a malformed URL value. */
+export function dayStart(day: string | undefined, zone: string) {
+  if (!day) return undefined;
+  try { return calendarInstant(day, zone); } catch { return undefined; }
 }

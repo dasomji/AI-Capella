@@ -5,8 +5,7 @@ import { AdminDataTable, type AdminColumn } from "./admin-data-table";
 import { AdminToolbar } from "./admin-toolbar";
 import { EnsembleDetail, PieceDetail, UserDetail } from "./admin-detail";
 import { TranscriptionScreen } from "./admin-transcription";
-import { AdminContext, listQueries, Count, Identifier, Instant, StateBadge, YesNo, ui, useAdmin, vocabulary, type AdminRow } from "./admin-format";
-import { calendarInstant } from "./admin-time";
+import { AdminContext, dayStart, listQueries, Count, Identifier, Instant, StateBadge, YesNo, ui, useAdmin, vocabulary, type AdminRow } from "./admin-format";
 import { adminUiMessages, type Lang } from "./i18n";
 import { brandRecipe } from "./design-system/recipes/auth";
 
@@ -165,7 +164,8 @@ function ListScreen({ section, title, query, setQuery }: { section: AdminSection
   const filters = Object.fromEntries(
     Object.entries(query)
       .filter(([key, value]) => value && key !== "search")
-      .map(([key, value]) => [key, key === "from" || key === "to" ? calendarInstant(value, zone) : value]),
+      .map(([key, value]) => [key, key === "from" || key === "to" ? dayStart(value, zone) : value])
+      .filter(([, value]) => value),
   );
   return (
     <div>
