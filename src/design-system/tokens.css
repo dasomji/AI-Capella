@@ -2290,3 +2290,10 @@
   --spacing-library-native-checkbox-margin: var(--ds-native-checkbox-margin);
   --spacing-account-input-padding: var(--ds-account-input-padding);
 }
+
+:root { --ds-panel-debug-radius: 6px; }
+@theme inline {
+  --spacing-panel-mark: var(--ds-panel-size-mark);
+  --spacing-panel-note: var(--ds-panel-ctl-note-font-size-31);
+  --radius-panel-debug: var(--ds-panel-debug-radius);
+}
