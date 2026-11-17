@@ -16,7 +16,7 @@ import {
   type ButtonOptions,
 } from "./design-system/dom";
 import { matchBreakpoint } from "./design-system/theme";
-import { lang, t } from "./i18n";
+import { lang, t, sharedPlaybackTourMessages } from "./i18n";
 
 /**
  * On for everyone; ?intro=aus switches it off on a device (no tours, no menu entry), ?intro=an
@@ -142,10 +142,7 @@ const TOURS: Record<TourId, Step[]> = {
     {
       at: ["#mode-seg"],
       title: { de: "Gemeinsam proben", en: "Rehearse together" },
-      text: {
-        de: "Wähle »Gemeinsam«: Alle steuern die gemeinsame Wiedergabe auf allen Geräten.",
-        en: "Choose “Together”: everyone controls shared playback on every device.",
-      },
+      text: sharedPlaybackTourMessages.library,
     },
   ],
   player: [
@@ -233,11 +230,8 @@ const TOURS: Record<TourId, Step[]> = {
     },
     {
       at: ["#mode-badge"],
-      title: { de: "Gemeinsam steuern", en: "Shared playback" },
-      text: {
-        de: "In »Gemeinsam« steuern alle die gemeinsame Wiedergabe. Änderungen gelten auf allen Geräten.",
-        en: "In Together, everyone controls shared playback. Changes apply on every device.",
-      },
+      title: sharedPlaybackTourMessages.title,
+      text: sharedPlaybackTourMessages.player,
     },
     {
       at: ["#player-menu-btn"],
