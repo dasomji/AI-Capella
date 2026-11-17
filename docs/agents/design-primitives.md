@@ -214,6 +214,9 @@ maps are checked by the theme contracts rather than repeatedly compared on every
 neutralizes only the two host shells' layout dimensions; component appearance still competes
 with the actual auth/admin composition recipes. Run `npm run test:browser:design-system`;
 set `BROWSER_EVIDENCE` for captures outside git.
+`npm run test:browser:components` additionally exercises real ensemble forms with stubbed APIs:
+immediate member saves, invitation choices submitted together, a persistent panel failure and
+successful retry, and a final destructive confirmation across both supported themes and four viewports.
 
 ### Library parity
 
