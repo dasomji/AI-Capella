@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { specimens } from './catalog';
+import {Button, Field, Select} from './react/app';
 import { useTheme } from './theme/react';
 import { colorRoles, setThemePreference, themeRegistry } from './theme';
 import type { ThemePreference } from './theme';
@@ -15,13 +16,13 @@ export function DesignSystemShowcase() {
   const theme = useTheme();
   return <main className="tw:bg-surface tw:text-ink tw:font-body tw:p-section">
     <h1 className="tw:font-heading">LightScore design tokens</h1>
-    <label>Theme <select aria-label="Theme" value={theme?.preference ?? 'system'} onChange={event => setThemePreference(event.target.value as ThemePreference)}>
+    <Field label="Theme">{association => <Select {...association} value={theme?.preference ?? 'system'} onChange={event => setThemePreference(event.target.value as ThemePreference)}>
       <option value="system">System</option>{themeRegistry.map(theme => <option key={theme.id} value={theme.id}>{theme.label}</option>)}
-    </select></label>
+    </Select>}</Field>
     <p>{theme?.id} · {theme?.type} · revision {theme?.revision}</p>
     <h2>Shared primitives · React / DOM</h2>
-    <p>Every named variant, state and slot uses the same typed recipe. Dialog specimens are nonmodal; open a modal with the behavior controls.</p>
-    <button type="button" onClick={async()=>{const {createDialog,createButton}=await import('./dom');const close=createButton({text:'Close',onClick:()=>modal.close()});const modal=createDialog({title:'Keyboard and focus',body:'Escape and outside click close this modal.',actions:close});modal.open();}}>Open lifecycle example</button>
+    <p>Actions share one softly rounded family with main, secondary, quiet and danger intents. Sizes are standard, compact, full-width and touch; compact expands on touch devices. Normal forms use writing lines; search, numeric and repeated names use boxes. Switches apply immediately; checkboxes submit with Save. Dialog specimens are nonmodal.</p>
+    <Button onClick={async()=>{const {createDialog,createButton}=await import('./dom');const close=createButton({text:'Close',onClick:()=>modal.close()});const modal=createDialog({title:'Keyboard and focus',body:'Escape and outside click close this modal.',actions:close});modal.open();}}>Open lifecycle example</Button>
     <div className="ds-specimens tw:grid tw:gap-section">{examples.map(example=><section key={example.name} data-specimen={example.name}><h3>{example.name}</h3><div className="ds-specimen-pair tw:grid tw:grid-cols-2 tw:gap-section tw:[&>div]:min-w-flush tw:[&>div]:relative tw:[&>div]:[transform:var(--ds-roll-staff-transform)] tw:[&_dialog]:relative! tw:[&_dialog]:inset-auto! tw:[&_dialog]:m-flush! tw:[&_dialog]:w-full! tw:[&_dialog]:h-auto! tw:[&_dialog]:max-w-full! tw:[&_dialog]:max-h-none!"><div data-renderer="react">{example.react}</div><DomSpecimen build={example.dom}/></div></section>)}</div>
     <h2 className="tw:font-display">Semantic color roles</h2>
     <div className="tw:flex tw:flex-wrap tw:gap-section">
