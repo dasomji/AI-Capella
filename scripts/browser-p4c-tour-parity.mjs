@@ -12,7 +12,7 @@ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{for(const version of ['before','after'])for(const theme of ['night-paper','parchment'])for(const [width,height] of [[1440,900],[768,1024],[390,844]]){
  const context=await browser.newContext({viewport:{width,height},colorScheme:'dark'}),page=await context.newPage();await page.addInitScript(()=>{localStorage.setItem('ai-capella-lang','en');localStorage.setItem('ai-capella-intro-off','1');});
  if(version==='before')await page.route('**/src/intro.ts',route=>route.fulfill({contentType:'application/javascript',body:source}));
- await page.goto(base+'/dev/design-system');await page.locator('.ds-specimens').waitFor();await page.evaluate(()=>document.fonts.ready);
+ await page.goto(base+'/dev/design-system');await page.locator('.ds-specimens').waitFor();await page.evaluate(()=>document.fonts.ready);const styles=await page.locator('style,link[rel=stylesheet]').evaluateAll(nodes=>nodes.map(n=>n.outerHTML).join(''));await page.goto(base+'/healthz');await page.setContent('<!doctype html><html><head>'+styles+'</head><body></body></html>');
  if(version==='before')await page.addStyleTag({content:'@layer legacy {'+legacy+'}'});
  await page.evaluate(async theme=>{(await import('/src/design-system/theme/index.ts')).setThemePreference(theme);window.intro=await import('/src/intro.ts');document.body.replaceChildren();},theme);
  for(const tour of ['library','player']){
