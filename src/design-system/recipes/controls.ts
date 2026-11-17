@@ -10,7 +10,7 @@ const controlFocus = {
   admin: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-admin-accent tw:focus-visible:outline-offset-tight",
   library: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-ink tw:focus-visible:outline-offset-compact",
 };
-const unfocusedControlBase = controlBehavior + " tw:m-none";
+const unfocusedControlBase = controlBehavior + " tw:m-flush";
 const adminControlBase = unfocusedControlBase + " " + controlFocus.admin;
 export const controlBase = unfocusedControlBase + " " + controlFocus.standard;
 export const disabledRecipe =
@@ -79,29 +79,29 @@ const parityButtonShapes = {
   "paper-choice": "ds-library-paper-option",
   "sound-prompt": "ds-library-sound-prompt",
   "offline-update": "ds-library-offline-update",
-  "domain-language": "tw:min-h-panel tw:min-w-heading tw:px-none tw:py-compact tw:rounded-card tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-weight-body tw:text-small tw:leading-leading-admin tw:text-center",
-  tile: "tw:flex-1 tw:min-w-none tw:min-h-upload-tile-height tw:max-score:min-h-upload-tile-phone-height tw:flex-col tw:px-inline tw:py-action tw:whitespace-normal tw:rounded-tile tw:bg-surface tw:text-ink tw:border-rule-strong tw:text-button tw:font-weight-label tw:font-auth-body tw:leading-leading-body",
+  "domain-language": "tw:min-h-panel tw:min-w-heading tw:px-flush tw:py-compact tw:rounded-card tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-weight-body tw:text-small tw:leading-leading-admin tw:text-center",
+  tile: "tw:flex-1 tw:min-w-flush tw:min-h-upload-tile-height tw:max-score:min-h-upload-tile-phone-height tw:flex-col tw:px-inline tw:py-action tw:whitespace-normal tw:rounded-tile tw:bg-surface tw:text-ink tw:border-rule-strong tw:text-button tw:font-weight-label tw:font-auth-body tw:leading-leading-body",
   compact: "tw:min-h-toolbar-dense tw:p-snug tw:rounded-card tw:border-rule-strong tw:bg-transparent tw:text-ink tw:text-small tw:font-weight-label tw:font-auth-body tw:leading-leading-body",
-  "review-item": "tw:min-h-control-height tw:w-full tw:mb-compact tw:justify-start tw:items-baseline tw:text-left tw:whitespace-normal tw:py-control tw:px-none tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:rounded-field tw:border-rule-strong tw:bg-transparent tw:text-ink tw:font-auth-body tw:font-weight-body tw:text-body-small tw:leading-leading-field",
-  "transcription-link": "tw:min-h-none tw:rounded-field tw:px-none tw:py-small tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:hover:text-ink tw:hover:underline tw:font-auth-body tw:font-weight-body tw:text-label tw:leading-leading-body",
-  "transcription-language": "tw:min-h-toolbar-dense tw:rounded-field tw:px-none tw:py-compact tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-weight-body tw:text-small tw:leading-leading-field",
-  "tour-link": "tw:min-h-none tw:rounded-control tw:px-snug tw:py-compact tw:border-0 tw:bg-transparent tw:text-note-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-weight-label tw:leading-leading-body",
-  "hint-link": "tw:min-h-none tw:rounded-control tw:px-snug tw:py-compact tw:border-0 tw:bg-transparent tw:text-hint-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-weight-label tw:leading-leading-body",
-  hint: "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-none tw:text-button tw:font-weight-label tw:font-control tw:leading-leading-body tw:border-rule-strong tw:hover:border-ink-secondary tw:bg-transparent tw:text-surface-sunken",
+  "review-item": "tw:min-h-control-height tw:w-full tw:mb-compact tw:justify-start tw:items-baseline tw:text-left tw:whitespace-normal tw:py-control tw:px-flush tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:rounded-field tw:border-rule-strong tw:bg-transparent tw:text-ink tw:font-auth-body tw:font-weight-body tw:text-body-small tw:leading-leading-field",
+  "transcription-link": "tw:min-h-flush tw:rounded-field tw:px-flush tw:py-small tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:hover:text-ink tw:hover:underline tw:font-auth-body tw:font-weight-body tw:text-label tw:leading-leading-body",
+  "transcription-language": "tw:min-h-toolbar-dense tw:rounded-field tw:px-flush tw:py-compact tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-weight-body tw:text-small tw:leading-leading-field",
+  "tour-link": "tw:min-h-flush tw:rounded-control tw:px-snug tw:py-compact tw:border-0 tw:bg-transparent tw:text-note-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-weight-label tw:leading-leading-body",
+  "hint-link": "tw:min-h-flush tw:rounded-control tw:px-snug tw:py-compact tw:border-0 tw:bg-transparent tw:text-hint-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-weight-label tw:leading-leading-body",
+  hint: "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-flush tw:text-button tw:font-weight-label tw:font-control tw:leading-leading-body tw:border-rule-strong tw:hover:border-ink-secondary tw:bg-transparent tw:text-surface-sunken",
 } as const;
 const buttonShapes: Record<Exclude<ButtonVariant, "scan-mark-go" | "scan-mark-ok" | keyof typeof panelButtons | keyof typeof parityButtonShapes>, string> = {
-  "job-action": "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-none tw:text-button tw:font-weight-label tw:font-auth-body",
+  "job-action": "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-flush tw:text-button tw:font-weight-label tw:font-auth-body",
   standard:
-    "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-none tw:text-button tw:font-weight-label tw:font-control",
-  cta: "tw:min-h-control-height-touch tw:rounded-card tw:px-action tw:py-none tw:w-full tw:text-button tw:font-weight-label tw:font-auth-body",
-  pill: "tw:min-h-control-height-touch tw:rounded-pill tw:px-action tw:py-none tw:text-button tw:font-weight-label tw:font-auth-body",
-  tour: "tw:min-h-control-height-tour tw:rounded-card tw:px-content tw:py-none tw:text-button tw:font-weight-label tw:font-control",
+    "tw:min-h-control-height tw:rounded-card tw:px-action tw:py-flush tw:text-button tw:font-weight-label tw:font-control",
+  cta: "tw:min-h-control-height-touch tw:rounded-card tw:px-action tw:py-flush tw:w-full tw:text-button tw:font-weight-label tw:font-auth-body",
+  pill: "tw:min-h-control-height-touch tw:rounded-pill tw:px-action tw:py-flush tw:text-button tw:font-weight-label tw:font-auth-body",
+  tour: "tw:min-h-control-height-tour tw:rounded-card tw:px-content tw:py-flush tw:text-button tw:font-weight-label tw:font-control",
   dense:
     "tw:min-h-control-height-touch tw:rounded-control-dense tw:px-row tw:py-inline tw:text-body-small tw:font-weight-body tw:font-auth-mono",
-  "dense-sort": "tw:min-h-control-height-touch tw:rounded-control-dense tw:px-none tw:py-none tw:text-body-small tw:font-weight-body tw:font-auth-mono",
-  "account-link": "tw:min-h-none tw:rounded-field tw:px-none tw:py-compact tw:text-body tw:font-weight-body tw:font-auth-body",
-  "password-toggle": "tw:min-h-none tw:rounded-field tw:px-none tw:py-compact tw:text-small tw:font-weight-body tw:font-auth-mono",
-  link: "tw:min-h-panel tw:rounded-field tw:px-none tw:py-compact tw:text-label tw:font-weight-label tw:font-control",
+  "dense-sort": "tw:min-h-control-height-touch tw:rounded-control-dense tw:px-flush tw:py-flush tw:text-body-small tw:font-weight-body tw:font-auth-mono",
+  "account-link": "tw:min-h-flush tw:rounded-field tw:px-flush tw:py-compact tw:text-body tw:font-weight-body tw:font-auth-body",
+  "password-toggle": "tw:min-h-flush tw:rounded-field tw:px-flush tw:py-compact tw:text-small tw:font-weight-body tw:font-auth-mono",
+  link: "tw:min-h-panel tw:rounded-field tw:px-flush tw:py-compact tw:text-label tw:font-weight-label tw:font-control",
 };
 const buttonIntents: Record<ButtonIntent, string> = {
   secondary:
@@ -125,7 +125,7 @@ function actionRecipe(intent: ButtonIntent, pressed: boolean, variant: "standard
   } : variant === "library" ? {...buttonIntents,danger:"tw:bg-danger tw:text-surface-sunken tw:border-danger"} : buttonIntents;
   return [landing ? controlBehavior + " " + controlFocus.standard : controlBase,
     actionDisabled, "tw:leading-leading-body tw:border-(length:--ds-stroke-thin) tw:border-solid tw:whitespace-nowrap tw:cursor-pointer tw:items-center tw:justify-center tw:gap-small",
-    landing ? "tw:block tw:min-h-control-height tw:rounded-card tw:px-action tw:py-none tw:text-body-small tw:font-weight-label tw:font-control tw:mx-auto tw:mt-action tw:text-center" : "tw:inline-flex " + buttonShapes.standard,
+    landing ? "tw:block tw:min-h-control-height tw:rounded-card tw:px-action tw:py-flush tw:text-body-small tw:font-weight-label tw:font-control tw:mx-auto tw:mt-action tw:text-center" : "tw:inline-flex " + buttonShapes.standard,
     colors[intent], pressed ? "tw:shadow-emboss-pressed" : "",
     variant === "library" ? "tw:text-center" : variant === "scan-go" || variant === "scan-ok" ? "ds-panel-scan-button tw:flex-1 tw:text-center" + (variant === "scan-ok" ? " ds-panel-scan-quiet" : "") : "",
   ].join(" ");
@@ -153,7 +153,7 @@ function buttonRecipeStyles({
       "tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:cursor-pointer",
       variant === "account-link"
         ? "tw:inline-block tw:leading-(--ds-leading-account-links) tw:hover:text-ink tw:hover:underline"
-        : "tw:block tw:absolute tw:right-none tw:bottom-inline tw:leading-leading-admin tw:normal-case tw:tracking-normal",
+        : "tw:block tw:absolute tw:right-flush tw:bottom-inline tw:leading-leading-admin tw:normal-case tw:tracking-normal",
     ].join(" ");
   if (variant in parityButtonShapes) {
     const shape = parityButtonShapes[variant as keyof typeof parityButtonShapes];
@@ -201,14 +201,14 @@ function iconButtonRecipeStyles({
   if (variant === "library-more") return libraryMoreRecipe();
   const shapes: Record<NonNullable<IconButtonOptions["variant"]>, string> = {
     "section-add":"", player:"", "player-landscape":"", "player-zoom":"", "player-follow":"", "voice-more":"",
-    "library-more": "ds-library-song-more song-more tw:min-h-none tw:size-toolbar tw:rounded-icon tw:p-none tw:font-control tw:text-body tw:leading-leading-body tw:hover:bg-surface-overlay tw:hover:text-ink",
-    "library-menu": "tw:min-h-none tw:size-toolbar tw:rounded-icon tw:p-none tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
+    "library-more": "ds-library-song-more song-more tw:min-h-flush tw:size-toolbar tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:hover:bg-surface-overlay tw:hover:text-ink",
+    "library-menu": "tw:min-h-flush tw:size-toolbar tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     standard:
-      "tw:min-h-none tw:size-toolbar tw:rounded-icon tw:p-none tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
+      "tw:min-h-flush tw:size-toolbar tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     small:
-      "tw:min-h-none tw:size-panel tw:rounded-icon tw:p-none tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
+      "tw:min-h-flush tw:size-panel tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     transcription:
-      "tw:min-h-none tw:size-toolbar tw:rounded-field tw:p-none tw:font-close tw:font-weight-close-light tw:text-close tw:leading-leading-close tw:text-ink-secondary tw:hover:text-ink",
+      "tw:min-h-flush tw:size-toolbar tw:rounded-field tw:p-flush tw:font-close tw:font-weight-close-light tw:text-close tw:leading-leading-close tw:text-ink-secondary tw:hover:text-ink",
     "admin-close":
       "tw:min-h-touch tw:w-auto tw:h-auto tw:rounded-control-dense tw:px-control tw:py-compact tw:font-close tw:text-admin-close tw:leading-leading-admin tw:text-admin-ink",
     "admin-copy":
@@ -256,7 +256,7 @@ function fieldRecipeStyles(
   const prompt = variant === "library-prompt";
   const ruled = variant !== "boxed" && !prompt;
   return {
-    root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-none" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-none tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group") : admin ? "tw:grid tw:gap-snug tw:min-w-none tw:font-auth-body tw:text-label tw:leading-leading-body tw:tabular-nums" : "tw:grid tw:gap-snug tw:min-w-none " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
+    root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-flush" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-flush tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group") : admin ? "tw:grid tw:gap-snug tw:min-w-flush tw:font-auth-body tw:text-label tw:leading-leading-body tw:tabular-nums" : "tw:grid tw:gap-snug tw:min-w-flush " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
     label:
       variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-leading-body tw:text-ink" : variant === "domain" ? "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-(--ds-domain-label-tracking) tw:leading-leading-admin tw:text-ink-secondary" : ruled && !admin
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-tracking-auth-label tw:leading-leading-field tw:text-ink-secondary"
@@ -264,16 +264,16 @@ function fieldRecipeStyles(
     control: [
       admin ? adminControlBase : variant === "ruled" || variant === "transcription" ? unfocusedControlBase : prompt ? unfocusedControlBase + " tw:outline-none tw:outline-offset-(--ds-space-micro)" : controlBase,
       variant === "ruled" || variant === "transcription" ? "" : disabledRecipe,
-      "tw:block tw:w-full tw:min-w-none tw:font-weight-body tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
+      "tw:block tw:w-full tw:min-w-flush tw:font-weight-body tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
       kind === "textarea" && admin
         ? "tw:h-auto tw:min-h-control-textarea-height tw:resize-y tw:border-(length:--ds-stroke-thin) tw:border-solid tw:rounded-field tw:p-inline tw:font-auth-body tw:text-label tw:leading-leading-body tw:bg-admin-surface tw:text-admin-ink"
         : domain && kind === "select"
           ? "tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid tw:px-small tw:py-small tw:leading-leading-body tw:bg-transparent tw:text-ink tw:font-control tw:text-body"
           : ruled
-            ? `tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid ${domain ? "tw:py-small tw:leading-leading-admin" : admin ? "tw:py-inline tw:leading-leading-body" : "tw:py-inline tw:leading-leading-field"} ${admin ? "tw:px-micro tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-label" : domain ? "tw:px-none tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body" : "tw:px-none tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input"}`
+            ? `tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid ${domain ? "tw:py-small tw:leading-leading-admin" : admin ? "tw:py-inline tw:leading-leading-body" : "tw:py-inline tw:leading-leading-field"} ${admin ? "tw:px-micro tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-label" : domain ? "tw:px-flush tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body" : "tw:px-flush tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input"}`
             : (kind === "textarea"
                 ? "tw:h-auto tw:min-h-control-textarea-height tw:resize-y tw:p-inline"
-                : "tw:h-control-height tw:px-control tw:py-none") +
+                : "tw:h-control-height tw:px-control tw:py-flush") +
               " tw:rounded-card tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-surface tw:text-ink tw:font-control tw:text-body tw:leading-leading-body",
       invalid && variant !== "ruled-account"
         ? "tw:border-danger"
@@ -288,8 +288,8 @@ function fieldRecipeStyles(
       ruled && !admin && !domain ? "tw:focus:shadow-focus" : "",
       admin ? "" : "tw:focus:outline-none",
     ].join(" "),
-    hint: "tw:m-none tw:text-label tw:font-body tw:leading-leading-body tw:text-ink-secondary",
-    error: variant === "ruled-account" ? "tw:block tw:mt-group tw:mb-content tw:text-body tw:font-auth-body tw:leading-leading-account tw:text-center tw:text-danger" : "tw:m-none tw:text-label tw:font-body tw:leading-leading-body tw:text-danger",
+    hint: "tw:m-flush tw:text-label tw:font-body tw:leading-leading-body tw:text-ink-secondary",
+    error: variant === "ruled-account" ? "tw:block tw:mt-group tw:mb-content tw:text-body tw:font-auth-body tw:leading-leading-account tw:text-center tw:text-danger" : "tw:m-flush tw:text-label tw:font-body tw:leading-leading-body tw:text-danger",
   };
 }
 function inputRecipeStyles(options: FieldOptions = {}) {
@@ -313,7 +313,7 @@ function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
       controlBase +
       " " +
       disabledRecipe +
-      " tw:appearance-auto tw:p-none tw:shrink-0 " +
+      " tw:appearance-auto tw:p-flush tw:shrink-0 " +
       (variant === "permission"
         ? "tw:size-group tw:accent-admin-accent tw:mt-tight tw:mr-tight tw:mb-tight tw:ml-compact"
         : "tw:size-action tw:accent-accent"),
@@ -333,7 +333,7 @@ function switchRecipeStyles({
   if (variant === "shared-device") return sharedDeviceRecipe();
   const sizes = {
     player: "tw:w-switch tw:h-panel tw:p-compact",
-    admin: "tw:w-page tw:h-sheet-dense tw:p-none",
+    admin: "tw:w-page tw:h-sheet-dense tw:p-flush",
     capability: "tw:w-heading tw:h-content tw:p-micro",
     comparison: "tw:w-heading tw:h-content tw:p-micro",
   };
@@ -346,13 +346,13 @@ function switchRecipeStyles({
   return {
     label:
       (variant === "comparison" ? "tw:relative tw:flex" : "tw:relative tw:inline-flex") + " tw:items-center tw:gap-small tw:font-auth-body tw:text-small tw:text-ink-secondary tw:cursor-pointer" + (variant === "capability" ? " tw:min-h-panel tw:flex-nowrap tw:leading-leading-admin" : variant === "comparison" ? " tw:min-h-toolbar-dense tw:my-section tw:text-label" : ""),
-    input: variant === "capability" || variant === "comparison" ? "tw:absolute tw:opacity-opacity-hidden tw:w-heading tw:h-section tw:m-none tw:peer" : "tw:sr-only tw:peer",
+    input: variant === "capability" || variant === "comparison" ? "tw:absolute tw:opacity-opacity-hidden tw:w-heading tw:h-section tw:m-flush tw:peer" : "tw:sr-only tw:peer",
     root:
       controlBase +
       " " +
       (variant === "admin" ? denseDisabled : disabledRecipe) +
       (variant === "admin" ? " tw:min-h-sheet-dense tw:font-auth-mono tw:text-body-small tw:leading-leading-admin tw:relative tw:inline-block tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer " :
-      " tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-(length:--ds-stroke-focus) tw:peer-focus-visible:[outline-color:var(--ds-focus)] tw:peer-focus-visible:outline-offset-compact tw:peer-disabled:opacity-(--ds-opacity-disabled) tw:min-h-none tw:leading-leading-body tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer ") +
+      " tw:peer-focus-visible:outline-solid tw:peer-focus-visible:outline-(length:--ds-stroke-focus) tw:peer-focus-visible:[outline-color:var(--ds-focus)] tw:peer-focus-visible:outline-offset-compact tw:peer-disabled:opacity-(--ds-opacity-disabled) tw:min-h-flush tw:leading-leading-body tw:relative tw:inline-flex tw:items-center tw:shrink-0 tw:rounded-pill tw:border-solid tw:cursor-pointer ") +
       sizes[variant] +
       " " +
       (variant === "player"
