@@ -1,5 +1,5 @@
 import { normalizeRecipe } from "./normalize";
-import { buttonRecipe, type ButtonOptions } from "./controls";
+import { buttonRecipe, type ButtonOptions, type ControlDensity } from "./controls";
 
 export const cardVariants = [
   "library",
@@ -40,9 +40,8 @@ export interface ToggleGroupOptions {
   variant?: (typeof toggleGroupVariants)[number];
 }
 export const emptyStateVariants = [
-  "landing-actions",
-  "library-text",
-  "admin-text",
+  "standard",
+  "compact",
   "jobs-hidden",
 ] as const;
 export interface EmptyStateOptions {
@@ -62,7 +61,7 @@ export function createDisplayRecipes(extensions: {card?:()=>string; badge?:(kind
 
 function cardRecipeStyles({ variant = "surface" }: CardOptions = {}) {
   if (variant === "library") return extensions.card?.() ?? missingArea("library card");
-  if (variant === "tour" || variant === "power-hint") return "tw:box-border tw:m-flush tw:border-0 tw:bg-ink tw:text-surface-sunken tw:font-body tw:leading-leading-body " + (variant === "tour" ? "ds-tour-note tw:absolute tw:left-flush tw:top-flush tw:w-tour-note-width tw:opacity-opacity-hidden tw:motion-panel-tour-transition tw:[&.shown]:opacity-opacity-visible tw:[&.shown]:duration-note-in tw:px-action tw:pt-row tw:pb-control tw:rounded-tile tw:shadow-note-shadow" : "ds-power-note tw:fixed tw:left-1/2 tw:bottom-toast-bottom tw:z-note tw:w-power-note-width tw:[transform:var(--ds-panel-note-enter-transform)] tw:opacity-opacity-hidden tw:motion-panel-toast-transition tw:[&.show]:opacity-opacity-visible tw:[&.show]:[transform:var(--ds-panel-toast-shown-transform)] tw:max-panel:bottom-toast-bottom-phone tw:px-content tw:pt-row tw:pb-inline tw:rounded-card tw:shadow-component-toast-shadow");
+  if (variant === "tour" || variant === "power-hint") return "tw:box-border tw:m-flush tw:border-(length:--ds-stroke-thin) tw:border-solid tw:border-rule-strong tw:bg-surface tw:text-ink tw:font-control tw:leading-leading-body " + (variant === "tour" ? "ds-tour-note tw:absolute tw:left-flush tw:top-flush tw:w-tour-note-width tw:opacity-opacity-hidden tw:motion-panel-tour-transition tw:[&.shown]:opacity-opacity-visible tw:[&.shown]:duration-note-in tw:px-action tw:pt-row tw:pb-control tw:rounded-tile tw:shadow-note-shadow" : "ds-power-note tw:fixed tw:left-1/2 tw:bottom-toast-bottom tw:z-note tw:w-power-note-width tw:[transform:var(--ds-panel-note-enter-transform)] tw:opacity-opacity-hidden tw:motion-panel-toast-transition tw:[&.show]:opacity-opacity-visible tw:[&.show]:[transform:var(--ds-panel-toast-shown-transform)] tw:max-panel:bottom-toast-bottom-phone tw:px-content tw:pt-row tw:pb-inline tw:rounded-card tw:shadow-component-toast-shadow");
   const appearances = {
     surface: "tw:bg-surface tw:text-ink tw:border-rule-strong tw:rounded-card",
     raised:
@@ -100,7 +99,7 @@ function toggleGroupRecipeStyles({
   variant = "segmented",
   separator,
 }: ToggleGroupOptions = {}) {
-  const item = (pressed = false) => {
+  const itemStyles = (pressed = false) => {
     if(variant==='admin'||variant==='presets'||variant==='admin-language')return "tw:inline-block tw:box-border tw:normal-nums tw:m-flush tw:min-h-touch tw:px-micro tw:py-compact tw:border-0 tw:rounded-field tw:bg-transparent tw:text-body-small tw:leading-leading-admin tw:cursor-pointer tw:text-center tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:[outline-color:var(--ds-admin-accent)] tw:focus-visible:outline-offset-(--ds-space-tight) " + (variant==='admin-language'?"tw:min-w-heading tw:font-auth-mono ":'tw:font-auth-body ') + (pressed?"tw:text-admin-ink tw:font-weight-label tw:underline tw:underline-offset-(--ds-space-control-dense)":"tw:text-admin-secondary tw:font-weight-body");
     if (variant === "language" && separator !== undefined)
       return "tw:inline-block tw:box-border tw:m-flush tw:min-h-panel tw:min-w-heading tw:px-flush tw:py-compact tw:border-0 tw:rounded-field tw:bg-transparent tw:font-auth-mono tw:text-small tw:font-weight-body tw:leading-leading-admin tw:text-center tw:cursor-pointer tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:[outline-color:var(--ds-focus)] tw:focus-visible:outline-offset-(--ds-space-compact) " + (pressed ? "tw:text-ink" : "tw:text-ink-secondary");
@@ -135,7 +134,7 @@ function toggleGroupRecipeStyles({
         : variant === "transcription"
           ? "tw:gap-inline"
           : "tw:gap-compact"),
-    item,
+    item: (pressed = false) => itemStyles(pressed) + " tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch",
   };
 }
 function toolbarRecipeStyles() {
@@ -144,32 +143,22 @@ function toolbarRecipeStyles() {
 function statusRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
   if (variant === "account-delete") return extensions.accountError?.() ?? missingArea("account error");
   if (variant === "account") return "tw:block tw:my-content tw:font-auth-body tw:text-body tw:leading-leading-account tw:text-center " + feedback[intent];
-  if(variant === "admin")return "tw:normal-nums tw:block tw:my-content tw:font-auth-body tw:text-body tw:leading-leading-body tw:text-admin-ink";
+  if(variant === "admin")return "tw:normal-nums tw:block tw:my-content tw:font-control tw:text-body tw:leading-leading-body " + feedback[intent];
   return (
-    "tw:m-flush tw:font-body tw:text-body-small tw:leading-leading-field " +
+    "tw:m-flush tw:font-control tw:text-body-small tw:leading-leading-field " +
     feedback[intent]
   );
 }
-function emptyStateRecipeStyles({
-  variant = "library-text",
-}: EmptyStateOptions = {}) {
+function emptyStateRecipeStyles({ variant = "standard" }: EmptyStateOptions = {}) {
   return {
-    root:
-      (variant === "admin-text" ? "tw:normal-nums tw:block tw:my-content tw:font-auth-body tw:text-body tw:text-admin-ink tw:leading-leading-body" : variant === "jobs-hidden"
-        ? "tw:m-flush tw:font-body tw:leading-leading-body tw:hidden"
-        : variant === "landing-actions"
-          ? "tw:m-flush tw:font-body tw:leading-leading-body tw:grid tw:gap-action tw:text-center tw:max-w-width-empty tw:mx-auto tw:py-section"
-          : "tw:m-flush tw:font-body tw:leading-leading-body tw:py-section tw:text-ink-secondary"),
-    title:
-      variant === "admin-text" ? "tw:m-flush tw:font-auth-body tw:text-body tw:leading-leading-body tw:text-admin-ink" : variant === "landing-actions"
-        ? "tw:m-flush tw:font-auth-display tw:text-auth-title"
-        : "tw:m-flush tw:text-body",
-    body: "tw:m-flush tw:text-body-small",
+    root: "tw:m-flush tw:font-control tw:leading-leading-body tw:grid tw:gap-control tw:text-center tw:text-ink-secondary tw:min-w-flush " + (variant === "jobs-hidden" ? "tw:hidden" : variant === "compact" ? "tw:py-control" : "tw:py-section tw:max-w-width-empty tw:mx-auto"),
+    title: "tw:m-flush tw:font-control tw:font-weight-label tw:text-body tw:leading-leading-body tw:text-ink",
+    body: "tw:m-flush tw:font-control tw:text-body-small tw:leading-leading-body tw:text-ink-secondary",
     actions: "tw:flex tw:flex-wrap tw:justify-center tw:gap-control",
   };
 }
 function loadingRecipeStyles() {
-  return statusRecipe() + " tw:animate-animation-loading tw:motion-reduce:animate-none";
+  return "tw:m-flush tw:font-control tw:text-body-small tw:leading-leading-body tw:text-ink-secondary tw:py-control tw:animate-animation-loading tw:motion-reduce:animate-none";
 }
 function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }: TableOptions = {}) {
   return {
