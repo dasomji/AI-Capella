@@ -12,7 +12,14 @@
   box-sizing:border-box;
   font-family:var(--ds-font-body);
   font-size:var(--ds-size-body);
-  line-height:var(--ds-leading-body);
+  line-height:inherit;
+  text-align:inherit;
+  letter-spacing:inherit;
+  text-transform:inherit;
+  white-space:inherit;
+  text-indent:inherit;
+  word-spacing:inherit;
+  font-variant:inherit;
   color:var(--ds-ink);
 }
 /* Animation frames require a keyframes rule; the animation is selected by a token-backed utility. */
@@ -32,6 +39,9 @@
 .ds-reset[hidden] { display:none !important; }
 /* Generated decorations restore inherited visibility and input policy after all:initial. */
 .ds-reset::before, .ds-reset::after {
+  direction:inherit; text-align:inherit; letter-spacing:inherit;
+  text-transform:inherit; white-space:inherit; text-indent:inherit;
+  word-spacing:inherit; line-height:inherit; font-variant:inherit;
   color-scheme:inherit; visibility:inherit; pointer-events:inherit;
   accent-color:inherit; print-color-adjust:inherit;
 }
