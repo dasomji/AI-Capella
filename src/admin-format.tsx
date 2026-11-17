@@ -5,6 +5,8 @@ import { adminFieldMessages, adminManagementMessages, adminMessages, adminPolish
 import { adminInstant } from "./admin-time";
 
 export type AdminRow = Record<string, any>;
+/** Last filters of each list in this tab, so a detail page's breadcrumb returns to the same list. */
+export const listQueries = new Map<string, Record<string, string>>();
 export const ui = adminRecipe();
 
 /** Language and business time zone shared by every administration screen. */

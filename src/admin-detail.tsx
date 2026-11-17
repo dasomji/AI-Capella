@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { adminRequest, managementError, AdminRequestError } from "./admin-request";
 import { AdminMemberships, AdminRole, ReasonDialog } from "./admin-management";
-import { Bytes, Count, Definitions, Identifier, Instant, PermissionBadges, Section, StateBadge, ui, useAdmin, vocabulary, type AdminRow } from "./admin-format";
+import { listQueries, Bytes, Count, Definitions, Identifier, Instant, PermissionBadges, Section, StateBadge, ui, useAdmin, vocabulary, type AdminRow } from "./admin-format";
 
 type Column = { id: string; label: string; mono?: boolean; cell?: (row: AdminRow) => ReactNode };
 
@@ -142,7 +142,7 @@ function DetailFrame({ list, listLabel, title, meta, error, loading, onRetry, ch
   return (
     <div className={ui.stack} data-admin="detail">
       <header className={ui.titleBlock}>
-        <Link to="/admin/$" params={{ _splat: list }} className={ui.crumb}>← {listLabel}</Link>
+        <Link to="/admin/$" params={{ _splat: list }} search={listQueries.get(list) ?? {}} className={ui.crumb}>← {listLabel}</Link>
         <h1 ref={heading} tabIndex={-1} className={ui.title}>{missing ? t.notFoundTitle : title}</h1>
         {meta && !error && <div className={ui.meta}>{meta}</div>}
       </header>

@@ -5,7 +5,7 @@ import { AdminDataTable, type AdminColumn } from "./admin-data-table";
 import { AdminToolbar } from "./admin-toolbar";
 import { EnsembleDetail, PieceDetail, UserDetail } from "./admin-detail";
 import { TranscriptionScreen } from "./admin-transcription";
-import { AdminContext, Count, Identifier, Instant, StateBadge, YesNo, ui, useAdmin, vocabulary, type AdminRow } from "./admin-format";
+import { AdminContext, listQueries, Count, Identifier, Instant, StateBadge, YesNo, ui, useAdmin, vocabulary, type AdminRow } from "./admin-format";
 import { calendarInstant } from "./admin-time";
 import { adminUiMessages, type Lang } from "./i18n";
 import { brandRecipe } from "./design-system/recipes/auth";
@@ -161,13 +161,14 @@ function ListScreen({ section, title, query, setQuery }: { section: AdminSection
         };
     }
   }, [section, language, zone]);
+  useEffect(() => { listQueries.set(section, query); }, [section, JSON.stringify(query)]);
   const filters = Object.fromEntries(
     Object.entries(query)
       .filter(([key, value]) => value && key !== "search")
       .map(([key, value]) => [key, key === "from" || key === "to" ? calendarInstant(value, zone) : value]),
   );
   return (
-    <section aria-labelledby="admin-page-title">
+    <div>
       <header className={ui.pageHead}>
         <div className={ui.titleBlock}>
           <h1 id="admin-page-title" className={ui.title}>{title}</h1>
@@ -193,6 +194,6 @@ function ListScreen({ section, title, query, setQuery }: { section: AdminSection
           />
         </>
       )}
-    </section>
+    </div>
   );
 }
