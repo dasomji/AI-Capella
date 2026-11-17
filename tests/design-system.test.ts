@@ -313,3 +313,13 @@ it('keeps native unbounded size utilities independent of the zero-spacing scale'
     expect(css,`${prop} must not collapse to the zero-spacing token`).not.toMatch(new RegExp(`${prop}:\\s*var\\(--ds-space-`));
   }
 });
+
+
+it('retains the earlier title for the experimental Velvet look', () => {
+  const dom = boot('?design=samt');
+  const root = dom.window.document.documentElement;
+  expect(themeRegistry.find(theme => theme.id === 'velvet')?.defaultStart).toBe('heute');
+  expect(root.dataset.start).toBeUndefined();
+  expect(root.dataset.experimental).toContain('earlier-title');
+  dom.window.close();
+});

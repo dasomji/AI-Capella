@@ -90,3 +90,73 @@ describe('owner foundation decisions', () => {
     } finally {dom.window.close();vi.unstubAllGlobals();vi.resetModules();}
   });
 });
+
+
+// Execute the production navigation boundary without booting audio, sockets or the full workspace.
+async function mainFunction(name: string, dependencies: Record<string, unknown>) {
+  const ts = await import('typescript');
+  const source = ts.createSourceFile('main.ts', readFileSync('src/main.ts','utf8'), ts.ScriptTarget.Latest, true);
+  const fn = source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === name);
+  if (!fn) throw Error(`Missing production function ${name}`);
+  const compiled = ts.transpileModule(fn.getText(source), {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+  return new Function(...Object.keys(dependencies), compiled + `; return ${name};`)(...Object.values(dependencies));
+}
+
+it.each(['landing','library'])('D05 releases queued appearance when the player exits to %s', async mode => {
+  const dom = new JSDOM('<div id="app" class="mode-player"></div>');
+  const apply = vi.fn();
+  let held = false;
+  const setView = await mainFunction('setViewMode', {
+    app:dom.window.document.querySelector('#app'), transcriptionPreviewMode:undefined,
+    renderLanding:vi.fn(), setAppearanceRehearsing:(next:boolean)=>{held=next;if(!held)apply();},
+    backdrop:{setShown:vi.fn()}, closeOverlay:vi.fn(), stopLandingRibbons:undefined,
+    START_STAGE:false, START_STAFF:false, titleName:null, animateRibbons:()=>vi.fn(),
+    document:dom.window.document, stopIntro:vi.fn(), offerIntro:vi.fn(), requestAnimationFrame:vi.fn(),
+    drawAllCovers:vi.fn(), drawMarks:vi.fn(), resizeCanvases:vi.fn(), releaseWakeLock:vi.fn(),
+  });
+  setView('player');expect(held).toBe(true);
+  setView(mode);expect(held).toBe(false);expect(apply).toHaveBeenCalledOnce();
+  dom.window.close();
+});
+
+it('D26 describes shared playback and personal volume/mute/solo in both tour translations', async () => {
+  const {sharedPlaybackTourMessages:copy} = await import('../src/i18n');
+  expect(copy.player.en).toMatch(/playback controls apply on every device/i);
+  expect(copy.player.en).toMatch(/volume, mute and solo stay personal/i);
+  expect(copy.player.de).toMatch(/Wiedergabesteuerung gilt auf allen Geräten/);
+  expect(copy.player.de).toMatch(/Lautstärke, Stummschaltung und Solo bleiben persönlich/);
+  for (const language of ['de','en'] as const) {
+    expect(copy.player[language]).not.toMatch(/take the lead|Führung übernehmen/i);
+    expect(copy.library[language]).toMatch(/alle|everyone/);
+  }
+});
+
+vi.mock('../src/admin-access', () => ({confirmAdmin:vi.fn()}));
+vi.mock('../src/admin-ui', () => ({AdminPage:()=>null}));
+it('rechecks sysadmin access on stay navigation and hides admin content after revocation', async () => {
+  const {confirmAdmin}=await import('../src/admin-access');
+  const {Route}=await import('../src/routes/admin.$');
+  const beforeLoad = Route.options.beforeLoad!;
+  vi.mocked(confirmAdmin).mockResolvedValue(true);
+  await beforeLoad({cause:'enter'} as NonNullable<Parameters<typeof beforeLoad>[0]>);
+  await beforeLoad({cause:'stay'} as NonNullable<Parameters<typeof beforeLoad>[0]>);
+  expect(confirmAdmin).toHaveBeenCalledTimes(2);
+  vi.mocked(confirmAdmin).mockResolvedValue(false);
+  await expect(beforeLoad({cause:'stay'} as NonNullable<Parameters<typeof beforeLoad>[0]>)).rejects.toMatchObject({isNotFound:true});
+});
+
+
+it('restores song order after a failed save without showing a persistent toast immediately before reload', async () => {
+  const ts=await import('typescript');
+  const source=ts.createSourceFile('main.ts',readFileSync('src/main.ts','utf8'),ts.ScriptTarget.Latest,true);
+  let callback: import('typescript').Node | undefined;
+  const visit=(node:import('typescript').Node)=>{if(ts.isPropertyAssignment(node)&&node.name.getText(source)==='onDrop')callback=node.initializer;ts.forEachChild(node,visit);};
+  visit(source);if(!callback)throw Error('Missing reorder onDrop');
+  const compiled=ts.transpileModule('const onDrop='+callback.getText(source),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+  const reload=vi.fn(),notify=vi.fn();
+  const save=vi.fn().mockRejectedValue(Error('network failure'));
+  const onDrop=new Function('importedSongs','saveSongOrder','location','toast','t','errorText',compiled+';return onDrop;')([{id:'piece'}],save,{reload},notify,()=>'',String);
+  onDrop(['piece']);await new Promise(resolve=>setTimeout(resolve,0));
+  expect(save).toHaveBeenCalledWith([{id:'piece',sortKey:0}]);
+  expect(reload).toHaveBeenCalledOnce();expect(notify).not.toHaveBeenCalled();
+});

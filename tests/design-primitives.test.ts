@@ -869,3 +869,82 @@ it('inherits field density and keeps error feedback next to a focused control',(
   expect(input.getAttribute('aria-invalid')).toBe('true');
   expect(input.className).toContain('tw:border-danger');
 });
+
+
+describe('AICAP-28 review fixes', () => {
+  it('coalesces identical queued notices and active repeats without extending their lifetime', () => {
+    vi.useFakeTimers();
+    toast('Unresolved failure', 'error');
+    const active = getToast()?.id;
+    toast('Unresolved failure', 'error');
+    expect(getToast()?.id).toBe(active);
+    for (let i = 0; i < 20; i++) toast('Saved');
+    dismissToast();
+    expect(getToast()?.text).toBe('Saved');
+    vi.advanceTimersByTime(2000);
+    toast('Saved');
+    vi.advanceTimersByTime(1200);
+    expect(getToast()).toBeNull();
+  });
+  it('bounds pending notices to ten, retaining the newest distinct notices in delivery order', () => {
+    toast('Unresolved failure', 'error');
+    for (let i = 0; i < 30; i++) toast(`Notice ${i}`);
+    const delivered: string[] = [];
+    dismissToast();
+    while (getToast()) { delivered.push(getToast()!.text); dismissToast(); }
+    expect(delivered).toEqual(Array.from({length:10}, (_, i) => `Notice ${i + 20}`));
+  });
+  it('does not coalesce different actions or different persistence policies', () => {
+    const first = vi.fn(), second = vi.fn();
+    toast('Failure', 'error');
+    toast('Retry', 'info', {action:{label:'Retry',onSelect:first}});
+    toast('Retry', 'info', {action:{label:'Retry',onSelect:second}});
+    dismissToast();document.querySelector<HTMLButtonElement>('#toast button')!.click();
+    expect(first).toHaveBeenCalledOnce();expect(second).not.toHaveBeenCalled();
+    document.querySelector<HTMLButtonElement>('#toast button')!.click();
+    expect(second).toHaveBeenCalledOnce();expect(getToast()).toBeNull();
+    toast('Failure', 'error');toast('Saved');toast('Saved','info',{persistent:true});
+    dismissToast();dismissToast();expect(getToast()?.persistent).toBe(true);
+  });
+  it('uses a shrinkable wrapping message slot beside actionable toast controls', () => {
+    toast('Eine sehr lange Fehlermeldung', 'error', {action:{label:'Erneut versuchen',onSelect(){}}});
+    const message = document.querySelector('#toast > span');
+    expect(message?.textContent).toBe('Eine sehr lange Fehlermeldung');
+    expect(message?.className).toContain('tw:min-w-flush');
+    expect(message?.className).toContain('tw:flex-1');
+  });
+  it('gives library final confirmations the shared danger border', () => {
+    const dialog = D.createDialog({variant:'library-prompt', title:'Delete piece', destructive:true, attrs:{role:'alertdialog'}}).element;
+    expect(dialog.className).toContain('tw:border-danger');
+    expect(dialog.className).not.toContain('tw:border-rule-strong');
+    expect(dialog.getAttribute('role')).toBe('alertdialog');
+  });
+});
+
+
+it('passes destructive intent from libraryPrompt through the real dialog adapter', async () => {
+  const {readFileSync}=await import('node:fs');
+  const ts=await import('typescript');
+  const source=ts.createSourceFile('main.ts',readFileSync('src/main.ts','utf8'),ts.ScriptTarget.Latest,true);
+  const fn=source.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==='libraryPrompt')!;
+  const compiled=ts.transpileModule(fn.getText(source),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+  const nativeDialog = (options: Parameters<typeof D.createDialog>[0]) => {
+    const result = D.createDialog(options);
+    Object.defineProperty(result.element, 'showModal', {value:()=>{result.element.open=true;}});
+    Object.defineProperty(result.element, 'close', {value:()=>{result.element.open=false;result.element.dispatchEvent(new Event('close'));}});
+    return result;
+  };
+  vi.stubGlobal('matchMedia', () => ({matches:true}));
+  const prompt=new Function('document' ,'createInput','createButton','createDialog','t','requestAnimationFrame',compiled+';return libraryPrompt;')(document,D.createInput,D.createButton,nativeDialog,(key:string)=>key,()=>{});
+  for(const title of ['Delete piece','Remove voice','Remove all sections']) {
+    const result=prompt({title,danger:true,confirmLabel:'Remove'});
+    const dialog=document.querySelector<HTMLDialogElement>('dialog[open]')!;
+    expect(dialog.getAttribute('role')).toBe('alertdialog');
+    expect(dialog.className).toContain('tw:border-danger');
+    expect(dialog.querySelector('button[type=submit]')?.className).toContain('tw:bg-danger');
+    dialog.querySelector('form')!.dispatchEvent(new Event('submit',{cancelable:true}));
+    dialog.dispatchEvent(new Event('transitionend'));
+    expect(await result).toBe('ok');
+  }
+  vi.unstubAllGlobals();
+});
