@@ -822,7 +822,11 @@
 :root {
   --ds-space-26: 26px;
   --ds-space-52: 52px;
-  --ds-space-21: 21px;
+  --ds-switch-admin-travel: 21px;
+  --ds-toast-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  --ds-toast-bottom-phone: calc(150px + env(safe-area-inset-bottom, 0px));
+  --ds-toast-max-width: min(520px, calc(100vw - 32px));
+  --ds-toast-max-width-sheet: calc(100vw - 32px);
   --ds-font-close: sans-serif;
   --ds-weight-close-light: 300;
   --ds-size-close: 27px;
@@ -850,8 +854,6 @@
   --ds-width-transcription: 560px;
   --ds-max-height-dialog: 92dvh;
   --ds-max-height-sheet: 88dvh;
-  --ds-shadow-dialog: 0 30px 80px rgba(0, 0, 0, 0.6);
-  --ds-shadow-toast: 0 16px 40px rgba(0, 0, 0, 0.5);
   --ds-action-hover: #fff8ee;
 }
 
@@ -932,11 +934,9 @@
   --font-weight-label: var(--ds-weight-label);
   --font-weight-strong: var(--ds-weight-strong);
   --text-button: var(--ds-size-button);
-  --shadow-dialog: var(--ds-shadow-dialog);
   --shadow-component-overlay: var(--ds-component-overlay-shadow);
   --shadow-component-toast: var(--ds-component-toast-shadow);
   --color-menu-check: var(--ds-component-menu-check);
-  --shadow-toast: var(--ds-shadow-toast);
   --text-toast: var(--ds-size-toast);
   --leading-body: var(--ds-leading-body);
   --leading-admin: var(--ds-leading-admin);
@@ -967,7 +967,7 @@
   --spacing-transcription: var(--ds-width-transcription);
   --spacing-26: var(--ds-space-26);
   --spacing-52: var(--ds-space-52);
-  --spacing-21: var(--ds-space-21);
+  --spacing-switch-admin: var(--ds-switch-admin-travel);
   --color-action-hover: var(--ds-component-action-hover);
   --default-transition-duration: var(--ds-duration-fast);
   --transition-duration-switch: var(--ds-duration-switch);
