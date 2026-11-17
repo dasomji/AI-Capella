@@ -1,3 +1,4 @@
+import { createButton, updateButton, createIconButton, createInput, createField, createCard, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
 import { matchBreakpoint } from './design-system/theme';
 import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
@@ -48,10 +49,58 @@ import type { PdfVoice } from './exportPdf';
 import { INTRO_ON, introDue, introRunning, startIntro, stopIntro } from './intro';
 import { canSwing, swingMap, swingScore } from './swing';
 import { loadScriptFont } from './goldInk';
-import { closeOverlay, confirmDialog, isNarrow, openMenu, openPopover, openSheet, promptDialog, toast } from './ui';
+import { closeOverlay, confirmDialog, isNarrow, openMenu, openPopover, openSheet, promptDialog } from './ui';
 import * as sync from './sync';
 import { account, canEditPieces, canManageMembers, activeEnsemble, ensembleById, forgetEnsemble, leads, ensembleName, PUBLIC_ID, refreshEnsembleNames, renameEnsemble, setActiveEnsemble, unlockedEnsembles } from './ensembles';
 import type { PlaybackState } from './sync';
+
+/** Trusted application icon markup only; user labels always go through textContent. */
+function libraryIcon(name?: Parameters<typeof icon>[0]): Node {
+  const template = document.createElement('template');
+  template.innerHTML = name ? icon(name) : '<span class="ic"></span>';
+  return template.content.firstChild!;
+}
+function openLibrarySheet(title: string, content: HTMLElement, opener?: Element | null, onClose?: () => void) {
+  const sheet = createSheet({variant:'library-sheet',title,content,behavior:{opener,onClose}});
+  const head = sheet.element.querySelector('header')!;
+  const grab = document.createElement('span');grab.className='ds-library-sheet-grab';grab.setAttribute('aria-hidden','true');head.prepend(grab);
+  head.append(createIconButton({label:t('close'),icon:libraryIcon('close'),onClick:()=>sheet.requestClose()}));
+  sheet.open();return sheet;
+}
+function openLibraryMenu(anchor: HTMLElement, items: Parameters<typeof openMenu>[1], title = '') {
+  let overlay: ReturnType<typeof createDialog>;
+  const convert = (items: Parameters<typeof openMenu>[1]): Parameters<typeof createMenu>[0]['items'] => items.map(item=>({
+    ...item, icon:libraryIcon(item.icon),radio:true,
+    options:item.options ? convert(item.options) : undefined,
+    onSelect:()=>{overlay.close();item.onSelect();},
+  }));
+  const menu = createMenu({variant:'library',label:title,items:convert(items),onEscape:()=>overlay.requestClose()});
+  const behavior={opener:anchor,initialFocus:()=>menu.element.querySelector<HTMLElement>('[role^="menuitem"]'),onClose:()=>menu.dispose()};
+  if(isNarrow()) {
+    overlay=openLibrarySheet(title,menu.element,anchor,()=>menu.dispose());
+    menu.element.querySelector<HTMLElement>('[role^="menuitem"]')?.focus({preventScroll:true});
+  } else {
+    overlay=createDialog({variant:'library-popover',title,content:menu.element,behavior});
+    overlay.open();
+    const place=()=>{const a=anchor.getBoundingClientRect(),p=overlay.element.getBoundingClientRect();overlay.element.style.left=`${Math.max(8,Math.min(window.innerWidth-p.width-8,a.right-p.width))}px`;overlay.element.style.top=`${Math.max(8,a.bottom+8+p.height>window.innerHeight-8?a.top-p.height-8:a.bottom+8)}px`;};
+    place();requestAnimationFrame(place);
+  }
+}
+function libraryPrompt(options: {title:string;body?:string;value?:string;confirmLabel:string;danger?:boolean}): Promise<string|null> {
+  return new Promise(resolve=>{
+    let result: string|null=null;
+    const form=document.createElement('form');form.id='library-prompt-form';
+    const input=options.value === undefined ? undefined : createInput({value:options.value,attrs:{'aria-label':options.title,autofocus:true}});
+    if(input)form.append(input);
+    const actions=document.createDocumentFragment();
+    const cancel=createButton({text:t('cancel'),onClick:()=>dialog.requestClose()});
+    const submit=createButton({text:options.confirmLabel,intent:options.danger?'danger':'primary',type:'submit',attrs:{form:form.id,autofocus:input?undefined:true}});
+    actions.append(cancel,submit);
+    const dialog=createDialog({variant:'library-prompt',title:options.title,body:options.body,content:form,actions,attrs:{role:'alertdialog'},behavior:{opener:document.activeElement,initialFocus:input??submit,onClose:()=>resolve(result)}});
+    form.addEventListener('submit',e=>{e.preventDefault();const value=input?.value.trim();result=input?value&&value!==options.value?value:null:'ok';dialog.close();});
+    dialog.open();requestAnimationFrame(()=>input?.select());
+  });
+}
 
 interface SongEntry {
   id: string;
@@ -246,6 +295,30 @@ app.innerHTML = `
   </section>
 `;
 
+// Build migrated controls before capturing the existing ID/delegation hooks.
+for (const [id, variant, intent] of [
+  ['mode-solo-btn', 'landing-mode', 'secondary'], ['mode-ensemble-btn', 'landing-mode', 'secondary'],
+  ['landing-create', 'link', 'secondary'], ['landing-samples', 'link', 'secondary'],
+  ['import-btn', 'standard', 'primary'], ['transcription-entry', 'standard', 'secondary'],
+] as const) {
+  const prior = document.getElementById(id)!;
+  const button = createButton({text: '', variant, intent, attrs: {id, hidden: prior.hidden || undefined}});
+  button.append(...prior.childNodes);
+  if (id === 'landing-create') button.classList.add('ds-library-landing-aside');
+  prior.replaceWith(button);
+}
+const oldMenu = document.getElementById('lib-menu-btn')!;
+const libMenu = createIconButton({label:t('menu'), attrs:{id:'lib-menu-btn'}});
+libMenu.append(...oldMenu.childNodes);oldMenu.replaceWith(libMenu);
+const oldSearch = document.getElementById('lib-search-wrap')!;
+const searchControl = createInput({variant:'library-search', type:'search', id:'lib-search', attrs:{placeholder:t('searchTitles'), 'aria-label':t('searchTitles')}});
+const searchField = createField({variant:'library-search',label:t('searchTitles'),control:searchControl,attrs:{id:'lib-search-wrap',hidden:true}});
+searchField.prepend(oldSearch.firstChild!);oldSearch.replaceWith(searchField);
+for (const [id, part] of [['song-grid','song-grid'], ['lib-banner','banner'], ['landing-empty','landing-empty']] as const) {
+  const prior = document.getElementById(id)!;
+  const next = createLibraryPart(id === 'song-grid' ? 'ul' : 'div',part,{attrs:{id,hidden:prior.hidden || undefined,...(id==='lib-banner'?{role:'status'}:{})}});
+  next.append(...prior.childNodes);prior.replaceWith(next);
+}
 const libraryEl = document.querySelector<HTMLElement>('#library')!;
 const songGridEl = document.querySelector<HTMLUListElement>('#song-grid')!;
 const libCountEl = document.querySelector<HTMLParagraphElement>('#lib-count')!;
@@ -994,7 +1067,7 @@ function languageItems() {
 }
 document.querySelector<HTMLButtonElement>('#lib-menu-btn')!.addEventListener('click', (e) => {
   const anchor = e.currentTarget as HTMLElement;
-  openMenu(anchor, [...appearanceItems(), ...paperItems(anchor), ...languageItems(), ...introItems('library'), {label:t('accountArea'),icon:'users',onSelect:()=>{void openAccountArea(anchor);}}], t('language'));
+  openLibraryMenu(anchor, [...appearanceItems(), ...paperItems(anchor), ...languageItems(), ...introItems('library'), {label:t('accountArea'),icon:'users',onSelect:()=>{void openAccountArea(anchor);}}], t('language'));
 });
 
 /** The paper design's paper, to choose on this device (paper.ts). */
@@ -1005,26 +1078,21 @@ function paperItems(anchor: HTMLElement) {
 
 function openPaperSheet(opener: HTMLElement | null) {
   const body = document.createElement('div');
-  body.className = 'sheet-body paper-body';
+  body.className = 'paper-body';
   const lead = document.createElement('p');
   lead.className = 'ctl-note';
   lead.textContent = t('paperLead');
-  const list = document.createElement('div');
-  list.className = 'paper-list';
+  const list = createLibraryPart('div', 'paper-list');
   list.setAttribute('role', 'radiogroup');
   list.setAttribute('aria-label', t('paperMenu'));
   const buttons = new Map<PaperKind, HTMLButtonElement>();
   const mark = () => buttons.forEach((b, k) => b.setAttribute('aria-checked', String(k === paperKind())));
   for (const kind of PAPER_KINDS) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'paper-option';
+    const b = createButton({text:'',variant:'paper-choice'});
     b.setAttribute('role', 'radio');
-    const swatch = document.createElement('canvas');
-    swatch.className = 'paper-swatch';
+    const swatch = createLibraryPart('canvas', 'paper-swatch');
     swatch.setAttribute('aria-hidden', 'true');
-    const text = document.createElement('span');
-    text.className = 'paper-text';
+    const text = createLibraryPart('span', 'paper-text');
     const name = document.createElement('b');
     name.textContent = t(`paper_${kind}` as MessageKey);
     const desc = document.createElement('span');
@@ -1040,7 +1108,7 @@ function openPaperSheet(opener: HTMLElement | null) {
   }
   mark();
   body.append(lead, list);
-  openSheet(t('paperMenu'), body, opener);
+  openLibrarySheet(t('paperMenu'), body, opener);
   // The previews, one per frame: each paper is made the first time it's shown.
   PAPER_KINDS.forEach((kind, i) =>
     window.setTimeout(() => {
@@ -1192,8 +1260,7 @@ function drawAllCovers() {
 }
 
 function voiceDots(count: number): HTMLSpanElement {
-  const dots = document.createElement('span');
-  dots.className = 'vdots';
+  const dots = createLibraryPart('span', 'vdots');
   dots.setAttribute('aria-hidden', 'true');
   for (let i = 0; i < Math.min(count, 8); i++) {
     const d = document.createElement('i');
@@ -1207,24 +1274,16 @@ function voiceDots(count: number): HTMLSpanElement {
 function songCard(song: SongEntry): HTMLLIElement {
   // Built with DOM APIs and textContent throughout -- song titles come from the shared library,
   // where anyone with the PIN can set them, so they must never be parsed as HTML.
-  const li = document.createElement('li');
-  li.className = 'song-card';
+  const li = createCard({as:'li',variant:'library'}) as HTMLLIElement;
   li.dataset.id = song.id;
-  const open = document.createElement('button');
-  open.type = 'button';
-  open.className = 'song-open';
+  const open = createButton({text:'',variant:'library-open'});
   open.setAttribute('aria-label', t('open', { title: song.title }));
-  const cover = document.createElement('canvas');
-  cover.className = 'cover';
+  const cover = createLibraryPart('canvas', 'cover');
   cover.setAttribute('aria-hidden', 'true');
-  const body = document.createElement('span');
-  body.className = 'song-body';
-  const title = document.createElement('span');
-  title.className = 'song-title';
+  const body = createLibraryPart('span', 'song-body');
+  const title = createLibraryPart('span', 'song-title');
   title.textContent = song.title;
-  const meta = document.createElement('span');
-  meta.className = 'song-meta';
-  meta.innerHTML = '&nbsp;';
+  const meta = createLibraryPart('span', 'song-meta', {text:'\u00a0'});
   body.append(title, meta);
   open.append(cover, body);
   li.appendChild(open);
@@ -1234,9 +1293,7 @@ function songCard(song: SongEntry): HTMLLIElement {
   }
   if(song.imported && isOffline() && !isPrepared(song.id)){open.disabled=true;li.style.opacity='.45';open.title=off('unavailable');meta.textContent=off('unavailable');}
   if (song.imported) {
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = 'icon-btn song-more';
+    const more = createIconButton({variant:'library-more',label:t('moreFor', { title: song.title })});
     more.setAttribute('aria-label', t('moreFor', { title: song.title }));
     more.innerHTML = icon('more');
     li.appendChild(more);
@@ -1269,21 +1326,20 @@ function renderSongList() {
   const items: HTMLElement[] = shown.map(songCard);
   if (libraryState === 'loading') {
     for (let i = 0; i < 3; i++) {
-      const sk = document.createElement('li');
-      sk.className = 'song-card skeleton';
+      const sk = createCard({as:'li',variant:'library'});
+      sk.classList.add('skeleton');
       sk.setAttribute('aria-hidden', 'true');
       items.push(sk);
     }
   }
   if (q && !shown.length) {
-    const empty = document.createElement('li');
-    empty.className = 'empty-note';
+    const empty = createLibraryPart('li', 'empty-note');
     empty.textContent = t('noMatches', { q: searchInput.value.trim() });
     items.push(empty);
   }
   coverCanvases.clear();
   songGridEl.replaceChildren(...items);
-  if (!songs.length && libraryState === 'ready') {const empty=document.createElement('li');empty.className='empty-note';empty.textContent=pt(editable()?'emptyEditable':'emptyPieces');songGridEl.append(empty);}
+  if (!songs.length && libraryState === 'ready') {const empty=createLibraryPart('li','empty-note');empty.textContent=pt(editable()?'emptyEditable':'emptyPieces');songGridEl.append(empty);}
   const count = countLabel(songs.length, 'arrangementsOne', 'arrangementsMany');
   libCountEl.textContent = !serverLibraryEnabled ? t('onThisDevice', { count }) : inPublicFolder() ? t('publicCount', { count }) : libraryState === 'ready' ? t('sharedWithChoir', { count }) : t('onThisDevice', { count });
   renderLibraryBanner();
@@ -1291,16 +1347,16 @@ function renderSongList() {
 
 function renderLibraryBanner() {
   libBannerEl.replaceChildren();
-  if (isOffline()) {libBannerEl.hidden=false;libBannerEl.classList.add('muted');libBannerEl.textContent=off('banner');return;}
+  if (isOffline()) {libBannerEl.hidden=false;updateLibraryBanner(libBannerEl, true);libBannerEl.textContent=off('banner');return;}
   libBannerEl.hidden = libraryState === 'ready' && !libraryFromCache;
   if (libraryState === 'ready') {
     if (libraryFromCache) {
-      libBannerEl.classList.add('muted');
+      updateLibraryBanner(libBannerEl, true);
       libBannerEl.textContent = t('offlineSaved');
     }
     return;
   }
-  libBannerEl.classList.toggle('muted', libraryState !== 'offline' && libraryState !== 'locked');
+  updateLibraryBanner(libBannerEl, libraryState !== 'offline' && libraryState !== 'locked');
   const text = document.createElement('div');
   if (libraryState === 'loading') text.textContent = t('loadingLibrary');
   else if (libraryState === 'unconfigured') text.textContent = t('notConfigured');
@@ -1310,10 +1366,7 @@ function renderLibraryBanner() {
     const p = document.createElement('span');
     p.textContent = t('offlineBody', { msg: libraryError });
     text.append(b, p);
-    const retry = document.createElement('button');
-    retry.type = 'button';
-    retry.className = 'btn';
-    retry.textContent = t('retry');
+    const retry = createButton({text:t('retry')});
     retry.addEventListener('click', () => location.reload());
     libBannerEl.append(text, retry);
     return;
@@ -1330,7 +1383,7 @@ songGridEl.addEventListener('click', (e) => {
   if (!song) return;
   const more = target.closest<HTMLButtonElement>('.song-more');
   if (more) {
-    openMenu(
+    openLibraryMenu(
       more,
       [
         {label: isPrepared(song.id)?off('remove'):off('prepare'),icon:'file',disabled:isOffline()&&!isPrepared(song.id),onSelect:()=>void (isPrepared(song.id)?unpreparePiece(song.id):preparePiece(song.id)).catch(e=>toast(errorText(e),'error'))},
@@ -1352,7 +1405,7 @@ async function confirmDelete(song: SongEntry) {
   // deliberate confirmation step (unlike this app's usual "any device can change shared state
   // immediately" trust model for renames/playback) since it's the one destructive, unrecoverable
   // action in the whole library.
-  const ok = await confirmDialog({ title: t('deleteTitle', { title: song.title }), body: t('deleteBody'), confirmLabel: t('delete'), danger: true });
+  const ok = await libraryPrompt({ title: t('deleteTitle', { title: song.title }), body: t('deleteBody'), confirmLabel: t('delete'), danger: true });
   if (!ok) return;
   // No optimistic local removal: the shared onSnapshot listener updates `importedSongs` and
   // re-renders for every device (including this one) once Firestore reflects the delete.
@@ -1364,7 +1417,7 @@ async function confirmDelete(song: SongEntry) {
 }
 
 async function renameSong(song: SongEntry) {
-  const value = await promptDialog(t('renameSong'), song.title, t('save'));
+  const value = await libraryPrompt({title:t('renameSong'), value:song.title, confirmLabel:t('save')});
   if (!value) return;
   applySongTitle(song.id, value, song.title);
 }
@@ -2495,7 +2548,7 @@ function openControlsSheet(opener: HTMLElement) {
   const body = document.createElement('div');
   body.className = 'sheet-body';
   body.append(tempoBlock(), keyBlock(), metronomeBlock(), startTonesBlock());
-  if(syncEnabled()){const count=document.createElement('button');count.className='mode-btn';count.dataset.bind='count-in';count.textContent=t('syncCountIn',{bars:sharedState?.countIn.bars??0});count.onclick=()=>sendShared({type:'setCountIn',bars:sharedState?.countIn.bars?0:1});body.append(count);}
+  if(syncEnabled()){const count=createButton({text:'',variant:'landing-mode'});count.dataset.bind='count-in';count.textContent=t('syncCountIn',{bars:sharedState?.countIn.bars??0});count.onclick=()=>sendShared({type:'setCountIn',bars:sharedState?.countIn.bars?0:1});body.append(count);}
   const sections = sectionsBlock();
   if (sections) body.appendChild(sections);
   body.appendChild(gotoBlock());
@@ -3514,9 +3567,7 @@ function updateSoundPrompt() {
     return;
   }
   if (!el) {
-    const button = document.createElement('button');
-    button.id = 'sound-prompt';
-    button.type = 'button';
+    const button = createButton({text:'',variant:'sound-prompt',attrs:{id:'sound-prompt'}});
     button.innerHTML = `${icon('play')}<span></span>`;
     button.addEventListener('click', () => {
       unlockAudio();

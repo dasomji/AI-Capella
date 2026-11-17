@@ -49,6 +49,14 @@ describe("pure recipes", () => {
         "quiet",
       ] as const) {
         const classes = r.buttonRecipe({ variant, intent }).split(/\s+/);
+        // Content-rich library controls own material/geometry slots in the shared CSS recipe.
+        // They deliberately retain the historical shapes, rather than the generic button shape.
+        if (["library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update"].includes(variant)) {
+          const slot = classes.find(c => c.startsWith('ds-library-') && c !== 'ds-library-button')!;
+          expect(readFileSync('src/design-system/library.css','utf8')).toContain('.'+slot);
+          expect(new Set(classes).size).toBe(classes.length);
+          continue;
+        }
         for (const group of [
           /^tw:min-h-/,
           /^tw:rounded-/,

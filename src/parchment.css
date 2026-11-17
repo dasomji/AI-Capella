@@ -56,26 +56,6 @@
   filter: drop-shadow(0 10px 10px rgb(90 60 25 / 0.22)) drop-shadow(0 1px 1px rgb(90 60 25 / 0.2));
 }
 
-:root[data-ground='pergament'] .mode-btn {
-  background: var(--fibre), linear-gradient(180deg, #f2e8d0, #e9dbbb);
-  color: var(--paper);
-  text-shadow: 0 1px 0 rgb(255 255 250 / 0.6);
-  box-shadow: var(--emboss-raised), 0 12px 24px -14px rgb(90 60 25 / 0.45);
-}
-
-:root[data-ground='pergament'] .mode-btn .ic {
-  filter: drop-shadow(0 1px 0 rgb(255 255 250 / 0.6));
-}
-
-:root[data-ground='pergament'] .mode-btn:hover {
-  background: var(--fibre), linear-gradient(180deg, #f5ecd6, #ecdfc1);
-  box-shadow: var(--emboss-raised), 0 16px 28px -14px rgb(90 60 25 / 0.5);
-}
-
-:root[data-ground='pergament'] .mode-btn.last-used {
-  box-shadow: var(--emboss-raised), 0 12px 24px -14px rgb(90 60 25 / 0.45), inset 0 -2px 0 rgb(180 120 40 / 0.45), 0 6px 16px -8px rgb(220 150 60 / 0.35);
-}
-
 /* ---- Buttons, switches, fields ------------------------------------------------------------- */
 
 :root[data-ground='pergament'] .btn.primary:hover {
@@ -173,49 +153,7 @@
 
 /* ---- Repertoire: sheets lying in a stack -------------------------------------------------- */
 
-:root[data-ground='pergament'] .song-card {
-  border-color: rgb(70 46 20 / 0.12);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 250 / 0.6),
-    0 1px 0 rgb(90 60 25 / 0.16),
-    5px 6px 0 -2px #e2d0aa,
-    5px 6px 0 -1px rgb(90 60 25 / 0.16),
-    0 24px 40px -28px rgb(90 60 25 / 0.45);
-}
-
-:root[data-ground='pergament'] .song-card:hover {
-  border-color: rgb(70 46 20 / 0.22);
-}
-
-:root[data-ground='pergament'] .song-card::after {
-  background: radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgb(255 252 240 / 0.35), transparent 45%);
-}
-
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  :root[data-ground='pergament'] .song-card.is-tilted {
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 250 / 0.6),
-      5px 6px 0 -2px #e2d0aa,
-      5px 6px 0 -1px rgb(90 60 25 / 0.16),
-      0 34px 50px -30px rgb(90 60 25 / 0.5);
-  }
-}
-
-:root[data-ground='pergament'] .song-card.skeleton {
-  background: linear-gradient(100deg, rgb(226 210 176 / 0.8) 30%, rgb(238 226 200 / 0.8) 50%, rgb(226 210 176 / 0.8) 70%) 0 0 / 300% 100%;
-}
-
-:root[data-ground='pergament'] .song-card.lifted {
-  box-shadow: 0 22px 48px rgb(90 60 25 / 0.35);
-}
-
-:root[data-ground='pergament'] .song-more,
-:root[data-ground='pergament'] .song-card > .tag {
-  background: rgb(241 232 210 / 0.85);
-}
-
-:root[data-ground='pergament'] .cover {
-  background: #e8d8b6;
 }
 
 :root[data-ground='pergament'] .drop-veil {
@@ -246,10 +184,6 @@
 
 :root[data-ground='pergament'] .fb-ask {
   box-shadow: var(--ds-component-toast-shadow);
-}
-
-:root[data-ground='pergament'] #sound-prompt {
-  box-shadow: 0 0 0 6px rgb(180 120 40 / 0.25), 0 16px 40px rgb(90 60 25 / 0.3);
 }
 
 :root[data-ground='pergament'] .intro-spot {

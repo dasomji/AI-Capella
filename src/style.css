@@ -341,34 +341,6 @@ button:disabled {
   animation: rise 1s 1.5s var(--ease) both;
 }
 
-.mode-btn.last-used {
-  border-color: var(--paper-dim);
-}
-
-.mode-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  height: 52px;
-  padding: 0 24px 0 20px;
-  border-radius: 999px;
-  border: 1px solid var(--hair-2);
-  background: rgba(19, 18, 30, 0.72);
-  backdrop-filter: blur(8px);
-  font-size: 16px;
-  font-weight: 600;
-  transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast);
-}
-
-.mode-btn:hover {
-  border-color: var(--paper-dim);
-  background: var(--ink-3);
-}
-
-.mode-btn:active {
-  transform: scale(0.98);
-}
-
 @keyframes rise {
   from {
     opacity: 0;
@@ -385,9 +357,6 @@ button:disabled {
     flex-direction: column;
     width: 100%;
     max-width: 340px;
-  }
-  .mode-btn {
-    justify-content: center;
   }
 }
 
@@ -462,166 +431,10 @@ button:disabled {
   flex-wrap: wrap;
 }
 
-.search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 280px;
-  max-width: 100%;
-  height: 42px;
-  padding: 0 12px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--hair-2);
-  background: var(--ink-1);
-  color: var(--muted);
-}
-
-.search input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  background: none;
-  outline: none;
-  color: var(--paper);
-  font-size: 15px;
-}
-
-.search:focus-within {
-  border-color: var(--paper-dim);
-}
-
-.banner {
-  max-width: 1240px;
-  margin: 0 auto 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
-  border-radius: var(--r-md);
-  background: var(--ink-2);
-  border: 1px solid var(--hair-2);
-  color: var(--paper-dim);
-  font-size: 14.5px;
-}
-
-.banner b {
-  display: block;
-  color: var(--paper);
-  font-size: 15px;
-  margin-bottom: 2px;
-}
-
-.banner.muted {
-  background: none;
-}
-
-.song-grid {
-  list-style: none;
-  margin: 0 auto;
-  padding: 0;
-  max-width: 1240px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 20px;
-}
-
-.song-card {
-  position: relative;
-  border-radius: 16px;
-  background: var(--ink-1);
-  border: 1px solid var(--hair);
-  overflow: hidden;
-  transition: border-color var(--t-fast), transform var(--t-med) var(--ease);
-}
-
-.song-card:hover {
-  border-color: var(--hair-2);
-  transform: translateY(-2px);
-}
-
-.song-open {
-  display: block;
-  width: 100%;
-  text-align: left;
-}
-
-.song-open:focus-visible {
-  outline-offset: -3px;
-}
-
-.cover {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  background: #15131f;
-}
-
-.song-body {
-  display: grid;
-  gap: 8px;
-  padding: 14px 16px 16px;
-}
-
-.song-title {
-  font: 500 23px/1.15 var(--f-display);
-  overflow-wrap: anywhere;
-}
-
-.song-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  min-height: 18px;
-  color: var(--paper-dim);
-  font-size: 13.5px;
-}
-
-.vdots {
-  display: inline-flex;
-  gap: 3px;
-  flex: none;
-}
-
-.vdots i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--c);
-}
-
-.song-more {
-  position: absolute;
-  right: 8px;
-  top: 8px;
-  background: rgba(13, 12, 22, 0.72);
-  color: var(--paper);
-}
-
-.song-card > .tag {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: rgba(13, 12, 22, 0.72);
-}
-
-.song-card.skeleton {
-  min-height: 260px;
-  background: linear-gradient(100deg, var(--ink-1) 30%, var(--ink-2) 50%, var(--ink-1) 70%) 0 0 / 300% 100%;
-  animation: shimmer 1.6s linear infinite;
-}
-
 @keyframes shimmer {
   to {
     background-position: -150% 0;
   }
-}
-
-.empty-note {
-  grid-column: 1 / -1;
-  color: var(--paper-dim);
-  padding: 12px 0;
 }
 
 .lib-tip {
@@ -679,64 +492,11 @@ button:disabled {
   .lib-head {
     margin-bottom: 18px;
   }
-  .lib-tools,
-  .search {
+  .lib-tools {
     width: 100%;
   }
   .lib-tools .btn {
     flex: 1;
-  }
-  .song-grid {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-  .song-card {
-    border-radius: 0;
-    background: none;
-    border: 0;
-    border-bottom: 1px solid var(--hair);
-  }
-  .song-card:hover {
-    transform: none;
-  }
-  .song-open {
-    display: grid;
-    grid-template-columns: 64px minmax(0, 1fr);
-    align-items: center;
-    gap: 14px;
-    padding: 12px 44px 12px 0;
-  }
-  .song-open .cover {
-    width: 64px;
-    height: 64px;
-    aspect-ratio: auto;
-    border-radius: 12px;
-  }
-  .song-body {
-    padding: 0;
-    gap: 6px;
-  }
-  .song-title {
-    font-size: 20px;
-    padding: 0;
-  }
-  .song-more {
-    top: 50%;
-    right: -6px;
-    transform: translateY(-50%);
-    background: none;
-    color: var(--paper-dim);
-  }
-  .song-card > .tag {
-    top: 50%;
-    left: auto;
-    right: 0;
-    transform: translateY(-50%);
-    padding: 3px 6px;
-    font-size: 9.5px;
-  }
-  .song-card.skeleton {
-    min-height: 88px;
   }
 }
 
@@ -2039,35 +1799,6 @@ button.stepper-value:hover {
 }
 
 /* While a rehearsal plays here but the browser holds the sound up until the screen is touched. */
-#sound-prompt {
-  position: fixed;
-  left: 50%;
-  top: calc(72px + var(--safe-t, 0px));
-  z-index: 1100;
-  display: none;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 18px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--paper);
-  color: var(--ink-0);
-  font: 600 15px/1.2 var(--f-text, inherit);
-  white-space: nowrap;
-  max-width: calc(100vw - 32px);
-  box-shadow: 0 0 0 6px rgba(200, 161, 90, 0.25), 0 16px 40px rgba(0, 0, 0, 0.5);
-  transform: translateX(-50%);
-  cursor: pointer;
-}
-
-#sound-prompt.show {
-  display: inline-flex;
-}
-
-#sound-prompt svg {
-  width: 18px;
-  height: 18px;
-}
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -2159,61 +1890,8 @@ button.stepper-value:hover {
 }
 
 /* ---- Paper chooser (main.ts openPaperSheet) ------------------------------------------- */
-.paper-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.paper-option {
-  display: grid;
-  grid-template-columns: 150px 1fr;
-  gap: 14px;
-  align-items: center;
-  padding: 8px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--hair);
-  text-align: left;
-  transition: border-color var(--t-fast), background var(--t-fast);
-}
-
-.paper-option:hover {
-  border-color: var(--hair-2);
-}
-
-.paper-option[aria-checked='true'] {
-  border-color: var(--paper);
-  background: rgb(255 244 228 / 0.04);
-}
-
-.paper-swatch {
-  width: 150px;
-  height: 84px;
-  border-radius: 8px;
-  display: block;
-  background: #1b1621;
-}
-
-.paper-text {
-  display: grid;
-  gap: 4px;
-  font-size: 13.5px;
-  line-height: 1.4;
-  color: var(--paper-dim);
-}
-
-.paper-text b {
-  color: var(--paper);
-  font-size: 15px;
-}
 
 @media (max-width: theme(--breakpoint-phone)) {
-  .paper-option {
-    grid-template-columns: 1fr;
-  }
-  .paper-swatch {
-    width: 100%;
-  }
 }
 
 /* ---- Scan sheet music ----------------------------------------------------------------- */
@@ -2344,10 +2022,7 @@ body:has(#app.mode-landing)::after {
    without blur -- blur there would be recomputed every frame while the score plays (measured:
    30 instead of 60 frames per second on a laptop). */
 .lib-top,
-.banner,
-.search,
-.seg,
-.mode-btn {
+.seg {
   background: var(--glass-bg);
   -webkit-backdrop-filter: var(--glass-filter);
   backdrop-filter: var(--glass-filter);
@@ -2385,10 +2060,7 @@ body:has(#app.mode-landing)::after {
 }
 
 .seg,
-.search,
-.zoom,
-.banner,
-.mode-btn {
+.zoom {
   border-color: var(--glass-edge);
   box-shadow: var(--glass-hi);
 }
@@ -2448,48 +2120,9 @@ body:has(#app.mode-landing)::after {
 }
 
 /* Velvet: the repertoire's cards. */
-.song-card {
-  background: var(--velvet-card);
-  border-color: rgb(255 244 230 / 0.1);
-  box-shadow: 0 24px 44px -30px rgb(0 0 0 / 0.95);
-}
-
-.song-card:hover {
-  border-color: rgb(255 244 230 / 0.2);
-}
-
-.song-card.skeleton {
-  background: linear-gradient(100deg, rgb(29 22 41 / 0.7) 30%, rgb(40 32 56 / 0.7) 50%, rgb(29 22 41 / 0.7) 70%) 0 0 / 300% 100%;
-}
-
-.cover {
-  background: transparent;
-}
 
 /* Cards tilt toward the mouse, a spot of light follows it (main.ts sets --rx/--ry/--mx/--my). */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .song-card {
-    transform: perspective(1000px) rotateX(calc(var(--ry, 0) * -4deg)) rotateY(calc(var(--rx, 0) * 4deg));
-    transition: transform 0.6s var(--ease), border-color var(--t-fast), box-shadow var(--t-med);
-  }
-  .song-card.is-tilted {
-    transform: perspective(1000px) translateY(-3px) rotateX(calc(var(--ry, 0) * -4deg)) rotateY(calc(var(--rx, 0) * 4deg));
-    transition: transform 0.12s linear, border-color var(--t-fast), box-shadow var(--t-med);
-    box-shadow: 0 34px 50px -30px rgb(0 0 0 / 0.95);
-  }
-  .song-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: radial-gradient(circle at var(--mx, 50%) var(--my, 0%), rgb(255 250 240 / 0.13), transparent 45%);
-    opacity: 0;
-    transition: opacity 0.35s;
-  }
-  .song-card.is-tilted::after {
-    opacity: 1;
-  }
 }
 
 .zoom-sep {
@@ -2563,21 +2196,18 @@ body:has(#app.mode-landing)::after {
 
 @media (prefers-reduced-transparency: reduce) {
   .lib-top,
-  .p-top,
-  .voices-panel,
-  .transport,
-  .info-row,
-  .overview,
-  .banner,
-  .zoom,
-  .search,
-  .seg,
-  .mode-btn,
-  .chip,
-  .popover,
-  .sheet,
-  .dialog,
-  #app.sing-along .chips {
+.p-top,
+.voices-panel,
+.transport,
+.info-row,
+.overview,
+.zoom,
+.seg,
+.chip,
+.popover,
+.sheet,
+.dialog,
+#app.sing-along .chips {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: var(--ink-2);
@@ -2613,15 +2243,6 @@ body:has(#app.mode-landing)::after {
 }
 
 /* Repertoire: sheets lying in a stack. */
-:root[data-design='papier'] .song-card {
-  background: var(--sheet-bg);
-  border-color: rgb(255 244 228 / 0.07);
-  box-shadow:
-    inset 0 1px 0 rgb(255 244 228 / 0.07),
-    0 1px 0 rgb(0 0 0 / 0.4),
-    5px 6px 0 -2px #19141f,
-    0 24px 40px -28px rgb(0 0 0 / 0.95);
-}
 
 /* The play button: embossed into the paper, the symbol printed in ink. */
 :root[data-design='papier'] .play-btn,
@@ -2687,12 +2308,6 @@ body:has(#app.mode-landing)::after {
 }
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  :root[data-design='papier'] .song-card.is-tilted {
-    box-shadow:
-      inset 0 1px 0 rgb(255 244 228 / 0.08),
-      5px 6px 0 -2px #19141f,
-      0 34px 50px -30px rgb(0 0 0 / 0.95);
-  }
 }
 
 /* ---- Draft title screen (?start=neu, see design.ts START_DRAFT) ------------------------------
@@ -2798,39 +2413,7 @@ body:has(#app.mode-landing)::after {
   }
 }
 
-:root[data-start='neu'] .mode-btn {
-  height: 54px;
-  padding: 0 26px 0 22px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--fibre), linear-gradient(180deg, #2b2432, #231d2a);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  color: #efe6d8;
-  text-shadow: 0 -1px 0 rgb(0 0 0 / 0.55), 0 1px 0 rgb(255 244 228 / 0.06);
-  box-shadow: var(--emboss-raised), 0 12px 24px -14px rgb(0 0 0 / 0.85);
-  transition: transform var(--t-fast), box-shadow var(--t-med);
-}
-
-:root[data-start='neu'] .mode-btn .ic {
-  filter: drop-shadow(0 -1px 0 rgb(0 0 0 / 0.5));
-}
-
-:root[data-start='neu'] .mode-btn:hover {
-  background: var(--fibre), linear-gradient(180deg, #2e2735, #251f2c);
-  transform: translateY(-1px);
-  box-shadow: var(--emboss-raised), 0 16px 28px -14px rgb(0 0 0 / 0.9);
-}
-
-:root[data-start='neu'] .mode-btn:active {
-  transform: none;
-  box-shadow: var(--emboss-pressed);
-}
-
 /* The mode used last time: a thin line of the lamp's light along its lower edge. */
-:root[data-start='neu'] .mode-btn.last-used {
-  box-shadow: var(--emboss-raised), 0 12px 24px -14px rgb(0 0 0 / 0.85), inset 0 -2px 0 rgb(255 210 158 / 0.35), 0 6px 16px -8px rgb(255 200 140 / 0.25);
-}
 
 /* Light and sound: the per-device fine adjustment (⋯ menu). */
 .offset-body {
@@ -3008,9 +2591,6 @@ body:has(#app.mode-landing)::after {
   font-size: 14px;
   text-align: center;
 }
-.landing-aside {
-  font-size: 14px;
-}
 #landing-enter-code {
   animation: rise 1s 1.9s var(--ease) both;
 }
@@ -3116,19 +2696,6 @@ body:has(#app.mode-landing)::after {
 }
 :root[data-title='buehne'] #landing-enter-code {
   animation-delay: 3.9s;
-}
-:root[data-title='buehne'] .mode-btn.last-used {
-  background: linear-gradient(180deg, #e6c98a, #c9a05a 55%, #b48a48);
-  color: #2a2016;
-  text-shadow: 0 1px 0 rgb(255 240 210 / 0.35);
-  box-shadow:
-    inset 0 1px 0 rgb(255 246 222 / 0.6),
-    inset 0 -1px 0 rgb(90 60 20 / 0.4),
-    0 0 26px -4px rgb(255 200 120 / 0.45),
-    0 12px 24px -14px rgb(0 0 0 / 0.9);
-}
-:root[data-title='buehne'] .mode-btn.last-used .ic {
-  filter: none;
 }
 @media (prefers-reduced-motion: reduce) {
   :root[data-title='buehne'] .landing-name .ls-score {
@@ -3270,21 +2837,6 @@ body:has(#app.mode-landing)::after {
 
 /* Moving a piece in the repertoire (reorder.ts): the lifted card floats over the list, an empty
    slot shows where it will land. */
-.song-card[data-id] {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
-.song-card.lifted {
-  z-index: 60;
-  pointer-events: none;
-  background: var(--ink-2);
-  border: 1px solid var(--hair-2);
-  border-radius: 14px;
-  box-shadow: 0 22px 48px rgb(0 0 0 / 0.55);
-  scale: 1.03;
-  transition: scale 0.18s var(--ease), box-shadow 0.18s var(--ease);
-}
 .drop-slot {
   list-style: none;
   border: 1.5px dashed var(--hair-2);
@@ -3345,7 +2897,6 @@ body:has(#app.mode-landing)::after {
 .domain-sheet input[type=checkbox] { accent-color:var(--gold, #d4ad65); }
 .member-row { padding:1rem 0; border-bottom:1px solid var(--hair-2); display:grid; gap:.6rem; }
 .domain-gold { color:var(--gold, #d4ad65); }
-.landing-empty { border-top:1px solid var(--hair-2); padding-top:1rem; }
 
 /* Account and ensemble controls share the player's ruled, pencil-and-ink language. */
 .domain-heading { margin:1.2rem 0 0; padding-top:1.2rem; border-top:1px solid var(--hair-2); font:500 11px/1.5 var(--ds-font-auth-mono); text-transform:uppercase; letter-spacing:.13em; color:var(--paper-dim); }
@@ -3362,9 +2913,6 @@ body:has(#app.mode-landing)::after {
 .row-menu { position:relative; flex:none; }
 .row-menu summary { list-style:none; cursor:pointer; padding:6px 10px; font-size:22px; color:var(--paper-dim); }
 .row-menu summary::-webkit-details-marker { display:none; }
-.landing-empty { text-align:center; border:0; max-width:360px; margin:auto; }
-.landing-empty > p:first-child { font:500 28px var(--ds-font-auth-display); }
-.landing-empty .btn, .landing-empty .link-btn { display:block; margin:18px auto 0; }
 .no-ensemble .landing-choice { align-items:center; text-align:center; }
 
 :root[data-ground='pergament'] .domain-gold { color:#795315; }

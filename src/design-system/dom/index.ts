@@ -349,7 +349,7 @@ export function createSwitch(options: SwitchOptions): HTMLElement {
 export function createCard(
   options: r.CardOptions &
     ElementOptions & {
-      as?: "article" | "section" | "div" | "aside";
+      as?: "article" | "section" | "div" | "aside" | "li";
       text?: string;
     } = {},
 ) {
@@ -510,7 +510,7 @@ export function createDialog(options: DialogOptions) {
     open: () =>
       (controller = openDialog(dialog, {
         ...options.behavior,
-        motion: options.variant === "sheet" || options.variant === "domain-sheet" ? "sheet" : undefined,
+        motion: options.variant === "sheet" || options.variant === "domain-sheet" || options.variant === "library-sheet" ? "sheet" : undefined,
         onClose: () => {
           options.behavior?.onClose?.();
           dialog.remove();
@@ -521,7 +521,7 @@ export function createDialog(options: DialogOptions) {
     setBusy: (value: boolean) => controller?.setBusy(value),
   };
 }
-export const createSheet = ({variant="sheet", ...options}: Omit<DialogOptions, "variant"> & {variant?: "sheet"|"domain-sheet"}) =>
+export const createSheet = ({variant="sheet", ...options}: Omit<DialogOptions, "variant"> & {variant?: "sheet"|"domain-sheet"|"library-sheet"}) =>
   createDialog({ ...options, variant });
 export const createDrawer = (options: Omit<DialogOptions, "variant">) =>
   createDialog({ ...options, variant: "drawer" });
@@ -529,6 +529,10 @@ export const createConfirmDialog = (options: Omit<DialogOptions, "variant"> & {v
   createDialog({ ...options, variant: options.variant ?? "confirm" });
 export interface MenuItem {
   label: string;
+  icon?: Node;
+  options?: readonly MenuItem[];
+  value?: string;
+  radio?: boolean;
   disabled?: boolean;
   checked?: boolean;
   danger?: boolean;
@@ -547,12 +551,13 @@ export function createMenu(options: MenuOptions) {
       attrs: { ...options.attrs, role: "menu", "aria-label": options.label },
     });
   if (!root.id) root.id = `ds-menu-${++fieldId}`;
-  for (const item of options.items) {
+  const appendItems = (parent: HTMLElement, items: readonly MenuItem[], nested = false) => {
+  for (const item of items) {
     const button = createButton({
-      text: item.label,
+      text: "",
       disabled: item.disabled,
       busy: item.busy,
-      onClick: item.onSelect,
+      onClick: item.options ? undefined : item.onSelect,
       attrs: {
         role: item.checked === undefined ? "menuitem" : "menuitemcheckbox",
         ...(item.checked === undefined
@@ -561,13 +566,27 @@ export function createMenu(options: MenuOptions) {
       },
     });
     applyPart(button, p.menuItemPart(options, item));
+    if (item.radio && item.checked !== undefined) button.setAttribute('role', 'menuitemradio');
+    if (item.icon) button.append(item.icon);
+    const label = element('span', '', item.label);button.append(label);
+    if (nested && options.variant === 'library') button.classList.add('ds-library-menu-option');
     if (item.checked) {
       const check = element("span", slots.check, "✓");
       check.setAttribute("aria-hidden", "true");
       button.append(check);
     }
-    root.append(button);
+    parent.append(button);
+    if (item.options) {
+      const value = element('span', 'ds-library-menu-value', item.value ?? '');button.append(value);
+      const chevron = element('span', 'ds-library-menu-chevron', '⌄');chevron.setAttribute('aria-hidden','true');button.append(chevron);
+      const sub = element('div', 'ds-library-menu-sub');sub.hidden=true;sub.setAttribute('role','group');sub.setAttribute('aria-label',item.label);
+      button.setAttribute('aria-expanded','false');button.setAttribute('aria-haspopup','true');
+      appendItems(sub,item.options,true);parent.append(sub);
+      button.addEventListener('click',()=>{sub.hidden=!sub.hidden;button.setAttribute('aria-expanded',String(!sub.hidden));if(!sub.hidden)sub.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({preventScroll:true});});
+    }
   }
+  };
+  appendItems(root,options.items);
   const dispose = bindMenu(root, options.onEscape);
   return { element: root, dispose };
 }
@@ -666,4 +685,12 @@ export function createNavigationTabs(options: ElementOptions & r.NavigationOptio
   nav.setAttribute('aria-label',options.label);
   for(const item of options.items){const link=element('a',slots.item(item.value===options.value),item.label);link.href=item.href;if(item.value===options.value)link.setAttribute('aria-current','page');link.addEventListener('click',event=>{if(options.onNavigate&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey&&event.button===0){event.preventDefault();options.onNavigate(item.value);}});nav.append(link);}
   return nav;
+}
+
+/** Library composition slots share the same token/recipe boundary as controls. */
+export function createLibraryPart<K extends keyof HTMLElementTagNameMap>(tag: K, part: r.LibraryPart, options: ElementOptions & {text?: string} = {}) {
+  return element(tag, r.libraryPartRecipe(part), options.text, options);
+}
+export function updateLibraryBanner(banner: HTMLElement, muted: boolean) {
+  banner.className = r.libraryPartRecipe('banner') + (muted ? ' muted' : '');
 }

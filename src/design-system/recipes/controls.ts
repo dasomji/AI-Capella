@@ -8,6 +8,7 @@ const actionDisabled = "tw:disabled:opacity-(--ds-opacity-disabled-action) tw:ar
 const denseDisabled =
   "tw:disabled:opacity-(--ds-opacity-disabled-admin) tw:aria-disabled:opacity-(--ds-opacity-disabled-admin)";
 export const buttonVariants = [
+  "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update",
   "standard",
   "cta",
   "pill",
@@ -28,6 +29,11 @@ export interface ButtonOptions {
   pressed?: boolean;
 }
 const parityButtonShapes = {
+  "library-open": "ds-library-song-open song-open",
+  "landing-mode": "ds-library-mode-btn mode-btn",
+  "paper-choice": "ds-library-paper-option",
+  "sound-prompt": "ds-library-sound-prompt",
+  "offline-update": "ds-library-offline-update",
   "domain-language": "tw:min-h-32 tw:min-w-28 tw:px-0 tw:py-4 tw:rounded-card tw:border-0 tw:bg-transparent tw:font-auth-mono tw:font-regular tw:text-small tw:leading-admin tw:text-center",
   tile: "tw:flex-1 tw:min-w-0 tw:min-h-upload-tile tw:max-score:min-h-upload-tile-phone tw:flex-col tw:px-10 tw:py-18 tw:whitespace-normal tw:rounded-transcription-tile tw:bg-surface tw:text-ink tw:border-rule-strong tw:text-button tw:font-label tw:font-auth-body tw:leading-body",
   compact: "tw:min-h-36 tw:p-6 tw:rounded-card tw:border-rule-strong tw:bg-transparent tw:text-ink tw:text-small tw:font-label tw:font-auth-body tw:leading-body",
@@ -65,6 +71,8 @@ function buttonRecipeStyles({
   intent = "secondary",
   pressed = false,
 }: ButtonOptions = {}) {
+  if (["library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update"].includes(variant))
+    return "ds-library-button " + parityButtonShapes[variant as keyof typeof parityButtonShapes];
   // D08/D10: retain account navigation and password reveal typography separately.
   if (variant === "account-link" || variant === "password-toggle")
     return [
@@ -105,6 +113,7 @@ function buttonRecipeStyles({
 export const iconButtonVariants = [
   "standard",
   "small",
+  "library-more",
   "transcription",
   "admin-close",
   "admin-copy",
@@ -115,7 +124,9 @@ export interface IconButtonOptions {
 function iconButtonRecipeStyles({
   variant = "standard",
 }: IconButtonOptions = {}) {
+  if (variant === "library-more") return "ds-library-button ds-library-song-more song-more tw:inline-grid tw:place-items-center tw:flex-none tw:size-40 tw:rounded-icon";
   const shapes: Record<NonNullable<IconButtonOptions["variant"]>, string> = {
+    "library-more": "ds-library-song-more song-more tw:min-h-0 tw:size-40 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:hover:bg-surface-overlay tw:hover:text-ink",
     standard:
       "tw:min-h-0 tw:size-40 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     small:
@@ -136,6 +147,7 @@ function iconButtonRecipeStyles({
 }
 /** ruled/transcription intentionally preserve identical looks pending D09/D10. */
 export const fieldVariants = [
+  "library-search",
   "boxed",
   "ruled",
   "ruled-account",
@@ -153,6 +165,7 @@ function fieldRecipeStyles(
   { variant = "boxed", invalid = false }: FieldOptions = {},
   kind: "input" | "select" | "textarea" = "input",
 ) {
+  if (variant === "library-search") return {root: "ds-library-search", label: "tw:sr-only", control: "ds-library-search-input tw:rounded-field", hint: "tw:sr-only", error: "tw:sr-only"};
   const admin = variant === "admin";
   const domain = variant === "domain" || variant === "domain-create";
   const ruled = variant !== "boxed";

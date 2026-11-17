@@ -1,6 +1,7 @@
 import { normalizeRecipe } from "./normalize";
 import { buttonRecipe, type ButtonOptions } from "./controls";
 export const cardVariants = [
+  "library",
   "surface",
   "raised",
   "material",
@@ -12,6 +13,7 @@ export interface CardOptions {
   variant?: (typeof cardVariants)[number];
 }
 function cardRecipeStyles({ variant = "surface" }: CardOptions = {}) {
+  if (variant === "library") return "ds-library-song-card song-card";
   if (variant === "tour" || variant === "power-hint") return "tw:box-border tw:m-0 tw:border-0 tw:bg-ink tw:text-surface-sunken tw:font-body tw:leading-body " + (variant === "tour" ? "ds-tour-note tw:px-18 tw:pt-14 tw:pb-12 tw:rounded-transcription-tile tw:shadow-note" : "ds-power-note tw:px-16 tw:pt-14 tw:pb-10 tw:rounded-card tw:shadow-component-toast");
   const appearances = {
     surface: "tw:bg-surface tw:text-ink tw:border-rule-strong tw:rounded-card",

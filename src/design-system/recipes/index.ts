@@ -3,6 +3,7 @@ export * from "./display";
 export * from "./overlays";
 /** Layout-only extension, deliberately finite: visual overrides are not part of the API. */
 export const layoutClasses = [
+  "tw:fixed", "tw:bottom-18", "tw:right-18", "tw:z-menu",
   "tw:w-full",
   "tw:mt-10",
   "tw:my-24",
@@ -44,3 +45,5 @@ export function withLayout(recipe: string, layout?: LayoutClass) {
 }
 
 export * from './workspace';
+
+export * from './library';

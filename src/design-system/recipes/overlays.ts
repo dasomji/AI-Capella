@@ -2,6 +2,7 @@ import { normalizeRecipe } from "./normalize";
 import { controlBase, disabledRecipe, buttonRecipe } from "./controls";
 /** dialog/confirm share appearance pending D14; confirm adds alertdialog semantics. */
 export const dialogVariants = [
+  "library-prompt", "library-sheet", "library-popover",
   "dialog",
   "sheet",
   "drawer",
@@ -16,6 +17,13 @@ export interface DialogOptions {
   variant?: DialogVariant;
 }
 function dialogRecipeStyles({ variant = "dialog" }: DialogOptions = {}) {
+  if (variant === "library-prompt" || variant === "library-sheet" || variant === "library-popover") return {
+    panel: "ds-library-overlay " + (variant === "library-sheet" ? "ds-library-sheet ds-sheet-motion" : variant === "library-popover" ? "ds-library-popover" : "ds-library-prompt"),
+    content: variant === "library-prompt" ? "ds-library-prompt-content" : "ds-library-overlay-content",
+    header: variant === "library-sheet" ? "ds-library-sheet-head" : variant === "library-popover" ? "tw:sr-only" : "ds-library-prompt-head",
+    title: variant === "library-sheet" ? "ds-library-sheet-title" : "ds-library-prompt-title",
+    body: "ds-library-prompt-body", actions: "ds-library-prompt-actions",
+  };
   if(variant==='drawer'||variant==='admin-confirm'||variant==='admin-reason') {
     const drawer=variant==='drawer';
     return {
@@ -36,7 +44,7 @@ function dialogRecipeStyles({ variant = "dialog" }: DialogOptions = {}) {
     panel: "tw:box-border tw:border tw:border-solid tw:outline-none tw:overflow-auto tw:text-ink tw:font-auth-body tw:leading-body ds-transcription-panel tw:border-rule-strong tw:backdrop:bg-transcription-backdrop tw:backdrop:backdrop-blur-(--ds-overlay-blur) " + (variant === "transcription-review" ? "tw:w-screen tw:h-dvh tw:max-w-none tw:max-h-none tw:m-0 tw:border-0 tw:rounded-field tw:p-24 tw:max-score:p-16 tw:bg-surface" : "tw:absolute tw:inset-0 tw:m-auto tw:h-fit tw:w-transcription tw:max-w-(--ds-dialog-native-max-width) tw:max-h-(--ds-max-height-dialog) tw:rounded-transcription-dialog tw:p-20 tw:max-score:p-18 tw:bg-surface-raised"),
     content: "tw:block tw:font-auth-body tw:leading-body tw:text-ink", header: "tw:flex tw:items-center tw:justify-between tw:gap-20 tw:mb-24 tw:min-h-50 tw:font-auth-body", title: variant === "transcription-review" ? "tw:m-0 tw:font-auth-display tw:font-emphasis tw:text-transcription-title tw:max-score:text-transcription-title-phone tw:leading-label" : "tw:m-0 tw:font-auth-mono tw:font-strong tw:text-section tw:leading-transcription-heading", body: "tw:m-0 tw:font-auth-body tw:text-body tw:leading-body", actions: "tw:flex tw:gap-10",
   };
-  const shapes: Record<Exclude<DialogVariant,"domain-sheet"|"transcription"|"transcription-review">, string> = {
+  const shapes: Record<Exclude<DialogVariant,"library-prompt"|"library-sheet"|"library-popover"|"domain-sheet"|"transcription"|"transcription-review">, string> = {
     dialog:
       "tw:w-dialog tw:max-w-dialog tw:rounded-dialog tw:p-24 tw:shadow-component-overlay",
     confirm:
@@ -66,11 +74,12 @@ export const sheetRecipe = () => dialogRecipe({ variant: "sheet" });
 export const drawerRecipe = () => dialogRecipe({ variant: "drawer" });
 export const confirmRecipe = () => dialogRecipe({ variant: "confirm" });
 /** popover/sheet/member intentionally alias appearance pending D13; placement is separate. */
-export const menuVariants = ["popover", "sheet", "member", "job", "admin"] as const;
+export const menuVariants = ["library", "popover", "sheet", "member", "job", "admin"] as const;
 export interface MenuOptions {
   variant?: (typeof menuVariants)[number];
 }
 function menuRecipeStyles({ variant = "popover" }: MenuOptions = {}) {
+  if (variant === "library") return {root: "ds-library-menu", item: "ds-library-menu-item ds-menu-item", danger: "ds-library-menu-danger", check: "ds-library-menu-check"};
   if (variant === "member" || variant === "job") return {
     root: "tw:absolute tw:right-0 tw:grid tw:box-border tw:border tw:border-solid tw:border-rule-strong tw:bg-surface-raised tw:text-ink tw:shadow-menu " + (variant === "member" ? "tw:top-full tw:z-stage tw:min-w-menu-member tw:p-0 tw:gap-0" : "tw:z-transcription tw:min-w-menu-job tw:p-12 tw:gap-8 tw:rounded-menu"),
     item: variant === "member" ? controlBase + " " + disabledRecipe + " ds-menu-item tw:flex tw:items-center tw:gap-12 tw:min-h-44 tw:px-12 tw:py-0 tw:rounded-control tw:border-0 tw:bg-transparent tw:font-body tw:font-label tw:text-button tw:text-left tw:text-ink tw:cursor-pointer" : "ds-job-menu-item " + buttonRecipe().replace("tw:font-control", "tw:font-auth-body"),
