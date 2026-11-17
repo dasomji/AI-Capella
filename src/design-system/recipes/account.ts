@@ -2,7 +2,7 @@ import { normalizeRecipe } from "./normalize";
 /** D09/D11/D15: account and device recipes preserve native semantics and domain hooks. */
 export const accountStyles = {
   navigationSwitch: "tw:inline-flex tw:items-center tw:gap-navigation-switch-gap tw:font-inherit tw:font-family-inherit tw:text-inherit tw:text-left tw:tracking-(--ds-tracking-default) tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:select-text tw:[&_.ic]:w-navigation-switch-icon tw:[&_.ic]:h-navigation-switch-icon tw:[&_.ic]:opacity-opacity-half tw:[&_.ic]:motion-account-navigation-switch-transition tw:[&:hover_.ic]:opacity-navigation-switch-hover-opacity tw:[&:hover_.ic]:[transform:var(--ds-account-navigation-switch-transform)]",
-  navigationOther: "tw:font-inherit tw:font-family-inherit tw:text-navigation-other-size tw:text-ink-secondary tw:opacity-navigation-other-opacity tw:p-navigation-other-padding tw:motion-account-navigation-other-transition tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:select-none tw:text-center tw:[&:hover]:opacity-visible tw:[&:hover]:text-ink",
+  navigationOther: "tw:font-inherit tw:font-family-inherit tw:text-navigation-other-size tw:text-ink-secondary tw:opacity-navigation-other-opacity tw:p-navigation-other-padding tw:motion-account-navigation-other-transition tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:select-none tw:text-center tw:[&:hover]:opacity-opacity-visible tw:[&:hover]:text-ink",
   offlineMark: "tw:text-accent-offline",
   songCard: "tw:[&[data-offline-unavailable]]:opacity-opacity-disabled-offline",
   body: "tw:grid tw:gap-account-gap tw:font-inherit tw:font-family-inherit tw:text-inherit tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:select-text tw:[&_:focus-visible]:[outline:var(--ds-account-body-outline)] tw:[&_:focus-visible]:outline-offset-(--ds-space-compact) tw:[&_*]:font-smoothing-inherit tw:[&_*]:locale-inherit tw:[&_*]:tap-highlight-inherit tw:[&_*]:select-text",
@@ -15,7 +15,7 @@ export const accountStyles = {
   password: "tw:flex tw:gap-domain-label-gap tw:items-center tw:flex-wrap tw:font-inherit tw:font-family-inherit tw:text-inherit",
   sharedInput: "tw:appearance-auto tw:m-native-checkbox-margin tw:p-none tw:font-inherit tw:font-family-inherit tw:text-inherit tw:accent-accent",
   label: "tw:font-inherit tw:font-family-inherit tw:text-inherit",
-  input: "tw:w-full tw:min-w-none tw:box-border tw:border-0 tw:frame-bottom-account-input-border-bottom tw:p-account-input-padding tw:surface-clear tw:text-ink tw:type-account-input-font",
+  input: "tw:w-full tw:min-w-none tw:box-border tw:border-0 tw:frame-bottom-account-input-border-bottom tw:p-account-input-padding tw:surface-material-clear tw:text-ink tw:type-account-input-font",
   deleteConfirm: "tw:text-center",
 } as const;
 export const accountParts = ["body","email","note","heading","admin-link"] as const;
