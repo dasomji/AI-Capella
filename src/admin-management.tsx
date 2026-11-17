@@ -167,11 +167,12 @@ function EditPermissions({ row, opener, onCancel, onSaved, onStale }: {
   const [draft, setDraft] = useState(baseline);
   // A refreshed snapshot (after 409 stale_permissions) resets the draft so the admin reviews it.
   const snapshot = JSON.stringify(baseline);
+  const [stale, setStale] = useState(0);
   const first = useRef(true);
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     setDraft(permissions(row));
-  }, [snapshot]);
+  }, [snapshot, stale]);
   const labels = { isLead: d.lead, manageMembers: d.manageMembers, editPieces: d.editPieces, transcribe: d.transcribe };
   const changes = changeList(baseline, draft, labels, t.yes, t.no);
   return (
@@ -191,7 +192,10 @@ function EditPermissions({ row, opener, onCancel, onSaved, onStale }: {
             { permissions: draft, expected: baseline, reason },
           );
         } catch (error) {
-          if (error instanceof AdminRequestError && error.status === 409) await onStale().catch(() => {});
+          if (error instanceof AdminRequestError && error.status === 409) {
+            await onStale().catch(() => {});
+            setStale((v) => v + 1);
+          }
           throw error;
         }
         await onSaved();
