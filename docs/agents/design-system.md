@@ -308,3 +308,20 @@ These roles preserve the previous pixels without using browser scheme as a mater
 SVG fill/stroke and style paint are scanned, including named colors. `currentColor` and native
 non-paints are allowed. Fixed brand SVG artwork needs a reviewed path/SHA-256 entry in
 `brandArtworkHashes`, with its reason documented here; no current SVG requires an exception.
+
+### Loud-theme paint matrix
+
+The probe visits every element, including hidden nodes and `::before` / `::after`, and
+records all color, background, physical border, outline, column-rule, shadow, SVG fill/stroke,
+filter, caret, accent, text-decoration and WebKit text/filter paints. Full matrices are
+compressed JSON artifacts; no element limit or selector sample is used. Unchanged nontransparent
+paints fail except these property/element-specific Chromium defaults in `theme-paint-probe.mjs`:
+
+- Transparent grounds, `none`/`auto`, and pseudos with no generated box.
+- Initial dark text on empty generated decorations, and currentColor on absent strokes.
+- Dark native fieldset groove borders and native select/option palettes.
+- Initial SVG fill on non-painting containers, filter defaults on unrelated elements,
+  definition/mask coverage, and straight open subpaths with zero fill area.
+
+Literal fill/stroke on visible SVG geometry and colors in shadows/gradients remain subject
+to both the guard and loud-theme test. The hardcoded-paint mutant must still fail.

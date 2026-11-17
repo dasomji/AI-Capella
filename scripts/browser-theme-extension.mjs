@@ -1,10 +1,12 @@
 import fs from 'node:fs/promises';
+import {gzipSync} from 'node:zlib';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwind from '@tailwindcss/vite';
 import { chromium } from 'playwright';
+import { probeThemePaints } from './theme-paint-probe.mjs';
 import { themeExtensionPlugin, testTheme } from '../tests/theme-extension-fixture.mjs';
 const evidence=path.resolve(process.env.BROWSER_EVIDENCE??'.review-evidence/theme-extension');
 await fs.mkdir(evidence,{recursive:true});
@@ -25,22 +27,12 @@ try{
  await page.routeWebSocket('**',ws=>ws.close());
  async function roles(screen){await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(150);const result=await page.evaluate(async()=>{const m=await import('/src/design-system/theme/index.ts');const t=m.readTheme();const missing=Object.entries(t.roles).filter(([,v])=>!v||/var\(/.test(v));return{id:t.id,roles:Object.keys(t.roles).length,missing,legacy:document.documentElement.hasAttribute('data-design')||document.documentElement.hasAttribute('data-ground'),color:t.colors.accent.css,rects:[...document.querySelectorAll('button,input,canvas,h1,h2')].filter(e=>e.getBoundingClientRect().width>0).length};});assert.equal(result.id,testTheme.id);assert.equal(result.legacy,false);assert.deepEqual(result.missing,[]);// Acceptance check: compare actual rendered paint on every screen, not just token values.
  await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important}'});
- const paints = await page.evaluate(async ({theme}) => {
-   const api = await import('/src/design-system/theme/index.ts');
-   const candidates = [...document.querySelectorAll('button,input,h1,h2,[role=dialog],#mode-badge,#play-btn,.play-btn,#landing-empty p,#transcription-entry,.mode-btn')]
-     .filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0;}).slice(0,60);
-   const properties=['color','background-color','background-image'];
-   const sample=()=>candidates.map(el=>Object.fromEntries(properties.map(p=>[p,getComputedStyle(el).getPropertyValue(p)])));
-   api.setThemePreference('night-paper'); await new Promise(r=>setTimeout(r,40));
-   const before=sample();
-   api.setThemePreference(theme); await new Promise(r=>setTimeout(r,40));
-   const after=sample();
-   return before.flatMap((paint,i)=>properties.filter(p=> /(?:rgb|hsl|#[a-f0-9]{3})/i.test(paint[p]) && !/^rgba\(0, 0, 0, 0\)$/.test(paint[p])).map(property=>({element:candidates[i].id||candidates[i].getAttribute('data-ds')||candidates[i].tagName,text:candidates[i].textContent?.slice(0,50),property,before:paint[property],after:after[i][property]})));
- }, {theme:testTheme.id});
- const unchanged=paints.filter(p=>p.before===p.after);
- records.push({screen,...result,paints,unchanged});
+ const {paints,unchanged,defaults,elements,pseudos,properties,paintCount} = await page.evaluate(probeThemePaints, {baseline:'night-paper',theme:testTheme.id});
+ const matrixFile=screen+'-paints.json.gz';
+ await fs.writeFile(path.join(evidence,matrixFile),Buffer.from(paints,'base64'));
+ records.push({screen,...result,elements,pseudos,properties,paintCount,matrixFile,defaults,unchanged});
  if(!screen.startsWith('renderer-'))assert.ok(paints.length,screen+' has rendered themed paint');
- // Save a diagnostic before asserting so a hard-coded component identifies itself.
+ // Save the complete all-element/pseudo/property matrix before asserting.
  await fs.writeFile(path.join(evidence,'proof.json'),JSON.stringify({theme:testTheme,records,errors},null,2));
  assert.deepEqual(unchanged,[], screen+' loud-theme acceptance: every visible key paint must differ from night-paper');}
  await page.goto(base+'proof.html');await page.evaluate(async()=>{localStorage.setItem('ai-capella-lang','en');await import('/proof-entry.tsx');});await page.waitForFunction(()=>window.proofReady);
