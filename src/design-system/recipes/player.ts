@@ -577,7 +577,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-switch
     "tw:relative tw:w-player-utility-switch-width tw:h-player-utility-icon-width-2 tw:rounded-player-badge-border-radius-22 tw:player-switch-background tw:flex-none tw:player-switch-transition",
     // The generated thumb uses the same token-backed utility surface as the track.
-    "tw:after:content-(--ds-content-empty) tw:after:absolute tw:after:left-player-utility-native-height-4px tw:after:top-player-utility-native-height-4px tw:after:w-player-utility-native-width-24px tw:after:h-player-utility-native-width-24px tw:after:rounded-player-live-dot-border-radius-9 tw:after:bg-ink-secondary tw:after:player-switch-thumb-transition tw:aria-checked:after:transform-(--ds-player-switch-aria-checked-true-after-transform-102) tw:aria-checked:after:bg-surface-sunken",
+    "tw:after:content-(--ds-content-empty) tw:after:absolute tw:after:left-4 tw:after:top-4 tw:after:size-24 tw:after:rounded-player-live-dot-border-radius-9 tw:after:bg-ink-secondary tw:after:player-switch-thumb-transition tw:aria-checked:after:transform-(--ds-player-switch-aria-checked-true-after-transform-102) tw:aria-checked:after:bg-surface-sunken",
     // .ds-player-switch[aria-checked="true"]
     "tw:[&[aria-checked='true']]:player-mute-btn-background",
   ].join(" "),
