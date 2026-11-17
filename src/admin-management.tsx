@@ -354,12 +354,17 @@ export function AdminMemberships({ entity, profile, onChanged }: {
       setStatus(d.refreshFailed);
     }
   }
+  const focusHeading = useRef(false);
+  // Runs after the closed dialog has restored focus to its opener; a removed row's opener is gone.
+  useEffect(() => {
+    if (action || !focusHeading.current) return;
+    focusHeading.current = false;
+    heading.current?.querySelector<HTMLElement>("h2")?.focus();
+  }, [action]);
   async function saved(message: string = d.success) {
-    const removed = action?.kind === "remove";
+    focusHeading.current = action?.kind === "remove";
     setAction(null);
     await refresh(message);
-    // A removed row cannot take focus back; land on the section instead.
-    if (removed) heading.current?.querySelector<HTMLElement>("h2")?.focus();
   }
   const current = (row: AdminRow) => rows.find((r) => r.id === row.id) ?? row;
   const subject = (row: AdminRow) => ({ name: row.name ?? row.email, ensemble: row.ensemble_name });
