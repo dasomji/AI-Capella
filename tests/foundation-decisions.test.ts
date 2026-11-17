@@ -31,7 +31,7 @@ function contrast(a: string,b: string) {
 describe('owner foundation decisions', () => {
   it.each(['night-paper','parchment','velvet'])('%s has one accent, paper and gold family with readable text', theme => {
     const value = tokens(theme);
-    for (const role of ['admin-accent','transcription-accent','accent-offline','accent-invitation','material-domain-gold-color']) expect(value(role)).toBe(value('accent'));
+    for (const role of ['admin-accent','transcription-accent','accent-offline','accent-invitation','material-domain-gold-color','score-query']) expect(value(role)).toBe(value('accent'));
     for (const [alias,role] of [['admin-surface','surface'],['admin-ink','ink'],['admin-secondary','ink-secondary'],['canvas-surface','surface'],['canvas-surface-raised','surface-raised'],['canvas-surface-overlay','surface-overlay']]) expect(value(alias)).toBe(value(role));
     expect(value('material-wordmark-gold-mid')).toBe(value('material-gold-mid'));
     expect(value('material-wordmark-gold-deep')).toBe(value('material-gold-deep'));

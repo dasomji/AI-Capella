@@ -120,12 +120,6 @@
   --pigment-accent: #d4ad65;
   --pigment-warning: #ef9d8e;
   --pigment-backdrop: #0009;
-  --pigment-admin-surface: #211d25;
-  --pigment-admin-ink: #f3eadb;
-  --pigment-admin-secondary: #c5b9aa;
-  --pigment-admin-rule: #766958;
-  --pigment-admin-accent: #e5bd69;
-  --pigment-admin-danger: #f2a49a;
   --pigment-feedback-wish: #72b7f2;
   --pigment-feedback-idea: #edc96b;
   --pigment-feedback-note: #a9d38a;
@@ -137,10 +131,6 @@
   --pigment-canvas-surface: #13121e;
   --pigment-canvas-surface-raised: #1b1929;
   --pigment-canvas-surface-overlay: #252235;
-  --pigment-score-stage-top: #17121f;
-  --pigment-score-stage-middle: #110e19;
-  --pigment-score-stage-bottom: #0e0c16;
-  --pigment-material-gold-deep: rgb(150,114,50);
   --pigment-material-wordmark-gold-mid: rgb(196,158,84);
   --pigment-material-wordmark-ink: rgb(239,230,216);
   --pigment-material-wordmark-gold-light: rgb(246,222,160);
@@ -184,7 +174,6 @@
   --pigment-feedback-idea-parchment: #9c7414;
   --pigment-feedback-note-parchment: #5a8a2a;
   --pigment-feedback-survey-parchment: #8445a6;
-  --pigment-score-query: #a46f18;
   --pigment-material-gold-light: rgb(104,72,20);
   --pigment-material-lamp-parchment: rgb(236,160,64);
   --pigment-material-sheet-parchment-top: #efe3c7;
@@ -473,7 +462,7 @@
   --ds-feedback-idea: var(--pigment-feedback-idea);
   --ds-feedback-note: var(--pigment-feedback-note);
   --ds-feedback-survey: var(--pigment-feedback-survey);
-  --ds-score-query: var(--pigment-feedback-idea);
+  --ds-score-query: var(--ds-accent);
   --ds-score-paper: var(--pigment-ink);
   --ds-score-past: var(--ds-surface-sunken);
   --ds-score-past-alpha: .38;
@@ -968,7 +957,7 @@
   --ds-feedback-idea: var(--pigment-feedback-idea-parchment);
   --ds-feedback-note: var(--pigment-feedback-note-parchment);
   --ds-feedback-survey: var(--pigment-feedback-survey-parchment);
-  --ds-score-query: var(--pigment-score-query);
+  --ds-score-query: var(--ds-accent);
   --ds-score-paper: var(--pigment-ink-parchment);
   --ds-score-past: var(--ds-surface-sunken);
   --ds-score-past-alpha: .5;
@@ -1461,7 +1450,7 @@
   --ds-feedback-idea: var(--pigment-feedback-idea);
   --ds-feedback-note: var(--pigment-feedback-note);
   --ds-feedback-survey: var(--pigment-feedback-survey);
-  --ds-score-query: var(--pigment-feedback-idea);
+  --ds-score-query: var(--ds-accent);
   --ds-score-paper: var(--pigment-ink);
   --ds-score-past: var(--ds-surface-sunken);
   --ds-score-past-alpha: .38;
