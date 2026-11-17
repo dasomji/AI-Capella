@@ -70,7 +70,7 @@ export interface IconButtonOptions {
   variant?: (typeof iconButtonVariants)[number];
   size?: ControlDensity;
 }
-/** ruled/transcription intentionally preserve identical looks pending D09/D10. */
+/** D09: normal forms use writing lines; boxed exceptions have explicit purposes. */
 export const fieldVariants = [
   "panel-tempo", "panel-measure", "panel-export", "panel-offset",
   "player-volume",
@@ -78,7 +78,6 @@ export const fieldVariants = [
   "library-prompt",
   "library-search",
   "search", "numeric", "repeated-name",
-  "boxed",
   "ruled",
   "ruled-account",
   "domain",
@@ -227,7 +226,7 @@ function fieldRecipeStyles(
   const admin = variant === "admin";
   const domain = variant === "domain" || variant === "domain-create";
   const prompt = variant === "library-prompt";
-  const ruled = !["boxed", "search", "numeric", "repeated-name"].includes(variant);
+  const ruled = !["search", "numeric", "repeated-name"].includes(variant);
   return {
     root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-flush" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-flush tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group") : admin ? "tw:grid tw:gap-snug tw:min-w-flush tw:font-auth-body tw:text-label tw:leading-leading-body tw:normal-case tw:tracking-(--ds-tracking-default) tw:tabular-nums" : "tw:grid tw:gap-snug tw:min-w-flush " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
     label:
@@ -238,9 +237,7 @@ function fieldRecipeStyles(
       admin ? adminControlBase : variant === "ruled" || variant === "transcription" ? unfocusedControlBase : prompt ? unfocusedControlBase + " tw:outline-none tw:outline-offset-(--ds-space-micro)" : controlBase,
       variant === "ruled" || variant === "transcription" ? "" : disabledRecipe,
       "tw:block tw:w-full tw:min-w-flush tw:font-weight-body tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
-      kind === "textarea" && admin
-        ? "tw:h-auto tw:min-h-control-textarea-height tw:resize-y tw:border-(length:--ds-stroke-thin) tw:border-solid tw:rounded-field tw:p-inline tw:font-auth-body tw:text-label tw:leading-leading-body tw:bg-admin-surface tw:text-admin-ink"
-        : domain && kind === "select"
+      domain && kind === "select"
           ? "tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid tw:px-small tw:py-small tw:leading-leading-body tw:bg-transparent tw:text-ink tw:font-control tw:text-body"
           : ruled
             ? `tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid ${domain ? "tw:py-small tw:leading-leading-admin" : admin ? "tw:py-inline tw:leading-leading-body" : "tw:py-inline tw:leading-leading-field"} ${admin ? "tw:px-micro tw:bg-admin-surface tw:text-admin-ink tw:font-auth-body tw:text-label" : domain ? "tw:px-flush tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-body" : "tw:px-flush tw:bg-transparent tw:text-ink tw:font-auth-body tw:text-input"}`
