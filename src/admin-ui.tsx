@@ -84,7 +84,7 @@ export function AdminPage() {
     const auditParams:Record<string,string> = profile ? (tab === 'users' ? { user: profile.id } : tab === 'ensembles' ? { ensemble: profile.id } : { target: profile.id }) : {};
     return <Workspace as="main" part="page" data-admin="shell">
       <Workspace as="header" part="header">
-        <a href="/app"><Workspace as="span" part="wordmark">LightScore</Workspace></a>
+        <Workspace as="a" href="/app" part="wordmark">LightScore</Workspace>
         <Workspace part="language"><ToggleGroup variant="admin-language" label="Language / Sprache" separator=" · " items={[{value:"de",label:"DE"},{value:"en",label:"EN"}]} value={language} onChange={value=>{const next=value as Lang;localStorage.setItem("ai-capella-lang",next);document.documentElement.lang=next;setLanguage(next);}}/></Workspace>
         <Workspace as="h1" part="title">{d.title}</Workspace>
         <NavigationTabs variant="admin" label={d.title} value={tab} items={(['users','ensembles','pieces','audit','transcription'] as const).map(t=>({value:t,label:d[t],href:'/admin/'+t}))} onNavigate={t=>{history.pushState({},'', '/admin/'+t);setQuery('');setFilters({});setTab(t);}}/>
