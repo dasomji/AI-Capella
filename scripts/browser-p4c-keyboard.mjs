@@ -25,6 +25,9 @@ export async function verifyP4cKeyboard(page, theme) {
   await page.keyboard.press('ArrowDown');await page.keyboard.press('End');await page.keyboard.press('Enter');
   await page.getByRole('alertdialog').waitFor();assert.equal(await page.locator('dialog:modal').count(),2);await wrap(page.getByRole('alertdialog'));
   await page.keyboard.press('Escape');await page.getByRole('alertdialog').waitFor({state:'detached'});assert.equal(await page.locator('dialog:modal').count(),1);assert.ok(await active(summary),'nested confirmation returns to menu trigger');
+  // A closed row menu must let Escape reach the parent modal after confirmation cancellation.
+  await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});assert.ok(await active(page.locator('#fixture-opener')));
+  await page.evaluate(()=>window.ui.membersSheet('fixture',document.querySelector('#fixture-opener')));
   const capability=page.getByRole('switch').first();await capability.focus();await page.keyboard.press('Space');await page.waitForTimeout(100);assert.ok(await active(capability),'permission update retains focused native input');
   await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});assert.ok(await active(page.locator('#fixture-opener')));
   await page.evaluate(async()=>{const entry=document.createElement('button');entry.id='transcription-entry';entry.textContent='Read a score';const jobs=document.createElement('div');document.body.append(entry,jobs);window.tx=(await import('/src/transcription.ts')).installTranscription({beforeListen:()=>true,reviewCleanup:()=>()=>{},socket:{on(){},off(){},emit(){}},ensemble:()=> 'fixture',entry,jobs,open:async()=>{}});});

@@ -262,7 +262,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
           const items =
             menu.element.querySelectorAll<HTMLElement>("[role=menuitem]");
           (e.key === "ArrowUp" ? items[items.length - 1] : items[0])?.focus();
-        } else if (e.key === "Escape") {
+        } else if (e.key === "Escape" && details.open) {
           e.preventDefault();
           e.stopPropagation();
           details.open = false;
