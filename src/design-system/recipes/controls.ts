@@ -14,6 +14,8 @@ export const buttonVariants = [
   "dense",
   "dense-sort",
   "link",
+  "account-link",
+  "password-toggle",
 ] as const;
 export type ButtonVariant = (typeof buttonVariants)[number];
 /** tour: danger=primary, quiet=secondary (D17); dense: primary/quiet=secondary (D10). */
@@ -32,6 +34,8 @@ const buttonShapes: Record<ButtonVariant, string> = {
   dense:
     "tw:min-h-control-height-admin tw:rounded-admin-control tw:px-14 tw:py-10 tw:text-body-small tw:font-regular tw:font-auth-mono",
   "dense-sort": "tw:min-h-control-height-admin tw:rounded-admin-control tw:px-0 tw:py-0 tw:text-body-small tw:font-regular tw:font-auth-mono",
+  "account-link": "tw:min-h-0 tw:rounded-field tw:px-0 tw:py-4 tw:text-body tw:font-regular tw:font-auth-body",
+  "password-toggle": "tw:min-h-0 tw:rounded-field tw:px-0 tw:py-4 tw:text-small tw:font-regular tw:font-auth-mono",
   link: "tw:min-h-32 tw:rounded-field tw:px-0 tw:py-4 tw:text-label tw:font-label tw:font-control",
 };
 const buttonIntents: Record<ButtonIntent, string> = {
@@ -48,6 +52,17 @@ function buttonRecipeStyles({
   intent = "secondary",
   pressed = false,
 }: ButtonOptions = {}) {
+  // D08/D10: retain account navigation and password reveal typography separately.
+  if (variant === "account-link" || variant === "password-toggle")
+    return [
+      controlBase,
+      "tw:disabled:opacity-(--ds-opacity-disabled-auth) tw:aria-disabled:opacity-(--ds-opacity-disabled-auth)",
+      buttonShapes[variant],
+      "tw:border-0 tw:bg-transparent tw:text-ink-secondary tw:cursor-pointer",
+      variant === "account-link"
+        ? "tw:inline-block tw:leading-(--ds-leading-account-links) tw:hover:text-ink tw:hover:underline"
+        : "tw:block tw:absolute tw:right-0 tw:bottom-10 tw:leading-admin tw:normal-case tw:tracking-normal",
+    ].join(" ");
   const color =
     variant === "tour"
       ? intent === "secondary" || intent === "quiet"

@@ -52,7 +52,7 @@ describe("pure recipes", () => {
         for (const group of [
           /^tw:min-h-/,
           /^tw:rounded-/,
-          /^tw:text-(button|label|body-small)$/,
+          /^tw:text-(button|label|body-small|body|small)$/,
           /^tw:font-(control|auth-mono|auth-body)$/,
           /^tw:bg-/,
         ])
