@@ -308,7 +308,6 @@
   --ds-control-height: 42px;
   --ds-radius-none: 0px;
   --ds-radius-field: var(--ds-radius-none);
-  --ds-radius-sheet: 24px;
   --ds-radius-menu: 8px;
   --ds-radius-round: 50%;
   --ds-stroke-thin: 1px;
@@ -487,7 +486,6 @@
   --ds-voice-8: var(--pigment-feedback-survey);
   --ds-component-action-hover: var(--ds-action-hover);
   --ds-domain-backdrop: rgb(8 6 14 / 0.45);
-  --ds-domain-sheet-shadow: var(--ds-shadow-material-highlight), 0 var(--ds-size-transcription-title) 70px calc(-1 * var(--ds-space-group)) rgb(0 0 0 / 0.8);
   --ds-note-secondary: rgb(21 17 26 / 0.55);
   --ds-hint-secondary: rgb(20 18 28 / 0.6);
   --ds-note-shadow: 0 var(--ds-space-action) var(--ds-space-voice-row) rgb(0 0 0 / 0.55);
@@ -724,8 +722,6 @@
   --ds-player-button-outline: var(--ds-stroke-focus) solid var(--ds-ink);
   --ds-library-button-outline: var(--ds-stroke-focus) solid var(--ds-ink);
   --ds-library-overlay-border: var(--ds-stroke-thin) solid var(--ds-material-edge);
-  --ds-library-sheet-border-top: var(--ds-stroke-thin) solid var(--ds-material-edge);
-  --ds-library-sheet-border: var(--ds-stroke-thin) solid var(--ds-material-edge);
   --ds-library-tag-border: var(--ds-stroke-thin) solid var(--ds-rule-strong);
   --ds-account-heading-border-top: var(--ds-stroke-thin) solid var(--ds-rule-strong);
   --ds-account-input-border-bottom: var(--ds-stroke-thin) solid var(--ds-ink-secondary);
@@ -972,7 +968,6 @@
   --ds-voice-8: var(--pigment-feedback-survey-parchment);
   --ds-component-action-hover: var(--ds-surface-hover);
   --ds-domain-backdrop: rgb(60 40 20 / 0.28);
-  --ds-domain-sheet-shadow: var(--ds-shadow-material-highlight), 0 var(--ds-size-transcription-title) 70px calc(-1 * var(--ds-space-group)) rgb(90 60 25 / 0.45);
   --ds-note-secondary: rgb(243 233 211 / 0.62);
   --ds-hint-secondary: rgb(243 233 211 / 0.62);
   --ds-note-shadow: var(--ds-component-toast-shadow);
@@ -1207,8 +1202,6 @@
   --ds-player-button-outline: var(--ds-stroke-focus) solid var(--ds-ink);
   --ds-library-button-outline: var(--ds-stroke-focus) solid var(--ds-ink);
   --ds-library-overlay-border: var(--ds-stroke-thin) solid var(--ds-material-edge);
-  --ds-library-sheet-border-top: var(--ds-stroke-thin) solid var(--ds-material-edge);
-  --ds-library-sheet-border: var(--ds-stroke-thin) solid var(--ds-material-edge);
   --ds-library-tag-border: var(--ds-stroke-thin) solid var(--ds-rule-strong);
   --ds-account-heading-border-top: var(--ds-stroke-thin) solid var(--ds-rule-strong);
   --ds-account-input-border-bottom: var(--ds-stroke-thin) solid var(--ds-ink-secondary);
@@ -1455,7 +1448,6 @@
   --ds-voice-8: var(--pigment-feedback-survey);
   --ds-component-action-hover: var(--ds-action-hover);
   --ds-domain-backdrop: rgb(8 6 14 / 0.45);
-  --ds-domain-sheet-shadow: var(--ds-shadow-material-highlight), 0 var(--ds-size-transcription-title) 70px calc(-1 * var(--ds-space-group)) rgb(0 0 0 / 0.8);
   --ds-note-secondary: rgb(21 17 26 / 0.55);
   --ds-hint-secondary: rgb(20 18 28 / 0.6);
   --ds-note-shadow: 0 var(--ds-space-action) var(--ds-space-voice-row) rgb(0 0 0 / 0.55);
@@ -1687,8 +1679,6 @@
   --ds-player-button-outline: var(--ds-stroke-focus) solid var(--ds-ink);
   --ds-library-button-outline: var(--ds-stroke-focus) solid var(--ds-ink);
   --ds-library-overlay-border: var(--ds-stroke-thin) solid var(--ds-material-edge);
-  --ds-library-sheet-border-top: var(--ds-stroke-thin) solid var(--ds-material-edge);
-  --ds-library-sheet-border: var(--ds-stroke-thin) solid var(--ds-material-edge);
   --ds-library-tag-border: var(--ds-stroke-thin) solid var(--ds-rule-strong);
   --ds-account-heading-border-top: var(--ds-stroke-thin) solid var(--ds-rule-strong);
   --ds-account-input-border-bottom: var(--ds-stroke-thin) solid var(--ds-ink-secondary);
@@ -1909,7 +1899,6 @@
   --ds-toast-bottom: calc(96px + env(safe-area-inset-bottom, var(--ds-space-none)));
   --ds-toast-bottom-phone: calc(150px + env(safe-area-inset-bottom, var(--ds-space-none)));
   --ds-toast-max-width: min(520px, calc(100vw - var(--ds-space-panel)));
-  --ds-toast-max-width-sheet: calc(100vw - var(--ds-space-panel));
   --ds-font-close: sans-serif;
   --ds-weight-close-light: 300;
   --ds-size-close: 27px;
@@ -1929,11 +1918,9 @@
   --ds-width-dialog: 420px;
   --ds-max-width-dialog: calc(100vw - var(--ds-space-toolbar));
   --ds-width-sheet: 440px;
-  --ds-left-sheet: calc(50% - 220px);
   --ds-width-table: 1080px;
   --ds-width-transcription: 560px;
   --ds-max-height-dialog: 92dvh;
-  --ds-max-height-sheet: 88dvh;
 }
 
 /* Tailwind adapter. No default pigment/font/size/radius/shadow vocabulary. */
@@ -1984,7 +1971,6 @@
   --ds-layer-note: 800;
   --ds-menu-member-width: 200px;
   --ds-menu-job-width: 180px;
-  --ds-sheet-padding: var(--ds-space-small) var(--ds-space-group) calc(var(--ds-space-group) + env(safe-area-inset-bottom,var(--ds-space-none)));
   --ds-domain-label-gap: .7rem;
 }
 
@@ -2051,9 +2037,7 @@
   --ds-library-prompt-heading: 500 var(--ds-space-sheet-dense)/1.2 var(--ds-font-display);
   --ds-library-popover-min: 220px;
   --ds-library-popover-max: min(360px, calc(100vw - var(--ds-space-content)));
-  --ds-library-sheet-padding: var(--ds-space-small) var(--ds-space-group) calc(var(--ds-space-group) + var(--ds-safe-bottom));
   --ds-library-grab-offset: calc(-1 * var(--ds-space-group));
-  --ds-library-sheet-offset: -220px;
   --ds-library-half-turn: 180deg;
   --ds-library-card-perspective: 1000px;
   --ds-library-card-tilt: 4deg;
@@ -2168,10 +2152,8 @@
   --ds-panel-layer-sync-debug: 10000;
   --ds-panel-layer-fps: 2000;
   --ds-panel-toast-transition: opacity var(--ds-duration-normal), transform var(--ds-duration-normal) var(--ds-ease-standard);
-  --ds-panel-sheet-transition: transform var(--ds-duration-normal) var(--ds-ease-standard);
   --ds-panel-backdrop-transition: opacity var(--ds-duration-normal);
   --ds-panel-tour-transition: opacity var(--ds-duration-note-out) ease;
-  --ds-panel-sheet-enter-transform: translateY(100%);
   --ds-panel-toast-enter-transform: translate(-50%, var(--ds-space-content));
   --ds-panel-toast-shown-transform: translate(-50%, 0);
   --ds-panel-note-enter-transform: translate(-50%,var(--ds-space-content));
@@ -2238,10 +2220,6 @@
   --ds-library-search-input-padding: var(--ds-space-hairline) var(--ds-space-micro);
   --ds-library-prompt-transition: transform var(--ds-duration-normal) var(--ds-ease-standard),opacity var(--ds-duration-fast);
   --ds-library-popover-transition: opacity var(--ds-duration-fast), transform var(--ds-duration-fast) var(--ds-ease-standard);
-  --ds-library-sheet-inset: auto var(--ds-space-none) var(--ds-space-none);
-  --ds-library-sheet-border-radius: var(--ds-radius-sheet) var(--ds-radius-sheet) var(--ds-radius-none) var(--ds-radius-none);
-  --ds-library-sheet-grab-left: 50%;
-  --ds-library-sheet-left: 50%;
   --ds-library-menu-item-padding: var(--ds-space-none) var(--ds-space-control);
   --ds-library-menu-item-transition: color var(--ds-duration-fast),
     text-shadow var(--ds-duration-fast);
@@ -2306,8 +2284,6 @@
   --ds-player-grid-template-areas-phone: 'top' 'chips' 'stage' 'ov' 'info' 'tr';
   --ds-player-grid-template-rows-landscape: calc(var(--ds-space-chips) + var(--ds-safe-top)) minmax(0, 1fr) var(--ds-space-heading) var(--ds-control-target-touch) auto;
   --ds-player-grid-template-areas-landscape: 'top' 'stage' 'ov' 'info' 'tr';
-  --ds-sheet-grab-left: 50%;
-  --ds-sheet-grab-margin-left: calc(-1 * var(--ds-space-group));
   --ds-before-after-animation-duration: 0.01ms;
   --ds-before-after-animation-iteration-count: 1;
   --ds-before-after-transition-duration: 0.01ms;
@@ -2585,7 +2561,6 @@
   --frame-all-library-overlay-border: var(--ds-library-overlay-border);
   --frame-all-library-paper-option-border: var(--ds-library-paper-option-border);
   --frame-all-library-search-border: var(--ds-library-search-border);
-  --frame-all-library-sheet-border: var(--ds-library-sheet-border);
   --frame-all-library-song-card-border: var(--ds-library-song-card-border);
   --frame-all-library-song-card-lifted-border: var(--ds-library-song-card-lifted-border);
   --frame-all-library-tag-border: var(--ds-library-tag-border);
@@ -2595,7 +2570,6 @@
   --frame-right-player-voices-panel-border-right: var(--ds-player-voices-panel-border-right);
   --frame-top-account-heading-border-top: var(--ds-account-heading-border-top);
   --frame-top-domain-heading-border-top: var(--ds-domain-heading-border-top);
-  --frame-top-library-sheet-border-top: var(--ds-library-sheet-border-top);
   --frame-top-player-duck-border-top: var(--ds-player-duck-border-top);
   --frame-top-reading-review-top-rule: var(--ds-transcription-review-panel-border-top);
   --frame-top-reading-skipped-top-rule: var(--ds-transcription-segment-skipped-border-top);
@@ -2653,7 +2627,6 @@
   --motion-library-song-card-lifted-transition: var(--ds-library-song-card-lifted-transition);
   --motion-library-song-card-transition: var(--ds-library-song-card-transition);
   --motion-panel-backdrop-transition: var(--ds-panel-backdrop-transition);
-  --motion-panel-sheet-transition: var(--ds-panel-sheet-transition);
   --motion-panel-toast-transition: var(--ds-panel-toast-transition);
   --motion-panel-tour-transition: var(--ds-panel-tour-transition);
   --motion-player-chip-transition: var(--ds-player-chip-transition);
@@ -2684,20 +2657,17 @@
   --radius-field: var(--ds-radius-field);
   --radius-icon: var(--ds-radius-icon);
   --radius-indicator: var(--ds-radius-indicator);
-  --radius-library-sheet-border-radius: var(--ds-library-sheet-border-radius);
   --radius-library-song-card-border-radius: var(--ds-library-song-card-border-radius);
   --radius-media: var(--ds-radius-media);
   --radius-menu: var(--ds-radius-menu);
   --radius-pill: var(--ds-radius-pill);
   --radius-round: var(--ds-radius-round);
-  --radius-sheet: var(--ds-radius-sheet);
   --radius-segment: var(--ds-radius-segment);
   --radius-tile-dense: var(--ds-radius-tile-dense);
   --radius-tile: var(--ds-radius-tile);
   --radius-track: var(--ds-radius-track);
   --shadow-component-overlay-shadow: var(--ds-component-overlay-shadow);
   --shadow-component-toast-shadow: var(--ds-component-toast-shadow);
-  --shadow-domain-sheet-shadow: var(--ds-domain-sheet-shadow);
   --shadow-emboss-pressed: var(--ds-shadow-emboss-pressed);
   --shadow-focus: var(--ds-shadow-focus);
   --shadow-material-highlight: var(--ds-shadow-material-highlight);
@@ -2803,11 +2773,6 @@
   --spacing-library-search-input-padding: var(--ds-library-search-input-padding);
   --spacing-library-search-padding: var(--ds-library-search-padding);
   --spacing-library-search-width: var(--ds-library-search-width);
-  --spacing-library-sheet-grab-left: var(--ds-library-sheet-grab-left);
-  --spacing-library-sheet-inset: var(--ds-library-sheet-inset);
-  --spacing-library-sheet-left: var(--ds-library-sheet-left);
-  --spacing-library-sheet-offset: var(--ds-library-sheet-offset);
-  --spacing-library-sheet-padding: var(--ds-library-sheet-padding);
   --spacing-library-song-body-padding: var(--ds-library-song-body-padding);
   --spacing-library-song-card-min-height: var(--ds-library-song-card-min-height);
   --spacing-library-song-card-min-height-phone: var(--ds-library-song-card-min-height-phone);
@@ -2822,7 +2787,6 @@
   --spacing-library-tip-max-width: var(--ds-library-tip-max-width);
   --spacing-library-top-padding: var(--ds-library-top-padding);
   --spacing-max-height-dialog: var(--ds-max-height-dialog);
-  --spacing-max-height-sheet: var(--ds-max-height-sheet);
   --spacing-max-width-dialog: var(--ds-max-width-dialog);
   --spacing-member-email-margin: var(--ds-member-email-margin);
   --spacing-member-row-gap: var(--ds-member-row-gap);
@@ -2890,8 +2854,6 @@
   --spacing-segment: var(--ds-space-segment);
   --spacing-segment-dense: var(--ds-space-segment-dense);
   --spacing-sheet-dense: var(--ds-space-sheet-dense);
-  --spacing-sheet-grab-left: var(--ds-sheet-grab-left);
-  --spacing-sheet-grab-margin-left: var(--ds-sheet-grab-margin-left);
   --spacing-snug: var(--ds-space-snug);
   --spacing-stage: var(--ds-space-stage);
   --spacing-stroke-focus: var(--ds-stroke-focus);
@@ -2901,7 +2863,6 @@
   --spacing-toast-bottom: var(--ds-toast-bottom);
   --spacing-toast-bottom-phone: var(--ds-toast-bottom-phone);
   --spacing-toast-max-width: var(--ds-toast-max-width);
-  --spacing-toast-max-width-sheet: var(--ds-toast-max-width-sheet);
   --spacing-toolbar: var(--ds-space-toolbar);
   --spacing-toolbar-dense: var(--ds-space-toolbar-dense);
   --spacing-touch: var(--ds-space-touch);
