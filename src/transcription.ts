@@ -704,7 +704,7 @@ export function installTranscription(options: {
             warnings: items.filter((i) => i.kind === "warning").length,
             uncertainties: items.filter((i) => i.kind === "uncertainty").length,
           }),
-          "tx-pencil",
+          transcriptionJobRecipe().pencil,
         ),
       );
       const comparison = createSwitch({
@@ -759,7 +759,7 @@ export function installTranscription(options: {
         const glyph = el(
           "span",
           item.kind === "warning" ? "!" : "?",
-          `tx-glyph ${item.kind}`,
+          `${transcriptionJobRecipe().glyph} ${item.kind}`,
         );
         glyph.setAttribute("aria-hidden", "true");
         b.classList.add("tx-review-item");

@@ -2725,6 +2725,7 @@
   --radius-menu: var(--ds-radius-menu);
   --radius-pill: var(--ds-radius-pill);
   --radius-round: var(--ds-radius-round);
+  --radius-sheet: var(--ds-radius-sheet);
   --radius-segment: var(--ds-radius-segment);
   --radius-tile-dense: var(--ds-radius-tile-dense);
   --radius-tile: var(--ds-radius-tile);

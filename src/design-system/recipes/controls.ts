@@ -313,7 +313,7 @@ function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
       controlBase +
       " " +
       disabledRecipe +
-      " tw:appearance-auto tw:p-flush tw:shrink-0 " +
+      " tw:appearance-auto tw:leading-leading-body tw:p-flush tw:shrink-0 " +
       (variant === "permission"
         ? "tw:size-group tw:accent-admin-accent tw:mt-tight tw:mr-tight tw:mb-tight tw:ml-compact"
         : "tw:size-action tw:accent-accent"),
