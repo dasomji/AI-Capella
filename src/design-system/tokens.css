@@ -8,6 +8,7 @@
   --breakpoint-wordmark: 700px;
   --breakpoint-score: 720px;
   --breakpoint-panel: 900px;
+  --breakpoint-transport: 1200px;
   --viewport-short-landscape-height: 520px;
 }
 
@@ -2161,10 +2162,10 @@
     --ds-player-t-sep-margin: var(--ds-space-none) var(--ds-space-small);
     --ds-player-play-button-transition: transform var(--ds-duration-fast), box-shadow var(--ds-duration-normal);
     --ds-player-play-button-active-transform: scale(0.95);
-    --ds-player-header-padding-phone: var(--ds-safe-top) var(--ds-space-snug) var(--ds-space-none) var(--ds-space-compact);
+    --ds-player-header-padding-phone: var(--ds-safe-top) max(var(--ds-space-snug), var(--ds-safe-right)) var(--ds-space-none) max(var(--ds-space-compact), var(--ds-safe-left));
     --ds-player-back-button-padding-phone: var(--ds-space-none) var(--ds-space-small);
     --ds-player-segment-button-padding-phone: var(--ds-space-none) var(--ds-space-segment-dense);
-    --ds-player-transport-padding: var(--ds-space-small) var(--ds-space-action) calc(var(--ds-space-inline) + var(--ds-safe-bottom));
+    --ds-player-transport-padding: var(--ds-space-small) max(var(--ds-space-action), var(--ds-safe-right)) calc(var(--ds-space-inline) + var(--ds-safe-bottom)) max(var(--ds-space-action), var(--ds-safe-left));
     --ds-player-transport-padding-bottom: calc(var(--ds-space-compact) + var(--ds-safe-bottom));
     --ds-player-sheet-body-voice-list-padding: var(--ds-space-compact) var(--ds-space-none) var(--ds-space-small);
     --ds-player-sheet-body-duck-padding: var(--ds-space-row) var(--ds-space-none) var(--ds-space-action);
@@ -2256,7 +2257,8 @@
   --ds-library-search-width: 280px;
   --ds-library-banner-max-width: var(--ds-width-library);
   --ds-library-song-grid-max-width: var(--ds-width-library);
-  --ds-library-song-grid-grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  --ds-library-card-width: 280px;
+  --ds-library-song-grid-grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--ds-library-card-width)), var(--ds-library-card-width)));
   --ds-library-cover-aspect-ratio: 16 / 10;
   --ds-library-song-card-min-height: 260px;
   --ds-library-song-card-border-radius: var(--ds-radius-none);
@@ -2299,6 +2301,8 @@
 :root {
   --ds-safe-bottom: env(safe-area-inset-bottom, var(--ds-space-none));
   --ds-safe-top: env(safe-area-inset-top, var(--ds-space-none));
+  --ds-safe-left: env(safe-area-inset-left, var(--ds-space-none));
+  --ds-safe-right: env(safe-area-inset-right, var(--ds-space-none));
   --ds-html-body-font: 400 var(--ds-space-content)/1.45 var(--ds-font-body);
   --ds-button-disabled-opacity: 0.4;
   --ds-wordmark-font: 600 var(--ds-size-dialog)/1 var(--ds-font-display);
@@ -2308,13 +2312,13 @@
   --ds-app-height: 100dvh;
   --ds-app-transition: opacity 0.2s ease-out;
   --ds-landing-gap: clamp(140px, 26vh, 260px);
-  --ds-landing-padding: var(--ds-space-section) var(--ds-space-group) calc(var(--ds-space-section) + var(--ds-safe-bottom));
+  --ds-landing-padding: calc(var(--ds-space-section) + var(--ds-safe-top)) max(var(--ds-space-group), var(--ds-safe-right)) calc(var(--ds-space-section) + var(--ds-safe-bottom)) max(var(--ds-space-group), var(--ds-safe-left));
   --ds-landing-name-font: 500 clamp(var(--ds-space-switch), 10vw, 112px)/1 var(--ds-font-display);
   --ds-landing-name-letter-spacing: -0.015em;
   --ds-landing-name-animation: rise 1.2s var(--ds-ease-standard) both;
   --ds-landing-modes-animation: rise 1s 1.5s var(--ds-ease-standard) both;
   --ds-landing-modes-max-width: 340px;
-  --ds-library-top-padding: var(--ds-safe-top) max(var(--ds-space-content), 3vw) var(--ds-space-none);
+  --ds-library-top-padding: calc(var(--ds-space-small) + var(--ds-safe-top)) max(var(--ds-space-content), 3vw, var(--ds-safe-right)) var(--ds-space-small) max(var(--ds-space-content), 3vw, var(--ds-safe-left));
   --ds-library-scroll-padding: var(--ds-space-toolbar-dense) max(var(--ds-space-content), 4vw) calc(var(--ds-space-toolbar) + var(--ds-safe-bottom));
   --ds-library-head-max-width: var(--ds-width-library);
   --ds-library-head-margin: var(--ds-space-none) auto var(--ds-space-heading);
@@ -2331,7 +2335,7 @@
     'tr tr';
   --ds-roll-staff-transform: translateZ(0);
   --ds-player-grid-template-columns-phone: minmax(0, 1fr);
-  --ds-player-grid-template-rows-phone: calc(54px + var(--ds-safe-top)) var(--ds-space-page) minmax(0, 1fr) var(--ds-space-toolbar-dense) var(--ds-control-height) auto;
+  --ds-player-grid-template-rows-phone: calc(54px + var(--ds-safe-top)) var(--ds-control-height-touch) minmax(0, 1fr) var(--ds-space-toolbar-dense) var(--ds-control-height-touch) auto;
   --ds-player-grid-template-areas-phone: 'top' 'chips' 'stage' 'ov' 'info' 'tr';
   --ds-player-grid-template-rows-landscape: calc(var(--ds-space-chips) + var(--ds-safe-top)) minmax(0, 1fr) var(--ds-space-heading) var(--ds-space-toolbar-dense) auto;
   --ds-player-grid-template-areas-landscape: 'top' 'stage' 'ov' 'info' 'tr';
@@ -2410,9 +2414,9 @@
   --ds-wordmark-font-family: 'Baltimore Black Slope 1832', var(--ds-font-display);
   --ds-account-stage-min-height: 100svh;
   --ds-account-content-z-index: 1;
-  --ds-account-content-width: min(100% - var(--ds-space-page), 560px);
+  --ds-account-content-width: min(100% - var(--ds-space-page) - var(--ds-safe-left) - var(--ds-safe-right), 560px);
   --ds-account-content-margin: var(--ds-space-none) auto;
-  --ds-account-content-padding: clamp(68px,12vh,120px) var(--ds-space-none) var(--ds-space-stage);
+  --ds-account-content-padding: calc(clamp(68px,12vh,120px) + var(--ds-safe-top)) var(--ds-space-none) calc(var(--ds-space-stage) + var(--ds-safe-bottom));
   --ds-account-ribbons-opacity: .28;
   --ds-account-wordmark-font: 500 clamp(var(--ds-space-switch),8vw,80px)/1.2 var(--ds-font-display);
   --ds-account-wordmark-height: 130px;
@@ -2423,7 +2427,7 @@
   --ds-auth-shell-p-line-height: 1.55;
   --ds-account-links-line-height: 1.8;
   --ds-account-stage-language-toggle-z-index: 2;
-  --ds-account-content-padding-top: 70px;
+  --ds-account-content-padding-top: calc(70px + var(--ds-safe-top));
   --ds-account-wordmark-height-phone: 110px;
   --ds-account-wordmark-title-name-margin: var(--ds-space-none) auto;
   --ds-job-heading: 500 var(--ds-size-transcription-mobile)/1.3 var(--ds-font-auth-display);
