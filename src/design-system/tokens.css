@@ -2916,7 +2916,7 @@
   --spacing-navigation-other-padding: var(--ds-navigation-other-padding);
   --spacing-navigation-switch-gap: var(--ds-navigation-switch-gap);
   --spacing-navigation-switch-icon: var(--ds-navigation-switch-icon);
-  --spacing-none: var(--ds-space-none);
+  --spacing-flush: var(--ds-space-none);
   --spacing-note: var(--ds-size-note);
   --spacing-page: var(--ds-space-page);
   --spacing-panel: var(--ds-space-panel);
