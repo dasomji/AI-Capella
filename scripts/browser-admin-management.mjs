@@ -81,14 +81,20 @@ async function tabTo(locator) {
   }
   throw Error("Tab did not reach requested control");
 }
-async function confirmation(reason) {
-  const dialog = page.locator("[role=alertdialog][open]");
+/** Fill the reason of the open action dialog and press its action-specific confirm button. */
+async function confirmation(reason, label) {
+  const dialog = page.locator("dialog[open][data-admin=confirm]");
   await dialog.waitFor();
   await dialog.getByLabel("Reason", { exact: true }).fill(reason);
-  await dialog
-    .getByRole("button", { name: "Confirm change", exact: true })
-    .click();
+  await dialog.getByRole("button", { name: label, exact: true }).click();
   await dialog.waitFor({ state: "hidden" });
+}
+async function editRow(row, changes) {
+  await row.getByRole("button", { name: /^Edit permissions of / }).click();
+  const dialog = page.locator("dialog[open][data-admin=confirm]");
+  await dialog.waitFor();
+  for (const [label, value] of changes) await dialog.getByLabel(label, { exact: true }).setChecked(value);
+  return dialog;
 }
 try {
   await page.goto(base);
@@ -145,8 +151,9 @@ try {
   await users.getByRole("alert").waitFor();
   await users.getByRole("button", {name: "Retry", exact: true}).waitFor();
   await page.getByRole("button", {name: "DE", exact: true}).click();
-  await page.locator("main > [data-admin=data-table]").getByRole("button", {name: "Erneut versuchen", exact: true}).click();
-  await loaded(page.locator("main > [data-admin=data-table]"));
+  assert.equal(await page.evaluate(() => document.documentElement.lang), "de", "Document language follows German admin (MOB-11)");
+  await page.getByRole("region", { name: "Nutzer", exact: true }).getByRole("button", {name: "Erneut versuchen", exact: true}).click();
+  await loaded(page.getByRole("region", { name: "Nutzer", exact: true }));
   await page.getByRole("button", {name: "EN", exact: true}).click();
   await pageNumber(users, 2);
   assert.deepEqual(await ids(users), (await db.query('select id from "user" order by id offset 10 limit 10')).rows.map((r) => r.id));
@@ -225,33 +232,26 @@ try {
   await pageNumber(users, 1);
   assert.equal(await users.locator("tbody tr").count(), 1);
   await shot("users-search-sort");
-  await users.locator("tbody tr").first().focus();
+  // Rows open their routed detail page from a real link (keyboard) or a row click.
+  await users.getByRole("link", { name: "Test User", exact: true }).focus();
   await page.keyboard.press("Enter");
-  await page
-    .getByRole("dialog")
-    .getByRole("heading", { name: "Test User", exact: true })
-    .waitFor();
+  await page.waitForURL(/\/admin\/users\/[^/?]+$/);
+  const userHeading = page.getByRole("heading", { level: 1, name: "Test User", exact: true });
+  await userHeading.waitFor();
   await loaded();
+  assert.equal(await userHeading.evaluate((el) => el === document.activeElement), true, "Detail page focuses its heading");
+  assert.equal(await page.locator("dialog[open]").count(), 0, "Details are a page, not a drawer (D12 B)");
   await shot("user-memberships");
-  // Real Tab presses must remain in the native drawer and return to its opening row.
-  const keyboardDrawer = page.locator('[data-admin=detail]');
-  const focusable = keyboardDrawer.locator('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]');
-  const firstControl = focusable.first(), lastControl = focusable.last();
-  assert.equal(await firstControl.evaluate(el=>el===document.activeElement),true);
-  await lastControl.focus();await page.keyboard.press('Tab');
-  assert.equal(await firstControl.evaluate(el=>el===document.activeElement),true,'Tab wraps inside drawer');
-  await page.keyboard.press('Shift+Tab');
-  assert.equal(await lastControl.evaluate(el=>el===document.activeElement),true,'Shift+Tab wraps inside drawer');
-  await page.keyboard.press('Escape');
-  assert.equal(await users.locator('tbody tr').first().evaluate(el=>el===document.activeElement),true,'Drawer returns focus to opening row');
-  await page.keyboard.press('Enter');await keyboardDrawer.waitFor();await loaded();
+  // Back returns to the same filtered list.
+  await page.goBack();
+  await users.getByRole("cell", { name: "user@test.com", exact: true }).waitFor();
+  assert.equal(await page.getByRole("searchbox").inputValue(), "user@test.com", "Back restores list filters");
 
   // More than one membership page makes mutation refresh behavior observable.
   await db.query(
     "insert into memberships(ensemble_id,user_id) select $1,id from \"user\" where email like 'pagination-%' order by id limit 12",
     [ensemble.id],
   );
-  await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("link", { name: "Ensembles", exact: true }).click();
   const ensembles = page.getByRole("region", {
     name: "Ensembles",
@@ -269,54 +269,48 @@ try {
     .getByRole("cell", { name: ensemble.name, exact: true })
     .waitFor();
   await shot("ensembles-search-sort");
-  await ensembles
-    .getByRole("cell", { name: ensemble.name, exact: true })
-    .click();
+  await ensembles.getByRole("link", { name: ensemble.name, exact: true }).click();
   const detail = page.locator("[data-admin=detail]"),
     management = detail.locator("[data-admin=management]");
-  await management
-    .getByRole("button", { name: "Add member", exact: true })
-    .click();
-  const picker = management.getByRole("region", {
-    name: "Choose user",
-    exact: true,
-  });
-  await management.getByRole("searchbox").last().fill("user@test.com");
-  await picker
-    .getByRole("cell", { name: "user@test.com", exact: true })
-    .waitFor();
-  await picker
-    .getByRole("button", { name: "Choose user", exact: true })
-    .click();
-  await management
-    .getByRole("button", { name: "Add member", exact: true })
-    .last()
-    .click();
+  const addButton = management.getByRole("button", { name: "Add member…", exact: true });
+  await addButton.click();
+  const addDialog = page.locator("dialog[open][data-admin=confirm]");
+  await addDialog.waitFor();
+  assert.equal(await page.locator("dialog:modal").count(), 1, "Add member is one centered dialog");
+  const pick = addDialog.getByRole("searchbox");
+  assert.equal(await pick.evaluate((el) => el === document.activeElement), true, "Picker search receives initial focus");
+  await addDialog.getByRole("button", { name: "Cancel", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  assert.equal(await addDialog.evaluate((el) => el.contains(document.activeElement)), true, "Tab stays inside the dialog");
+  await page.keyboard.press("Escape");
+  await addDialog.waitFor({ state: "hidden" });
+  assert.equal(await addButton.evaluate((el) => el === document.activeElement), true, "Escape returns focus to the opening action");
+  await page.keyboard.press("Enter");
+  await addDialog.waitFor();
+  assert.equal(await addDialog.getByRole("button", { name: "Add member", exact: true }).isDisabled(), true, "A person must be chosen first");
+  await pick.fill("user@test.com");
+  await addDialog.getByRole("button", { name: "Choose Test User", exact: true }).click();
+  await addDialog.getByLabel("Ensemble lead", { exact: true }).waitFor();
+  const reasonControl = addDialog.getByLabel("Reason", { exact: true });
+  assert.equal(await addDialog.getByRole("button", { name: "Add member", exact: true }).isDisabled(), true, "A reason is required");
   await shot("add-confirmation");
-  const nestedConfirm = page.getByRole('alertdialog');
-  assert.equal(await page.locator('dialog:modal').count(),2,'Confirm stacks above the open drawer');
-  const reasonControl = nestedConfirm.getByLabel('Reason',{exact:true});
-  assert.equal(await reasonControl.evaluate(el=>el===document.activeElement),true,'Reason receives initial focus');
-  await nestedConfirm.getByRole('button',{name:'Cancel',exact:true}).focus();await page.keyboard.press('Tab');
-  assert.equal(await reasonControl.evaluate(el=>el===document.activeElement),true,'Tab wraps inside confirmation');
-  await page.keyboard.press('Escape');await nestedConfirm.waitFor({state:'hidden'});
-  assert.equal(await management.getByRole('button',{name:'Add member',exact:true}).last().evaluate(el=>el===document.activeElement),true,'Escape returns focus to drawer action');
-  await page.keyboard.press('Enter');await nestedConfirm.waitFor();
   let releaseAdd, addStarted;
   const addGate = new Promise(resolve=>{releaseAdd=resolve;});
   const addRequest = new Promise(resolve=>{addStarted=resolve;});
-  await page.route('**/api/admin/ensembles/'+ensemble.id+'/members',async route=>{addStarted();await addGate;await route.continue();},{times:1});
+  await page.route('**/api/admin/ensembles/'+ensemble.id+'/members',async route=>{
+    assert.equal(route.request().postDataJSON().reason, 'Browser: add the existing test account', 'The reason travels with the change');
+    addStarted();await addGate;await route.continue();
+  },{times:1});
   await reasonControl.fill('Browser: add the existing test account');
-  await nestedConfirm.getByRole('button',{name:'Confirm change',exact:true}).click();await addRequest;
+  await addDialog.getByRole('button',{name:'Add member',exact:true}).click();await addRequest;
   try {
     await page.keyboard.press('Escape');
-    assert.equal(await nestedConfirm.count(),1,'Busy confirmation blocks Escape');
-    assert.equal(await nestedConfirm.getByRole('button',{name:'Cancel',exact:true}).isDisabled(),true);
-    assert.equal(await page.locator('dialog:modal').count(),2);
+    assert.equal(await addDialog.count(),1,'Busy dialog blocks Escape');
+    assert.equal(await addDialog.getByRole('button',{name:'Cancel',exact:true}).isDisabled(),true);
   } finally {releaseAdd();}
-  await nestedConfirm.waitFor({state:'hidden'});
+  await addDialog.waitFor({state:'hidden'});
   const members = management.getByRole("region", {
-    name: "Memberships",
+    name: "Members",
     exact: true,
   });
   let row = members.locator("tbody tr").filter({ hasText: "user@test.com" });
@@ -328,6 +322,10 @@ try {
       .getAttribute("aria-sort"),
     null,
   );
+  // DESK-11: the row actions are visible without horizontal scrolling at desktop width.
+  const actionBox = await row.getByRole("button", { name: /^Remove / }).boundingBox();
+  const wrapBox = await members.locator("[data-admin=table-wrap]").boundingBox();
+  assert.ok(actionBox && wrapBox && actionBox.x + actionBox.width <= wrapBox.x + wrapBox.width, "Membership actions are visible");
   await members.getByLabel("Rows per page", { exact: true }).selectOption("10");
   await loaded(members);
   await members
@@ -336,26 +334,25 @@ try {
     .click();
   await loaded(members);
   const staleRow=members.locator('tbody tr').filter({hasText:'pagination-'}).first();
-  await staleRow.getByLabel('Transcribe',{exact:true}).check();
-  await staleRow.getByRole('button',{name:'Save permissions',exact:true}).click();
+  const staleDialog=await editRow(staleRow,[["Transcribe",true]]);
   await page.route('**/api/admin/ensembles/'+ensemble.id+'/members/*',route=>route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({code:'stale_permissions'})}),{times:1});
-  const staleDialog=page.getByRole('alertdialog');
   await staleDialog.getByLabel('Reason',{exact:true}).fill('Browser: stale permission snapshot');
-  await staleDialog.getByRole('button',{name:'Confirm change',exact:true}).click();
+  await staleDialog.getByRole('button',{name:'Save permissions',exact:true}).click();
   await staleDialog.getByRole('alert').filter({hasText:'Permissions changed in another session'}).waitFor();
   assert.equal(await staleDialog.getByLabel('Reason',{exact:true}).inputValue(),'Browser: stale permission snapshot');
-  await loaded(members);await shot('stale-permissions');
+  await loaded(members);
+  assert.equal(await staleDialog.getByLabel('Transcribe',{exact:true}).isChecked(),false,'A stale snapshot resets the draft to the refreshed values');
+  await shot('stale-permissions');
   await page.keyboard.press('Escape');await staleDialog.waitFor({state:'hidden'});
   // An in-place refresh failure retains both the current page and its Next cursor.
   const refreshIds = await ids(members);
   const refreshRow = members.locator("tbody tr").filter({hasText: "pagination-"}).first();
+  await editRow(refreshRow, [["Edit music pieces", true]]);
   await page.route("**/api/admin/memberships?*", (route) => route.fulfill({
     status: 429, contentType: "application/json",
     body: JSON.stringify({code: "rate_limited", max: 120, unit: "minute"}),
   }), {times: 2});
-  await refreshRow.getByLabel("Edit music pieces", {exact: true}).check();
-  await refreshRow.getByRole("button", {name: "Save permissions", exact: true}).click();
-  await confirmation("Browser: refresh failure retains rows and cursor");
+  await confirmation("Browser: refresh failure retains rows and cursor", "Save permissions");
   for(let attempt = 0; attempt < 2; attempt++) {
     await loaded(members);
     assert.deepEqual(await ids(members), refreshIds);
@@ -368,6 +365,7 @@ try {
   await members.getByRole("button", { name: "Next", exact: true }).click();
   await pageNumber(members, 2);
   const membershipIds = await ids(members);
+  await editRow(row, [["Edit music pieces", true]]);
   await page.route("**/api/admin/memberships?*", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     await route.continue();
@@ -382,11 +380,7 @@ try {
       }),
     { times: 1 },
   );
-  await row.getByLabel("Edit music pieces", { exact: true }).check();
-  await row
-    .getByRole("button", { name: "Save permissions", exact: true })
-    .click();
-  await confirmation("Browser: grant editing");
+  await confirmation("Browser: grant editing", "Save permissions");
   assert.deepEqual(
     await ids(members),
     membershipIds,
@@ -399,7 +393,7 @@ try {
     .filter({ hasText: "Change saved. Refreshing the view failed." })
     .waitFor();
   assert.equal(
-    await page.locator("[role=alertdialog][open]").count(),
+    await page.locator("dialog[open][data-admin=confirm]").count(),
     0,
     "Refresh failure does not reopen mutation dialog",
   );
@@ -415,11 +409,17 @@ try {
       true,
     ),
   );
+  const editAudit = (await db.query("select metadata from audit_events where action like 'admin.membership%' and outcome='ok' and metadata->>'reason'=$1", ["Browser: grant editing"])).rows;
+  assert.equal(editAudit.length, 1, "The change and its reason are audited");
   await shot("permission-updated");
   row = members.locator("tbody tr").filter({ hasText: "user@test.com" });
   const removalRefresh = await holdDetailRefresh(ensemble.id);
-  await row.getByRole("button", { name: "Remove member", exact: true }).click();
-  await confirmation("Browser: remove the test account");
+  await row.getByRole("button", { name: /^Remove / }).click();
+  const removeDialog = page.locator("dialog[open][data-admin=confirm]");
+  await removeDialog.getByRole("heading", { name: /^Remove Test User from Admin management browser choir\?$/ }).waitFor();
+  assert.equal(await removeDialog.getAttribute("role"), "alertdialog");
+  assert.match(await removeDialog.getByRole("button", { name: "Remove member", exact: true }).getAttribute("class"), /bg-danger/, "Final removal uses the danger treatment (D14 A)");
+  await confirmation("Browser: remove the test account", "Remove member");
   await row.waitFor({ state: "hidden" });
   await pageNumber(members, 2);
   assert.equal(
@@ -431,14 +431,14 @@ try {
     ).rowCount,
     0,
   );
-  assert.equal(await management.getByRole("heading", {name: "Memberships", exact: true}).evaluate((el) => el === document.activeElement), true, "Removal moves focus to the membership heading");
+  assert.equal(await management.getByRole("heading", {name: "Members", exact: true}).evaluate((el) => el === document.activeElement), true, "Removal moves focus to the members heading");
   await shot("member-removed");
   await removalRefresh.started;
-  await page.getByRole("button", {name: "Close", exact: true}).click();
+  await page.getByRole("link", { name: "← Ensembles", exact: true }).click();
   await removalRefresh.release();
   await loaded();
   assert.equal(await detail.count(), 0, "A delayed refresh cannot reopen a closed detail");
-  await ensembles.getByRole("cell", {name: ensemble.name, exact: true}).click();
+  await ensembles.getByRole("link", {name: ensemble.name, exact: true}).click();
   await loaded(members);
   // Open another profile while an older mutation refresh is pending.
   const alternateResponse = await context.request.post(base + "/api/ensembles", {
@@ -448,35 +448,36 @@ try {
   const alternate = await alternateResponse.json();
   const staleRefresh = await holdDetailRefresh(ensemble.id);
   const anotherRow = members.locator("tbody tr").filter({hasText: "pagination-"}).first();
-  const edit = anotherRow.getByLabel("Transcribe", {exact: true});
-  await edit.setChecked(!(await edit.isChecked()));
-  await anotherRow.getByRole("button", {name: "Save permissions", exact: true}).click();
-  await confirmation("Browser: changing profiles invalidates detail refresh");
+  const anotherDialog = await editRow(anotherRow, []);
+  const transcribe = anotherDialog.getByLabel("Transcribe", {exact: true});
+  await transcribe.setChecked(!(await transcribe.isChecked()));
+  await confirmation("Browser: changing profiles invalidates detail refresh", "Save permissions");
   await staleRefresh.started;
   await loaded(members);
-  await page.getByRole("button", {name: "Close", exact: true}).click();
-  await ensembles.getByRole("cell", {name: alternate.name, exact: true}).click();
-  await detail.getByRole("heading", {name: alternate.name, exact: true}).waitFor();
+  // Client-side navigation keeps the held request alive while another profile opens.
+  await page.getByRole("link", { name: "← Ensembles", exact: true }).click();
+  await ensembles.getByRole("link", { name: alternate.name, exact: true }).click();
+  await detail.getByRole("heading", {level: 1, name: alternate.name, exact: true}).waitFor();
   await staleRefresh.release();
   await loaded();
-  assert.equal(await detail.getByRole("heading", {name: alternate.name, exact: true}).count(), 1, "A delayed refresh cannot overwrite another profile");
-  await page.getByRole("button", {name: "Close", exact: true}).click();
-  await ensembles.getByRole("cell", {name: ensemble.name, exact: true}).click();
+  assert.equal(await detail.getByRole("heading", {level: 1, name: alternate.name, exact: true}).count(), 1, "A delayed refresh cannot overwrite another profile");
+  await page.goto(base + "/admin/ensembles/" + ensemble.id);
   await loaded(members);
   // A clear, translated failure case for the sole remaining lead.
-  await members.getByRole("searchbox").fill("admin@test.com");
-  await loaded(members);
   await members
-    .locator("tbody tr")
-    .filter({ hasText: "admin@test.com" })
-    .getByRole("button", { name: "Remove member", exact: true })
+    .getByRole("columnheader", { name: /Email/ })
+    .getByRole("button")
     .click();
-  const dialog = page.locator("[role=alertdialog][open]");
+  await loaded(members);
+  const leadRow = members.locator("tbody tr").filter({ hasText: "admin@test.com" });
+  await leadRow.waitFor();
+  await leadRow.getByRole("button", { name: /^Remove / }).click();
+  const dialog = page.locator("dialog[open][data-admin=confirm]");
   await dialog
     .getByLabel("Reason", { exact: true })
     .fill("Browser: last lead guard");
   await dialog
-    .getByRole("button", { name: "Confirm change", exact: true })
+    .getByRole("button", { name: "Remove member", exact: true })
     .click();
   await dialog
     .getByRole("alert")
@@ -484,18 +485,14 @@ try {
     .waitFor();
   await shot("last-lead-error");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "DE", exact: true }).click();
-  await page
-    .locator("main > [data-admin=data-table] tbody tr")
-    .filter({ hasText: ensemble.name })
-    .click();
   await management
-    .getByRole("button", { name: "Mitglied hinzufügen", exact: true })
+    .getByRole("button", { name: "Mitglied hinzufügen …", exact: true })
     .waitFor();
   await management.locator("tbody tr").first().waitFor();
   await loaded();
+  assert.equal(await page.evaluate(() => document.documentElement.lang), "de");
   assert.equal(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -508,55 +505,44 @@ try {
     true,
   );
   for (const control of [
-    wrap.getByRole("checkbox").first(),
-    wrap
-      .getByRole("button", { name: "Berechtigungen speichern", exact: true })
-      .first(),
-    wrap
-      .getByRole("button", { name: "Mitglied entfernen", exact: true })
-      .first(),
+    wrap.getByRole("button", { name: /bearbeiten$/ }).first(),
+    wrap.getByRole("button", { name: /entfernen$/ }).first(),
   ]) {
     await control.scrollIntoViewIfNeeded();
     const box = await control.boundingBox();
     assert.ok(box && box.x >= 0 && box.x + box.width <= 390);
+    assert.ok(box.height >= 44, "Phone actions keep comfortable touch targets (D10 A)");
   }
   await shot("phone-de");
-  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "EN", exact: true }).click();
   await page.getByRole("link", { name: "Users", exact: true }).click();
   await page.getByRole("searchbox").fill("admin@test.com");
-  await page
-    .locator("main > [data-admin=data-table] tbody tr")
-    .filter({ hasText: "admin@test.com" })
-    .waitFor();
+  const adminRow = page.getByRole("region", { name: "Users", exact: true }).locator("tbody tr").filter({ hasText: "admin@test.com" });
+  await adminRow.waitFor();
   await loaded();
+  await adminRow.getByRole("link").first().click();
   await page
-    .locator("main > [data-admin=data-table] tbody tr")
-    .filter({ hasText: "admin@test.com" })
+    .getByRole("button", { name: "Revoke sysadmin…", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Revoke sysadmin", exact: true })
-    .click();
-  await page
-    .locator("[role=alertdialog][open]")
+    .locator("dialog[open][data-admin=confirm]")
     .getByLabel("Reason", { exact: true })
     .fill("Browser: self revoke guard");
   await page
-    .locator("[role=alertdialog][open]")
-    .getByRole("button", { name: "Confirm change", exact: true })
+    .locator("dialog[open][data-admin=confirm]")
+    .getByRole("button", { name: "Revoke sysadmin", exact: true })
     .click();
   await page
-    .locator("[role=alertdialog][open]")
+    .locator("dialog[open][data-admin=confirm]")
     .getByRole("alert")
     .filter({ hasText: "cannot revoke your own" })
     .waitFor();
   await shot("self-revoke-error");
   await page
-    .locator("[role=alertdialog][open]")
+    .locator("dialog[open][data-admin=confirm]")
     .getByRole("button", { name: "Cancel", exact: true })
     .click();
-  await page.getByRole("button", { name: "Close", exact: true }).click();
-  // Legacy audit tables share the phone card rule; their labels and data remain readable.
+  // Audit records share the phone card rule; their labels and data remain readable.
   await page.getByRole("link", { name: "Audit log", exact: true }).click();
   await page.locator("[data-admin=table-wrap] tbody tr").first().waitFor();
   assert.equal(
@@ -564,7 +550,7 @@ try {
       .locator("[data-admin=table-wrap] tbody tr")
       .first()
       .evaluate((el) => getComputedStyle(el).display),
-    "block",
+    "grid",
   );
   assert.equal(
     await page.evaluate(
@@ -572,10 +558,30 @@ try {
     ),
     true,
   );
+  // TAB-07: one strict record breakpoint for rows, table and wrapper.
+  for (const [width, display] of [[599, "grid"], [600, "table-row"], [601, "table-row"]]) {
+    await page.setViewportSize({ width, height: 960 });
+    await loaded();
+    const layout = await page.locator("[data-admin=table-wrap]").first().evaluate((wrapEl) => ({
+      row: getComputedStyle(wrapEl.querySelector("tbody tr")).display,
+      table: wrapEl.querySelector("table").getBoundingClientRect().width,
+      wrap: wrapEl.clientWidth,
+      page: document.documentElement.scrollWidth <= innerWidth,
+    }));
+    assert.equal(layout.row, display, "Record rows at " + width);
+    assert.ok(layout.page, "No page overflow at " + width);
+    if (display === "grid") assert.ok(layout.table <= layout.wrap + 1, "Records fill, not exceed, the wrapper at " + width);
+  }
+  // TAB-10 / MOB-10: fresh documents on every section and detail page hydrate without errors.
+  for (const path of ["users", "ensembles", "pieces", "transcription", "audit", "ensembles/" + ensemble.id]) {
+    await page.goto(base + "/admin/" + path);
+    await page.locator("h1").first().waitFor();
+    await loaded();
+  }
   assert.deepEqual(errors, []);
   await fs.writeFile(
     evidence + "/browser-report.md",
-    `Admin browser journey: PASS\n\nSign-in, user/ensemble search and sorting, user detail, direct add, inline permission change, removal, last-lead and self-revoke failures, complete pagination, exact ascending/descending row order, page resets for search/sort, keyboard sorting/detail activation, pager focus, failed navigation with translated retry, in-place refresh preserving rows/cursors across failed retries, removal focus, stale detail refresh after closing or changing profiles, German phone cards with reachable controls.\n\n${files.map((f) => "- " + f).join("\n")}\n`,
+    `Admin browser journey: PASS\n\nSign-in, user/ensemble search and sorting, routed user/ensemble detail pages, direct add, permission edit dialog with reason, destructive removal, last-lead and self-revoke failures, stale snapshot review, complete pagination, exact ascending/descending row order, page resets for search/sort, keyboard sorting/detail activation, pager focus, failed navigation with translated retry, in-place refresh preserving rows/cursors across failed retries, removal focus, stale detail refresh after leaving or changing profiles, German phone cards with reachable touch-size controls, document language, the 599/600/601 record breakpoint and error-free fresh loads of every admin page.\n\n${files.map((f) => "- " + f).join("\n")}\n`,
   );
   console.log("ADMIN_MANAGEMENT_BROWSER_PASS", files.length, "screenshots");
 } catch (e) {
