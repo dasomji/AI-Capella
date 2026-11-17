@@ -1,8 +1,8 @@
 /* Canonical pre-paint resolver. This exact source also runs inline; keep it self-contained. */
 export const themeRegistry = /** @type {const} */ ([
-    { id: 'night-paper', label: 'Night paper', aliases: ['papier'], storage: 'papier', defaultStart: null, colorScheme: 'dark', system: 'dark' },
-    { id: 'parchment', label: 'Parchment', aliases: ['pergament'], storage: 'pergament', defaultStart: null, colorScheme: 'light', system: 'light' },
-    { id: 'velvet', label: 'Velvet', aliases: ['samt'], storage: 'samt', defaultStart: 'heute', colorScheme: 'dark', system: null },
+    { id: 'night-paper', menuLabel: 'designNight', label: 'Night paper', aliases: ['papier'], storage: 'papier', defaultStart: null, colorScheme: 'dark', system: 'dark' },
+    { id: 'parchment', menuLabel: 'designParchment', label: 'Parchment', aliases: ['pergament'], storage: 'pergament', defaultStart: null, colorScheme: 'light', system: 'light' },
+    { id: 'velvet', menuLabel: null, label: 'Velvet', aliases: ['samt'], storage: 'samt', defaultStart: 'heute', colorScheme: 'dark', system: null },
 ]);
 /** @param {string | null} value */
 export function themePreference(value) {

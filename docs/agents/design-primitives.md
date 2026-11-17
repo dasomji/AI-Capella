@@ -2,7 +2,7 @@
 
 Recipes in `src/design-system/recipes` are pure TypeScript with literal `tw:` classes. React
 and DOM adapters import the same functions. They have no runtime dependencies. `ds-reset` is
-an opt-in slot reset above legacy CSS, including pseudo-elements; it is not global Preflight.
+an opt-in slot reset above native CSS, including pseudo-elements; it is not global Preflight.
 Tokens and the semantic Tailwind mapping remain in `tokens.css`. Custom Tailwind utilities
 must be declared at the top level of `app.css`, outside its imported token layer.
 
@@ -105,7 +105,7 @@ for cancel buttons and `close()` after successful work. Policies: `escape`/`outs
 Shared sheet variants slide in/out and reuse the legacy swipe thresholds through
 `behavior/sheet.ts`; cancellation still obeys busy policy. They retain the native top layer
 until the transform transition completes, with a fallback derived from its CSS duration.
-Legacy sheets/popovers retain their existing 160ms fallback. Reduced motion closes immediately.
+Reduced motion closes immediately. The unused legacy overlay constructors and their 160ms fallback are removed.
 
 Menus support ArrowUp/Down, Home/End, Enter/Space, Escape and buffered typeahead. Space continues
 a live typeahead buffer; otherwise it activates. Roving focus survives rerenders. React Menu
@@ -120,8 +120,9 @@ the 300ms exit fade. Latest message replaces the previous one; durations are 320
 consume `toastRecipe({kind})`; host geometry uses `toastPlacementRecipe`. Domain-sheet placement
 is at the top. There is no legacy toast variant or `#toast` appearance CSS.
 
-`src/ui.ts` keeps its signatures and delegates to `dom/legacy.ts`; existing class/query hooks
-remain until screen migration. Native controls keep inherited color-scheme, visibility,
+`src/ui.ts` retains only `closeOverlay`, `isNarrow` and the domain `MenuItem` type.
+`dom/legacy.ts` documents these signatures; no legacy visual constructors remain. Stable
+class/query hooks remain for event delegation, tours and renderer measurement. Native controls keep inherited color-scheme, visibility,
 pointer-events, accent-color and print-color-adjust despite the opt-in reset.
 
 ## Rules for P4/P5 agents
@@ -190,7 +191,7 @@ context, `verifyP3ReducedMotion`. Inspect returned mismatches (must be empty). T
 computed properties and before/after pseudo-elements, exercise native focus behavior, and
 mutate/restore one role to prove both adapters react to a token-only edit. The context check
 neutralizes only the two host shells' layout dimensions; component appearance still competes
-with the actual auth/admin legacy selectors. Evidence stays outside git under
+with the actual auth/admin composition recipes. Evidence stays outside git under
 `/tmp/aicap-design/evidence/p3-fix/` (review fixes) and `p3/` (original baseline).
 
 ### Library parity (P5 slice 1)
@@ -199,8 +200,8 @@ with the actual auth/admin legacy selectors. Evidence stays outside git under
 `landing-create`, `library-action`, `paper-choice`, `sound-prompt` and `offline-update`
 retain the main screen's authored controls. Fields add `library-search` and `library-prompt`;
 Card/Badge add `library`; overlays add `library-prompt`, `library-sheet` and `library-popover`;
-Menu adds `library`. Their material and responsive slots live in the shared `library.css`
-recipe stylesheet and read `tokens.css`. `createLibraryPart` owns typed composition slots;
+Menu adds `library`. Their material and responsive slots live in `recipes/library.ts` and read `tokens.css`;
+`library.css` contains generated spotlight residue only. `createLibraryPart` owns typed composition slots;
 `updateLibraryBanner` retains its hooks during state changes. These names preserve parity,
 including the historical night-paper loading card and parchment phone menu-button ground.
 
@@ -272,3 +273,14 @@ margins and list-marker behavior through their opt-in reset. Native menus/prompt
 the shared lifecycle; supply stable openers and dispose menus. The existing PDF-only export
 and automatic A/B/C section relabeling are unchanged; no new export format or rename command
 is introduced by this presentation migration.
+
+## Final shell boundary
+
+`recipes/shell.ts` owns auth layout, library/landing chrome, ensemble content, tour/power content
+and transcription layout. Owning constructors call `shellRecipe` with stable hooks; controls
+continue to use their typed primitive recipes. ID/class names are behavior hooks, not another
+palette. CSS residue is limited to native/generated parts, global inheritance, renderer sizing
+and animation definitions, each with an adjacent reason.
+
+Add a theme through one complete token block and one registry entry. Run
+`npm run test:browser:theme-extension` for the non-shipped fourth-theme proof.

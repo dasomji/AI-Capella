@@ -669,8 +669,8 @@
 @utility shell-landing-name-line-height-0133-0 { line-height: 0; }
 @utility shell-landing-name-filter-0134-0 { filter: var(--ds-shell-theme-landing-name-ink-filter-12); }
 @utility shell-landing-name-animation-0134-0 { animation: var(--ds-shell-landing-name-ink-animation-117); }
-@utility shell-landing-name-webkit-mask-image-0134-0 { -webkit-mask-image: var(--ds-shell-landing-name-ink-webkit-mask-image-118); }
-@utility shell-landing-name-mask-image-0134-0 { mask-image: var(--ds-shell-landing-name-ink-mask-image-119); }
+@utility shell-landing-name-webkit-mask-image-0134-0 { -webkit-mask-image: linear-gradient(var(--ds-shell-local-1), var(--ds-shell-local-2) calc(var(--written) - var(--ds-shell-local-3)), transparent var(--written)); }
+@utility shell-landing-name-mask-image-0134-0 { mask-image: linear-gradient(var(--ds-shell-local-4), var(--ds-shell-local-5) calc(var(--written) - var(--ds-shell-local-6)), transparent var(--written)); }
 @utility shell-landing-name-animation-0135-0 { animation: var(--ds-shell-landing-name-ink-animation-120); }
 @utility shell-landing-name-animation-0136-0 { animation: none; }
 @utility shell-ls-name-margin-0137-0 { margin: var(--ds-shell-ls-name-margin-121); }
@@ -692,16 +692,16 @@
 @utility shell-landing-dedication-margin-0153-0 { margin: var(--ds-shell-landing-dedication-margin-135); }
 @utility shell-landing-dedication-column-gap-0153-0 { column-gap: var(--ds-shell-landing-dedication-column-gap-136); }
 @utility shell-landing-dedication-font-0153-0 { font: var(--ds-shell-landing-dedication-font-137); }
-@utility shell-landing-dedication-animation-0153-0 { animation: var(--ds-shell-landing-dedication-animation-138); }
+@utility shell-landing-dedication-animation-0153-0 { animation: rise var(--ds-shell-local-7) var(--ded-delay, var(--ded-wait)) var(--ds-ease-standard) both; }
 @utility shell-ded-name-padding-0155-0 { padding: var(--ds-shell-ded-name-padding-139); }
 @utility shell-ded-name-background-0155-0 { background: var(--ds-shell-theme-ded-name-background-8); }
 @utility shell-ded-name-webkit-background-clip-0155-0 { -webkit-background-clip: var(--ds-shell-theme-ded-name-webkit-background-clip-9); }
 @utility shell-ded-name-background-clip-0155-0 { background-clip: var(--ds-shell-theme-ded-name-background-clip-10); }
 @utility shell-ded-name-color-0155-0 { color: transparent; }
 @utility shell-ded-name-filter-0155-0 { filter: var(--ds-shell-theme-ded-name-filter-11); }
-@utility shell-ded-name-webkit-mask-image-0155-0 { -webkit-mask-image: var(--ds-shell-ded-name-webkit-mask-image-140); }
-@utility shell-ded-name-mask-image-0155-0 { mask-image: var(--ds-shell-ded-name-mask-image-141); }
-@utility shell-landing-dedication-animation-0156-0 { animation: var(--ds-shell-landing-dedication-written-ded-name-animation-142); }
+@utility shell-ded-name-webkit-mask-image-0155-0 { -webkit-mask-image: linear-gradient(var(--ds-shell-local-8), var(--ds-shell-local-9) calc(var(--written) - var(--ds-shell-local-10)), transparent var(--written)); }
+@utility shell-ded-name-mask-image-0155-0 { mask-image: linear-gradient(var(--ds-shell-local-11), var(--ds-shell-local-12) calc(var(--written) - var(--ds-shell-local-13)), transparent var(--written)); }
+@utility shell-landing-dedication-animation-0156-0 { animation: ink-write var(--ds-shell-local-14) cubic-bezier(0.45, 0.1, 0.4, 1) calc(var(--ded-delay, var(--ded-wait)) + var(--ds-shell-local-15)) both; }
 @utility shell-lib-head-margin-bottom-0164-0 { margin-bottom: var(--ds-shell-lib-head-h1-ens-title-margin-bottom-143); }
 @utility shell-landing-gap-0166-0 { gap: var(--ds-shell-landing-gap-145); }
 @utility shell-landing-padding-bottom-0166-0 { padding-bottom: var(--ds-shell-landing-padding-bottom-146); }

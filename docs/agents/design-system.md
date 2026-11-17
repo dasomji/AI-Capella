@@ -2,7 +2,7 @@
 
 `src/design-system/tokens.css` is the authored design-value source. It defines primitive
 pigments, shared theme-independent roles and complete varying semantic mappings for `night-paper`, `parchment`, and `velvet`, the
-orthogonal Revival type preset, compatibility aliases, and Tailwind's semantic adapter.
+orthogonal Revival type preset and Tailwind's semantic adapter.
 P1 preserves the existing appearance; owner decisions in AICAP-28 remain pending.
 
 ```mermaid
@@ -38,13 +38,20 @@ flowchart LR
 
 ## Add a theme or preset
 
-Add one mapping block for the varying roles in `tokens.css` and one entry in
-`theme/resolver.js`'s `themeRegistry` (ID, label, aliases, storage, compatibility attributes,
-color scheme and optional system appearance). `ThemeId`, validation, legacy lookups and the
-showcase derive from it. Shared roles already come from `:root`. The registry selects the
-compatibility look a new theme inherits; **110 historical selectors** still depend on
-`data-design` / `data-ground` / `samt`. Removing these selectors and their inherited appearance
-is known P6 work, so a registry entry does not independently restyle every legacy component.
+Add one complete varying-role block in `tokens.css` and one entry in
+`theme/resolver.js`'s `themeRegistry` (ID, label, URL aliases, storage key, default title start,
+color scheme, optional system appearance and menu label policy). Existing translated labels
+are retained; `menuLabel: null` keeps Velvet URL-only, as before. New entries without a
+translation key use their registry label. Copy an existing theme block to retain its
+complete key set, then edit its role values. Shared roles come from `:root`.
+There are no legacy theme attributes or compatibility aliases. Components never select a
+theme ID. Material recipes use the `material-family` and `color-scheme` token values for their
+paper/waves and light material strategies; a new theme chooses these values in its block.
+
+`npm run test:browser:theme-extension` adds a test-only fourth block and registry entry through
+Vite transforms, then renders React auth/account/invite/admin/showcase, the main shell/sheets,
+and real canvas renderers. It asserts complete resolved roles, the distinctive new accent,
+and absence of legacy attributes. No fourth theme is included in production.
 
 The self-contained resolver's raw source, including its registry/helpers, is injected before
 hydration; Vite uses the identical serializer for the offline shell. Do not serialize compiled
@@ -54,7 +61,7 @@ second declaration registry exists. The resolver remains safe to import on the s
 Use `setThemePreference('system' | 'night-paper' | 'parchment' | 'velvet')`. Existing device
 URLs/storage (`papier`, `pergament`, `samt`, `auto`) remain compatible. Explicit choice wins
 over OS appearance. `data-theme` chooses the colors; `data-type` selects the orthogonal
-Revival preset. Historical `data-design`/`data-ground` remain while legacy selectors migrate.
+Revival preset. Only `data-theme` selects the theme; `data-start`/`data-title` are independent title drafts.
 
 `readTheme()` is client-only and returns a deeply frozen snapshot with a revision, concrete
 sRGB colors, resolved font stacks, spectrum/fallback, material and print roles. Imports are
@@ -103,17 +110,28 @@ Both `design-system/react/` and `design-system/dom/` consume those recipes. Pres
 `data-action`, `data-bind` and ID hooks during screen migration. New primitives explicitly
 normalize their own controls; global Preflight is deliberately omitted.
 
-`app.css` is the sole CSS/font entry and owns the order
-`theme → legacy → tokens → components → utilities`. Every legacy stylesheet is in the
-same layer, base before parchment. Do not add screen-side CSS/font imports. Root SSR links
-the generated stylesheet before hydration; the offline shell links it before its entry
-script, and the service worker's finalized asset manifest includes generated CSS/fonts.
+`app.css` is the sole CSS/font entry: `theme → fonts → tokens → native → components → utilities`.
+It contains imports and Tailwind directives/mappings, with no ordinary component selectors.
+There is no legacy layer or legacy stylesheet. `recipes/shell.ts` supplies native route/domain
+composition at construction; `dom/main-screen.ts` attaches ID/class slots without DOM scanning.
+`native.css` retains global inheritance, generated grounds and native subparts; `stage.css`
+retains canvas sizing/compositor hooks; `artwork.css` retains keyframes and the typed ink
+interpolation registration. Every retained rule states its reason. Other component CSS is
+limited to native/generated parts. Keep element-local inputs (`--written`, `--ded-wait`, voice
+colors and measured positions) at their consumer: hoisting their expressions to root freezes
+or invalidates them. Their authored dimensions/timings still come from `tokens.css`.
+
+Root SSR and the offline shell link the generated stylesheet before startup. The finalized
+service-worker asset manifest includes CSS/fonts and the generated favicon. Browser-installed
+SVG/manifest sources live under `design-system/assets`; `scripts/design-assets.mjs` resolves
+their default-theme roles for development and builds because external icons cannot inherit
+page CSS. Raster brand artwork remains fixed asset data.
 
 The dev-only `/dev/design-system` route renders the palette, spectrum and fonts and offers
 the switcher. Its module/route are eliminated from production. P3 adds the React/DOM
 component comparisons there.
 
-## Guard and legacy baseline
+## Guard: zero baseline
 
 `npm run check:design-tokens` uses TypeScript and PostCSS ASTs. It checks source CSS/TS/JS,
 server presentation and authored public SVG/manifest assets. It flags literal colors
@@ -136,17 +154,12 @@ access and arbitrary data flow are not exhaustively resolved. Snapshot-font reco
 local `.fonts` access and aliases, not a whole-program type proof. Review renderer inputs and
 external SVG output. Do not interpret a green guard as proof of complete theme reactivity.
 
-`scripts/design-token-baseline.json` records exact file/kind/context/value/count entries.
-Remove resolved entries explicitly. Any new violation **or stale entry** fails. Entries are
-also checked against immutable production commit `3c9d43c`, so editing the baseline cannot
-admit a new pigment. Local checks cap edits at HEAD's baseline; PR CI caps them at the base
-branch. CI fetches history for the production ceiling. Do not regenerate the baseline during migration; `--initialize-baseline` refuses to overwrite
-it. After strengthening a guard rule, `node scripts/check-design-tokens.mjs --merge-new-rules`
-can add exact entries/counts only for that rule's newly versioned detection, and only when
-present at `3c9d43c`. It records the rule versions; later runs cannot revive removed entries at
-the same version. The ordinary guard checks both immutable membership and reference growth.
-Do not hand-edit versions to admit new work. Renaming a function containing a legacy color
-changes its context and makes it NEW: remove the color rather than rebasing its baseline.
+`scripts/design-token-baseline.json` must contain zero entries. Any non-empty baseline fails,
+even when it exactly matches current source. Initialization and merge-new-rules switches are
+retired. Fix a violation at its source. Design-system CSS outside `tokens.css` also rejects raw
+length/duration literals (including px/rem/em/ms/s/%); zero and 100% are allowed. Token variables
+and token-backed calculations are the normal representation. Legacy theme-attribute selectors
+are forbidden. Named exceptions are structural rules with reasons, never baseline entries.
 
 `files()` scans authored CSS/TS/JS under src/ and server/, plus public SVG/webmanifest assets.
 It skips generated routeTree files and test files, and does not enter scripts/, node_modules/,
@@ -155,11 +168,19 @@ fixtures and bootstrap/build plumbing rather than product presentation; their em
 SSR/offline delivery are covered by build and browser contracts. This scope is a real limit,
 so review new presentation-producing tooling and root HTML explicitly.
 
-Narrow exceptions: `@font-face` family identities for the seven bundled music/Revival assets
-are registrations, not selected font stacks. `safe-svg.ts`'s exact expected Verovio cursor
-stylesheet is exempt by SHA-256 of that string; changing it loses the exception. Do not relax
-the sanitizer. Static icons/browser metadata and document-processing white flattening remain
-visible legacy baseline entries until their respective generation/contract migration.
+Named narrow exceptions:
+
+- `paper-noise-geometry`: only formation/flocs/tooth noise tuples in `paper.ts`, interpreted as
+  cell counts and amplitude; color tuples at other sinks still fail.
+- `notation-stem-shape`: `black` in the existing filled/half stem-shape conditional, not paint.
+- `document-white-flattening`: the exact Sharp background property in document preprocessing,
+  before grayscale; unrelated to screen or PDF appearance.
+- `ink-interpolation-registration`: `@property --written` requires a constant initial percentage;
+  108% is completed writing geometry. Its syntax string is CSS registration metadata.
+
+Bundled `@font-face` identities register assets rather than choose stacks. `safe-svg.ts`'s
+expected Verovio cursor stylesheet remains exempt by its exact SHA-256; do not relax the sanitizer.
+The guard is local AST analysis with the limitations above, not an interprocedural proof.
 
 ## Parity roles retained
 
@@ -180,8 +201,7 @@ The old offline marker fallback is explicitly mapped to `accent-offline`, so int
 complete default accent fixes focus without recoloring that marker. `paper.ts` writes its
 procedural texture to `--ds-material-fibre-live` and notifies the controller. Paper-theme
 `material-fibre` roles use that live input with the authored SVG fallback; velvet keeps `none`.
-The old `--fibre` alias and material recipes resolve the chosen role. Compatibility aliases
-are defined once on `:root` and freeze there: per-subtree themes do not re-theme legacy aliases.
+Material recipes and the renderer accessor consume the chosen semantic role directly.
 
 ## Verification
 

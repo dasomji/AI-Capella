@@ -46,21 +46,23 @@ cache key includes every texture input and ignores only its own generated image 
 
 ## Guard exceptions
 
-The remaining `paper.ts` channel-flow entries are noise recipe triples `[cellsX,cellsY,weight]`,
-not RGB. `staffView.ts`'s `black` labels select filled SMuFL notehead stem geometry.
-These exact legacy entries remain visible in the shrinking baseline. Coverage masks use the
-opaque `canvas-mask` input; only its alpha contributes to destination-in/out operations.
-Visible gel highlights use `material-gel-gloss-color`, independently of print paper.
+The baseline is empty. Named structural guard exceptions recognize only `paper.ts` noise
+recipe triples `[cellsX,cellsY,weight]`, `staffView.ts`'s filled/half stem-shape labels, optical
+document white flattening, and the constant typed ink interpolation registration. They are
+not theme inputs. Coverage masks use `canvas-mask`; visible gel highlights use
+`material-gel-gloss-color`, independently of print paper.
 
-## Static brand exception
+## Browser-installed artwork
 
-`public/favicon.svg`, `public/manifest.webmanifest`, `public/icon-192.png`, `icon-512.png`,
-`icon-maskable-512.png` and `apple-touch-icon.png` remain fixed default-brand artwork. They do not
-inherit page CSS; installed OS icons/splash screens are not part of live screen swaps. Their
-existing literal baseline entries stay visible. The favicon/manifest ground is the historical
-night-paper brand ground; favicon voice paths retain the original 4-voice brand spectrum.
-The theme controller updates browser chrome metadata live. Future brand changes must generate
-these assets from the token source together, rather than recoloring each asset independently.
+`design-system/assets/favicon.svg` and `manifest.webmanifest` use semantic roles.
+`scripts/design-assets.mjs` resolves the default theme into development/build assets; external
+icons cannot inherit page CSS. Installed raster icons remain fixed artwork data. Browser chrome
+metadata updates live. No literal browser-asset palette remains in the guard baseline.
+
+Adding a theme is one complete varying-role block plus one registry entry. Component material
+strategies are chosen by token values, not theme IDs or legacy attributes.
+`npm run test:browser:theme-extension` supplies a fourth theme only inside its fixture and
+checks complete role resolution across screens and canvas renderers.
 
 ## Live-swap regression
 

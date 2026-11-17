@@ -33,7 +33,7 @@
 /* Typed interpolation of the generated ink-writing percentage requires @property. */
 
 @property --written {
-  syntax: var(--ds-shell-written-syntax-362);
+  syntax: '<percentage>';
   inherits: false;
   initial-value: 108%;
 }

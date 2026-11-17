@@ -1,3 +1,4 @@
+import { themeRegistry } from './design-system/theme';
 import { shellRecipe } from "./design-system/recipes/shell";
 import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
 import { matchBreakpoint } from './design-system/theme';
@@ -958,8 +959,11 @@ function appearanceItems() {
   };
   const options = [
     { label: t('designAuto'), checked: DESIGN_CHOICE === 'auto', onSelect: choose('auto') },
-    { label: t('designNight'), checked: DESIGN_CHOICE === 'papier', onSelect: choose('papier') },
-    { label: t('designParchment'), checked: DESIGN_CHOICE === 'pergament', onSelect: choose('pergament') },
+    ...themeRegistry.filter(theme => theme.menuLabel !== null).map(({ menuLabel, label, aliases }) => ({
+      label: menuLabel ? t(menuLabel) : label,
+      checked: DESIGN_CHOICE === aliases[0],
+      onSelect: choose(aliases[0]),
+    })),
   ];
   return [{ label: t('appearance'), icon: 'sheet' as const, value: options.find((o) => o.checked)?.label ?? '', options, onSelect: () => {} }];
 }

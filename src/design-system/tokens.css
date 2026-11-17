@@ -2333,11 +2333,8 @@
 }
 /* Shell, artwork and route composition values retained exactly through P6 cleanup. */
 :root {
-  --ds-shell-root-ds-safe-bottom-21: env(safe-area-inset-bottom, 0px);
-  --ds-shell-root-ds-safe-top-22: env(safe-area-inset-top, 0px);
   --ds-safe-bottom: env(safe-area-inset-bottom, 0px);
   --ds-safe-top: env(safe-area-inset-top, 0px);
-  --ds-shell-html-body-background-23: var(--ds-surface-sunken);
   --ds-shell-html-body-color-24: var(--ds-ink);
   --ds-shell-html-body-font-25: 400 16px/1.45 var(--ds-font-body);
   --ds-shell-button-disabled-opacity-26: 0.4;
@@ -2367,7 +2364,6 @@
   --ds-shell-mark-width-50: 28px;
   --ds-shell-mark-height-51: 28px;
   --ds-shell-lib-top-r-gap-52: 8px;
-  --ds-shell-lib-scroll-flex-53: 1;
   --ds-shell-lib-scroll-padding-54: 36px max(16px, 4vw) calc(40px + var(--ds-safe-bottom));
   --ds-shell-lib-head-max-width-55: 1240px;
   --ds-shell-lib-head-margin-56: 0 auto 28px;
@@ -2425,9 +2421,7 @@
   --ds-shell-app-sing-along-player-grid-template-areas-104: 'top' 'stage' 'chips';
   --ds-shell-app-sing-along-player-grid-template-rows-105: calc(46px + var(--ds-safe-top)) minmax(0, 1fr);
   --ds-shell-app-sing-along-player-grid-template-areas-106: 'top' 'stage';
-  --ds-shell-html-body-background-107: #0c0a14;
   --ds-shell-body-after-content-108: '';
-  --ds-shell-body-after-background-109: var(--ds-material-velvet-noise);
   --ds-shell-app-z-index-110: 1;
   --ds-shell-lib-top-background-111: var(--ds-material-vellum);
   --ds-shell-lib-top-webkit-backdrop-filter-112: var(--ds-material-filter);
@@ -2436,8 +2430,6 @@
   --ds-shell-overview-box-shadow-115: var(--ds-shadow-material-highlight);
   --ds-shell-lib-top-overview-background-116: var(--ds-surface-raised);
   --ds-shell-landing-name-ink-animation-117: ink-float 7s ease-in-out 1.6s infinite;
-  --ds-shell-landing-name-ink-webkit-mask-image-118: linear-gradient(90deg, #000 calc(var(--written) - 8%), transparent var(--written));
-  --ds-shell-landing-name-ink-mask-image-119: linear-gradient(90deg, #000 calc(var(--written) - 8%), transparent var(--written));
   --ds-shell-landing-name-ink-animation-120: ink-write 1.5s cubic-bezier(0.45, 0.1, 0.4, 1) 0.15s both, ink-float 7s ease-in-out 1.7s infinite;
   --ds-shell-ls-name-margin-121: 0 auto;
   --ds-shell-ls-name-light-settled-ls-light-animation-122: ls-breathe 6s ease-in-out infinite;
@@ -2449,7 +2441,6 @@
   --ds-shell-landing-modes-animation-delay-128: 3.6s;
   --ds-shell-landing-gap-129: clamp(96px, 16vh, 170px);
   --ds-shell-landing-padding-bottom-130: calc(6vh + var(--ds-safe-bottom));
-  --ds-shell-landing-name-ls-score-opacity-131: 1;
   --ds-shell-ls-name-light-written-ls-light-animation-132: ls-flare 1.1s ease-out both;
   --ds-shell-ls-name-light-settled-ls-light-animation-133: ls-flare 1.1s ease-out both,
     ls-breathe 6s ease-in-out 1.1s infinite;
@@ -2457,11 +2448,7 @@
   --ds-shell-landing-dedication-margin-135: 0 0 4px;
   --ds-shell-landing-dedication-column-gap-136: 0.4em;
   --ds-shell-landing-dedication-font-137: 400 clamp(34px, 4.8vw, 46px)/1.05 'Italianno', cursive;
-  --ds-shell-landing-dedication-animation-138: rise 1s var(--ded-delay, var(--ded-wait)) var(--ds-ease-standard) both;
   --ds-shell-ded-name-padding-139: 0 0.12em;
-  --ds-shell-ded-name-webkit-mask-image-140: linear-gradient(90deg, #000 calc(var(--written) - 8%), transparent var(--written));
-  --ds-shell-ded-name-mask-image-141: linear-gradient(90deg, #000 calc(var(--written) - 8%), transparent var(--written));
-  --ds-shell-landing-dedication-written-ded-name-animation-142: ink-write 1.4s cubic-bezier(0.45, 0.1, 0.4, 1) calc(var(--ded-delay, var(--ded-wait)) + 0.25s) both;
   --ds-shell-lib-head-h1-ens-title-margin-bottom-143: 6px;
   --ds-shell-body-has-app-mode-landing-landing-background-144: #0c0a0e;
   --ds-shell-landing-gap-145: clamp(96px, 16vh, 170px);
@@ -2472,11 +2459,9 @@
   --ds-shell-landing-name-ls-name-lit-ls-score-filter-150: brightness(1.06) drop-shadow(0 0 22px rgb(255 200 120 / 0.16)) drop-shadow(0 -1px 1px rgb(0 0 0 / 0.5));
   --ds-shell-ls-name-ls-light-ls-name-light-settled-ls-light-opacity-151: 0.07;
   --ds-shell-ls-name-ls-light-ls-name-light-settled-ls-light-filter-152: grayscale(1) brightness(0.5);
-  --ds-shell-ls-name-lit-ls-light-opacity-153: 1;
   --ds-shell-ls-name-lit-ls-light-animation-154: stage-ignite 1.2s linear both,
     ls-breathe 6s ease-in-out 1.2s infinite;
   --ds-shell-landing-modes-animation-delay-155: 3.5s;
-  --ds-shell-landing-name-ls-score-opacity-156: 1;
   --ds-shell-power-hint-b-font-size-157: 15px;
   --ds-shell-power-hint-p-margin-158: 4px 0 8px;
   --ds-shell-power-hint-p-font-size-159: 14px;
@@ -2488,7 +2473,6 @@
     width 0.55s var(--ds-ease-standard),
     height 0.55s var(--ds-ease-standard),
     opacity 0.4s ease;
-  --ds-shell-intro-open-intro-spot-opacity-165: 1;
   --ds-shell-intro-head-gap-166: 12px;
   --ds-shell-intro-count-font-167: 600 12px/1 var(--ds-font-mono);
   --ds-shell-intro-count-letter-spacing-168: 0.08em;
@@ -2521,7 +2505,6 @@
   --ds-shell-domain-heading-letter-spacing-195: .13em;
   --ds-shell-domain-heading-color-196: var(--ds-ink-secondary);
   --ds-shell-member-head-gap-197: 12px;
-  --ds-shell-member-identity-flex-198: 1;
   --ds-shell-member-identity-b-font-199: 500 16px var(--ds-font-auth-body);
   --ds-shell-member-email-margin-200: 4px 0 0;
   --ds-shell-member-email-color-201: var(--ds-ink-secondary);
@@ -2622,7 +2605,6 @@
   --ds-shell-tx-segments-gap-296: 3px;
   --ds-shell-tx-segments-height-297: 4px;
   --ds-shell-tx-segments-margin-298: 16px 0;
-  --ds-shell-tx-segment-flex-299: 1;
   --ds-shell-tx-segment-background-300: var(--ds-ink-secondary);
   --ds-shell-tx-segment-completed-background-301: var(--ds-transcription-accent);
   --ds-shell-tx-segment-running-animation-302: tx-pulse 1.5s ease-in-out infinite;
@@ -2639,11 +2621,9 @@
   --ds-shell-tx-score-wrap-max-height-313: calc(100dvh - 110px);
   --ds-shell-tx-score-wrap-min-height-314: 60dvh;
   --ds-shell-tx-score-wrap-padding-top-315: clamp(24px,10vh,100px);
-  --ds-shell-tx-score-flex-316: 1;
   --ds-shell-tx-score-page-color-317: var(--ds-ink);
   --ds-shell-tx-score-page-margin-318: 0 auto 24px;
   --ds-shell-tx-score-page-max-width-319: theme(--breakpoint-panel);
-  --ds-shell-tx-original-flex-320: 1;
   --ds-shell-tx-original-min-width-321: 40%;
   --ds-shell-tx-original-img-border-radius-322: 4px;
   --ds-shell-tx-original-figcaption-font-323: 400 12px var(--ds-font-auth-mono);
@@ -2685,7 +2665,6 @@
   --ds-shell-shimmer-background-position-359: -150% 0;
   --ds-shell-pulse-opacity-360: 1;
   --ds-shell-pulse-opacity-361: 0.45;
-  --ds-shell-written-syntax-362: '<percentage>';
   --ds-shell-ls-appear-opacity-363: 1;
   --ds-shell-ls-breathe-opacity-364: 1;
   --ds-shell-ls-breathe-opacity-365: 0.9;
@@ -2722,4 +2701,22 @@
   --ds-icon-voice-3: var(--ds-voice-3);
   --ds-icon-voice-6: var(--ds-voice-6);
   --ds-icon-voice-8: var(--ds-voice-8);
+}
+/* Local artwork inputs stay at their consumer; only authored geometry and timing live here. */
+:root {
+  --ds-shell-local-1: 90deg;
+  --ds-shell-local-2: #000;
+  --ds-shell-local-3: 8%;
+  --ds-shell-local-4: 90deg;
+  --ds-shell-local-5: #000;
+  --ds-shell-local-6: 8%;
+  --ds-shell-local-7: 1s;
+  --ds-shell-local-8: 90deg;
+  --ds-shell-local-9: #000;
+  --ds-shell-local-10: 8%;
+  --ds-shell-local-11: 90deg;
+  --ds-shell-local-12: #000;
+  --ds-shell-local-13: 8%;
+  --ds-shell-local-14: 1.4s;
+  --ds-shell-local-15: 0.25s;
 }
