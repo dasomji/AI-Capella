@@ -1229,7 +1229,7 @@ export class PianoRoll {
       // Syllables from cached bitmaps (re-shaping text per note per rebuild adds up fast), always in
       // the lane under their note -- skipped there if another voice already printed a syllable at
       // that spot (unison voices would print over each other).
-      const textColor = score ? towardPaper(color, 0.62) : paper(0.8);
+      const textColor = score ? towardPaper(color, Number(readTheme().roles['score-lyric-tint-mix'])) : paper(Number(readTheme().roles['score-lyric-paper-alpha']));
       const words: Word[] = [];
       for (let i = 0; i < lyricNotes.length; i++) {
         const { note, x, y, index } = lyricNotes[i];
@@ -1364,7 +1364,7 @@ export class PianoRoll {
       }
     }
     const dim = dimmed ? DIMMED_ALPHA : 1;
-    const light = towardPaper(color, 0.6);
+    const light = towardPaper(color, Number(readTheme().roles['score-key-highlight-mix']));
     ctx.lineCap = 'round';
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(5, capR);
@@ -1389,7 +1389,7 @@ export class PianoRoll {
     const gap = 1.5;
     const reachMax = Math.max(40, rowHeight * 3);
     const fontPx = lyricFontPx(rowHeight);
-    const lyricColor = LYRIC_STYLE === 'score' ? towardPaper(color, 0.62) : paper(0.8); // as printed (same cached bitmap)
+    const lyricColor = LYRIC_STYLE === 'score' ? towardPaper(color, Number(readTheme().roles['score-lyric-tint-mix'])) : paper(Number(readTheme().roles['score-lyric-paper-alpha'])); // as printed (same cached bitmap)
     const shape = new Path2D();
     const hole = (n: NoteEvent) => {
       const x = localBeatToX(n.startBeat) + 1;
@@ -1423,7 +1423,7 @@ export class PianoRoll {
       }
     }
     ctx.save();
-    ctx.fillStyle = towardPaper(color, 0.18);
+    ctx.fillStyle = towardPaper(color, Number(readTheme().roles['score-key-tint-mix']));
     throughClips(ctx, clear, 0.85 * (dimmed ? DIMMED_ALPHA : 1), () => ctx.fill(shape));
     ctx.restore();
   }
@@ -1440,7 +1440,7 @@ export class PianoRoll {
     const yBottom = rowTop(this.minMidi) + rowHeight;
     ctx.fillStyle = this.theme.color('score-key-light').css;
     ctx.fillRect(x0, yTop, KEYBOARD_WIDTH_PX, yBottom - yTop);
-    ctx.fillStyle = this.theme.color('score-key-separator').rgba(0.3);
+    ctx.fillStyle = this.theme.color('score-key-separator').rgba(Number(readTheme().roles['score-key-separator-alpha']));
     for (let midi = this.minMidi; midi <= this.maxMidi; midi++) {
       const pc = ((midi % 12) + 12) % 12;
       if (BLACK_KEY_PITCH_CLASSES.has(pc)) continue;
@@ -1462,7 +1462,7 @@ export class PianoRoll {
       if (((midi % 12) + 12) % 12 === 0) ctx.fillText(midiName(midi), x0 + KEYBOARD_WIDTH_PX - 19, rowTop(midi) + rowHeight / 2);
     }
     const shadow = ctx.createLinearGradient(x0 + KEYBOARD_WIDTH_PX, 0, x0 + KEYBOARD_WIDTH_PX + 10, 0);
-    shadow.addColorStop(0, this.theme.color('score-key-shadow').rgba(0.45));
+    shadow.addColorStop(0, this.theme.color('score-key-shadow').rgba(Number(readTheme().roles['score-key-shadow-alpha'])));
     shadow.addColorStop(1, this.theme.color('score-key-shadow').rgba(0));
     ctx.fillStyle = shadow;
     ctx.fillRect(x0 + KEYBOARD_WIDTH_PX, yTop, 10, yBottom - yTop);
@@ -1638,9 +1638,9 @@ function markHoles(ctx: CanvasRenderingContext2D, pills: [number, number, number
   for (const [x, y, w] of pills) marks.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, Math.min(h / 2, w / 2));
   ctx.save();
   ctx.globalAlpha = 1;
-  ctx.fillStyle = withAlpha(color, 0.12);
+  ctx.fillStyle = withAlpha(color, Number(readTheme().roles['score-muted-hole-fill-alpha']));
   ctx.fill(marks);
-  ctx.strokeStyle = withAlpha(color, 0.3);
+  ctx.strokeStyle = withAlpha(color, Number(readTheme().roles['score-muted-hole-stroke-alpha']));
   ctx.lineWidth = 1;
   ctx.stroke(marks);
   ctx.restore();

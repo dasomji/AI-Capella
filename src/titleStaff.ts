@@ -60,8 +60,8 @@ function readingLine(ctx: CanvasRenderingContext2D, x: number, cy: number, staff
     ctx.translate(x, cy);
     ctx.scale(1, tall);
     const g = ctx.createRadialGradient(0, 0, 0, 0, 0, reach);
-    g.addColorStop(0, readTheme().color('title-staff-lamp-core').rgba(0.2 * alpha));
-    g.addColorStop(0.35, readTheme().color('title-staff-lamp-edge').rgba(0.09 * alpha));
+    g.addColorStop(0, readTheme().color('title-staff-lamp-core').rgba(Number(readTheme().roles['title-staff-lamp-core-alpha']) * alpha));
+    g.addColorStop(0.35, readTheme().color('title-staff-lamp-edge').rgba(Number(readTheme().roles['title-staff-lamp-edge-alpha']) * alpha));
     g.addColorStop(1, readTheme().color('title-staff-lamp-edge').rgba(0));
     ctx.fillStyle = g;
     ctx.fillRect(-reach, -reach, reach * 2, reach * 2);
@@ -71,7 +71,7 @@ function readingLine(ctx: CanvasRenderingContext2D, x: number, cy: number, staff
   if (half < 1) return;
   const line = ctx.createLinearGradient(0, cy - half, 0, cy + half);
   line.addColorStop(0, readTheme().color('title-staff-reading-line').rgba(0));
-  line.addColorStop(0.5, readTheme().color('title-staff-reading-line').rgba(0.6 * alpha));
+  line.addColorStop(0.5, readTheme().color('title-staff-reading-line').rgba(Number(readTheme().roles['title-staff-reading-line-alpha']) * alpha));
   line.addColorStop(1, readTheme().color('title-staff-reading-line').rgba(0));
   ctx.fillStyle = line;
   ctx.fillRect(x - 0.5, cy - half, 1, half * 2);
@@ -85,15 +85,15 @@ function note(ctx: CanvasRenderingContext2D, x: number, end: number, y: number, 
   ctx.globalCompositeOperation = 'lighter';
   const halo = new Path2D();
   halo.roundRect(x - r * 0.9, y - r * 1.9, end - x + r * 1.8, r * 3.8, r * 1.9);
-  ctx.fillStyle = withAlpha(color, 0.1 * alpha);
+  ctx.fillStyle = withAlpha(color, Number(readTheme().roles['title-staff-note-shadow-alpha']) * alpha);
   ctx.fill(halo);
   ctx.restore();
   const slot = new Path2D();
   slot.roundRect(x, y - r, end - x, h, r);
-  ctx.fillStyle = withAlpha(color, 0.85 * alpha);
+  ctx.fillStyle = withAlpha(color, Number(readTheme().roles['title-staff-note-ink-alpha']) * alpha);
   ctx.fill(slot);
   if (hot > 0.01) {
-    ctx.fillStyle = readTheme().color('title-staff-note-highlight').rgba(0.8 * hot * alpha);
+    ctx.fillStyle = readTheme().color('title-staff-note-highlight').rgba(Number(readTheme().roles['title-staff-note-highlight-alpha']) * hot * alpha);
     const core = new Path2D();
     core.roundRect(x + r * 0.4, y - r * 0.35, Math.max(0, end - x - r * 0.8), r * 0.7, r * 0.35);
     ctx.fill(core);
@@ -197,7 +197,7 @@ export function animateStaff(canvas: HTMLCanvasElement, name: TitleName): () => 
       // little of its light lingering behind it.
       const span = x1 - x0;
       const at = (x: number) => clamp01((x - x0) / span);
-      const ink = readTheme().color('title-staff-ink').rgba(0.34);
+      const ink = readTheme().color('title-staff-ink').rgba(Number(readTheme().roles['title-staff-ink-alpha']));
       const g = ctx.createLinearGradient(x0, 0, x1, 0);
       if (lampOn) {
         const hot = readTheme().color('title-staff-reading-line').rgba(Number((0.34 + 0.6 * fade * rise).toFixed(3)));
@@ -216,7 +216,7 @@ export function animateStaff(canvas: HTMLCanvasElement, name: TitleName): () => 
 
       // The rastral's nib, one of five, while it rules.
       if (ruled < 1) {
-        ctx.fillStyle = readTheme().color('title-staff-nib').rgba(0.9);
+        ctx.fillStyle = readTheme().color('title-staff-nib').rgba(Number(readTheme().roles['title-staff-nib-alpha']));
         ctx.beginPath();
         ctx.arc(xr, yAt(xr), 1.6, 0, Math.PI * 2);
         ctx.fill();
@@ -232,7 +232,7 @@ export function animateStaff(canvas: HTMLCanvasElement, name: TitleName): () => 
           if (x < x0 || x > xr) continue;
           const y = yAt(x);
           const spot = ctx.createRadialGradient(x, y, 0, x, y, 14);
-          spot.addColorStop(0, readTheme().color('title-staff-flare-core').rgba(0.75 * a));
+          spot.addColorStop(0, readTheme().color('title-staff-flare-core').rgba(Number(readTheme().roles['title-staff-flare-core-alpha']) * a));
           spot.addColorStop(1, readTheme().color('title-staff-flare-edge').rgba(0));
           ctx.fillStyle = spot;
           ctx.fillRect(x - 14, y - 14, 28, 28);

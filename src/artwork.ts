@@ -38,18 +38,18 @@ export function drawRibbons(ctx: CanvasRenderingContext2D, w: number, h: number,
       pts.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
     };
     trace();
-    ctx.strokeStyle = withAlpha(color, 0.07);
+    ctx.strokeStyle = withAlpha(color, Number(readTheme().roles['artwork-line-shadow-alpha']));
     ctx.lineWidth = o.halo ?? 14;
     ctx.stroke();
     trace();
-    ctx.strokeStyle = withAlpha(color, 0.9);
+    ctx.strokeStyle = withAlpha(color, Number(readTheme().roles['artwork-line-ink-alpha']));
     ctx.lineWidth = o.line ?? 2.4;
     ctx.stroke();
     for (let b = 0; b < 3; b++) {
       const u = (((t * (0.035 + i * 0.006) + b / 3 + i * 0.13) % 1) + 1) % 1;
       const [bx, by] = pts[Math.round(u * steps)];
       const a = Math.sin(Math.PI * u);
-      ctx.fillStyle = withAlpha(color, 0.85 * a);
+      ctx.fillStyle = withAlpha(color, Number(readTheme().roles['artwork-glint-alpha']) * a);
       ctx.beginPath();
       ctx.arc(bx, by, (o.bead ?? 3.2) * (0.6 + 0.4 * a), 0, Math.PI * 2);
       ctx.fill();
@@ -118,24 +118,24 @@ export function drawPenRibbons(ctx: CanvasRenderingContext2D, w: number, h: numb
     if (glow > 0) {
       ctx.beginPath();
       pts.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-      ctx.strokeStyle = withAlpha(color, 0.07 * glow);
+      ctx.strokeStyle = withAlpha(color, Number(readTheme().roles['artwork-ribbon-shadow-alpha']) * glow);
       ctx.lineWidth = o.halo ?? 14;
       ctx.stroke();
     }
     const stroke = new Path2D();
     if (draft === '1') broadNib(stroke, pts, { w: line * 3.1, angle: 30, floor: 0.14, taper: 0.06, upTo: p });
     else pointedPen(stroke, pts, { w: line * 3.4, hair: Math.max(0.8, line * 0.34), taper: 0.06, upTo: p });
-    ctx.fillStyle = withAlpha(color, 0.92);
+    ctx.fillStyle = withAlpha(color, Number(readTheme().roles['artwork-ribbon-ink-alpha']));
     ctx.fill(stroke, 'nonzero');
     if (p < 1) {
       // The pen's point: a small bright spot where the ink is going down.
       const [px, py] = pointAlong(pts, p);
       const spot = ctx.createRadialGradient(px, py, 0, px, py, line * 5);
-      spot.addColorStop(0, withAlpha(color, 0.5));
+      spot.addColorStop(0, withAlpha(color, Number(readTheme().roles['artwork-ribbon-flare-alpha'])));
       spot.addColorStop(1, withAlpha(color, 0));
       ctx.fillStyle = spot;
       ctx.fillRect(px - line * 5, py - line * 5, line * 10, line * 10);
-      ctx.fillStyle = readTheme().color('artwork-nib').rgba(0.9);
+      ctx.fillStyle = readTheme().color('artwork-nib').rgba(Number(readTheme().roles['artwork-nib-alpha']));
       ctx.beginPath();
       ctx.arc(px, py, Math.max(1.2, line * 0.6), 0, Math.PI * 2);
       ctx.fill();
@@ -145,7 +145,7 @@ export function drawPenRibbons(ctx: CanvasRenderingContext2D, w: number, h: numb
         const u = (((t * (0.035 + i * 0.006) + b / 3 + i * 0.13) % 1) + 1) % 1;
         const [bx, by] = pts[Math.round(u * steps)];
         const a = Math.sin(Math.PI * u) * glow;
-        ctx.fillStyle = withAlpha(color, 0.85 * a);
+        ctx.fillStyle = withAlpha(color, Number(readTheme().roles['artwork-glint-alpha']) * a);
         ctx.beginPath();
         ctx.arc(bx, by, (o.bead ?? 3.2) * (0.6 + 0.4 * a), 0, Math.PI * 2);
         ctx.fill();
@@ -261,12 +261,12 @@ export function drawCover(ctx: CanvasRenderingContext2D, w: number, h: number, d
   const top = colorForPart(0, count);
   const bottom = colorForPart(count - 1, count);
   const g1 = ctx.createRadialGradient(w * 0.82, h * 0.12, 0, w * 0.82, h * 0.12, w * 0.75);
-  g1.addColorStop(0, withAlpha(top, 0.22));
+  g1.addColorStop(0, withAlpha(top, Number(readTheme().roles['artwork-cover-top-alpha'])));
   g1.addColorStop(1, withAlpha(top, 0));
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, w, h);
   const g2 = ctx.createRadialGradient(w * 0.12, h * 1.05, 0, w * 0.12, h * 1.05, w * 0.8);
-  g2.addColorStop(0, withAlpha(bottom, 0.2));
+  g2.addColorStop(0, withAlpha(bottom, Number(readTheme().roles['artwork-cover-bottom-alpha'])));
   g2.addColorStop(1, withAlpha(bottom, 0));
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, w, h);
@@ -291,11 +291,11 @@ export function drawCover(ctx: CanvasRenderingContext2D, w: number, h: number, d
       ctx.lineTo(pts[n][0], pts[n][1]);
     };
     trace();
-    ctx.strokeStyle = withAlpha(color, 0.12);
+    ctx.strokeStyle = withAlpha(color, Number(readTheme().roles['artwork-cover-voice-shadow-alpha']));
     ctx.lineWidth = 7 * scale;
     ctx.stroke();
     trace();
-    ctx.strokeStyle = withAlpha(color, 0.95);
+    ctx.strokeStyle = withAlpha(color, Number(readTheme().roles['artwork-cover-voice-alpha']));
     ctx.lineWidth = 1.7 * scale;
     ctx.stroke();
   });
@@ -324,7 +324,7 @@ function drawPenCover(ctx: CanvasRenderingContext2D, w: number, h: number, data:
     }
     const stroke = new Path2D();
     broadNib(stroke, pts, { w: 3.6 * scale, angle: 35, floor: 0.22, taper: 0.05 });
-    ctx.fillStyle = withAlpha(colorForPart(i, count), 0.95);
+    ctx.fillStyle = withAlpha(colorForPart(i, count), Number(readTheme().roles['artwork-cover-voice-alpha']));
     ctx.fill(stroke, 'nonzero');
   });
 }

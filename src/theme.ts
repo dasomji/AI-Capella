@@ -63,13 +63,13 @@ export function gelPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: 
   const { gloss: GEL_GLOSS, paper: light, deep, shine: glossColor } = gelInputs();
   let shades = gelShades.get(color);
   if (!shades) {
-    shades = { top: towardPaper(color, 0.28 * GEL_GLOSS, light), bottom: towardInk(color, 0.26 * GEL_GLOSS, deep) };
+    shades = { top: towardPaper(color, Number(readTheme().roles['material-gel-top-mix']) * GEL_GLOSS, light), bottom: towardInk(color, Number(readTheme().roles['material-gel-bottom-mix']) * GEL_GLOSS, deep) };
     gelShades.set(color, shades);
   }
   const r = Math.min(h / 2, w / 2);
   const body = ctx.createLinearGradient(0, y, 0, y + h);
-  body.addColorStop(0, lit ? towardPaper(color, 0.5, light) : shades.top);
-  body.addColorStop(0.55, lit ? towardPaper(color, 0.3, light) : color);
+  body.addColorStop(0, lit ? towardPaper(color, Number(readTheme().roles['material-gel-lit-top-mix']), light) : shades.top);
+  body.addColorStop(0.55, lit ? towardPaper(color, Number(readTheme().roles['material-gel-lit-middle-mix']), light) : color);
   body.addColorStop(1, lit ? color : shades.bottom);
   ctx.fillStyle = body;
   roundRectPath(ctx, x, y, w, h, r);
@@ -77,12 +77,12 @@ export function gelPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: 
   if (h < 9) return;
   const inset = Math.min(r * 0.6, 5);
   const shine = ctx.createLinearGradient(0, y + 1.5, 0, y + h * 0.5);
-  shine.addColorStop(0, glossColor.rgba(0.5 * GEL_GLOSS));
+  shine.addColorStop(0, glossColor.rgba(Number(readTheme().roles['material-gel-shine-alpha']) * GEL_GLOSS));
   shine.addColorStop(1, glossColor.rgba(0));
   ctx.fillStyle = shine;
   roundRectPath(ctx, x + inset, y + 1.5, Math.max(0, w - inset * 2), h * 0.46, r * 0.8);
   ctx.fill();
-  ctx.strokeStyle = glossColor.rgba(0.16 * GEL_GLOSS);
+  ctx.strokeStyle = glossColor.rgba(Number(readTheme().roles['material-gel-edge-alpha']) * GEL_GLOSS);
   ctx.lineWidth = 1;
   roundRectPath(ctx, x + 0.5, y + 0.5, w - 1, h - 1, Math.max(0, r - 0.5));
   ctx.stroke();
@@ -103,7 +103,7 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
 export function playheadBeam(ctx: CanvasRenderingContext2D, x: number, top: number, height: number) {
   const beam = ctx.createLinearGradient(x - 36, 0, x + 36, 0);
   beam.addColorStop(0, readTheme().color('material-light-warm').rgba(0));
-  beam.addColorStop(0.5, readTheme().color('material-light-warm').rgba(0.12));
+  beam.addColorStop(0.5, readTheme().color('material-light-warm').rgba(Number(readTheme().roles['material-playhead-alpha'])));
   beam.addColorStop(1, readTheme().color('material-light-warm').rgba(0));
   ctx.fillStyle = beam;
   ctx.fillRect(x - 36, top, 72, height);
