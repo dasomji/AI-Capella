@@ -1,7 +1,7 @@
 import { themeRegistry } from './design-system/theme';
 import { appShellRecipe, landingRecipe } from "./design-system/recipes/shell";
 import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
-import { matchBreakpoint } from './design-system/theme';
+import { matchBreakpoint, setAppearanceRehearsing } from './design-system/theme';
 import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
 import { isOffline } from './offline-state';
@@ -386,6 +386,8 @@ function setViewMode(mode: 'landing' | 'library' | 'player') {
   app.classList.toggle('mode-landing', mode === 'landing');
   app.classList.toggle('mode-library', mode === 'library');
   app.classList.toggle('mode-player', mode === 'player');
+  if (mode === 'player') setAppearanceRehearsing(true);
+  else if (mode === 'library') setAppearanceRehearsing(false);
   // The title screen keeps its plain ground: only the voice ribbons move there.
   backdrop.setShown(mode !== 'landing');
   closeOverlay();
@@ -952,12 +954,12 @@ function soundItems() {
 
 /**
  * Erscheinungsbild: the look on this device -- following its light or dark mode (night paper in
- * dark mode, parchment in light mode), or one of the two. Retained canvases repaint live.
+ * dark mode, parchment in light mode), or one of the two. Choices wait until the repertoire.
  */
 function appearanceItems() {
   const choose = (next: DesignChoice) => () => {
     if (next === DESIGN_CHOICE) return;
-    setDesignChoice(next);
+    if (setDesignChoice(next)) toast(t('appearanceDeferred'));
   };
   const options = [
     { label: t('designAuto'), checked: DESIGN_CHOICE === 'auto', onSelect: choose('auto') },
@@ -1018,7 +1020,7 @@ function openPaperSheet(opener: HTMLElement | null) {
     text.append(name, desc);
     b.append(swatch, text);
     b.addEventListener('click', () => {
-      setPaperKind(kind);
+      if (setPaperKind(kind)) toast(t('appearanceDeferred'));
       mark();
     });
     buttons.set(kind, b);
