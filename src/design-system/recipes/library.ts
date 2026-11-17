@@ -317,7 +317,11 @@ export function libraryPartRecipe(part: LibraryPart) {
 
 /** Expand only this domain's slots; adapters retain every historical behavior hook. */
 export function libraryAccountUtilityRecipe<T>(value: T): T {
-  if (typeof value === "string") return [...new Set(accountUtilityRecipe(libraryUtilityRecipe(value)).split(/\s+/))].join(" ") as T;
+  if (typeof value === "string") {
+    const classes = accountUtilityRecipe(libraryUtilityRecipe(value)).split(/\s+/);
+    // The sheet owns its phone top rule and desktop frame independently of overlay material.
+    return [...new Set(classes.filter(name => !value.includes("ds-library-sheet") || name !== "tw:border-library-overlay-border"))].join(" ") as T;
+  }
   if (value && typeof value === "object")
     return Object.fromEntries(Object.entries(value).map(([slot, classes]) => [slot, libraryAccountUtilityRecipe(classes)])) as T;
   return value;
