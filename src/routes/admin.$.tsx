@@ -6,8 +6,8 @@ const adminSearch = (search: Record<string, unknown>): Record<string, string> =>
   Object.fromEntries(Object.entries(search).filter(([, v]) => ['string', 'number', 'boolean'].includes(typeof v) && v !== '').map(([k, v]) => [k, String(v)]));
 export const Route = createFileRoute('/admin/$')({
   validateSearch: adminSearch,
-  // Filter typing stays on the same match; every admin API request still checks the role itself.
-  beforeLoad: async ({ cause }) => { if (cause === 'stay') return; if (!await confirmAdmin()) throw notFound(); },
+  // Revalidate the platform role even when navigation reuses this route match.
+  beforeLoad: async () => { if (!await confirmAdmin()) throw notFound(); },
   component: AdminRoute,
 });
 function AdminRoute() {
