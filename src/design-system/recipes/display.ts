@@ -1,3 +1,4 @@
+import { libraryAccountUtilityRecipe } from "./library";
 import { normalizeRecipe } from "./normalize";
 import { buttonRecipe, type ButtonOptions } from "./controls";
 export const cardVariants = [
@@ -13,7 +14,7 @@ export interface CardOptions {
   variant?: (typeof cardVariants)[number];
 }
 function cardRecipeStyles({ variant = "surface" }: CardOptions = {}) {
-  if (variant === "library") return "ds-library-song-card song-card";
+  if (variant === "library") return libraryAccountUtilityRecipe("ds-library-song-card song-card");
   if (variant === "tour" || variant === "power-hint") return "tw:box-border tw:m-0 tw:border-0 tw:bg-ink tw:text-surface-sunken tw:font-body tw:leading-body " + (variant === "tour" ? "ds-tour-note tw:px-18 tw:pt-14 tw:pb-12 tw:rounded-transcription-tile tw:shadow-note" : "ds-power-note tw:px-16 tw:pt-14 tw:pb-10 tw:rounded-card tw:shadow-component-toast");
   const appearances = {
     surface: "tw:bg-surface tw:text-ink tw:border-rule-strong tw:rounded-card",
@@ -52,8 +53,8 @@ const feedback: Record<FeedbackIntent, string> = {
   accent: "tw:text-accent tw:border-accent",
 };
 function badgeRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
-  if (variant === "offline-prepared") return "ds-offline-mark offline-mark";
-  if (variant === "library") return "ds-library-tag tag";
+  if (variant === "offline-prepared") return libraryAccountUtilityRecipe("ds-offline-mark offline-mark");
+  if (variant === "library") return libraryAccountUtilityRecipe("ds-library-tag tag");
   if(variant === "admin")return "tw:inline-block tw:box-border tw:px-7 tw:py-2 tw:rounded-chip tw:border tw:border-solid tw:bg-transparent tw:font-auth-body tw:text-body-small tw:leading-body " + (intent === "accent" ? "tw:text-admin-accent tw:border-admin-accent" : "tw:text-admin-ink tw:border-admin-rule");
   return (
     "tw:inline-block tw:box-border tw:px-7 tw:py-2 tw:rounded-chip tw:border tw:border-solid tw:bg-transparent tw:font-body tw:text-small tw:leading-body " +
@@ -120,7 +121,7 @@ function toolbarRecipeStyles() {
   return "tw:flex tw:items-center tw:flex-wrap tw:gap-12 tw:font-body tw:text-ink";
 }
 function statusRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
-  if (variant === "account-delete") return "ds-account-error account-error";
+  if (variant === "account-delete") return libraryAccountUtilityRecipe("ds-account-error account-error");
   if (variant === "account") return "tw:block tw:my-16 tw:font-auth-body tw:text-body tw:leading-account tw:text-center " + feedback[intent];
   if(variant === "admin")return "tw:block tw:my-16 tw:font-auth-body tw:text-body tw:leading-body tw:text-admin-ink";
   return (
