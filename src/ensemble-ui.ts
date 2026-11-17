@@ -1,4 +1,5 @@
-import { controlNoteRecipe, ensemblePanelRecipe, sheetHandleRecipe } from "./design-system/recipes/shell";
+import { bindRowMenu } from "./design-system/behavior";
+import { controlNoteRecipe, ensemblePanelRecipe } from "./design-system/recipes/shell";
 import { randomId } from "./uuid";
 import { api } from "./domain-client";
 import {
@@ -81,15 +82,11 @@ function openSheet(
     },
   });
   const head = sheet.element.querySelector("header")!;
-  const grab = element("span");
-  grab.className = sheetHandleRecipe();
-  grab.setAttribute("aria-hidden", "true");
   const close = createIconButton({
     label: t("close"),
     onClick: () => sheet.requestClose(),
   });
   close.innerHTML = icon("close");
-  head.prepend(grab);
   head.append(close);
   sheet.open();
   return sheet;
@@ -235,6 +232,7 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
       menus.push(menu.dispose);
       details.append(menu.element);
       row.append(details);
+      menus.push(bindRowMenu(details, menu.element));
       details.addEventListener("toggle", () =>
         summary.setAttribute("aria-expanded", String(details.open)),
       );
