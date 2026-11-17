@@ -783,14 +783,9 @@ button:disabled {
 }
 
 /* Controls inside sheets/popovers */
-.ctl-block {
-  padding: 14px 0 16px;
-  border-top: 1px solid var(--hair);
-}
 
-.sheet-body > .ctl-block:first-child {
-  border-top: 0;
-}
+
+
 
 .ctl-note {
   display: block;

@@ -582,3 +582,7 @@ p.ds-panel-ctl-note {
 
 /* Field wrappers avoid native select inline-baseline differences after DOM insertion. */
 .ds-panel-field-group {display:grid;}
+/* Keep the native disclosure marker after the opt-in summary reset. */
+.ds-panel-export-summary {list-style:disclosure-closed inside;}
+.ds-panel-export-voices[open] > .ds-panel-export-summary {list-style-type:disclosure-open;}
+.ds-panel-range {cursor:default;user-select:text;}
