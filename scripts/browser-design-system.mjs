@@ -17,7 +17,7 @@ export async function verifyDesignSystemPage({ specimens } = {}) {
   if (rows.length < 180) throw Error("Showcase missing primitives");
   for (const name of ["button/account-link/secondary/default", "button/password-toggle/secondary/default", "field/ruled-account/input/invalid", "control-group/trailing-action", "toggle-group/language-separated", "status/account/error"])
     if (!rows.some(row => row.dataset.specimen === name)) throw Error("Missing account parity specimen: " + name);
-  for (const name of ["navigation/admin", "workspace/wordmark", "workspace/page", "workspace/definitions", "button/dense-sort/secondary/default", "toggle-group/admin-language", "dialog/admin-reason", "dialog/admin-confirm", "table/records", "table/metrics", "status/admin", "badge/admin"])
+  for (const name of ["navigation/admin", "workspace/wordmark", "workspace/page", "workspace/definitions", "button-size/compact/quiet/default", "toggle-group/admin-language", "dialog/admin-reason", "dialog/admin-confirm", "table/records", "table/metrics", "status/admin", "badge/admin"])
     if (!rows.some(row => row.dataset.specimen === name)) throw Error("Missing admin parity specimen: " + name);
   for (const name of ["field-group/transcription", "card/tour", "card/power-hint", "dialog/domain-sheet", "dialog/transcription", "dialog/transcription-review", "menu/job", "switch-native/comparison/false"])
     if (!rows.some(row => row.dataset.specimen === name)) throw Error("Missing isolated DOM parity specimen: " + name);
@@ -377,7 +377,7 @@ export async function verifyP3ReviewFixes() {
   focusAudit.style.textTransform = "uppercase";
   document.body.append(focusAudit);
   try {
-    for (const [variant, offset] of [["standard", "4px"], ["dense", "3px"], ["player-play", "2px"]]) {
+    for (const [variant, offset] of [["standard", "4px"], ["player-play", "2px"]]) {
       const button = D.createButton({ variant, text: "Focus offset" });
       focusAudit.append(button);
       button.focus({ preventScroll: true });
