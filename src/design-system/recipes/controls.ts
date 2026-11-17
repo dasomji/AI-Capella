@@ -162,7 +162,7 @@ function fieldRecipeStyles(
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-emphasis tw:uppercase tw:tracking-auth-label tw:leading-field tw:text-ink-secondary"
         : admin ? "tw:text-label tw:font-auth-body tw:leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-body tw:text-ink-secondary",
     control: [
-      admin ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : controlBase,
+      admin ? controlBase.replace("outline-focus", "outline-admin-accent").replace("outline-offset-4", "outline-offset-3") : variant === "ruled" || variant === "transcription" ? controlBase.split(" ").filter(name => !name.startsWith("tw:focus-visible:")).join(" ") : controlBase,
       disabledRecipe,
       "tw:block tw:w-full tw:min-w-0 tw:font-regular tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
       kind === "textarea" && admin

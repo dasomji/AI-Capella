@@ -305,6 +305,7 @@ export function Switch({
           name={name}
           type="checkbox"
           role="switch"
+          aria-checked={checked}
           className={slots.input}
           aria-label={label}
           aria-busy={busy}

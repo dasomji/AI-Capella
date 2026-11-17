@@ -306,6 +306,7 @@ export function createSwitch(options: SwitchOptions): HTMLElement {
       thumb = element("span", slots.thumb);
     input.type = "checkbox";
     input.setAttribute("role", "switch");
+    input.setAttribute("aria-checked", String(!!options.checked));
     input.checked = !!options.checked;
     input.disabled = !!options.disabled;
     if (options.name) input.name = options.name;
@@ -622,6 +623,7 @@ export function updateSwitch(root: HTMLElement, options: SwitchOptions) {
   if (track.firstElementChild) track.firstElementChild.className = slots.thumb;
   const control = input ?? root;
   if (input) {
+    input.setAttribute("aria-checked", String(!!options.checked));
     input.checked = !!options.checked;
     input.disabled = !!options.disabled;
   } else {
