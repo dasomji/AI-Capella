@@ -1,10 +1,10 @@
 import { panelMotion } from "./panel";
-import { sheetMotion } from "./sheet";
+
 /** Native showModal owns background inertness, including later portals and stacked modals. */
 export type CancelReason = "escape" | "outside" | "button" | "swipe";
 export interface DialogBehaviorOptions {
   opener?: Element | null;
-  /** Shared slide and swipe transport for sheet variants. */
+  /** Historical sheet motion name aliases centered fade; no swipe dismissal. */
   motion?: "sheet" | "panel";
   initialFocus?: HTMLElement | (() => HTMLElement | null);
   escape?: "close" | "ignore";
@@ -73,15 +73,14 @@ export function openDialog(
     busy = options.busy ?? false;
   let closingChildren: DialogController[] | undefined;
   const motion =
-    options.motion === "sheet"
-      ? sheetMotion(dialog, () => controller.requestClose("swipe"))
-      : options.motion === "panel"
+    options.motion === "sheet" || options.motion === "panel"
         ? panelMotion(dialog)
         : undefined;
   const finish = (notify: boolean) => {
     if (closed) return;
     closed = true;
     motion?.dispose();
+    unbindViewport();
     // Layers opened after an exit starts replace the closing layer; they are not its children.
     const index = stack.findIndex((entry) => entry.controller === controller);
     for (const child of (
@@ -192,6 +191,42 @@ export function openDialog(
       }
     }
   };
+  const view = doc.defaultView!;
+  const viewport = view.visualViewport;
+  let viewportFrame = 0;
+  const fitViewport = () => {
+    if (dialog.dataset.dialogLayout === "fullscreen") return;
+    // Measured viewport geometry: inset the native centered dialog within the visible area.
+    const gap = parseFloat(getComputedStyle(doc.documentElement).getPropertyValue("--ds-space-content")) || 0;
+    const width = viewport?.width ?? view.innerWidth;
+    const height = viewport?.height ?? view.innerHeight;
+    const left = viewport?.offsetLeft ?? 0;
+    const top = viewport?.offsetTop ?? 0;
+    dialog.style.left = `${left + gap}px`;
+    dialog.style.right = `${Math.max(0, view.innerWidth - left - width) + gap}px`;
+    dialog.style.top = `${top + gap}px`;
+    dialog.style.bottom = `${Math.max(0, view.innerHeight - top - height) + gap}px`;
+    dialog.style.maxWidth = `${Math.max(0, width - 2 * gap)}px`;
+    dialog.style.maxHeight = `${Math.max(0, height - 2 * gap)}px`;
+    const focused = doc.activeElement;
+    if (focused instanceof HTMLElement && dialog.contains(focused) && focused !== dialog)
+      focused.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "instant" });
+  };
+  const scheduleViewport = () => {
+    cancelAnimationFrame(viewportFrame);
+    viewportFrame = requestAnimationFrame(fitViewport);
+  };
+  const unbindViewport = () => {
+    cancelAnimationFrame(viewportFrame);
+    view.removeEventListener("resize", scheduleViewport);
+    viewport?.removeEventListener("resize", scheduleViewport);
+    viewport?.removeEventListener("scroll", scheduleViewport);
+    dialog.removeEventListener("focusin", scheduleViewport);
+  };
+  view.addEventListener("resize", scheduleViewport);
+  viewport?.addEventListener("resize", scheduleViewport);
+  viewport?.addEventListener("scroll", scheduleViewport);
+  dialog.addEventListener("focusin", scheduleViewport);
   if (!dialog.isConnected) doc.body.append(dialog);
   dialog.tabIndex = -1;
   dialog.addEventListener("cancel", onCancel);
@@ -200,6 +235,7 @@ export function openDialog(
   dialog.addEventListener("keydown", onKey);
   if (!stack.length) previousOverflow = doc.body.style.overflow;
   dialog.showModal();
+  fitViewport();
   stack.push({ dialog, controller });
   motion?.enter();
   doc.body.style.overflow = "hidden";
