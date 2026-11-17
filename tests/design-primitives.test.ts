@@ -18,7 +18,7 @@ vi.mock('../src/design-system/theme', async importOriginal => ({
 }));
 afterEach(() => {
   D.closeOverlay();
-  dismissToast();
+  do { dismissToast(); } while (getToast());
   document.body.replaceChildren();
   vi.restoreAllMocks();
   vi.useRealTimers();
@@ -352,7 +352,9 @@ describe("menu keyboard and shared notifier", () => {
     vi.advanceTimersByTime(3200);
     expect(getToast()?.text).toBe("Error");
     expect(document.querySelectorAll("#toast")).toHaveLength(1);
-    vi.advanceTimersByTime(3300);
+    vi.advanceTimersByTime(33000);
+    expect(getToast()?.text).toBe("Error");
+    document.querySelector<HTMLButtonElement>("#toast button")!.click();
     expect(getToast()).toBeNull();
     expect(listener).toHaveBeenCalledTimes(3);
     unsubscribe();
@@ -557,9 +559,9 @@ describe("P3 review regression contracts", () => {
     const host = document.getElementById("toast")!;
     expect(host.getAttribute("role")).toBe("alert");
     dismissToast();
-    expect(host.textContent).toBe("Error");
+    expect(host.textContent).toBe("Error×");
     vi.advanceTimersByTime(299);
-    expect(host.textContent).toBe("Error");
+    expect(host.textContent).toBe("Error×");
     vi.advanceTimersByTime(1);
     expect(host.textContent).toBe("");
     toast("Old");
@@ -640,26 +642,26 @@ describe("shared panel motion", () => {
   });
 });
 
-describe("shared sheet motion", () => {
+describe("centered dialog compatibility motion", () => {
   it("retains the modal and scroll lock through the exit, then restores focus", () => {
     vi.useFakeTimers();
     const { dialog, api, opener } = modal({ motion: "sheet" });
-    expect(dialog.dataset.sheetState).toBe("entering");
+    expect(dialog.dataset.panelState).toBe("entering");
     vi.advanceTimersByTime(20);
-    expect(dialog.dataset.sheetState).toBe("open");
+    expect(dialog.dataset.panelState).toBe("open");
     dialog.style.transitionDuration = "0.22s";
     api.close();
-    expect(dialog.dataset.sheetState).toBe("closing");
+    expect(dialog.dataset.panelState).toBe("closing");
     expect(dialog.open).toBe(true);
     expect(document.body.style.overflow).toBe("hidden");
     const event = new Event("transitionend");
-    Object.defineProperty(event, "propertyName", { value: "transform" });
+    Object.defineProperty(event, "propertyName", { value: "opacity" });
     dialog.dispatchEvent(event);
     expect(dialog.open).toBe(false);
     expect(document.activeElement).toBe(opener);
-    expect(dialog.hasAttribute("data-sheet-state")).toBe(false);
+    expect(dialog.hasAttribute("data-panel-state")).toBe(false);
   });
-  it("routes swipe dismissal through busy cancellation and releases touch listeners", () => {
+  it("does not swipe-dismiss centered dialogs, including historical sheet APIs", () => {
     vi.useFakeTimers();
     const onCancel = vi.fn();
     const { dialog, api } = modal({ motion: "sheet", busy: true, onCancel });
@@ -671,7 +673,7 @@ describe("shared sheet motion", () => {
     vi.advanceTimersByTime(20);
     touch("touchstart", 100);
     touch("touchmove", 300);
-    expect(dialog.style.transform).toContain("192px");
+    expect(dialog.style.transform).toBe("");
     touch("touchend", 300);
     vi.advanceTimersByTime(20);
     expect(dialog.open).toBe(true);
@@ -682,7 +684,8 @@ describe("shared sheet motion", () => {
     touch("touchmove", 300);
     touch("touchend", 300);
     vi.advanceTimersByTime(20);
-    expect(onCancel).toHaveBeenCalledWith("swipe");
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(dialog.open).toBe(true);
     api.dispose();
     touch("touchstart", 100);
     touch("touchmove", 300);
@@ -693,13 +696,13 @@ describe("shared sheet motion", () => {
     vi.stubGlobal("matchMedia", () => ({ matches: true }));
     try {
       const { dialog, api } = modal({ motion: "sheet" });
-      expect(dialog.dataset.sheetState).toBe("open");
+      expect(dialog.dataset.panelState).toBe("entering");
       api.close();
       expect(dialog.open).toBe(false);
       const next = modal({ motion: "sheet" });
       next.api.dispose();
       vi.runAllTimers();
-      expect(next.dialog.hasAttribute("data-sheet-state")).toBe(false);
+      expect(next.dialog.hasAttribute("data-panel-state")).toBe(false);
     } finally {
       vi.unstubAllGlobals();
     }
@@ -778,7 +781,8 @@ it('uses token durations for toast lifetime and exit rather than numeric default
     vi.advanceTimersByTime(11); expect(document.getElementById('toast')?.textContent).toBe('');
     toast('Short error', 'error');
     vi.advanceTimersByTime(22); expect(getToast()?.text).toBe('Short error');
-    vi.advanceTimersByTime(1); expect(getToast()).toBeNull();
+    vi.advanceTimersByTime(10000); expect(getToast()?.text).toBe('Short error');
+    dismissToast(); expect(getToast()).toBeNull();
   } finally { Object.assign(toastRoles, original); }
 });
 
