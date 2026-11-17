@@ -229,7 +229,8 @@ function Input({
 }: InputProps) {
   const inherited = useContext(FieldVariant);
   variant ??= inherited;
-  density ??= useContext(FieldDensity);
+  const inheritedDensity = useContext(FieldDensity);
+  density ??= inheritedDensity;
   invalid =
     invalid ??
     (props["aria-invalid"] !== undefined &&
@@ -246,7 +247,8 @@ function Input({
 function Select({ variant, density, invalid, layout, ...props }: SelectProps) {
   const inherited = useContext(FieldVariant);
   variant ??= inherited;
-  density ??= useContext(FieldDensity);
+  const inheritedDensity = useContext(FieldDensity);
+  density ??= inheritedDensity;
   invalid =
     invalid ??
     (props["aria-invalid"] !== undefined &&
@@ -268,7 +270,8 @@ function Textarea({
 }: TextareaProps) {
   const inherited = useContext(FieldVariant);
   variant ??= inherited;
-  density ??= useContext(FieldDensity);
+  const inheritedDensity = useContext(FieldDensity);
+  density ??= inheritedDensity;
   invalid =
     invalid ??
     (props["aria-invalid"] !== undefined &&
