@@ -707,7 +707,7 @@ export function Menu({
     </div>
   );
   return trigger ? (
-    <div className="ds-menu-anchor tw:relative tw:[&>[role=menu]]:absolute tw:[&>[role=menu]]:top-full tw:[&>[role=menu]]:left-0 tw:[&>[role=menu]]:z-menu tw:[&[data-placement=end]>[role=menu]]:left-auto tw:[&[data-placement=end]>[role=menu]]:right-0" data-placement={placement}>
+    <div className="ds-menu-anchor tw:relative tw:[&>[role=menu]]:absolute tw:[&>[role=menu]]:top-full tw:[&>[role=menu]]:left-none tw:[&>[role=menu]]:z-menu tw:[&[data-placement=end]>[role=menu]]:left-auto tw:[&[data-placement=end]>[role=menu]]:right-none" data-placement={placement}>
       <Button
         ref={triggerRef}
         aria-haspopup="menu"
