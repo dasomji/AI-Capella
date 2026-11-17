@@ -1,5 +1,5 @@
 import { themeRegistry, themePreference, bootstrapTheme } from './design-system/theme/bootstrap';
-import { initializeTheme, setThemePreference, systemTheme, onSystemThemeChange } from './design-system/theme';
+import { initializeTheme, setThemePreference, systemTheme, onSystemThemeChange, subscribeTheme } from './design-system/theme';
 // Which look this device shows. The default is what the whole choir sees; a device can switch to
 // another by opening the app with ?design=samt (or ?logo=1, ?roll=gel), and keeps it until opened
 // with the default again. The look (design) follows the device's light or dark mode unless chosen
@@ -39,10 +39,10 @@ export function legacyDesign(id: string): Design {
   const theme = themeRegistry.find(theme => theme.id === id) ?? themeRegistry[0];
   return theme.compat.ground ?? theme.compat.design;
 }
-export const DESIGN_CHOICE: DesignChoice = !appearance || appearance.preference === 'system' ? 'auto' : legacyDesign(appearance.preference);
+export let DESIGN_CHOICE: DesignChoice = !appearance || appearance.preference === 'system' ? 'auto' : legacyDesign(appearance.preference);
 export function systemDesign(): Design { return legacyDesign(systemTheme()); }
-export const DESIGN: Design = appearance ? legacyDesign(appearance.id) : 'papier';
-/** Main retains its existing quiet-moment reload policy until P2 migrates renderer caches. */
+export let DESIGN: Design = appearance ? legacyDesign(appearance.id) : 'papier';
+/** Preferences apply live; retained renderer resources follow the snapshot revision. */
 export function setDesignChoice(next: DesignChoice) {
   setThemePreference(themePreference(next));
 }
@@ -50,8 +50,8 @@ export function onSystemDesignChange(changed: () => void) {
   return onSystemThemeChange(changed);
 }
 /** Parchment: the paper design on a light ground (everything of the paper design holds, in light). */
-export const PARCHMENT = DESIGN === 'pergament';
-export const PAPER_DESIGN = DESIGN === 'papier' || PARCHMENT;
+export let PARCHMENT = DESIGN === 'pergament';
+export let PAPER_DESIGN = DESIGN === 'papier' || PARCHMENT;
 
 /** The two drafts of the pen-written title animation (see artwork.ts drawPenRibbons); '2' was chosen. */
 export type LogoDraft = '1' | '2';
@@ -84,4 +84,13 @@ export const START_STAGE = START_CHOICE === 'buehne';
  * ?schrift=bodoni brings back the earlier ones (Bodoni Moda, Atkinson Hyperlegible) on a device
  * ('heute' as it was called while the new ones were a test), ?schrift=neu the new ones.
  */
-export const REVIVAL_TYPE = appearance?.revival ?? true;
+export let REVIVAL_TYPE = appearance?.revival ?? true;
+
+// Thin compatibility facade; renderers choose typed material strategies from the snapshot.
+subscribeTheme(theme => {
+  DESIGN_CHOICE = theme.preference === 'system' ? 'auto' : legacyDesign(theme.preference);
+  DESIGN = legacyDesign(theme.id);
+  PARCHMENT = theme.material.onLight;
+  PAPER_DESIGN = theme.material.surface === 'paper';
+  REVIVAL_TYPE = theme.type === 'revival';
+}, { immediate: true });

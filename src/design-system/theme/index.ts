@@ -15,6 +15,7 @@ export type ThemeSnapshot = Readonly<{
   fonts: Readonly<Record<typeof fontRoles[number], string>>;
   spectrum: readonly Color[];
   fallback: Readonly<{ hueStep: number; saturation: number; lightness: number }>;
+  material: Readonly<{ surface: 'paper' | 'waves'; light: 'ink' | 'additive'; composite: 'multiply' | 'lighter'; onLight: boolean }>;
   print: Readonly<{ paper: Color; ink: Color; textFont: string; musicFont: string; notationScale: number }>;
   /** All semantic role values, including material/filter recipes and dimensional scales. */
   roles: Readonly<Record<string, string>>;
@@ -32,7 +33,7 @@ function refresh() {
   snapshot = undefined;
   revision++;
   // Do not perform style reads for unused API subscribers; readTheme is lazy.
-  if (listeners.size) { const value = readTheme(); for (const listener of listeners) listener(value); }
+  if (listeners.size) { const value = readTheme(); for (const listener of listeners) { if (value.revision !== revision) break; listener(value); } }
 }
 function updateChrome() {
   const color = getComputedStyle(document.documentElement).getPropertyValue('--ds-browser-chrome').trim();
@@ -42,7 +43,7 @@ export function systemTheme(): ThemeId {
   const scheme = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   return (themeRegistry.find(theme => theme.system === scheme) ?? themeRegistry[0]).id;
 }
-/** Legacy main keeps its quiet-moment/reload policy until renderer caches migrate in P2. */
+/** Optional quiet-moment policy for consumers that defer preference application. Main repaints live. */
 export function onSystemThemeChange(fn: () => void) {
   quietChanges.add(fn);
   return () => { quietChanges.delete(fn); };
@@ -116,6 +117,7 @@ export function readTheme(): ThemeSnapshot {
   snapshot = Object.freeze({
     revision, id: root.dataset.theme as ThemeId, preference: root.dataset.themePreference as ThemePreference, type: root.dataset.type ?? 'bodoni',
     color: (role: typeof colorRoles[number]) => colors[role],
+    material: Object.freeze({ surface: value('material-fibre') === 'none' ? 'waves' : 'paper', light: value('color-scheme') === 'light' ? 'ink' : 'additive', composite: value('color-scheme') === 'light' ? 'multiply' : 'lighter', onLight: value('color-scheme') === 'light' }),
     colors, fonts, spectrum: Object.freeze(Array.from({ length: 8 }, (_, i) => normalizeColor(value(`voice-${i + 1}`)))),
     fallback: Object.freeze({ hueStep: number('voice-fallback-hue-step'), saturation: number('voice-fallback-saturation'), lightness: number('voice-fallback-lightness') }),
     print: Object.freeze({ paper: normalizeColor(value('print-paper')), ink: normalizeColor(value('print-ink')), textFont: value('print-font-text'), musicFont: value('print-font-music'), notationScale: number('print-notation-scale') }),
