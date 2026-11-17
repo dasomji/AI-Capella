@@ -25,6 +25,11 @@ export interface DialogController {
   requestClose(reason?: CancelReason): void;
   setBusy(busy: boolean): void;
 }
+const stackListeners = new Set<() => void>();
+export function subscribeDialogStack(listener: () => void) {
+  stackListeners.add(listener);
+  return () => { stackListeners.delete(listener); };
+}
 const stack: { dialog: HTMLDialogElement; controller: DialogController }[] = [];
 let previousOverflow = "";
 let pointerOpener: HTMLElement | null = null;
@@ -54,7 +59,7 @@ function targets(root: HTMLElement) {
       if (node.hidden || node.inert) return false;
       if (node === root) break;
     }
-    return el.tabIndex >= 0 && el.getClientRects().length > 0;
+    return !el.closest('[data-toast-hidden="true"]') && el.tabIndex >= 0 && el.getClientRects().length > 0;
   });
 }
 export function openDialog(
@@ -93,6 +98,7 @@ export function openDialog(
     dialog.removeEventListener("keydown", onKey);
     if (dialog.open) dialog.close();
     if (index >= 0) stack.splice(index, 1);
+    stackListeners.forEach(listener => listener());
     if (!stack.length) doc.body.style.overflow = previousOverflow;
     if (
       previousFocus instanceof HTMLElement &&
@@ -237,6 +243,7 @@ export function openDialog(
   dialog.showModal();
   fitViewport();
   stack.push({ dialog, controller });
+  stackListeners.forEach(listener => listener());
   motion?.enter();
   doc.body.style.overflow = "hidden";
   controller.setBusy(busy);
