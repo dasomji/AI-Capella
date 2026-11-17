@@ -795,3 +795,18 @@
 .ds-library-prompt[data-panel-state='entering'],.ds-library-prompt[data-panel-state='closing'] { opacity:0; transform:var(--ds-library-prompt-enter); }
 .ds-library-prompt[data-panel-state='open'] { opacity:1; transform:none; }
 .ds-library-prompt-head { display:contents; }
+
+/* Menu indicators inherit the same native text rendering as their command label. */
+.ds-library-menu-check {
+  cursor: inherit;
+  text-align: inherit;
+  user-select: text;
+  -webkit-font-smoothing: inherit;
+  -webkit-locale: inherit;
+  -webkit-tap-highlight-color: inherit;
+}
+.ds-library-overlay * {
+  -webkit-font-smoothing: inherit;
+  -webkit-locale: inherit;
+  -webkit-tap-highlight-color: inherit;
+}
