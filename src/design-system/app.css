@@ -51,3 +51,6 @@
 
 /* Clear the complete border shorthand, including inherited style and color. */
 @utility frame-clear { border:0; }
+
+/* Native numeric fields retain textfield appearance; Tailwind exposes only auto/none. */
+@utility appearance-textfield { appearance:textfield; }
