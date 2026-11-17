@@ -24,7 +24,9 @@ flowchart LR
    names while an owner decision is pending; never normalize appearance as part of a rename.
 2. The core spacing scale is `none`, `hairline`, `micro`, `compact`, `snug`, `small`, `control`,
    `content`, `section`, `panel`, `page`, `stage`. Existing density roles such as `tight`,
-   `inline`, `row`, `action`, and `heading` compose that scale. Radii use `field`, `track`,
+   `inline`, `row`, `action`, and `heading` compose that scale. Zero-spacing utilities use
+   `flush` (`tw:p-flush`), leaving native `max-w-none` / `max-h-none` limits intact.
+   Position roles such as `center` do not reuse a radius merely because the values match. Radii use `field`, `track`,
    `control-dense`, `media`, `indicator`, `tile-dense`, `menu`, `control`, `icon`, `segment`,
    `card`, `tile`, `card-roomy`, `dialog`, `dialog-roomy`, `sheet`, `pill`, and `round`.
    D08/D10 retain distinct control/card densities; D12 retains the dialog/sheet distinctions.
