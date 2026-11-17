@@ -485,7 +485,7 @@ export function createDialog(options: DialogOptions) {
   dialog.dataset.ds = "dialog";
   const titleId = `ds-dialog-${++fieldId}-title`,
     bodyId = titleId + "-body";
-  if (!dialog.hasAttribute("aria-labelledby"))
+  if (options.title && !dialog.hasAttribute("aria-label") && !dialog.hasAttribute("aria-labelledby"))
     dialog.setAttribute("aria-labelledby", titleId);
   dialog.setAttribute(
     "role",
@@ -499,11 +499,13 @@ export function createDialog(options: DialogOptions) {
   if (options.body && !dialog.hasAttribute("aria-describedby"))
     dialog.setAttribute("aria-describedby", bodyId);
   const content = element("div", slots.content);
-  const head = element("header", slots.header);
-  const heading = element("h2", slots.title, options.title);
-  heading.id = titleId;
-  head.append(heading);
-  content.append(head);
+  if (options.title) {
+    const head = element("header", slots.header);
+    const heading = element("h2", slots.title, options.title);
+    heading.id = titleId;
+    head.append(heading);
+    content.append(head);
+  }
   if (options.body) {
     const body = element("p", slots.body, options.body);
     body.id = bodyId;
