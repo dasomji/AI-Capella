@@ -118,6 +118,7 @@
 /* Shorthands/vendor inheritance cannot be represented by @theme namespaces. */
 @utility panel-inherit {
   font: inherit;
+  font-family: inherit;
   color: inherit;
   -webkit-font-smoothing: inherit;
   -webkit-locale: inherit;
