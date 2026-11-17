@@ -143,7 +143,18 @@ export function specimens(): Specimen[] {
       react: <R.Card variant={variant}>A surface</R.Card>,
       dom: () => D.createCard({ variant, text: "A surface" }),
     });
+  rows.push({
+    name: "control-group/trailing-action",
+    react: <R.ControlGroup><R.Input variant="ruled-account" layout="tw:pr-76" aria-label="Password" type="password" /><R.Button variant="password-toggle">show</R.Button></R.ControlGroup>,
+    dom: () => D.createControlGroup({content: [D.createInput({variant: "ruled-account", layout: "tw:pr-76", type: "password", attrs: {"aria-label": "Password"}}), D.createButton({variant: "password-toggle", text: "show"})]}),
+  });
+  rows.push({
+    name: "toggle-group/language-separated",
+    react: <R.ToggleGroup variant="language" separator=" · " label="Language / Sprache" value="en" items={[{value: "de",label: "DE"},{value: "en",label: "EN"}]} />,
+    dom: () => D.createToggleGroup({variant: "language", separator: " · ", label: "Language / Sprache", value: "en", items: [{value: "de",label: "DE"},{value: "en",label: "EN"}]}),
+  });
   for (const intent of r.feedbackIntents) {
+    rows.push({name: `status/account/${intent}`, react: <R.Status variant="account" intent={intent}>Status</R.Status>, dom: () => D.createStatus({variant:"account", intent, text:"Status"})});
     rows.push({
       name: `badge/${intent}`,
       react: <R.Badge intent={intent}>Status</R.Badge>,
