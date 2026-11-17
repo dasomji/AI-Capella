@@ -11,7 +11,23 @@ const colorAtom = /#[\da-f]{3,8}\b|(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)
 const namedColors = new Set(('aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen').split(' '));
 const fontStack = /(?:['"](?:Atkinson[^'";]+|Bodoni[^'";]+|Baltimore[^'";]+|Remington[^'";]+|Modern Antique[^'";]+|Italianno|LightScore Engraving|Bravura)['"][^;\n]*|(?:system-ui|ui-monospace|sans-serif|monospace|\bserif\b|\bcursive\b))/g;
 const paletteClass = /(?:^|\s)tw:(?:[\w-]+:)*(?:bg|text|border|outline|ring|fill|stroke|shadow|from|via|to|decoration|accent|caret)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(?:-\d+)?(?:\/\d+)?\b/g;
-const arbitraryAesthetic = /(?:^|\s)tw:(?:[\w-]+:)*-?(?:(?:bg|text|border|outline|ring|fill|stroke|font|rounded|shadow|tracking|leading|opacity|duration|ease|from|via|to|p[xysetblr]?|m[xysetblr]?|gap(?:-[xy])?|space-[xy]|inset(?:-[xy])?|top|right|bottom|left|start|end|w|h|size|min-[wh]|max-[wh]|z|basis)-(?:\[[^\]]+\]|\([^)]*\))|\[(?:color|background|font|border|box-shadow|border-radius|padding|margin|gap|width|height|inset|z-index)[^\]]*\])/g;
+// Every arbitrary-valued utility is covered, including nested selector variants.
+const arbitraryAesthetic = /tw:(?:[^\s"'`]*:)?-?[a-z][\w-]*-(?:\[[^\]]+\]|\([^)]*\))|tw:(?:[^\s"'`]*:)?\[[^\]]+\]/g;
+const numberedName = /(?:-\d{4}-\d+|-\d{2,}|-\d+(?:px|rem|em|ms))(?:$|[^\w-])/;
+// Enabled after the semantic migration. Exporting the rule separately makes its contract
+// testable while the concurrent conversion is in flight.
+export let enforceSemanticNames = false;
+export function checkSemanticName(name) { return numberedName.test(name); }
+const adapterTokens = new Set([...fs.readFileSync(path.join(root, 'src/design-system/tokens.css'), 'utf8').matchAll(/(--[\w-]+)\s*:\s*var\(--ds-/g)].map(m => m[1]));
+function mappedScale(utility) {
+  const match = utility.match(/^(-?)([a-z][\w-]*?)-(\d+(?:\.\d+)?|full)$/);
+  if (!match) return true;
+  const [, , prop, value] = match;
+  const namespace = /^(?:p[xysetblr]?|m[xysetblr]?|gap(?:-[xy])?|space-[xy]|inset(?:-[xy])?|top|right|bottom|left|start|end|w|h|size|min-[wh]|max-[wh]|basis|translate-[xy])$/.test(prop) ? 'spacing' : ({duration:'duration',delay:'delay',z:'z-index',border:'border-width',rounded:'radius',opacity:'opacity',text:'text',leading:'leading',tracking:'tracking',blur:'blur',outline:'outline-width',ring:'ring-width',font:'font-weight'})[prop];
+  // Grid counts, flex ratios, order and percentages describe structural layout.
+  return !namespace || adapterTokens.has(`--${namespace}-${value}`) || (value === '0' && !['font','text'].includes(prop)) || (value === 'full' && namespace === 'spacing');
+}
+
 /** Named, structural exceptions for data that is not a theme value. */
 export const exceptionRules = {
   'paper-noise-geometry': 'Paper formation/flocs/tooth triples are [cell count X, cell count Y, amplitude], never RGB channels.',
@@ -77,12 +93,26 @@ export function scanDesignFile(file, source) {
   }
   function classes(text, context) {
     for (const match of text.matchAll(paletteClass)) add('palette-utility', context, match[0]);
-    for (const match of text.matchAll(arbitraryAesthetic)) if (!/-(?:\(--ds-[\w-]+\)|\[var\(--ds-[\w-]+\)\])$/.test(match[0])) add('arbitrary-aesthetic', context, match[0]);
+    for (const word of text.match(/tw:[^\s\"'`]+/g) ?? []) {
+      if (/data-(?:theme|type|design|ground)\s*[=\]]/.test(word)) add('legacy-theme-selector', context, word);
+      // A variant's brackets can contain colons and nested attribute selectors.
+      let depth = 0, lastColon = 2;
+      for (let i = 3; i < word.length; i++) {
+        if ('[('.includes(word[i])) depth++;
+        if ('])'.includes(word[i])) depth--;
+        if (word[i] === ':' && depth === 0) lastColon = i;
+      }
+      const utility = word.slice(lastColon + 1).replace(/!$/, '');
+      if ((/-\[[^]*\]$|^-?\[[^]*\]$|^-?[\w-]+-\([^]*\)$/.test(utility)) && !/-(?:\(--ds-[\w-]+\)|\[var\(--ds-[\w-]+\)\])$/.test(utility) && utility !== 'content-[attr(data-label)]') add('arbitrary-aesthetic', context, word);
+      if (!mappedScale(utility)) add('unmapped-scale-utility', context, word);
+      if (enforceSemanticNames && checkSemanticName(word)) add('value-encoding-name', context, word);
+    }
     for (const match of text.matchAll(defaultFont)) add('default-font-utility', context, match[0]);
   }
   if (file.endsWith('.css')) {
     const tree = postcss.parse(source);
     tree.walkDecls(decl => {
+      if (enforceSemanticNames && checkSemanticName(decl.prop)) add('value-encoding-name', decl.prop, decl.prop);
       if (tokenSource) return;
       const ancestry = []; let node = decl.parent;
       while (node && node.type !== 'root') { ancestry.unshift(node.selector ?? `@${node.name} ${node.params ?? ''}`); node = node.parent; }
@@ -98,11 +128,12 @@ export function scanDesignFile(file, source) {
       if (/--pigment-/.test(decl.value)) add('primitive-import', context, decl.value);
     });
     tree.walkAtRules(rule => {
-      if (rule.name === 'import' && file !== 'src/design-system/app.css' && !/\blayer(?:\s*\(|\s*;|$)/.test(rule.params)) add('unlayered-css-import', '@import', rule.params);
-      if (!file.startsWith('src/design-system/') && rule.name === 'media' && /\b(?:width|height)\s*[:<>=][^)]*\d+(?:px|rem|em)\b/.test(rule.params)) add('raw-media-query', '@media', rule.params);
+      if (rule.name === 'import' && !/\blayer(?:\s*\(|\s*;|$)/.test(rule.params)) add('unlayered-css-import', '@import', rule.params);
+      if (['media', 'custom-variant'].includes(rule.name) && /\b(?:width|height)\s*[:<>=][^)]*\d+(?:px|rem|em)\b/.test(rule.params)) add('raw-media-query', '@' + rule.name, rule.params);
+      if (enforceSemanticNames && ['utility', 'custom-variant'].includes(rule.name) && checkSemanticName(rule.params.split(/[\s({]/)[0])) add('value-encoding-name', '@' + rule.name, rule.params);
     });
     tree.walkRules(rule => {
-      if (/data-(?:design|ground)\s*[=\]]/.test(rule.selector)) add('legacy-theme-selector', rule.selector, rule.selector);
+      if (!tokenSource && /data-(?:theme|type|design|ground)\s*[=\]]/.test(rule.selector)) add('legacy-theme-selector', rule.selector, rule.selector);
       if (file.startsWith('src/design-system/')) return;
       if (/(?:^|[\s>+~])(?:button|input|select|textarea)(?:[\s.:[>#]|$)/.test(rule.selector) && /[.#][\w-]+/.test(rule.selector)) add('screen-control-selector', rule.selector, rule.selector);
     });
@@ -143,6 +174,13 @@ export function scanDesignFile(file, source) {
     }
   }
   function checkSink(node) {
+    function computed(n) {
+      if (ts.isIdentifier(n) && declarations.has(n.text)) return;
+      if (ts.isTemplateExpression(n) && /(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch|color)\(/i.test(n.head.text)) add('computed-color-at-sink', context(node), n.getText(ast));
+      ts.forEachChild(n, computed);
+    }
+    computed(node);
+    for (const id of references(node)) if (declarations.has(id)) computed(declarations.get(id));
     for (const raw of rawChannels(node)) add('raw-channels-at-sink', context(node), raw);
     for (const id of references(node)) for (const raw of sources.get(id) ?? []) add('raw-channels-at-sink', context(node) + ' <- ' + id, raw);
   }
@@ -214,6 +252,7 @@ export function scanDesignFile(file, source) {
     if (outsideSystem && ts.isBinaryExpression(node) && [ts.SyntaxKind.LessThanToken, ts.SyntaxKind.LessThanEqualsToken, ts.SyntaxKind.GreaterThanToken, ts.SyntaxKind.GreaterThanEqualsToken].includes(node.operatorToken.kind) && [node.left, node.right].some(part => /^(?:(?:window|globalThis)\.)?inner(?:Width|Height)$/.test(part.getText(ast)))) add('raw-breakpoint-compare', context(node), node.getText(ast));
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const name = node.expression.name.text;
+      if (name === 'getAttribute' && /^data-(?:theme|type|design|ground)$/.test(node.arguments[0]?.text ?? '') && !/^src\/design-system\/theme\//.test(file)) add('legacy-theme-read', context(node), node.getText(ast));
       if (name === 'addColorStop' && node.arguments[1]) checkVisual(node.arguments[1]);
       if (['setAttribute', 'setProperty'].includes(name) && node.arguments[0] && node.arguments[1]) {
         const prop = node.arguments[0].text ?? '';

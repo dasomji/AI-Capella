@@ -108,3 +108,32 @@ describe('review guard regressions M3–M6 / N1', () => {
     expect(scanDesignFile('src/design-system/example.css', ':root[data-design="papier"] x {display:none}').some(r=>r.kind==='legacy-theme-selector')).toBe(true);
   });
 });
+
+describe('final review guard evasions', () => {
+  it.each(['theme', 'type', 'design', 'ground'])('rejects %s selectors and attribute reads', name => {
+    expect(scanDesignFile('src/design-system/native.css', `[data-${name}=parchment] {display:none}`).some(r=>r.kind==='legacy-theme-selector')).toBe(true);
+    expect(scan(`root.getAttribute('data-${name}')`).some(r=>r.kind==='legacy-theme-read')).toBe(true);
+    expect(scan(`const x='tw:[[data-${name}=parchment]_&]:block'`).some(r=>r.kind==='legacy-theme-selector')).toBe(true);
+  });
+  it('requires layer() on every app import', () => {
+    expect(scanDesignFile('src/design-system/app.css', '@import "x.css";').some(r=>r.kind==='unlayered-css-import')).toBe(true);
+    expect(scanDesignFile('src/design-system/app.css', '@import "x.css" layer(components);')).toEqual([]);
+  });
+  it.each(['translate-x-[13px]', 'grid-cols-[13px_1fr]', 'animate-[spin_1s]', 'rotate-[15deg]', 'content-[hello]'])('checks arbitrary utility %s', cls => {
+    expect(scan(`const x='tw:hover:${cls}'`).some(r=>r.kind==='arbitrary-aesthetic')).toBe(true);
+  });
+  it.each(['duration-300','z-50','border-2','rounded-full','opacity-37'])('rejects unmapped scales %s', cls => {
+    expect(scan(`const x='tw:${cls}'`).some(r=>r.kind==='unmapped-scale-utility')).toBe(true);
+  });
+  it.each(['@media (max-width:700px){x{display:none}}', '@custom-variant phone (@media (max-width:700px));'])('checks at-rule breakpoint parameters %s', css => {
+    expect(scanDesignFile('src/design-system/native.css', css).some(r=>r.kind==='raw-media-query')).toBe(true);
+  });
+  it.each(['ctx.fillStyle=`rgb(${r},${g},${b})`', 'const tint=`rgb(${r},${g},${b})`; el.style.background=tint', 'ctx.addColorStop(0, `rgba(${r},${g},${b},${alpha})`)'])('rejects computed color sinks %s', source => {
+    expect(scan(source).some(r=>r.kind==='computed-color-at-sink')).toBe(true);
+  });
+  it('rejects rule-index and value-encoding names without rejecting semantic spacing scales', async () => {
+    const {checkSemanticName} = await import('../scripts/check-design-tokens.mjs');
+    for (const name of ['--ds-panel-bpm-radius-39','shell-0031-0','player-native-height-4px']) expect(checkSemanticName(name),name).toBe(true);
+    for (const name of ['--ds-space-12','--spacing-24','--ds-radius-card','tw:p-24']) expect(checkSemanticName(name.replace(/^(--ds-space|--spacing|tw:p)-\d+$/, 'semantic-scale')),name).toBe(false);
+  });
+});

@@ -12,6 +12,10 @@ import {
   dismissToast,
   subscribeToast,
 } from "../src/design-system/behavior";
+const toastRoles = vi.hoisted(() => ({ 'toast-duration-info': '3200ms', 'toast-duration-error': '6500ms', 'toast-duration-exit': '300ms' }));
+vi.mock('../src/design-system/theme', async importOriginal => ({
+  ...await importOriginal(), readTheme: () => ({ roles: toastRoles }),
+}));
 afterEach(() => {
   D.closeOverlay();
   dismissToast();
@@ -759,4 +763,20 @@ describe('final review adapter and keyboard regressions', () => {
       expect(dialog.getAttribute('aria-label')).toBe('Tempo');
     }
   });
+});
+
+it('uses token durations for toast lifetime and exit rather than numeric defaults', () => {
+  vi.useFakeTimers();
+  const original = { ...toastRoles };
+  Object.assign(toastRoles, { 'toast-duration-info': '17ms', 'toast-duration-error': '23ms', 'toast-duration-exit': '11ms' });
+  try {
+    toast('Short info');
+    vi.advanceTimersByTime(16); expect(getToast()?.text).toBe('Short info');
+    vi.advanceTimersByTime(1); expect(getToast()).toBeNull();
+    expect(document.getElementById('toast')?.textContent).toBe('Short info');
+    vi.advanceTimersByTime(11); expect(document.getElementById('toast')?.textContent).toBe('');
+    toast('Short error', 'error');
+    vi.advanceTimersByTime(22); expect(getToast()?.text).toBe('Short error');
+    vi.advanceTimersByTime(1); expect(getToast()).toBeNull();
+  } finally { Object.assign(toastRoles, original); }
 });
