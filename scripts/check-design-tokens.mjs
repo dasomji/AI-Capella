@@ -104,7 +104,7 @@ export function scanDesignFile(file, source, options = {}) {
         if (word[i] === ':' && depth === 0) lastColon = i;
       }
       const utility = word.slice(lastColon + 1).replace(/!$/, '');
-      if ((/-\[[^]*\]$|^-?\[[^]*\]$|^-?[\w-]+-\([^]*\)$/.test(utility)) && !/-(?:\(--ds-[\w-]+\)|\[var\(--ds-[\w-]+\)\])$/.test(utility) && utility !== 'content-[attr(data-label)]') add('arbitrary-aesthetic', context, word);
+      if ((/-\[[^]*\]$|^-?\[[^]*\]$|^-?[\w-]+-\([^]*\)$/.test(utility)) && !/(?:-(?:\((?:[a-z-]+:)?--ds-[\w-]+\)|\[(?:[a-z-]+:)?var\(--ds-[\w-]+\)\])|^\[[a-z-]+:var\(--ds-[\w-]+\)\])$/.test(utility) && utility !== 'content-[attr(data-label)]') add('arbitrary-aesthetic', context, word);
       if (!mappedScale(utility)) add('unmapped-scale-utility', context, word);
       if (enforceNames && checkSemanticName(word)) add('value-encoding-name', context, word);
     }

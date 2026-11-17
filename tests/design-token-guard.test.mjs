@@ -149,3 +149,7 @@ it.each([
 ])('enforces semantic names when enabled: %s', (file,source) => {
   expect(scanDesignFile(file,source,{semanticNames:true}).some(r=>r.kind==='value-encoding-name')).toBe(true);
 });
+
+it.each(['tw:[transform:var(--ds-panel-specimen-transform)]', 'tw:focus-visible:[outline-color:var(--ds-admin-accent)]', 'tw:border-(length:--ds-stroke-thin)', 'tw:w-[length:var(--ds-control-height)]'])('accepts semantic arbitrary property and typed token utility %s', cls => {
+  expect(scan(`const x='${cls}'`)).toEqual([]);
+});

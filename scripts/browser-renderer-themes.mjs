@@ -10,8 +10,8 @@ import { chromium } from 'playwright';
 // Mutations are Vite transforms in this disposable harness; never edits to the owner preview.
 const mutant = process.env.P2_MUTANT;
 const mutations = {
-  staff: ['/src/staffView.ts', 'this.shadeRevision !== this.theme.revision', 'false'],
-  roll: ['/src/pianoRoll.ts', 'this.themeRevision !== this.theme.revision', 'false'],
+  staff: ['/src/staffView.ts', 'this.shadeRevision !== this.theme.revision', 'this.shadeRevision === -1'],
+  roll: ['/src/pianoRoll.ts', 'this.themeRevision !== this.theme.revision', 'this.themeRevision === -1'],
   lantern: ['/src/pianoRoll.ts', 'if (LANTERN) this.lantern ??= new Lantern();\n    else this.lantern = null;', '/* construction-only Lantern */'],
   paper: ['/src/paper.ts', 'made.clear(); composed.clear(); patterns = new WeakMap();', '/* stale paper tiles */'],
   overview: ['/src/overview.ts', 'this.themeRevision !== theme.revision', 'false'],

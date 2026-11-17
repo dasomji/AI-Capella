@@ -6,6 +6,7 @@ export function loudThemeBlock(source) {
   const css = postcss.parse(source), values = new Map();
   css.walkRules(rule => { if (rule.selector === ':root') rule.walkDecls(d => values.set(d.prop, d.value)); });
   const block = css.nodes.find(n => n.type === 'rule' && n.selectors?.includes(':root[data-theme="night-paper"]')).clone({selector:':root[data-theme="test-aurora"]'});
+  if(block.type!=='rule')throw Error('Theme block must be a CSS rule');
   block.walkDecls(d => values.set(d.prop, d.value));
   function resolve(value, seen = new Set()) {
     return value.replace(/var\(\s*(--[\w-]+)(?:\s*,\s*([^()]*))?\)/g, (all, name, fallback) => {
@@ -35,6 +36,7 @@ export function themeExtensionPlugin() {
   return {name:'test-only-fourth-theme',enforce:'pre',
     load(id) { if(id.endsWith('/theme/resolver.js?raw'))return `export default ${JSON.stringify(extended)}`; },
     transform(code,id) {
+      if(process.env.THEME_PROOF_MUTANT==='hardcoded' && id.endsWith('/native.css'))return code+'\nbutton,h1{color:#f00!important}';
       if(id.endsWith('/theme/resolver.js'))return extended;
       if(id.endsWith('/design-system/app.css'))return code+'\n@layer tokens {'+block.toString()+'}';
     },
