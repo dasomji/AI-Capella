@@ -30,6 +30,9 @@ flowchart LR
    Custom-property names are at most 48 characters including `--` and never contain another
    `--`. Short role names replace selector paths; numeric ordinals are not component roles.
    `design-token-policy.mjs` and the guard enforce these constraints.
+   Standalone unitless zero in geometric shorthands also composes `space-none` or
+   `radius-none`. Unitless arithmetic inputs (such as normalized card tilt at rest),
+   opacity and color channels retain their numeric grammar instead of taking a length role.
 
    The core spacing scale is `none`, `hairline`, `micro`, `compact`, `snug`, `small`, `control`,
    `content`, `section`, `panel`, `page`, `stage`. Existing density roles such as `tight`,
