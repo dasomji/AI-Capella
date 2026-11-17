@@ -43,6 +43,16 @@ export const colorRoles = [
   'material-paper-fibre-light', 'material-paper-fibre-ink', 'material-paper-lamp',
 ] as const;
 export const fontRoles = ['body', 'control', 'mono', 'display', 'heading', 'song-title', 'mark', 'brand', 'script', 'music', 'auth-body', 'auth-display', 'auth-mono', 'canvas-text', 'canvas-mono', 'canvas-display'] as const;
+// Strategy identity is authored by each theme, independently of browser color-scheme.
+const materialStrategies = {
+  light: { strategy: 'light', light: 'additive', composite: 'lighter', onLight: false, paperKind: 'device', lanternComposite: 'source-over', ribbonLineComposite: 'lighter' },
+  ink: { strategy: 'ink', light: 'ink', composite: 'multiply', onLight: true, paperKind: 'pergament', lanternComposite: 'multiply', ribbonLineComposite: 'source-over' },
+} as const;
+type MaterialStrategy = typeof materialStrategies[keyof typeof materialStrategies];
+function materialStrategy(value: string): MaterialStrategy {
+  if (value !== 'light' && value !== 'ink') throw Error(`Invalid material-strategy: ${value}`);
+  return materialStrategies[value];
+}
 export type ThemeSnapshot = Readonly<{
   revision: number; id: ThemeId; preference: ThemePreference; type: string; titleDraft: 'current' | 'earlier';
   color: (role: typeof colorRoles[number]) => Color;
@@ -50,7 +60,7 @@ export type ThemeSnapshot = Readonly<{
   fonts: Readonly<Record<typeof fontRoles[number], string>>;
   spectrum: readonly Color[];
   fallback: Readonly<{ hueStep: number; saturation: number; lightness: number }>;
-  material: Readonly<{ surface: 'paper' | 'waves'; light: 'ink' | 'additive'; composite: 'multiply' | 'lighter'; onLight: boolean }>;
+  material: Readonly<{ surface: 'paper' | 'waves' } & MaterialStrategy>;
   print: Readonly<{ paper: Color; ink: Color; textFont: string; musicFont: string; notationScale: number }>;
   /** All semantic role values, including material/filter recipes and dimensional scales. */
   roles: Readonly<Record<string, string>>;
@@ -170,7 +180,7 @@ export function readTheme(): ThemeSnapshot {
   snapshot = Object.freeze({
     revision, id: root.dataset.theme as ThemeId, preference: root.dataset.themePreference as ThemePreference, type: root.dataset.type ?? 'bodoni', titleDraft: root.dataset.start === 'neu' ? 'current' : 'earlier',
     color: (role: typeof colorRoles[number]) => colors[role],
-    material: Object.freeze({ surface: value('material-fibre') === 'none' ? 'waves' : 'paper', light: value('color-scheme') === 'light' ? 'ink' : 'additive', composite: value('color-scheme') === 'light' ? 'multiply' : 'lighter', onLight: value('color-scheme') === 'light' }),
+    material: Object.freeze({ surface: value('material-fibre') === 'none' ? 'waves' : 'paper', ...materialStrategy(value('material-strategy')) }),
     colors, fonts, spectrum: Object.freeze(Array.from({ length: 8 }, (_, i) => concreteColor(value(`voice-${i + 1}`)))),
     fallback: Object.freeze({ hueStep: number('voice-fallback-hue-step'), saturation: number('voice-fallback-saturation'), lightness: number('voice-fallback-lightness') }),
     print: Object.freeze({ paper: concreteColor(value('print-paper')), ink: concreteColor(value('print-ink')), textFont: value('print-font-text'), musicFont: value('print-font-music'), notationScale: number('print-notation-scale') }),

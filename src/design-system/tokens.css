@@ -448,6 +448,7 @@
   --ds-on-accent: var(--pigment-surface-sunken);
   --ds-on-danger: var(--pigment-ink);
   --ds-material-family: paper;
+  --ds-material-strategy: light;
   --ds-color-scheme: dark;
   --ds-browser-chrome: var(--pigment-page-background);
   --ds-admin-surface: var(--pigment-admin-surface);
@@ -937,6 +938,7 @@
   --ds-on-accent: var(--pigment-on-accent);
   --ds-on-danger: var(--pigment-on-accent);
   --ds-material-family: paper;
+  --ds-material-strategy: ink;
   --ds-color-scheme: light;
   --ds-browser-chrome: var(--pigment-browser-chrome);
   --ds-admin-surface: var(--pigment-admin-surface-2);
@@ -1424,6 +1426,7 @@
   --ds-on-accent: var(--pigment-surface-sunken);
   --ds-on-danger: var(--pigment-ink);
   --ds-material-family: waves;
+  --ds-material-strategy: light;
   --ds-color-scheme: dark;
   --ds-browser-chrome: var(--pigment-page-background);
   --ds-admin-surface: var(--pigment-admin-surface);

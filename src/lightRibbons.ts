@@ -140,7 +140,7 @@ export function drawLightRibbons(ctx: CanvasRenderingContext2D, w: number, h: nu
   ctx.globalCompositeOperation = readTheme().material.composite;
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(layer, 0, 0, gw, gh, 0, 0, gw / GLOW_SCALE, gh / GLOW_SCALE);
-  if (readTheme().material.onLight) ctx.globalCompositeOperation = 'source-over';
+  ctx.globalCompositeOperation = readTheme().material.ribbonLineComposite;
 
   // The lines themselves: pen strokes in the voice colour with a thin bright core, like a trace of
   // light in a long exposure.

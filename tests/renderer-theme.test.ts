@@ -17,7 +17,7 @@ async function clientTheme() {
   for (const role of fontRoles) values['--ds-font-' + role] = 'Snapshot Font';
   for (let i = 1; i <= 8; i++) values['--ds-voice-' + i] = `rgb(${i * 20}, 40, 60)`;
   Object.assign(values, { '--ds-print-paper': '#ffffff', '--ds-print-ink': '#000000', '--ds-print-font-text': 'Print Font',
-    '--ds-print-font-music': 'Music Font', '--ds-color-scheme': 'dark', '--ds-material-fibre': 'none',
+    '--ds-print-font-music': 'Music Font', '--ds-color-scheme': 'dark', '--ds-material-strategy': 'light', '--ds-material-fibre': 'none',
     '--ds-voice-fallback-hue-step': '47', '--ds-voice-fallback-saturation': '70', '--ds-voice-fallback-lightness': '72' });
   const computed = vi.fn(() => ({ getPropertyValue: (key: string) => values[key] ?? '' }));
   vi.stubGlobal('getComputedStyle', computed);
@@ -50,11 +50,11 @@ it('uses supplied spectrum/fallback inputs for all voice counts and keeps frozen
   expect(colorForPart(7, 8, theme)).toBe(theme.spectrum[7].css);
   expect(colorForPart(2, 12, theme)).toBe('hsl(94, 70%, 72%)');
   expect(computed).toHaveBeenCalledTimes(reads);
-  values['--ds-color-scheme'] = 'light';
+  values['--ds-material-strategy'] = 'ink'; // Browser scheme deliberately remains dark.
   values['--ds-material-fibre'] = 'paper texture';
   values['--ds-print-ink'] = '#987654';
   api.notifyThemeMaterialChange();
-  expect(api.readTheme().material).toEqual({ surface: 'paper', light: 'ink', composite: 'multiply', onLight: true });
+  expect(api.readTheme().material).toEqual({ surface: 'paper', strategy: 'ink', light: 'ink', composite: 'multiply', onLight: true, paperKind: 'pergament', lanternComposite: 'multiply', ribbonLineComposite: 'source-over' });
   expect(Object.isFrozen(print)).toBe(true);
   expect(print.ink.css).toBe('rgb(0, 0, 0)');
   expect(api.readTheme().print.ink.css).toBe('rgb(152, 118, 84)');
