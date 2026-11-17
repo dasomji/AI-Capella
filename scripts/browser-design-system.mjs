@@ -20,6 +20,16 @@ export async function verifyDesignSystemPage() {
   for (const name of ["navigation/admin", "workspace/page", "workspace/definitions", "button/dense-sort/secondary/default", "toggle-group/admin-language", "dialog/admin-reason", "dialog/admin-confirm", "table/records", "table/metrics", "status/admin", "badge/admin"])
     if (!rows.some(row => row.dataset.specimen === name)) throw Error("Missing admin parity specimen: " + name);
   const mismatches = [];
+  // Read-only record rows contain controls; only keyboard-openable rows are commands.
+  for (const renderer of ["react", "dom"]) {
+    const record = document.querySelector(`[data-specimen="table/records"] [data-renderer="${renderer}"] tbody tr`);
+    if (!record || getComputedStyle(record).cursor === "pointer")
+      throw Error("Static record row has command appearance: " + renderer);
+    record.tabIndex = 0;
+    if (getComputedStyle(record).cursor !== "pointer")
+      throw Error("Openable record row missing command appearance: " + renderer);
+    record.removeAttribute("tabindex");
+  }
   let elements = 0,
     properties = 0,
     attributes = 0;

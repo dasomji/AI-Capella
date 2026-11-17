@@ -179,7 +179,7 @@ function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }
         : "") +
       (mono ? "tw:min-w-(--ds-table-cell-mono-min) tw:font-auth-mono tw:whitespace-nowrap tw:overflow-hidden tw:text-ellipsis tw:max-account:overflow-visible tw:max-account:wrap-anywhere" : "tw:min-w-(--ds-table-cell-min) tw:font-auth-body") + " tw:text-body-small tw:leading-body tw:tabular-nums tw:max-w-(--ds-table-cell-max) tw:px-14 tw:py-12 tw:text-admin-secondary tw:first:text-admin-ink tw:align-top tw:border-0 tw:border-b tw:border-solid tw:border-admin-rule",
     row:
-      variant === "records" ? "tw:hover:bg-table-row-hover tw:cursor-pointer" : "tw:bg-transparent",
+      variant === "records" ? "tw:[&[tabindex]]:hover:bg-table-row-hover tw:[&[tabindex]]:cursor-pointer" : "tw:bg-transparent",
     empty: "tw:p-24 tw:text-admin-secondary tw:text-left",
     pagination:
       "tw:flex tw:items-center tw:flex-wrap tw:gap-12 tw:mt-12 tw:mb-24 tw:font-auth-body tw:text-body tw:leading-body tw:text-admin-ink tw:tabular-nums",
