@@ -50,6 +50,19 @@
     cursor: pointer;
     touch-action: none
 }
+/* At tablet landscape widths, use the compact footer before desktop commands collide. */
+@media (width >= theme(--breakpoint-panel)) and (width < theme(--breakpoint-transport)) {
+    #player {
+        grid-template-rows: var(--ds-player-tablet-rows);
+        grid-template-areas: var(--ds-player-tablet-areas)
+    }
+}
+/* The notch excludes essential score labels too; inset the entire measured player grid.
+   Renderers retain their pointer coordinate and DPR calculations inside that grid. */
+#player {
+    margin-left: var(--ds-safe-left);
+    margin-right: var(--ds-safe-right)
+}
 @media (width < theme(--breakpoint-panel)) {
     /* Phone grid tracks must settle before roll/staff viewport measurement. */
     #player {
