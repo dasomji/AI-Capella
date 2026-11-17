@@ -51,12 +51,12 @@ export function workspaceRecipe(part: WorkspacePart) {
   const classes=parts[part];
   const type=(/tw:font-(auth-body|auth-display|auth-mono)/.test(classes)?'':'tw:font-auth-body ')+(/tw:text-(body|body-small|label|small|section|admin|metric|workspace-heading|workspace-wordmark)( |$)/.test(classes)?'':'tw:text-body ')+(/tw:leading-/.test(classes)?'':"tw:leading-leading-body ")+(/tw:text-admin-(ink|secondary)/.test(classes)?'':'tw:text-admin-ink ');
   const typography=['page','header','wordmark','title','heading','subheading','note','legend','term','value','mono','content'];
-  return typography.includes(part) ? normalizeRecipe('tw:box-border '+(part==='subheading'?'':'tw:tabular-nums ')+type+classes) : classes;
+  return typography.includes(part) ? normalizeRecipe('tw:box-border '+(part==='subheading'?'tw:normal-nums ':'tw:tabular-nums ')+type+classes) : classes;
 }
 export interface NavigationOptions { variant?: 'admin' }
 export function navigationRecipe(_options: NavigationOptions={}) {
   return normalizeRecipe({
-    root:"tw:flex tw:gap-section tw:overflow-auto tw:max-account:gap-action",
+    root:"tw:normal-nums tw:flex tw:gap-section tw:overflow-auto tw:max-account:gap-action",
     item:(current=false)=>"tw:inline tw:shrink-0 tw:font-auth-mono tw:font-weight-body tw:text-body-small tw:leading-leading-admin tw:uppercase tw:tracking-(--ds-tracking-label) tw:py-inline tw:px-flush tw:whitespace-nowrap tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:[outline-color:var(--ds-admin-accent)] tw:focus-visible:outline-offset-(--ds-space-tight) tw:tabular-nums "+(current?'tw:text-admin-accent tw:underline tw:underline-offset-(--ds-space-small)':'tw:text-admin-ink tw:no-underline'),
   });
 }

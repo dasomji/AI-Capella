@@ -260,7 +260,7 @@ function fieldRecipeStyles(
     label:
       variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-leading-body tw:text-ink" : variant === "domain" ? "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-(--ds-domain-label-tracking) tw:leading-leading-admin tw:text-ink-secondary" : ruled && !admin
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-tracking-auth-label tw:leading-leading-field tw:text-ink-secondary"
-        : admin ? "tw:text-label tw:font-auth-body tw:leading-leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-leading-body tw:text-ink-secondary",
+        : admin ? "tw:normal-nums tw:text-label tw:font-auth-body tw:leading-leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-leading-body tw:text-ink-secondary",
     control: [
       admin ? adminControlBase : variant === "ruled" || variant === "transcription" ? unfocusedControlBase : prompt ? unfocusedControlBase + " tw:outline-none tw:outline-offset-(--ds-space-micro)" : controlBase,
       variant === "ruled" || variant === "transcription" ? "" : disabledRecipe,
