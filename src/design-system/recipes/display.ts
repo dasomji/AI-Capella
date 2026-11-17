@@ -151,7 +151,7 @@ function statusRecipeStyles({ intent = "neutral", variant = "standard" }: Feedba
 }
 function emptyStateRecipeStyles({ variant = "standard" }: EmptyStateOptions = {}) {
   return {
-    root: "tw:m-flush tw:font-control tw:leading-leading-body tw:grid tw:gap-control tw:text-center tw:text-ink-secondary tw:min-w-flush " + (variant === "jobs-hidden" ? "tw:hidden" : variant === "compact" ? "tw:py-control" : "tw:py-section tw:max-w-width-empty tw:mx-auto"),
+    root: "tw:m-flush tw:font-control tw:leading-leading-body tw:gap-control tw:text-center tw:text-ink-secondary tw:min-w-flush " + (variant === "jobs-hidden" ? "tw:hidden" : "tw:grid " + (variant === "compact" ? "tw:py-control" : "tw:py-section tw:max-w-width-empty tw:mx-auto")),
     title: "tw:m-flush tw:font-control tw:font-weight-label tw:text-body tw:leading-leading-body tw:text-ink",
     body: "tw:m-flush tw:font-control tw:text-body-small tw:leading-leading-body tw:text-ink-secondary",
     actions: "tw:flex tw:flex-wrap tw:justify-center tw:gap-control",
