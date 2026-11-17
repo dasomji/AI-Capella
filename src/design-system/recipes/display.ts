@@ -6,11 +6,13 @@ export const cardVariants = [
   "material",
   "admin",
   "tour",
+  "power-hint",
 ] as const;
 export interface CardOptions {
   variant?: (typeof cardVariants)[number];
 }
 function cardRecipeStyles({ variant = "surface" }: CardOptions = {}) {
+  if (variant === "tour" || variant === "power-hint") return "tw:box-border tw:m-0 tw:border-0 tw:bg-ink tw:text-surface-sunken tw:font-body tw:leading-body " + (variant === "tour" ? "tw:px-18 tw:pt-14 tw:pb-12 tw:rounded-transcription-tile tw:shadow-note" : "tw:px-16 tw:pt-14 tw:pb-10 tw:rounded-card tw:shadow-component-toast");
   const appearances = {
     surface: "tw:bg-surface tw:text-ink tw:border-rule-strong tw:rounded-card",
     raised:
@@ -19,11 +21,10 @@ function cardRecipeStyles({ variant = "surface" }: CardOptions = {}) {
       "tw:bg-material-card tw:text-ink tw:border-rule-strong tw:rounded-card tw:shadow-material-lift",
     admin:
       "tw:bg-admin-surface tw:text-admin-ink tw:border-admin-rule tw:rounded-field",
-    tour: "tw:bg-ink tw:text-surface-sunken tw:border-transparent tw:rounded-transcription-tile",
   };
   return (
     "tw:box-border tw:m-0 " +
-    (variant === "tour" ? "tw:px-18 tw:py-14" : "tw:p-18") +
+    "tw:p-18" +
     " tw:border tw:border-solid " + (variant==="admin"?"tw:font-auth-body tw:text-body tw:leading-body ":"tw:font-body tw:leading-body ") +
     appearances[variant]
   );
