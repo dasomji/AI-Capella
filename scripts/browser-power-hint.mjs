@@ -59,7 +59,7 @@ try {
       }, order);
       // Entrances start on the next frame: getAnimations() alone can return an empty list
       // before .open/.show are applied, leaving the sheet translated offscreen in CI.
-      await page.waitForFunction(() => document.querySelector('dialog[open][data-sheet-state="open"]') && document.querySelector(".power-hint.show"));
+      await page.waitForFunction(() => document.querySelector('dialog[open][data-panel-state="open"]') && document.querySelector(".power-hint.show"));
       await page.evaluate(async () => {
         await document.fonts.ready;
         await Promise.all(document.getAnimations().map((animation) => animation.finished));
