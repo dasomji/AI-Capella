@@ -373,6 +373,22 @@ export async function verifyP3ReviewFixes() {
       await wait(16);
     }
   };
+  const focusAudit = document.createElement("div");
+  focusAudit.style.textTransform = "uppercase";
+  document.body.append(focusAudit);
+  try {
+    for (const [variant, offset] of [["standard", "4px"], ["dense", "3px"], ["player-play", "2px"]]) {
+      const button = D.createButton({ variant, text: "Focus offset" });
+      focusAudit.append(button);
+      button.focus({ preventScroll: true });
+      assert(button.matches(":focus-visible"), `${variant} fixture has keyboard focus`);
+      assert(getComputedStyle(button).outlineOffset === offset, `${variant} focus offset is ${offset}`);
+    }
+    const input = D.createInput({ variant: "admin", value: "MixedCase" });
+    const field = D.createField({ variant: "admin", label: "MixedCase", control: input });
+    focusAudit.append(field);
+    assert(getComputedStyle(field).textTransform === "none" && getComputedStyle(field.querySelector("label")).textTransform === "none" && getComputedStyle(input).textTransform === "none", "Admin field and control retain normal casing inside uppercase parent");
+  } finally { focusAudit.remove(); }
   const opener = document.createElement("button");
   opener.textContent = "Regression opener";
   document.body.append(opener);

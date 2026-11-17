@@ -45,9 +45,11 @@
     "test:browser:keyboard": "P4C_KEYBOARD=1 DESIGN_BROWSER_SCRIPT=scripts/browser-p4c-parity.mjs node scripts/browser-design-dev.mjs",
     "test:browser:admin-parity": "BROWSER_SCRIPT=scripts/browser-admin-parity.mjs node scripts/browser-isolated.mjs",
     "test:browser:auth-flows": "BROWSER_SCRIPT=scripts/browser-auth-p4a-flows.mjs node scripts/browser-isolated.mjs",
-    "test:design-mutants": "node scripts/design-mutants.mjs"
+    "test:design-mutants": "node scripts/design-mutants.mjs",
+    "check:design-utilities": "node scripts/check-design-utilities.mjs"
   },
   "devDependencies": {
+    "@tailwindcss/node": "4.3.5",
     "@tailwindcss/vite": "4.3.5",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^22.20.5",

@@ -255,3 +255,27 @@ it('preserves unselectable landing notes and the library Menu ink focus outline'
   expect(menu).toContain('tw:focus-visible:outline-ink');
   expect(menu).not.toContain('tw:focus-visible:outline-focus');
 });
+
+it('emits every authored utility through the real app compiler, excluding only structural peer', async () => {
+  const {auditDesignUtilities,compileDesignUtilities}=await import('../scripts/check-design-utilities.mjs');
+  const result=await auditDesignUtilities();
+  expect(result.candidates).toBeGreaterThan(1000);
+  expect(result.missing).toEqual([]);
+  expect(result.ignoredMarkers.every(marker=>marker==='tw:peer')).toBe(true);
+  // Negative controls reproduce a missing semantic offset and an unknown stacking alias.
+  expect(await compileDesignUtilities(['tw:focus-visible:outline-offset-compact','tw:z-definitely-absent'])).toEqual([null,null]);
+},15000);
+
+it('emits the standard, admin and player focus offsets from their authored spacing roles', async () => {
+  const {compileDesignUtilities}=await import('../scripts/check-design-utilities.mjs');
+  const {default:postcss}=await import('postcss');
+  const cases: [r.ButtonOptions['variant'],string][]=[['standard','compact'],['dense','tight'],['player-play','micro']];
+  for(const [variant,scale] of cases) {
+    const candidates=r.buttonRecipe({variant}).split(/\s+/).filter(candidate=>candidate.includes('outline-offset'));
+    expect(candidates.length,variant).toBeGreaterThan(0);
+    const emitted=await compileDesignUtilities(candidates);
+    const values: string[]=[];
+    for(const css of emitted){expect(css,variant).not.toBeNull();if(css)postcss.parse(css).walkDecls('outline-offset',d=>{values.push(d.value);});}
+    expect(values,variant).toContain(`var(--ds-space-${scale})`);
+  }
+},15000);

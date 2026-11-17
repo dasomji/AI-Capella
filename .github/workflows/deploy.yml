@@ -54,7 +54,7 @@ jobs:
             unit) npm test && TZ=America/New_York npm test ;;
             build) npm run build ;;
             secrets) npm run check:secrets ;;
-            design-tokens) npm run check:design-tokens ;;
+            design-tokens) npm run check:design-tokens && npm run check:design-utilities ;;
             eval) npm run eval:transcription -- --dry-run ;;
             migration) npm run build && npm run test:migration ;;
             backup) npm run test:backup ;;
