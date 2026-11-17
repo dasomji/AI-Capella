@@ -1,3 +1,4 @@
+import { emptyStateRecipe } from "./display";
 import { normalizeRecipe } from "./normalize";
 import { accountStyles } from "./account";
 /** D02/D08/D12/D13: library controls, cards and overlays share named semantic slots. */
@@ -15,14 +16,14 @@ const libraryStyles = {
   songMeta: "tw:flex tw:items-center tw:flex-wrap tw:gap-library-song-meta-gap tw:min-h-action tw:text-ink-secondary tw:text-align-inherit tw:[font-size:var(--ds-type-library-meta-font-size)] tw:[white-space:var(--ds-type-library-meta-white-space)]",
   vdots: "tw:text-start tw:whitespace-normal tw:inline-flex tw:gap-tight tw:flex-none tw:[&_i]:w-segment tw:[&_i]:h-segment tw:[&_i]:rounded-round tw:[&_i]:[background:var(--c)]",
   songMore: "tw:absolute tw:right-small tw:top-small tw:surface-library-song-more-background tw:text-ink tw:text-center tw:max-compact-inclusive:top-center tw:max-compact-inclusive:right-library-phone-song-more-right tw:max-compact-inclusive:[transform:var(--ds-library-phone-song-more-transform)] tw:max-compact-inclusive:surface-library-phone-more-background tw:max-compact-inclusive:text-ink-secondary tw:[&:hover]:bg-surface-overlay tw:[&:hover]:text-ink",
-  emptyNote: "tw:col-span-full tw:text-ink-secondary tw:p-library-empty-note-padding tw:list-none",
+  emptyNote: "tw:col-span-full tw:min-w-flush tw:p-flush tw:col-span-full tw:list-none",
   soundPrompt: "tw:fixed tw:left-center tw:top-library-sound-prompt-top tw:z-dialog tw:hidden tw:items-center tw:gap-inline tw:p-library-sound-prompt-padding tw:border-0 tw:rounded-pill tw:surface-ink tw:text-surface-sunken tw:type-library-sound-prompt-font tw:[white-space:var(--ds-library-sound-prompt-white-space)] tw:max-w-library-sound-prompt-max-width tw:shadow-library-sound-prompt-box-shadow tw:[transform:var(--ds-library-sound-prompt-transform)] tw:[cursor:var(--ds-library-sound-prompt-cursor)] tw:[&.show]:inline-flex tw:[&_svg]:w-action tw:[&_svg]:h-action",
   paperList: "tw:grid tw:gap-inline tw:mt-row",
   paperOption: "tw:grid tw:grid-cols-paper-options tw:gap-row tw:items-center tw:p-small tw:rounded-card tw:frame-all-library-paper-option-border tw:text-left tw:motion-library-paper-option-transition tw:[&:hover]:border-rule-strong tw:[&[aria-checked=true]]:border-ink tw:[&[aria-checked=true]]:surface-paper-selected-surface tw:max-phone-inclusive:grid-cols-1",
   paperSwatch: "tw:text-start tw:w-library-paper-swatch-width tw:h-library-paper-swatch-height tw:rounded-menu tw:block tw:surface-library-paper-swatch-background tw:overflow-clip tw:max-phone-inclusive:w-full",
   paperText: "tw:text-start tw:grid tw:gap-compact tw:text-note tw:leading-library-paper-text-line-height tw:text-ink-secondary tw:[&_b]:text-ink tw:[&_b]:text-button",
   landingAside: "tw:text-body-small",
-  landingEmpty: "tw:pt-library-landing-empty-padding-top tw:text-center tw:border-0 tw:max-w-library-landing-empty-max-width tw:m-auto tw:[&_>_p:first-child]:type-library-landing-empty-p-first-child-font tw:[&_.btn]:block tw:[&_.btn]:m-library-landing-empty-btn-margin tw:[&_.link-btn]:block tw:[&_.link-btn]:m-library-landing-empty-link-btn-margin tw:[&_.ds-library-link]:block tw:[&_.ds-library-link]:m-library-landing-empty-link-btn-margin tw:[&_[data-ds='button']]:block tw:[&_[data-ds='button']]:m-library-landing-empty-btn-margin",
+  landingEmpty: emptyStateRecipe().root + " tw:[&>p]:m-flush tw:[&>p]:font-control tw:[&>p]:leading-leading-body tw:[&>p:first-child]:text-body tw:[&>p:first-child]:font-weight-label tw:[&>p:first-child]:text-ink tw:[&>p:not(:first-child)]:text-body-small tw:[&>p:not(:first-child)]:text-ink-secondary tw:[&[hidden]]:hidden!",
   searchInput: "tw:font-inherit tw:font-family-inherit tw:text-inherit tw:p-library-search-input-padding",
   overlay: "tw:text-ink tw:font-inherit tw:font-family-inherit tw:outline-none tw:box-border tw:surface-material-vellum-strong tw:[backdrop-filter:var(--ds-material-filter-strong)] tw:frame-all-library-overlay-border tw:shadow-domain-sheet-shadow tw:font-smoothing-inherit tw:locale-inherit tw:tap-highlight-inherit tw:[&::backdrop]:surface-library-overlay-backdrop tw:[&_*]:font-smoothing-inherit tw:[&_*]:locale-inherit tw:[&_*]:tap-highlight-inherit",
   overlayContent: "tw:block",
