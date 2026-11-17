@@ -19,17 +19,6 @@
   }
 }
 
-/* Animation frames require CSS keyframes; recipes select the token-backed animation. */
-
-@keyframes pulse {
-  from {
-    opacity: var(--ds-shell-pulse-opacity-360);
-  }
-  to {
-    opacity: var(--ds-shell-pulse-opacity-361);
-  }
-}
-
 /* Typed interpolation of the generated ink-writing percentage requires @property. */
 
 @property --written {

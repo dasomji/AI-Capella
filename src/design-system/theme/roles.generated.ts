@@ -1052,8 +1052,6 @@ export const themeRoleNames = [
   "shell-power-hint-p-font-size-159",
   "shell-power-hint-p-line-height-160",
   "shell-power-hint-p-margin-158",
-  "shell-pulse-opacity-360",
-  "shell-pulse-opacity-361",
   "shell-rise-opacity-358",
   "shell-rise-transform-357",
   "shell-roll-staff-transform-82",
