@@ -1,4 +1,4 @@
-# Shared primitives (AICAP-28 P3)
+# Shared primitives
 
 Recipes in `src/design-system/recipes` are pure TypeScript with literal `tw:` classes. React
 and DOM adapters import the same functions. They have no runtime dependencies. `ds-reset` is
@@ -125,7 +125,7 @@ is at the top. There is no legacy toast variant or `#toast` appearance CSS.
 class/query hooks remain for event delegation, tours and renderer measurement. Native controls keep inherited color-scheme, visibility,
 pointer-events, accent-color and print-color-adjust despite the opt-in reset.
 
-## Rules for P4/P5 agents
+## Screen implementation rules
 
 1. Use typed primitives and named variants. Keep className/style and screen-scoped CSS out of
    call sites. Request new named roles from the primitive owner. `layout` accepts one role or
@@ -191,10 +191,10 @@ context, `verifyP3ReducedMotion`. Inspect returned mismatches (must be empty). T
 computed properties and before/after pseudo-elements, exercise native focus behavior, and
 mutate/restore one role to prove both adapters react to a token-only edit. The context check
 neutralizes only the two host shells' layout dimensions; component appearance still competes
-with the actual auth/admin composition recipes. Evidence stays outside git under
-`/tmp/aicap-design/evidence/p3-fix/` (review fixes) and `p3/` (original baseline).
+with the actual auth/admin composition recipes. Run `npm run test:browser:design-system`;
+set `BROWSER_EVIDENCE` for captures outside git.
 
-### Library parity (P5 slice 1)
+### Library parity
 
 `library-open` / `library-more`, `landing-mode`, `landing-link` / `landing-aside` /
 `landing-create`, `library-action`, `paper-choice`, `sound-prompt` and `offline-update`
@@ -214,7 +214,7 @@ shared native panel-motion controller; sheets keep the slide/swipe controller. F
 scroll lock remain with the native dialog until the exit completes, with reduced motion closing
 immediately. The recipes retain their separate historical scale inputs.
 
-### Account/ensemble/offline parity (P5 slice 2)
+### Account/ensemble/offline parity
 
 `ensemble-switch` / `ensemble-other`, `device-link` and `account-delete-confirm` keep the
 navigation and deletion action appearances. The final deletion command retains its historical
@@ -232,7 +232,7 @@ Update builder controls with `updateButton`. When screen code changes a native a
 also present in the builder's initial `attrs` (for example transcription entry `hidden`),
 pass its current value in the update so initial construction state is not reapplied.
 
-### Player toolbar and mixer parity (P5 slice 3)
+### Player toolbar and mixer parity
 
 `createVoiceRow`, `createVoiceChip` and `createMixerVolume` compose native controls from shared
 Button/IconButton/Input primitives. Player slots and Transport recipes own header, footer,
@@ -255,7 +255,7 @@ preserving the previous modal command boundary. Do not copy an initial `aria-pre
 builder `attrs`: pass `pressed`, then update it through `updateButton`. Play labels update
 through the same state API so construction-time attributes cannot restore an old label.
 
-### Numeric, sections, export and utility parity (P5 slice 4)
+### Numeric, sections, export and utility parity
 
 `createMainScreen` builds the main domain shell directly from shared controls, with translated
 text/icon callbacks and the existing canvas/layout hooks. No legacy-control template pass is

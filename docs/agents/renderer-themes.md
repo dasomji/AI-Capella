@@ -32,7 +32,7 @@ A4, margins and engraving defaults remain in `exportPdf.ts`.
 
 ## Exact renderer roles
 
-The pre-P2 appearance (`46831e3`) is retained by distinct inputs in `tokens.css`: gel deep
+The original appearance is retained by distinct inputs in `tokens.css`: gel deep
 shading, lantern cavity/occlusion/glow, paper strand/light/fleck/transmission, wordmark rim,
 individual name/ribbon/stage/staff temperatures, wave shades/grounds, cover ground, keyboard
 separator/shadow, row/hole-edge shadows and brand tile. Theme-independent inputs live in
