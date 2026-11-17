@@ -34,7 +34,7 @@ export function createOverlayRecipes(extensions: {
  menu?:()=>{root:string;item:string;danger:string;check:string;option?:string;value?:string;chevron?:string;sub?:string};
 } = {}) {
 
-const centeredPanel = "tw:fixed tw:inset-flush tw:m-auto tw:h-fit tw:box-border tw:overflow-auto tw:overscroll-contain tw:outline-none tw:w-width-dialog tw:max-w-max-width-dialog tw:max-h-max-height-dialog tw:border-(length:--ds-stroke-thin) tw:border-solid tw:border-rule-strong tw:rounded-dialog tw:p-section tw:bg-surface-raised tw:text-ink tw:font-body tw:leading-leading-body tw:shadow-component-overlay-shadow tw:backdrop:bg-backdrop tw:motion-library-prompt-transition tw:data-[panel-state=entering]:opacity-opacity-hidden tw:data-[panel-state=closing]:opacity-opacity-hidden tw:motion-reduce:transition-none";
+const centeredPanel = "tw:fixed tw:inset-flush tw:m-auto tw:h-fit tw:box-border tw:overflow-auto tw:overscroll-contain tw:outline-none tw:max-w-max-width-dialog tw:max-h-max-height-dialog tw:border-(length:--ds-stroke-thin) tw:border-solid tw:rounded-dialog tw:p-section tw:bg-surface-raised tw:text-ink tw:font-body tw:leading-leading-body tw:shadow-component-overlay-shadow tw:backdrop:bg-backdrop tw:motion-library-prompt-transition tw:data-[panel-state=entering]:opacity-opacity-hidden tw:data-[panel-state=closing]:opacity-opacity-hidden tw:motion-reduce:transition-none";
 function dialogRecipeStyles({ variant = "dialog", destructive = false }: DialogOptions = {}) {
   if (variant === "library-prompt" || variant === "library-sheet" || variant === "library-popover") return extensions.dialog?.(variant) ?? missingArea("library dialog");
   const admin = variant === "drawer" || variant === "admin-detail" || variant === "admin-confirm" || variant === "admin-reason";
@@ -42,7 +42,7 @@ function dialogRecipeStyles({ variant = "dialog", destructive = false }: DialogO
   return {
     panel: (review
       ? "tw:fixed tw:inset-flush tw:box-border tw:w-screen tw:h-dvh tw:max-w-none tw:max-h-none tw:m-flush tw:border-0 tw:rounded-field tw:p-section tw:max-score:p-content tw:bg-surface tw:text-ink tw:font-body tw:overflow-auto tw:outline-none tw:backdrop:bg-backdrop"
-      : centeredPanel + (variant === "domain-sheet" || variant === "sheet" || admin ? " tw:w-width-sheet" : variant === "transcription" ? " tw:w-width-transcription" : "")) + (admin ? " tw:tabular-nums" : "") + (destructive ? " tw:border-danger" : ""),
+      : centeredPanel + (variant === "domain-sheet" || variant === "sheet" || admin ? " tw:w-width-sheet" : variant === "transcription" ? " tw:w-width-transcription" : " tw:w-width-dialog")) + (admin ? " tw:tabular-nums" : "") + (destructive ? " tw:border-danger" : " tw:border-rule-strong"),
     content: "tw:grid tw:gap-row tw:min-w-flush",
     header: "tw:flex tw:items-center tw:justify-between tw:gap-group",
     title: review ? "tw:m-flush tw:font-auth-display tw:font-weight-medium tw:text-transcription-title tw:max-score:text-transcription-title-phone tw:leading-leading-label" : "tw:m-flush tw:font-body tw:text-dialog tw:font-weight-strong tw:leading-leading-label tw:wrap-anywhere",
