@@ -102,11 +102,20 @@ for user requests (`escape`, `outside`, `button`, `swipe`); `onClose` reports a 
 Controlled `open=false`, unmount and StrictMode replay dispose silently. Use `requestClose()`
 for cancel buttons and `close()` after successful work. Policies: `escape`/`outside` =
 `close | ignore`, `busyCancel` = `block | allow` (block by default). Explicit close always works.
-Shared sheet variants slide in/out and reuse the legacy swipe thresholds through
-`behavior/sheet.ts`; cancellation still obeys busy policy. They retain the native top layer
-until the transform transition completes, with a fallback derived from its CSS duration.
-Reduced motion closes immediately. The unused legacy overlay constructors and their 160ms fallback are removed.
+D12 centers all dialogs except `transcription-review`, which stays full-screen. Historical
+`Sheet`/`Drawer` and DOM builder names remain compatible centered aliases; no swipe dismissal
+or drag handle remains. Use `<Dialog variant="admin-detail" open={open} title={title}
+behavior={{opener, busy}} onCancel={close}>…</Dialog>` for admin details. Its content scrolls
+inside the viewport-bounded panel. `openDialog` measures `visualViewport` on resize/scroll,
+retains safe-area margins and scrolls the focused field into view when a keyboard reduces the
+visible area. The shared fade retains the native top layer through exit; reduced motion closes
+immediately. Presentation stays fixed until close; the next opening uses the current layout.
 
+`ConfirmDialog` / `createConfirmDialog` accept `destructive` and optional
+`confirmAction: {label, onConfirm}`. The generated final action uses `intent="danger"` when
+destructive; these wrappers always use `alertdialog`. Callers supplying custom `actions` must
+set the final button's intent explicitly. Translated labels and asynchronous work remain owned
+by the screen.
 Menus support ArrowUp/Down, Home/End, Enter/Space, Escape and buffered typeahead. Space continues
 a live typeahead buffer; otherwise it activates. Roving focus survives rerenders. React Menu
 accepts a `trigger` and `placement="start" | "end"`, focuses the menu when opened, and returns
@@ -115,11 +124,19 @@ Dispose DOM menus when removing them. Busy and disabled commands are guarded in 
 
 `toast()` is the one lazy notifier across React and DOM; no host component is needed. Its body
 host uses a manual popover in the top layer and survives toast-then-close. Text stays through
-the 300ms exit fade. Latest message replaces the previous one; durations are 3200ms info /
-6500ms error. Errors use `role="alert"`, others `status`. `Toast`/`createToast` and the real host
-consume `toastRecipe({kind})`; host geometry uses `toastPlacementRecipe`. Domain-sheet placement
-is at the top. There is no legacy toast variant or `#toast` appearance CSS.
+the token-defined exit fade. Placement is consistently bottom-center in every context. Brief
+informational notices use `toast-duration-info`; errors persist with a translated dismissal
+button. `toast(text, kind, {action: {label, onSelect}})` and `{persistent: true}` also stay until
+dismissed. Subsequent notices queue behind persistent messages, so a success cannot erase an
+unresolved error. Errors use `role="alert"`, others `status`. Screen operation errors should
+stay within the active panel; field errors use Field's adjacent error slot. Static `Toast` /
+`createToast` consume the same appearance recipe; host geometry uses `toastPlacementRecipe`.
 
+Compact member/scan-job menus stay anchored popovers at every width (D13). `bindRowMenu(details,
+menu.element)` preserves the native disclosure and keyboard contract, uses the popover top layer
+to avoid clipping, and disposes placement/listeners with the owning screen. `anchorPopover` tracks
+resize, captured scrolling, visual viewport and element resizing; collision handling bounds the
+panel and provides inner scrolling. Main library/player menus use centered dialogs.
 `src/ui.ts` retains only `closeOverlay`, `isNarrow` and the domain `MenuItem` type.
 `dom/legacy.ts` documents these signatures; no legacy visual constructors remain. Stable
 class/query hooks remain for event delegation, tours and renderer measurement. Native controls keep inherited color-scheme, visibility,
@@ -210,10 +227,9 @@ DOM Menu items may supply an icon Node, radio semantics and nested `options` wit
 `value`. Labels remain text, disabled commands stay guarded, and the menu owner disposes the
 binding on close. Popovers share native modal focus and measured entrance/fade transport.
 
-Library prompts and popovers retain their measured scale/fade entrance and exit through the
-shared native panel-motion controller; sheets keep the slide/swipe controller. Focus and
-scroll lock remain with the native dialog until the exit completes, with reduced motion closing
-immediately. The recipes retain their separate historical scale inputs.
+Library prompts, main menus and settings panels now share centered geometry and fade through
+`openDialog`. Their legacy variant names retain stable hooks only; they no longer select
+sheets, floating popovers or swiping. Focus, scroll lock and Escape/busy policies remain shared.
 
 ### Account/ensemble/offline parity
 
