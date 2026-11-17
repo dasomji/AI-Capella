@@ -1891,6 +1891,9 @@
 }
 /* Orthogonal type preset. Auth/admin/canvas text intentionally retain their shorter stacks. */
 :root[data-type="revival"] {
+  /* D03: display-sized instructions remain modern; only named brand/title roles are antique. */
+  --ds-font-display: var(--ds-font-body);
+  --ds-font-auth-display: var(--ds-font-body);
   --ds-font-heading: var(--ds-font-body);
   --ds-font-song-title: 'Modern Antique 1889', var(--ds-font-display);
   --ds-weight-mark: 400;
@@ -2099,7 +2102,7 @@
   --ds-choice-hover-transform: translateY(calc(-1 * var(--ds-space-hairline)));
   --ds-library-song-card-lifted-transition: scale 0.18s var(--ds-ease-standard), box-shadow 0.18s var(--ds-ease-standard);
   --ds-library-landing-empty-padding-top: 1rem;
-  --ds-library-landing-empty-p-first-child-font: 500 var(--ds-space-heading) var(--ds-font-auth-display);
+  --ds-library-landing-empty-p-first-child-font: 500 var(--ds-space-heading) var(--ds-font-body);
   --ds-library-landing-empty-btn-margin: var(--ds-space-action) auto var(--ds-space-none);
   --ds-library-landing-empty-link-btn-margin: var(--ds-space-action) auto var(--ds-space-none);
   --ds-library-prompt-max: calc(100vw - var(--ds-space-toolbar));
@@ -2439,7 +2442,7 @@
   --ds-account-content-margin: var(--ds-space-none) auto;
   --ds-account-content-padding: calc(clamp(68px,12vh,120px) + var(--ds-safe-top)) var(--ds-space-none) calc(var(--ds-space-stage) + var(--ds-safe-bottom));
   --ds-account-ribbons-opacity: .28;
-  --ds-account-wordmark-font: 500 clamp(var(--ds-space-switch),8vw,80px)/1.2 var(--ds-font-display);
+  --ds-account-wordmark-font: 500 clamp(var(--ds-space-switch),8vw,80px)/1.2 var(--ds-font-brand);
   --ds-account-wordmark-height: 130px;
   --ds-account-wordmark-margin: var(--ds-space-none) var(--ds-space-none) var(--ds-space-heading);
   --ds-auth-shell-width: min(100%,360px);
