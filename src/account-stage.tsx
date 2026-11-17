@@ -7,6 +7,7 @@ export function LanguageToggle({ language, onChange }: { language: Lang; onChang
   return <div className="language-toggle"><ToggleGroup variant="language" label="Language / Sprache" separator=" · " items={([{ value: 'de', label: 'DE' }, { value: 'en', label: 'EN' }])} value={language} onChange={value => { const next = value as Lang; localStorage.setItem('ai-capella-lang', next); document.documentElement.lang = next; onChange(next); }} /></div>;
 }
 export function AccountStage({ language, onLanguage, children }: { language: Lang; onLanguage: (language: Lang) => void; children: ReactNode }) {
+  useEffect(() => { document.documentElement.lang = language; }, [language]);
   const name = useRef<HTMLHeadingElement>(null);
   const ribbons = useRef<HTMLCanvasElement>(null);
   useEffect(() => {

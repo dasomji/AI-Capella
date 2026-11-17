@@ -120,7 +120,7 @@ function Invitation() {
           <a href="/app">LightScore</a>
         </>
       ) : state === "wrong_account" ? (
-        <Button variant="cta" intent="primary" layout="tw:mt-inline" busy={busy}
+        <Button variant="standard" size="full-width" intent="primary" layout="tw:mt-inline" busy={busy}
           onClick={async () => {
             if (busy) return;
             setBusy(true);
@@ -146,13 +146,13 @@ function Invitation() {
           {text("switchAccount")}
         </Button>
       ) : preview && user ? (
-        <Button variant="cta" intent="primary" layout="tw:mt-inline" busy={busy} onClick={() => void accept()}>
+        <Button variant="standard" size="full-width" intent="primary" layout="tw:mt-inline" busy={busy} onClick={() => void accept()}>
           {text("acceptInvitation")}
         </Button>
       ) : (
         preview && (
           <div>
-            <Button variant="cta" intent="primary" layout="tw:mt-inline" onClick={() => authenticate("signup")}>
+            <Button variant="standard" size="full-width" intent="primary" layout="tw:mt-inline" onClick={() => authenticate("signup")}>
               {text("createAccount")}
             </Button>
             <nav className={accountStageRecipe().links}><Button variant="account-link" onClick={() => authenticate("signin")}>
