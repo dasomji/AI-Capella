@@ -290,3 +290,8 @@ export function switchRecipe(
 ): ReturnType<typeof switchRecipeStyles> {
   return normalizeRecipe(switchRecipeStyles(...args));
 }
+
+/** A positioning slot for a native control with an adjacent action. */
+export function controlGroupRecipe() {
+  return normalizeRecipe("tw:block tw:relative");
+}
