@@ -6,7 +6,6 @@ export const cardVariants = [
   "surface",
   "raised",
   "material",
-  "admin",
   "tour",
   "power-hint",
 ] as const;
@@ -25,15 +24,13 @@ export interface FeedbackOptions {
   variant?: "standard" | "admin" | "account" | "library" | "account-delete" | "offline-prepared";
   intent?: FeedbackIntent;
 }
-/** admin/presets share unselected items pending D10; admin selected is underlined. */
+/** Shared toggle appearances used by account and transcription controls. */
 export const toggleGroupVariants = [
   "segmented",
   "language",
   "transcription",
-  "admin",
-  "admin-language",
-  "presets",
 ] as const;
+export type BadgeOptions = Omit<FeedbackOptions, "variant"> & {variant?: Exclude<FeedbackOptions["variant"], "admin">};
 export interface ToggleGroupOptions {
   /** Optional inline separator preserves text choices without a flex gap. */
   separator?: string;
@@ -68,13 +65,11 @@ function cardRecipeStyles({ variant = "surface" }: CardOptions = {}) {
       "tw:bg-surface-raised tw:text-ink tw:border-rule-strong tw:rounded-card",
     material:
       "tw:surface-material-card tw:text-ink tw:border-rule-strong tw:rounded-card tw:shadow-material-lift",
-    admin:
-      "tw:bg-admin-surface tw:text-admin-ink tw:border-admin-rule tw:rounded-field",
   };
   return (
     "tw:box-border tw:m-flush " +
     "tw:p-action" +
-    " tw:border-(length:--ds-stroke-thin) tw:border-solid " + (variant==="admin"?"tw:font-auth-body tw:text-body tw:leading-leading-body tw:tabular-nums ":"tw:font-body tw:leading-leading-body ") +
+    " tw:border-(length:--ds-stroke-thin) tw:border-solid " + "tw:font-body tw:leading-leading-body " +
     appearances[variant]
   );
 }
@@ -86,10 +81,9 @@ const feedback: Record<FeedbackIntent, string> = {
   error: "tw:text-danger tw:border-danger",
   accent: "tw:text-accent tw:border-accent",
 };
-function badgeRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
+function badgeRecipeStyles({ intent = "neutral", variant = "standard" }: BadgeOptions = {}) {
   if (variant === "offline-prepared") return extensions.badge?.("prepared") ?? missingArea("prepared badge");
   if (variant === "library") return extensions.badge?.("tag") ?? missingArea("library badge");
-  if(variant === "admin")return "tw:inline-block tw:box-border tw:px-segment tw:py-micro tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent tw:font-auth-body tw:text-body-small tw:leading-leading-body " + feedback[intent];
   return (
     "tw:inline-block tw:box-border tw:px-segment tw:py-micro tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent tw:font-body tw:text-small tw:leading-leading-body " +
     feedback[intent]
@@ -100,7 +94,6 @@ function toggleGroupRecipeStyles({
   separator,
 }: ToggleGroupOptions = {}) {
   const itemStyles = (pressed = false) => {
-    if(variant==='admin'||variant==='presets'||variant==='admin-language')return "tw:inline-block tw:box-border tw:normal-nums tw:m-flush tw:min-h-touch tw:px-micro tw:py-compact tw:border-0 tw:rounded-field tw:bg-transparent tw:text-body-small tw:leading-leading-admin tw:cursor-pointer tw:text-center tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:[outline-color:var(--ds-admin-accent)] tw:focus-visible:outline-offset-(--ds-space-tight) " + (variant==='admin-language'?"tw:min-w-heading tw:font-auth-mono ":'tw:font-auth-body ') + (pressed?"tw:text-admin-ink tw:font-weight-label tw:underline tw:underline-offset-(--ds-space-control-dense)":"tw:text-admin-secondary tw:font-weight-body");
     if (variant === "language" && separator !== undefined)
       return "tw:inline-block tw:box-border tw:m-flush tw:min-h-panel tw:min-w-heading tw:px-flush tw:py-compact tw:border-0 tw:rounded-field tw:bg-transparent tw:font-auth-mono tw:text-small tw:font-weight-body tw:leading-leading-admin tw:text-center tw:cursor-pointer tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:[outline-color:var(--ds-focus)] tw:focus-visible:outline-offset-(--ds-space-compact) " + (pressed ? "tw:text-ink" : "tw:text-ink-secondary");
     if (variant === "segmented")
@@ -126,7 +119,7 @@ function toggleGroupRecipeStyles({
     );
   };
   return {
-    root: variant==="admin-language" ? "tw:block tw:font-auth-mono tw:text-small tw:leading-leading-admin tw:text-ink-secondary tw:tabular-nums" : (variant==="admin"||variant==="presets") && separator!==undefined ? "tw:block tw:font-auth-body tw:text-body tw:leading-leading-body tw:tabular-nums " + (variant === "presets" ? "tw:text-admin-ink" : "tw:text-admin-secondary") : variant === "language" && separator !== undefined
+    root: variant === "language" && separator !== undefined
       ? "tw:block tw:font-auth-mono tw:text-small tw:leading-leading-admin tw:text-ink-secondary"
       : "tw:inline-flex tw:items-center tw:flex-wrap " +
       (variant === "segmented"

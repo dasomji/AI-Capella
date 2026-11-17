@@ -17,7 +17,7 @@ export async function verifyDesignSystemPage({ specimens } = {}) {
   if (rows.length < 180) throw Error("Showcase missing primitives");
   for (const name of ["button/account-link/secondary/default", "button/password-toggle/secondary/default", "field/ruled-account/input/invalid", "control-group/trailing-action", "toggle-group/language-separated", "status/account/error"])
     if (!rows.some(row => row.dataset.specimen === name)) throw Error("Missing account parity specimen: " + name);
-  for (const name of ["navigation/admin", "workspace/wordmark", "workspace/page", "workspace/definitions", "button-size/compact/quiet/default", "toggle-group/admin-language", "dialog/admin-reason", "dialog/admin-confirm", "table/records", "table/metrics", "status/admin", "badge/admin"])
+  for (const name of ["button-size/compact/quiet/default", "dialog/admin-detail", "table/records", "table/metrics", "status/admin"])
     if (!rows.some(row => row.dataset.specimen === name)) throw Error("Missing admin parity specimen: " + name);
   for (const name of ["field-group/transcription", "card/tour", "card/power-hint", "dialog/domain-sheet", "dialog/transcription", "dialog/transcription-review", "menu/job", "switch-native/comparison/false"])
     if (!rows.some(row => row.dataset.specimen === name)) throw Error("Missing isolated DOM parity specimen: " + name);
@@ -463,8 +463,8 @@ export async function verifyP3ReviewFixes() {
   } finally {
     fixture.dispose();
   }
-  const parent = D.createDrawer({
-    title: "Parent drawer",
+  const parent = D.createDialog({variant:"admin-detail",
+    title: "Parent dialog",
     content: D.createButton({
       text: "Confirm",
       attrs: { id: "p3-parent-action" },
@@ -479,14 +479,14 @@ export async function verifyP3ReviewFixes() {
   nested.open();
   assert(
     parent.element.open && nested.element.open,
-    "minor9 nested confirm stacks above drawer",
+    "minor9 nested confirm stacks above dialog",
   );
   nested.close();
   await until(() => !nested.element.isConnected, "Nested centered confirm exit completes");
   assert(
     parent.element.open &&
       document.activeElement === parent.element.querySelector("button"),
-    "minor9 nested focus returns inside drawer",
+    "minor9 nested focus returns inside dialog",
   );
   const portal = F.mountReactFixture();
   await wait(30);
@@ -500,7 +500,7 @@ export async function verifyP3ReviewFixes() {
   document
     .getElementById("toast")
     .dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-  assert(parent.element.open, "minor9 toast pointer does not cancel drawer");
+  assert(parent.element.open, "minor9 toast pointer does not cancel dialog");
   parent.close();
   await until(() => !parent.element.isConnected, "Parent centered detail exit completes");
   // Simulate Safari pointer activation leaving activeElement on body.
@@ -710,7 +710,7 @@ export async function verifyOwnerComponents() {
     }
     const accountPassword=document.querySelector(`[data-specimen="field/account-password/input/normal"] [data-renderer="${renderer}"] input`);
     if(accountPassword.getBoundingClientRect().height<44) throw Error('Account password must use shared target height');
-    for(const variant of ['standard','small','transcription','admin-close','admin-copy','library-menu']) {
+    for(const variant of ['standard','small','transcription','library-menu']) {
       const icon=document.querySelector(`[data-specimen="icon-button/${variant}"] [data-renderer="${renderer}"] button`);
       const r=icon.getBoundingClientRect();if(r.width<44||r.height<44)throw Error(`${renderer} ${variant} icon target below 44`);
     }

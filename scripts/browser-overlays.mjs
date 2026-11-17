@@ -19,7 +19,7 @@ try {
    document.body.replaceChildren();
    window.trigger=document.createElement('button');trigger.textContent='Open settings';document.body.append(trigger);trigger.focus();
   },theme);
-  for(const variant of ['dialog','sheet','domain-sheet','library-sheet','library-popover','library-prompt','drawer','admin-detail','transcription','transcription-review']) {
+  for(const variant of ['dialog','sheet','domain-sheet','library-sheet','library-popover','library-prompt','admin-detail','transcription','transcription-review']) {
    if(baseline&&variant==='admin-detail')continue;
    await page.evaluate(({variant,baseline})=>{
     const content=document.createElement('div');

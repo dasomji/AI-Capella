@@ -366,7 +366,7 @@ export function createCard(
 }
 export const createSurface = createCard;
 export function createBadge(
-  options: r.FeedbackOptions &
+  options: r.BadgeOptions &
     ElementOptions & {
       text: string;
     },
@@ -492,9 +492,7 @@ export function createDialog(options: DialogOptions) {
   dialog.setAttribute(
     "role",
     (options.attrs?.role as string) ??
-      (options.variant === "confirm" ||
-      options.variant === "admin-confirm" ||
-      options.variant === "admin-reason"
+      (options.variant === "confirm"
         ? "alertdialog"
         : "dialog"),
   );
@@ -543,10 +541,8 @@ export const createSheet = ({
 }: Omit<DialogOptions, "variant"> & {
   variant?: "sheet" | "domain-sheet" | "library-sheet";
 }) => createDialog({ ...options, variant });
-export const createDrawer = (options: Omit<DialogOptions, "variant">) =>
-  createDialog({ ...options, variant: "drawer" });
 export interface ConfirmDialogOptions extends Omit<DialogOptions, "variant"> {
-  variant?: "confirm" | "admin-confirm" | "admin-reason";
+  variant?: "confirm";
   /** Prefer this generated action for irreversible confirmations; custom actions must set intent themselves. */
   confirmAction?: { label: string; onConfirm: () => void };
 }
@@ -735,61 +731,6 @@ export function createTableParts(
     pagination: () => createTablePagination({ variant }),
     wrap: () => createTableWrap({ variant }),
   };
-}
-
-export function createWorkspace<K extends keyof HTMLElementTagNameMap = "div">(
-  options: ElementOptions & {
-    as?: K;
-    part: r.WorkspacePart;
-    text?: string;
-    content?: Node;
-  },
-) {
-  const node = element(
-    options.as ?? "div",
-    r.workspaceRecipe(options.part),
-    options.text,
-    options,
-  );
-  if (options.content) node.append(options.content);
-  return node;
-}
-export function createNavigationTabs(
-  options: ElementOptions &
-    r.NavigationOptions & {
-      label: string;
-      items: readonly { value: string; label: string; href: string }[];
-      value: string;
-      onNavigate?: (value: string) => void;
-    },
-) {
-  const slots = r.navigationRecipe(options),
-    nav = element("nav", slots.root, undefined, options);
-  nav.setAttribute("aria-label", options.label);
-  for (const item of options.items) {
-    const link = element(
-      "a",
-      slots.item(item.value === options.value),
-      item.label,
-    );
-    link.href = item.href;
-    if (item.value === options.value) link.setAttribute("aria-current", "page");
-    link.addEventListener("click", (event) => {
-      if (
-        options.onNavigate &&
-        !event.metaKey &&
-        !event.ctrlKey &&
-        !event.shiftKey &&
-        !event.altKey &&
-        event.button === 0
-      ) {
-        event.preventDefault();
-        options.onNavigate(item.value);
-      }
-    });
-    nav.append(link);
-  }
-  return nav;
 }
 
 /** Library composition slots share the same token/recipe boundary as controls. */

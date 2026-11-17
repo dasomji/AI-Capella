@@ -4,17 +4,13 @@ import { normalizeRecipe } from "./normalize";
 const controlBehavior = "tw:box-border tw:disabled:cursor-default tw:aria-disabled:cursor-wait tw:motion-reduce:transition-none";
 const controlFocus = {
   standard: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-focus tw:focus-visible:outline-offset-(--ds-space-compact)",
-  admin: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-admin-accent tw:focus-visible:outline-offset-(--ds-space-tight)",
   library: "tw:focus-visible:outline-solid tw:focus-visible:outline-(length:--ds-stroke-focus) tw:focus-visible:outline-ink tw:focus-visible:outline-offset-(--ds-space-compact)",
 };
 const unfocusedControlBase = controlBehavior + " tw:m-flush";
-const adminControlBase = unfocusedControlBase + " " + controlFocus.admin;
 export const controlBase = unfocusedControlBase + " " + controlFocus.standard;
 export const disabledRecipe =
   "tw:disabled:opacity-(--ds-opacity-disabled) tw:aria-disabled:opacity-(--ds-opacity-disabled)";
 const actionDisabled = "tw:disabled:opacity-(--ds-opacity-disabled-action) tw:aria-disabled:opacity-(--ds-opacity-disabled-action) tw:disabled:pointer-events-none tw:aria-disabled:pointer-events-none";
-const denseDisabled =
-  "tw:disabled:opacity-(--ds-opacity-disabled-admin) tw:aria-disabled:opacity-(--ds-opacity-disabled-admin)";
 export const buttonVariants = [
   "scan-mark-go", "scan-mark-ok",
   "panel-step", "panel-tempo", "panel-round", "panel-preset", "section-mark", "section-word",
@@ -63,8 +59,6 @@ export const iconButtonVariants = [
   "small",
   "library-more", "library-menu",
   "transcription",
-  "admin-close",
-  "admin-copy",
 ] as const;
 export interface IconButtonOptions {
   variant?: (typeof iconButtonVariants)[number];
@@ -83,7 +77,6 @@ export const fieldVariants = [
   "domain",
   "domain-create",
   "transcription",
-  "admin",
 ] as const;
 export type FieldVariant = (typeof fieldVariants)[number];
 export interface FieldOptions {
@@ -91,12 +84,12 @@ export interface FieldOptions {
   density?: ControlDensity;
   invalid?: boolean;
 }
-export const checkboxVariants = ["standard", "permission", "export", "export-voice"] as const;
+export const checkboxVariants = ["standard", "export", "export-voice"] as const;
 export interface CheckboxOptions {
   variant?: (typeof checkboxVariants)[number];
   density?: ControlDensity;
 }
-export const switchVariants = ["player", "player-preference", "admin", "capability", "comparison", "shared-device"] as const;
+export const switchVariants = ["player", "player-preference", "capability", "comparison", "shared-device"] as const;
 export interface SwitchOptions {
   variant?: (typeof switchVariants)[number];
   density?: ControlDensity;
@@ -204,15 +197,11 @@ function iconButtonRecipeStyles({
       "tw:size-panel tw:rounded-icon tw:p-flush tw:font-control tw:text-body tw:leading-leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
     transcription:
       "tw:size-toolbar tw:rounded-field tw:p-flush tw:font-close tw:font-weight-close-light tw:text-close tw:leading-leading-close tw:text-ink-secondary tw:hover:text-ink",
-    "admin-close":
-      "tw:w-auto tw:h-auto tw:rounded-control-dense tw:px-control tw:py-compact tw:font-close tw:text-admin-close tw:leading-leading-admin tw:text-admin-ink",
-    "admin-copy":
-      "tw:w-auto tw:h-auto tw:rounded-control-dense tw:p-compact tw:font-auth-mono tw:text-body-small tw:leading-leading-admin tw:text-admin-ink",
   };
   return [
     variant === "library-menu" ? unfocusedControlBase + " " + controlFocus.library : controlBase,
-    variant.startsWith("admin") ? denseDisabled : disabledRecipe,
-    (variant.startsWith("admin") ? "tw:inline-block tw:text-center " : "tw:inline-grid tw:place-items-center tw:flex-none ") + "tw:border-0 tw:bg-transparent tw:cursor-pointer",
+    disabledRecipe,
+    "tw:inline-grid tw:place-items-center tw:flex-none " + "tw:border-0 tw:bg-transparent tw:cursor-pointer",
     shapes[variant] ?? missingArea(variant),
     size === "compact" ? "tw:min-h-control-height-compact tw:min-w-control-height-compact tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch" : "tw:min-h-control-target-touch tw:min-w-control-target-touch",
   ].join(" ");
@@ -224,36 +213,33 @@ function fieldRecipeStyles(
   const custom = extensions.field?.({variant, invalid, density}, kind);
   if (custom !== undefined) return custom;
   if (variant.startsWith("panel-") || ["player-volume", "account-password", "library-search"].includes(variant)) missingArea(variant);
-  const admin = variant === "admin";
   const domain = variant === "domain" || variant === "domain-create";
   const prompt = variant === "library-prompt";
   const ruled = !["search", "numeric", "repeated-name"].includes(variant);
   return {
-    root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-flush" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-flush tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group") : admin ? "tw:grid tw:gap-snug tw:min-w-flush tw:font-auth-body tw:text-label tw:leading-leading-body tw:normal-case tw:tracking-(--ds-tracking-default) tw:tabular-nums" : "tw:grid tw:gap-snug tw:min-w-flush " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
+    root: variant === "domain-create" ? "tw:flex tw:flex-wrap tw:items-center tw:gap-(--ds-domain-label-gap) tw:min-w-flush" : variant === "ruled-account" ? "tw:block tw:mt-group tw:min-w-flush tw:font-auth-body " + (invalid ? "tw:mb-content" : "tw:mb-group")  : "tw:grid tw:gap-snug tw:min-w-flush " + (variant === "ruled" || variant === "transcription" ? "tw:font-auth-body" : "tw:font-body"),
     label:
-      variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-leading-body tw:text-ink" : variant === "domain" ? "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-(--ds-tracking-label) tw:leading-leading-admin tw:text-ink-secondary" : ruled && !admin
+      variant === "domain-create" ? "tw:font-body tw:text-body tw:leading-leading-body tw:text-ink" : variant === "domain" ? "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-(--ds-tracking-label) tw:leading-leading-admin tw:text-ink-secondary" : ruled
         ? (variant === "ruled-account" ? "tw:block " : "") + "tw:font-auth-mono tw:text-caption tw:font-weight-medium tw:uppercase tw:tracking-tracking-auth-label tw:leading-leading-field tw:text-ink-secondary"
-        : admin ? "tw:normal-nums tw:text-label tw:font-auth-body tw:leading-leading-body tw:text-admin-secondary" : "tw:text-label tw:font-body tw:leading-leading-body tw:text-ink-secondary",
+         : "tw:text-label tw:font-body tw:leading-leading-body tw:text-ink-secondary",
     control: [
-      admin ? adminControlBase : variant === "ruled" || variant === "transcription" ? unfocusedControlBase : prompt ? unfocusedControlBase + " tw:outline-none tw:outline-offset-(--ds-space-micro)" : controlBase,
+      variant === "ruled" || variant === "transcription" ? unfocusedControlBase : prompt ? unfocusedControlBase + " tw:outline-none tw:outline-offset-(--ds-space-micro)" : controlBase,
       variant === "ruled" || variant === "transcription" ? "" : disabledRecipe,
-      "tw:block tw:w-full tw:font-weight-body tw:disabled:cursor-default" + (admin ? " tw:tabular-nums" : ""),
+      "tw:block tw:w-full tw:font-weight-body tw:disabled:cursor-default",
       "tw:font-control tw:text-input tw:leading-leading-field tw:text-ink " + (ruled
         ? "tw:rounded-field tw:border-0 tw:border-b-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent"
         : "tw:rounded-card tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-surface"),
       kind === "textarea" ? "tw:h-auto tw:min-h-control-textarea-height tw:resize-y tw:px-control-padding-inline tw:py-control-padding-block" : controlSizeRecipe(density),
       invalid
         ? "tw:border-danger"
-        : admin
-          ? "tw:border-admin-rule"
-          : domain && kind === "select"
+        : domain && kind === "select"
             ? "tw:border-rule-strong"
             : domain ? "tw:border-ink-secondary"
             : ruled
               ? "tw:border-ink-secondary tw:focus:border-focus"
               : "tw:border-rule-strong tw:focus:border-ink-secondary",
-      ruled && !admin && !domain ? "tw:focus:shadow-focus" : "",
-      admin ? "" : "tw:focus:outline-none",
+      ruled && !domain ? "tw:focus:shadow-focus" : "",
+      "tw:focus:outline-none",
     ].join(" "),
     hint: "tw:m-flush tw:text-label tw:font-body tw:leading-leading-body tw:text-ink-secondary",
     error: "tw:m-flush tw:text-label tw:font-control tw:leading-leading-body tw:text-danger",
@@ -279,9 +265,7 @@ function checkboxRecipeStyles({ variant = "standard", density = "standard" }: Ch
       " " +
       disabledRecipe +
       " tw:appearance-auto tw:leading-leading-body tw:p-flush tw:shrink-0 " +
-      (variant === "permission"
-        ? "tw:size-group tw:accent-admin-accent tw:mt-tight tw:mr-tight tw:mb-tight tw:ml-compact"
-        : "tw:size-action tw:accent-accent"),
+      "tw:size-action tw:accent-accent",
   };
 }
 function switchRecipeStyles({

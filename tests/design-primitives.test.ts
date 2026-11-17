@@ -462,12 +462,12 @@ describe("P3 review regression contracts", () => {
   it("inherits React Field/Table variants and binds DOM table parts once", () => {
     const field = renderToString(
       createElement(R.Field, {
-        variant: "admin",
+        variant: "search",
         label: "Name",
         children: (props) => createElement(R.Input, { ...props }),
       }),
     );
-    expect(field).toContain('data-field-variant="admin"');
+    expect(field).toContain('data-field-variant="search"');
     const table = renderToString(
       createElement(
         R.Table,

@@ -9,9 +9,6 @@ describe("pure recipes", () => {
     expect(r.iconButtonRecipe({ variant: "transcription" })).toContain(
       "tw:text-close",
     );
-    expect(r.iconButtonRecipe({ variant: "admin-close" })).toContain(
-      "tw:text-admin-close",
-    );
     expect(r.selectRecipe({ variant: "domain" })).toContain("tw:border-b-(length:--ds-stroke-thin)");
     expect(r.inputRecipe({ variant: "domain" })).toContain("tw:font-control");
     expect(r.cardRecipe({ variant: "tour" })).toContain("tw:pt-row");
@@ -273,7 +270,7 @@ it('emits every authored utility through the real app compiler, excluding only s
   expect(await compileDesignUtilities(['tw:focus-visible:outline-offset-compact','tw:z-definitely-absent'])).toEqual([null,null]);
 },15000);
 
-it('emits the standard, admin and player focus offsets from their authored spacing roles', async () => {
+it('emits the standard and player focus offsets from their authored spacing roles', async () => {
   const {compileDesignUtilities}=await import('../scripts/check-design-utilities.mjs');
   const {default:postcss}=await import('postcss');
   const cases: [r.ButtonOptions['variant'],string][]=[['standard','compact'],['player-play','micro']];

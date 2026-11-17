@@ -103,7 +103,7 @@ export interface DialogProps
   specimen?: boolean;
 }
 export interface ConfirmDialogProps extends Omit<DialogProps, "variant"> {
-  variant?: "confirm" | "admin-confirm" | "admin-reason";
+  variant?: "confirm";
   /** Use the generated action to inherit deliberate danger treatment. */
   confirmAction?: { label: string; onConfirm: () => void };
 }
@@ -441,7 +441,7 @@ function Badge({
   variant,
   layout,
   ...props
-}: Native<HTMLAttributes<HTMLSpanElement>> & r.FeedbackOptions) {
+}: Native<HTMLAttributes<HTMLSpanElement>> & r.BadgeOptions) {
   return (
     <span
       {...props}
@@ -610,7 +610,7 @@ function Dialog({
       data-dialog-layout={variant === "transcription-review" ? "fullscreen" : "centered"}
       role={
         props.role ??
-        (variant === "confirm" || variant === "admin-confirm" || variant === "admin-reason"
+        (variant === "confirm"
           ? "alertdialog"
           : "dialog")
       }
@@ -644,9 +644,6 @@ function Dialog({
 }
 const Sheet = ({variant="sheet",...props}: Omit<DialogProps, "variant"> & {variant?: "sheet"|"domain-sheet"}) => (
   <Dialog {...props} variant={variant} />
-);
-const Drawer = (props: Omit<DialogProps, "variant">) => (
-  <Dialog {...props} variant="drawer" />
 );
 const ConfirmDialog = ({variant="confirm", confirmAction, actions, ...props}: ConfirmDialogProps) => (
   <Dialog {...props} variant={variant} role="alertdialog" actions={<>{actions}{confirmAction && <Button intent={props.destructive ? "danger" : "primary"} onClick={confirmAction.onConfirm}>{confirmAction.label}</Button>}</>} />
@@ -887,13 +884,5 @@ function TableWrap({
   );
 }
 
-/** Finite semantic composition slots, shared with DOM workspaces. */
-function Workspace({as: Tag = 'div', part, layout, ...props}: Native<HTMLAttributes<HTMLElement>> & {href?:string;as?: 'a'|'main'|'header'|'div'|'section'|'span'|'p'|'h1'|'h2'|'h3'|'dl'|'dt'|'dd'|'pre'|'strong'|'small'|'fieldset'|'legend'; part:r.WorkspacePart;ref?:Ref<any>}) {
-  return <Tag {...props} className={recipes.withLayout(recipes.workspaceRecipe(part),layout)}/>;
-}
-function NavigationTabs({label, items, value, onNavigate, variant, layout, ...props}: Native<HTMLAttributes<HTMLElement>> & r.NavigationOptions & {label:string;items:readonly {value:string;label:string;href:string}[];value:string;onNavigate?:(value:string)=>void}) {
-  const slots=recipes.navigationRecipe({variant});
-  return <nav {...props} aria-label={label} className={recipes.withLayout(slots.root,layout)}>{items.map(item=><a key={item.value} href={item.href} aria-current={value===item.value?'page':undefined} className={slots.item(value===item.value)} onClick={event=>{if(onNavigate&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey&&event.button===0){event.preventDefault();onNavigate(item.value);}}}>{item.label}</a>)}</nav>;
-}
-return { Button, IconButton, ControlGroup, Input, Select, Textarea, Field, FieldGroup, Checkbox, Switch, Card, Surface, Badge, Toolbar, Status, Loading, EmptyState, ToggleGroup, Dialog, Sheet, Drawer, ConfirmDialog, Menu, Toast, Table, TableHeader, TableCell, TableRow, TableEmpty, TablePagination, TableWrap, Workspace, NavigationTabs };
+return { Button, IconButton, ControlGroup, Input, Select, Textarea, Field, FieldGroup, Checkbox, Switch, Card, Surface, Badge, Toolbar, Status, Loading, EmptyState, ToggleGroup, Dialog, Sheet, ConfirmDialog, Menu, Toast, Table, TableHeader, TableCell, TableRow, TableEmpty, TablePagination, TableWrap };
 }

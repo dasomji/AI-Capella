@@ -6,12 +6,10 @@ export const dialogVariants = [
   "library-prompt", "library-sheet", "library-popover",
   "dialog",
   "sheet",
-  "drawer", "admin-detail",
+  "admin-detail",
   "confirm",
   "transcription",
   "domain-sheet", "transcription-review",
-  "admin-confirm",
-  "admin-reason",
 ] as const;
 export type DialogVariant = (typeof dialogVariants)[number];
 export interface DialogOptions {
@@ -19,7 +17,7 @@ export interface DialogOptions {
   destructive?: boolean;
 }
 /** D13: compact row menus remain anchored at every viewport width. */
-export const menuVariants = ["library", "popover", "sheet", "member", "job", "admin"] as const;
+export const menuVariants = ["library", "popover", "sheet", "member", "job"] as const;
 export interface MenuOptions {
   variant?: (typeof menuVariants)[number];
 }
@@ -44,7 +42,7 @@ function dialogRecipeStyles({ variant = "dialog", destructive = false }: DialogO
     title: "tw:m-flush tw:font-auth-display tw:font-weight-medium tw:text-transcription-title tw:max-score:text-transcription-title-phone tw:leading-leading-label",
     body: "tw:m-flush tw:font-auth-body tw:text-body tw:leading-leading-body", actions: "tw:flex tw:gap-inline",
   };
-  const admin = variant === "drawer" || variant === "admin-detail" || variant === "admin-confirm" || variant === "admin-reason";
+  const admin = variant === "admin-detail";
   return {
     panel: centeredPanel + (variant === "domain-sheet" || variant === "sheet" || admin ? " tw:w-width-sheet" : variant === "transcription" ? " tw:w-width-transcription" : " tw:w-width-dialog") + (admin ? " tw:tabular-nums" : "") + (destructive ? " tw:border-danger" : " tw:border-rule-strong"),
     content: "tw:grid tw:gap-row tw:min-w-flush",
@@ -55,7 +53,6 @@ function dialogRecipeStyles({ variant = "dialog", destructive = false }: DialogO
   };
 }
 const sheetRecipe = () => dialogRecipe({ variant: "sheet" });
-const drawerRecipe = () => dialogRecipe({ variant: "drawer" });
 const confirmRecipe = () => dialogRecipe({ variant: "confirm" });
 function menuRecipeStyles({ variant = "popover" }: MenuOptions = {}) {
   if (variant === "library") return extensions.menu?.() ?? missingArea("library menu");
@@ -70,8 +67,7 @@ function menuRecipeStyles({ variant = "popover" }: MenuOptions = {}) {
       controlBase +
       " " +
       disabledRecipe +
-      " ds-menu-item tw:flex tw:items-center tw:gap-control tw:min-h-touch tw:px-control tw:py-flush tw:rounded-control tw:border-0 tw:bg-transparent tw:font-weight-label tw:text-button tw:text-left tw:cursor-pointer " +
-      (variant === "admin" ? "tw:font-auth-mono" : ""),
+      " ds-menu-item tw:flex tw:items-center tw:gap-control tw:min-h-touch tw:px-control tw:py-flush tw:rounded-control tw:border-0 tw:bg-transparent tw:font-weight-label tw:text-button tw:text-left tw:cursor-pointer ",
     danger: "tw:text-danger!",
     check: "tw:ml-auto tw:text-component-menu-check",
   };
@@ -109,6 +105,6 @@ function toastRecipe(
 ): ReturnType<typeof toastRecipeStyles> {
   return normalizeRecipe(toastRecipeStyles(...args));
 }
-return { sheetRecipe, drawerRecipe, confirmRecipe, toastPlacementRecipe, dialogRecipe, menuRecipe, toastRecipe };
+return { sheetRecipe, confirmRecipe, toastPlacementRecipe, dialogRecipe, menuRecipe, toastRecipe };
 }
-export const { sheetRecipe, drawerRecipe, confirmRecipe, toastPlacementRecipe, dialogRecipe, menuRecipe, toastRecipe } = /* @__PURE__ */ createOverlayRecipes();
+export const { sheetRecipe, confirmRecipe, toastPlacementRecipe, dialogRecipe, menuRecipe, toastRecipe } = /* @__PURE__ */ createOverlayRecipes();

@@ -125,7 +125,6 @@
   --pigment-feedback-note: #a9d38a;
   --pigment-feedback-survey: #c891ee;
   --pigment-shadow-menu: #0003;
-  --pigment-shadow-admin-detail: #0008;
   --pigment-score-past: #0d0c16;
   --pigment-score-key-light: #e8e0d2;
   --pigment-canvas-surface: #13121e;
@@ -326,7 +325,6 @@
   --ds-duration-dedication-staff: 3.2s;
   --ds-duration-dedication-night: 3.1s;
   --ds-opacity-disabled: .4;
-  --ds-opacity-disabled-admin: .55;
   --ds-opacity-disabled-auth: .6;
   --ds-opacity-disabled-offline: .45;
   --ds-score-stage-middle-stop: .55;
@@ -448,12 +446,6 @@
   --ds-material-strategy: light;
   --ds-color-scheme: dark;
   --ds-browser-chrome: var(--pigment-page-background);
-  --ds-admin-surface: var(--ds-surface);
-  --ds-admin-ink: var(--ds-ink);
-  --ds-admin-secondary: var(--ds-ink-secondary);
-  --ds-admin-rule: var(--ds-rule-strong);
-  --ds-admin-accent: var(--ds-accent);
-  --ds-admin-danger: var(--ds-danger);
   --ds-transcription-accent: var(--ds-accent);
   --ds-transcription-warning: var(--ds-warning);
   --ds-accent-offline: var(--ds-accent);
@@ -626,11 +618,7 @@
   --ds-shadow-material-lift: 0 var(--ds-space-action) var(--ds-space-touch) calc(-1 * var(--ds-space-group)) var(--pigment-shadow-material-lift);
   --ds-focus: var(--ds-accent);
   --ds-backdrop: var(--pigment-backdrop);
-  --ds-admin-header-rule: var(--ds-danger);
-  --ds-admin-system-surface: var(--ds-surface);
   --ds-shadow-menu: 0 var(--ds-space-small) var(--ds-space-section) var(--pigment-shadow-menu);
-  --ds-shadow-admin-detail: calc(-1 * var(--ds-space-content)) 0 80px var(--pigment-shadow-admin-detail);
-  --ds-shadow-admin-confirm: 0 0 0 100vmax var(--pigment-backdrop);
   --ds-shadow-focus: 0 var(--ds-space-hairline) var(--ds-focus);
   --ds-score-key-light: var(--pigment-score-key-light);
   --ds-score-key-dark: var(--pigment-key-dark);
@@ -644,7 +632,7 @@
   --ds-canvas-mask: var(--pigment-canvas-mask);
   --ds-material-gel-gloss-color: var(--pigment-gel-gloss);
   --ds-action-hover: #fff8ee;
-  --ds-table-row-hover: color-mix(in srgb,var(--ds-admin-accent) 8%,transparent);
+  --ds-table-row-hover: color-mix(in srgb,var(--ds-accent) 8%,transparent);
   --ds-transcription-backdrop: #0009;
   --ds-transcription-selected: inset 0 0 0 var(--ds-space-hairline) var(--ds-transcription-accent);
   --ds-library-mode-btn-border: var(--ds-space-hairline) solid var(--ds-rule-strong);
@@ -943,12 +931,6 @@
   --ds-material-strategy: ink;
   --ds-color-scheme: light;
   --ds-browser-chrome: var(--pigment-browser-chrome);
-  --ds-admin-surface: var(--ds-surface);
-  --ds-admin-ink: var(--ds-ink);
-  --ds-admin-secondary: var(--ds-ink-secondary);
-  --ds-admin-rule: var(--ds-rule-strong);
-  --ds-admin-accent: var(--ds-accent);
-  --ds-admin-danger: var(--ds-danger);
   --ds-transcription-accent: var(--ds-accent);
   --ds-transcription-warning: var(--ds-warning);
   --ds-accent-offline: var(--ds-accent);
@@ -1119,11 +1101,7 @@
   --ds-shadow-material-lift: 0 var(--ds-space-action) var(--ds-space-touch) calc(-1 * var(--ds-space-group)) var(--pigment-shadow-material-lift);
   --ds-focus: var(--ds-accent);
   --ds-backdrop: var(--pigment-backdrop);
-  --ds-admin-header-rule: var(--ds-danger);
-  --ds-admin-system-surface: var(--ds-surface);
   --ds-shadow-menu: 0 var(--ds-space-small) var(--ds-space-section) var(--pigment-shadow-menu);
-  --ds-shadow-admin-detail: calc(-1 * var(--ds-space-content)) 0 80px var(--pigment-shadow-admin-detail);
-  --ds-shadow-admin-confirm: 0 0 0 100vmax var(--pigment-backdrop);
   --ds-shadow-focus: 0 var(--ds-space-hairline) var(--ds-focus);
   --ds-score-key-light: var(--pigment-score-key-light);
   --ds-score-key-dark: var(--pigment-key-dark);
@@ -1137,7 +1115,7 @@
   --ds-canvas-mask: var(--pigment-canvas-mask);
   --ds-material-gel-gloss-color: var(--pigment-gel-gloss);
   --ds-action-hover: #fff8ee;
-  --ds-table-row-hover: color-mix(in srgb,var(--ds-admin-accent) 8%,transparent);
+  --ds-table-row-hover: color-mix(in srgb,var(--ds-accent) 8%,transparent);
   --ds-transcription-backdrop: #0009;
   --ds-transcription-selected: inset 0 0 0 var(--ds-space-hairline) var(--ds-transcription-accent);
   --ds-library-mode-btn-border: var(--ds-space-hairline) solid var(--ds-rule-strong);
@@ -1436,12 +1414,6 @@
   --ds-material-strategy: light;
   --ds-color-scheme: dark;
   --ds-browser-chrome: var(--pigment-page-background);
-  --ds-admin-surface: var(--ds-surface);
-  --ds-admin-ink: var(--ds-ink);
-  --ds-admin-secondary: var(--ds-ink-secondary);
-  --ds-admin-rule: var(--ds-rule-strong);
-  --ds-admin-accent: var(--ds-accent);
-  --ds-admin-danger: var(--ds-danger);
   --ds-transcription-accent: var(--ds-accent);
   --ds-transcription-warning: var(--ds-warning);
   --ds-accent-offline: var(--ds-accent);
@@ -1609,11 +1581,7 @@
   --ds-shadow-material-lift: 0 var(--ds-space-action) var(--ds-space-touch) calc(-1 * var(--ds-space-group)) var(--pigment-shadow-material-lift);
   --ds-focus: var(--ds-accent);
   --ds-backdrop: var(--pigment-backdrop);
-  --ds-admin-header-rule: var(--ds-danger);
-  --ds-admin-system-surface: var(--ds-surface);
   --ds-shadow-menu: 0 var(--ds-space-small) var(--ds-space-section) var(--pigment-shadow-menu);
-  --ds-shadow-admin-detail: calc(-1 * var(--ds-space-content)) 0 80px var(--pigment-shadow-admin-detail);
-  --ds-shadow-admin-confirm: 0 0 0 100vmax var(--pigment-backdrop);
   --ds-shadow-focus: 0 var(--ds-space-hairline) var(--ds-focus);
   --ds-score-key-light: var(--pigment-score-key-light);
   --ds-score-key-dark: var(--pigment-key-dark);
@@ -1627,7 +1595,7 @@
   --ds-canvas-mask: var(--pigment-canvas-mask);
   --ds-material-gel-gloss-color: var(--pigment-gel-gloss);
   --ds-action-hover: #fff8ee;
-  --ds-table-row-hover: color-mix(in srgb,var(--ds-admin-accent) 8%,transparent);
+  --ds-table-row-hover: color-mix(in srgb,var(--ds-accent) 8%,transparent);
   --ds-transcription-backdrop: #0009;
   --ds-transcription-selected: inset 0 0 0 var(--ds-space-hairline) var(--ds-transcription-accent);
   --ds-library-mode-btn-border: var(--ds-space-hairline) solid var(--ds-rule-strong);
@@ -1945,7 +1913,6 @@
   --ds-font-close: sans-serif;
   --ds-weight-close-light: 300;
   --ds-size-close: 27px;
-  --ds-size-admin-close: 28px;
   --ds-leading-close: 1;
   --ds-size-button: 15px;
   --ds-size-toast: 14.5px;
@@ -1963,7 +1930,6 @@
   --ds-max-width-dialog: calc(100vw - var(--ds-space-toolbar));
   --ds-width-sheet: 440px;
   --ds-left-sheet: calc(50% - 220px);
-  --ds-width-drawer: 640px;
   --ds-width-table: 1080px;
   --ds-width-transcription: 560px;
   --ds-max-height-dialog: 92dvh;
@@ -1993,18 +1959,6 @@
 
 /* Workspace parity geometry; D06/D12/D16 retain these independent roles. */
 :root {
-  --ds-workspace-inset: clamp(var(--ds-space-content),4vw,var(--ds-space-stage));
-  --ds-workspace-rule-inset: calc(-1 * var(--ds-workspace-inset));
-  --ds-workspace-rule-phone-inset: calc(-1 * var(--ds-space-content));
-  --ds-workspace-search-min: 180px;
-  --ds-workspace-filter-min: 140px;
-  --ds-workspace-heading-margin: .83em;
-  --ds-workspace-subheading-margin: 1em;
-  --ds-workspace-definition-columns: minmax(100px,1fr) 2fr;
-  --ds-workspace-definition-phone-columns: 1fr 1.5fr;
-  --ds-workspace-metric-columns: repeat(auto-fit,minmax(150px,1fr));
-  --ds-workspace-confirm-width: min(440px,calc(100vw - var(--ds-space-panel)));
-  --ds-workspace-confirm-height: 90dvh;
   --ds-dialog-native-max-width: calc(100% - 2em - var(--ds-space-snug));
   --ds-content-empty: '';
   --ds-size-metric: 26px;
@@ -2528,13 +2482,6 @@
   --color-accent: var(--ds-accent);
   --color-accent-invitation: var(--ds-accent-invitation);
   --color-accent-offline: var(--ds-accent-offline);
-  --color-admin-accent: var(--ds-admin-accent);
-  --color-admin-danger: var(--ds-admin-danger);
-  --color-admin-header-rule: var(--ds-admin-header-rule);
-  --color-admin-ink: var(--ds-admin-ink);
-  --color-admin-rule: var(--ds-admin-rule);
-  --color-admin-secondary: var(--ds-admin-secondary);
-  --color-admin-surface: var(--ds-admin-surface);
   --color-backdrop: var(--ds-backdrop);
   --color-action-hover: var(--ds-action-hover);
   --color-component-action-hover: var(--ds-component-action-hover);
@@ -2748,8 +2695,6 @@
   --radius-tile-dense: var(--ds-radius-tile-dense);
   --radius-tile: var(--ds-radius-tile);
   --radius-track: var(--ds-radius-track);
-  --shadow-admin-confirm: var(--ds-shadow-admin-confirm);
-  --shadow-admin-detail: var(--ds-shadow-admin-detail);
   --shadow-component-overlay-shadow: var(--ds-component-overlay-shadow);
   --shadow-component-toast-shadow: var(--ds-component-toast-shadow);
   --shadow-domain-sheet-shadow: var(--ds-domain-sheet-shadow);
@@ -2951,7 +2896,6 @@
   --spacing-stage: var(--ds-space-stage);
   --spacing-stroke-focus: var(--ds-stroke-focus);
   --spacing-switch: var(--ds-space-switch);
-  --spacing-switch-admin-travel: var(--ds-size-dialog);
   --spacing-title-l-margin-right: var(--ds-title-l-margin-right);
   --spacing-title-name-margin: var(--ds-title-name-margin);
   --spacing-toast-bottom: var(--ds-toast-bottom);
@@ -2984,7 +2928,6 @@
   --spacing-upload-tile-phone-height: var(--ds-upload-tile-phone-height);
   --spacing-voice-row: var(--ds-space-voice-row);
   --spacing-width-dialog: var(--ds-width-dialog);
-  --spacing-width-drawer: var(--ds-width-drawer);
   --spacing-width-empty: var(--ds-width-empty);
   --spacing-width-sheet: var(--ds-width-sheet);
   --spacing-width-table: var(--ds-width-table);
@@ -3044,9 +2987,6 @@
   --surface-surface-sunken: var(--ds-surface-sunken);
   --surface-transcription-accent: var(--ds-transcription-accent);
   --surface-transcription-job-background: var(--ds-transcription-job-background);
-  --text-admin: var(--ds-size-admin);
-  --text-admin-close: var(--ds-size-admin-close);
-  --text-admin-mobile: var(--ds-size-admin-mobile);
   --text-auth-title: var(--ds-size-auth-title);
   --text-body: var(--ds-size-body);
   --text-body-small: var(--ds-size-body-small);

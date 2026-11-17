@@ -2,7 +2,6 @@ export * from "./app-controls";
 export * from "./app-display";
 export * from "./app-overlays";
 export * from './layout';
-export * from './workspace';
 
 export * from './library';
 

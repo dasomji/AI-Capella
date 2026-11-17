@@ -80,7 +80,7 @@ or Invite; changing the visual control must never change when data saves. Switch
 checked/value after the command succeeds. Use `createMenu(...).dispose()` when removing a menu.
 
 Other exports: IconButton, Select, Textarea, Checkbox, Switch, Surface/Card, Badge, ToggleGroup,
-Toolbar, Status, Loading, EmptyState, Sheet, Drawer, ConfirmDialog, Menu, Toast and
+Toolbar, Status, Loading, EmptyState, Sheet, ConfirmDialog, Menu, Toast and
 Table/TableWrap/TableHeader/TableCell/TableRow/TableEmpty/TablePagination. DOM equivalents use
 `create*`; `createTableParts({variant})` binds all table builders to one appearance.
 React Table/TableWrap provide variant context to their parts; Field provides control context.
@@ -93,7 +93,7 @@ screens. These components do not introduce tabs semantics for URL navigation or 
 
 `behavior/openDialog` is the only native modal lifecycle. Native `showModal()` owns background
 inertness; never set author `inert` on modal ancestors or newly opened portals. Dialogs stack:
-a confirm above a drawer leaves the drawer open, then returns focus into it. Scroll lock lasts
+a confirm above a dialog leaves the parent open, then returns focus into it. Scroll lock lasts
 until the final modal closes. React Dialog portals to body, retains title/body ID associations,
 and accepts native aria/data/id hooks. Confirm variants default to `role="alertdialog"`.
 
@@ -104,7 +104,7 @@ Controlled `open=false`, unmount and StrictMode replay dispose silently. Use `re
 for cancel buttons and `close()` after successful work. Policies: `escape`/`outside` =
 `close | ignore`, `busyCancel` = `block | allow` (block by default). Explicit close always works.
 D12 centers all dialogs except `transcription-review`, which stays full-screen. Historical
-`Sheet`/`Drawer` and DOM builder names remain compatible centered aliases; no swipe dismissal
+`Sheet` and its DOM builder remain centered aliases; the unused `Drawer` alias is retired; no swipe dismissal
 or drag handle remains. Use `<Dialog variant="admin-detail" open={open} title={title}
 behavior={{opener, busy}} onCancel={close}>…</Dialog>` for admin details. Its content scrolls
 inside the viewport-bounded panel. `openDialog` measures `visualViewport` on resize/scroll,

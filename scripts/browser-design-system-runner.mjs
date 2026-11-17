@@ -94,10 +94,9 @@ try {
         for (const variant of [
           "dialog",
           "sheet",
-          "drawer",
           "confirm",
           "transcription",
-          "admin-confirm",
+          "admin-detail",
         ]) {
           const isolation = await page.addStyleTag({
             content: `[data-specimen]:not([data-specimen="dialog/${variant}"]){display:none}`,
