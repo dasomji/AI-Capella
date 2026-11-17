@@ -1,6 +1,6 @@
-import { libraryDialogRecipe, libraryMenuRecipe } from "./library";
 import { normalizeRecipe } from "./normalize";
 import { controlBase, disabledRecipe, buttonRecipe } from "./controls";
+
 /** dialog/confirm share appearance pending D14; confirm adds alertdialog semantics. */
 export const dialogVariants = [
   "library-prompt", "library-sheet", "library-popover",
@@ -17,8 +17,24 @@ export type DialogVariant = (typeof dialogVariants)[number];
 export interface DialogOptions {
   variant?: DialogVariant;
 }
+/** popover/sheet/member intentionally alias appearance pending D13; placement is separate. */
+export const menuVariants = ["library", "popover", "sheet", "member", "job", "admin"] as const;
+export interface MenuOptions {
+  variant?: (typeof menuVariants)[number];
+}
+export const toastVariants = ["info", "error"] as const;
+export interface ToastOptions {
+  kind?: (typeof toastVariants)[number];
+  font?: "body" | "auth";
+}
+function missingArea(name:string):never { throw Error("Use app recipes for " + name); }
+export function createOverlayRecipes(extensions: {
+ dialog?:(variant:'library-prompt'|'library-sheet'|'library-popover')=>Record<'panel'|'content'|'header'|'title'|'body'|'actions',string>;
+ menu?:()=>{root:string;item:string;danger:string;check:string;option?:string;value?:string;chevron?:string;sub?:string};
+} = {}) {
+
 function dialogRecipeStyles({ variant = "dialog" }: DialogOptions = {}) {
-  if (variant === "library-prompt" || variant === "library-sheet" || variant === "library-popover") return libraryDialogRecipe(variant);
+  if (variant === "library-prompt" || variant === "library-sheet" || variant === "library-popover") return extensions.dialog?.(variant) ?? missingArea("library dialog");
   if(variant==='drawer'||variant==='admin-confirm'||variant==='admin-reason') {
     const drawer=variant==='drawer';
     return {
@@ -65,16 +81,11 @@ function dialogRecipeStyles({ variant = "dialog" }: DialogOptions = {}) {
     actions: "tw:flex tw:justify-end tw:gap-inline tw:mt-snug",
   };
 }
-export const sheetRecipe = () => dialogRecipe({ variant: "sheet" });
-export const drawerRecipe = () => dialogRecipe({ variant: "drawer" });
-export const confirmRecipe = () => dialogRecipe({ variant: "confirm" });
-/** popover/sheet/member intentionally alias appearance pending D13; placement is separate. */
-export const menuVariants = ["library", "popover", "sheet", "member", "job", "admin"] as const;
-export interface MenuOptions {
-  variant?: (typeof menuVariants)[number];
-}
+const sheetRecipe = () => dialogRecipe({ variant: "sheet" });
+const drawerRecipe = () => dialogRecipe({ variant: "drawer" });
+const confirmRecipe = () => dialogRecipe({ variant: "confirm" });
 function menuRecipeStyles({ variant = "popover" }: MenuOptions = {}) {
-  if (variant === "library") return libraryMenuRecipe();
+  if (variant === "library") return extensions.menu?.() ?? missingArea("library menu");
   if (variant === "member" || variant === "job") return {
     root: "tw:absolute tw:right-flush tw:grid tw:box-border tw:border-(length:--ds-stroke-thin) tw:border-solid tw:border-rule-strong tw:bg-surface-raised tw:text-ink tw:shadow-menu " + (variant === "member" ? "tw:top-full tw:z-stage tw:min-w-menu-member-width tw:p-flush tw:gap-flush" : "tw:z-transcription tw:min-w-menu-job-width tw:p-control tw:gap-small tw:rounded-menu"),
     item: variant === "member" ? controlBase + " " + disabledRecipe + " ds-menu-item tw:flex tw:items-center tw:gap-control tw:min-h-touch tw:px-control tw:py-flush tw:rounded-control tw:border-0 tw:bg-transparent tw:font-body tw:font-weight-label tw:text-button tw:text-left tw:text-ink tw:cursor-pointer" : "ds-job-menu-item " + buttonRecipe({variant:"job-action"}),
@@ -92,11 +103,6 @@ function menuRecipeStyles({ variant = "popover" }: MenuOptions = {}) {
     check: "tw:ml-auto tw:text-component-menu-check",
   };
 }
-export const toastVariants = ["info", "error"] as const;
-export interface ToastOptions {
-  kind?: (typeof toastVariants)[number];
-  font?: "body" | "auth";
-}
 function toastRecipeStyles({
   kind = "info",
   font = "body",
@@ -110,23 +116,26 @@ function toastRecipeStyles({
   );
 }
 /** Body host geometry is separate from the static notification appearance. */
-export function toastPlacementRecipe() {
+function toastPlacementRecipe() {
   return "ds-toast-placement tw:fixed tw:z-toast tw:pointer-events-none tw:inset-auto tw:left-1/2 tw:bottom-toast-bottom tw:max-w-toast-max-width tw:[transform:var(--ds-panel-toast-enter-transform)] tw:opacity-opacity-hidden tw:motion-panel-toast-transition tw:[&.show]:opacity-opacity-visible tw:[&.show]:[transform:var(--ds-panel-toast-shown-transform)] tw:max-panel:bottom-toast-bottom-phone tw:[body:has(.domain-sheet)_&]:top-content tw:[body:has(.domain-sheet)_&]:bottom-auto tw:[body:has(.domain-sheet)_&]:max-w-toast-max-width-sheet";
 }
 
-export function dialogRecipe(
+function dialogRecipe(
   ...args: Parameters<typeof dialogRecipeStyles>
 ): ReturnType<typeof dialogRecipeStyles> {
   return normalizeRecipe(dialogRecipeStyles(...args));
 }
-export function menuRecipe(
+function menuRecipe(
   ...args: Parameters<typeof menuRecipeStyles>
 ): ReturnType<typeof menuRecipeStyles> {
   const slots = menuRecipeStyles(...args);
   return normalizeRecipe({ ...slots, item: slots.item + " tw:relative tw:isolate tw:hover:text-component-menu-hover tw:focus-visible:text-component-menu-hover tw:hover:[text-shadow:var(--ds-component-menu-shadow)] tw:focus-visible:[text-shadow:var(--ds-component-menu-shadow)] tw:hover:before:opacity-opacity-visible tw:focus-visible:before:opacity-opacity-visible" });
 }
-export function toastRecipe(
+function toastRecipe(
   ...args: Parameters<typeof toastRecipeStyles>
 ): ReturnType<typeof toastRecipeStyles> {
   return normalizeRecipe(toastRecipeStyles(...args));
 }
+return { sheetRecipe, drawerRecipe, confirmRecipe, toastPlacementRecipe, dialogRecipe, menuRecipe, toastRecipe };
+}
+export const { sheetRecipe, drawerRecipe, confirmRecipe, toastPlacementRecipe, dialogRecipe, menuRecipe, toastRecipe } = /* @__PURE__ */ createOverlayRecipes();

@@ -1,4 +1,4 @@
-import { accountStageRecipe, brandRecipe } from "./design-system/recipes/shell";
+import { accountStageRecipe, brandRecipe } from "./design-system/recipes/auth";
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Lang } from './i18n';
 import { ToggleGroup } from './design-system/react';

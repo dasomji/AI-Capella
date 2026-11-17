@@ -140,7 +140,7 @@ import other recipes and type-only token/theme declarations. Runtime theme, Reac
 application imports are forbidden, including through re-exports. React and DOM builders own
 native semantics and lifecycle; recipes own visual roles and explicit variants.
 
-`app.css` is the sole CSS/font entry: `theme → fonts → tokens → native → components → utilities`.
+`app.css` is the CSS/font foundation: `theme → fonts → tokens → native → components → utilities`.
 It contains imports and Tailwind directives/mappings, with no ordinary component selectors.
 There is no legacy layer or legacy stylesheet. `recipes/shell.ts` supplies native route/domain
 composition at construction; `dom/main-screen.ts` attaches ID/class slots without DOM scanning.
@@ -151,7 +151,20 @@ limited to native/generated parts. Keep element-local inputs (`--written`, `--de
 colors and measured positions) at their consumer: hoisting their expressions to root freezes
 or invalidates them. Their authored dimensions/timings still come from `tokens.css`.
 
-Root SSR and the offline shell link the generated stylesheet before startup. The finalized
+Production `design-css-split.mjs` restricts the foundation’s utility candidates to shared/auth/admin
+recipes. `workspace.css` emits the app’s library/account/player/panel residue and ordered utilities
+from that same source. `/app` SSR links it eagerly after the foundation, before hydration; the
+offline shell links both in that order and the finalized service-worker manifest precaches both.
+Common utilities repeat in the app output to retain Tailwind’s global ordering when primitive
+and area classes compete. Development `app.css` remains the full catalog entry. See ADR 0005.
+
+Base controls/display/overlay factories accept pure typed extensions. `app-*` recipe modules
+compose those factories with the area recipes. React’s default adapter uses base recipes; DOM
+and the development `react/app` adapter use app composition. Adapter implementations and part
+contracts are shared factories, with no mutable registry. Do not import app recipes from the
+base factories, auth adapter or behavior helpers (including indirect part imports).
+
+Root SSR and the offline shell link the generated stylesheets before startup. The finalized
 service-worker asset manifest includes CSS/fonts and the generated favicon. Browser-installed
 SVG/manifest sources live under `design-system/assets`; `scripts/design-assets.mjs` resolves
 their default-theme roles for development and builds because external icons cannot inherit

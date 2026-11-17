@@ -1,4 +1,4 @@
-import { accountStageRecipe } from "./design-system/recipes/shell";
+import { accountStageRecipe } from "./design-system/recipes/auth";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { AccountStage } from "./account-stage";
 import { Button, ControlGroup, Field, Input, Status } from "./design-system/react";

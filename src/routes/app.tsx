@@ -1,7 +1,8 @@
+import workspaceCss from '../design-system/workspace.css?url';
 import { accountStageRecipe, appShellRecipe } from "../design-system/recipes/shell";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-export const Route = createFileRoute("/app")({ component: Rehearsal });
+export const Route = createFileRoute("/app")({ head: () => ({links:[{rel:'stylesheet',href:workspaceCss}]}), component: Rehearsal });
 function Rehearsal() {
   const [ready, setReady] = useState(false);
   useEffect(() => {

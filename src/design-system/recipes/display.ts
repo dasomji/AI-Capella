@@ -1,7 +1,6 @@
-import { libraryCardRecipe, libraryBadgeRecipe } from "./library";
-import { accountErrorRecipe } from "./account";
 import { normalizeRecipe } from "./normalize";
 import { buttonRecipe, type ButtonOptions } from "./controls";
+
 export const cardVariants = [
   "library",
   "surface",
@@ -14,8 +13,55 @@ export const cardVariants = [
 export interface CardOptions {
   variant?: (typeof cardVariants)[number];
 }
+export const feedbackIntents = [
+  "neutral",
+  "success",
+  "warning",
+  "error",
+  "accent",
+] as const;
+export type FeedbackIntent = (typeof feedbackIntents)[number];
+export interface FeedbackOptions {
+  variant?: "standard" | "admin" | "account" | "library" | "account-delete" | "offline-prepared";
+  intent?: FeedbackIntent;
+}
+/** admin/presets share unselected items pending D10; admin selected is underlined. */
+export const toggleGroupVariants = [
+  "segmented",
+  "language",
+  "transcription",
+  "admin",
+  "admin-language",
+  "presets",
+] as const;
+export interface ToggleGroupOptions {
+  /** Optional inline separator preserves text choices without a flex gap. */
+  separator?: string;
+  variant?: (typeof toggleGroupVariants)[number];
+}
+export const emptyStateVariants = [
+  "landing-actions",
+  "library-text",
+  "admin-text",
+  "jobs-hidden",
+] as const;
+export interface EmptyStateOptions {
+  variant?: (typeof emptyStateVariants)[number];
+}
+/** scroll/metrics intentionally alias until D16; records owns the responsive layout. */
+export const tableVariants = ["records", "scroll", "metrics"] as const;
+export interface TableOptions {
+  bounded?: boolean;
+  mono?: boolean;
+  variant?: (typeof tableVariants)[number];
+}
+/** Shared appearances; screen-owned data/selection/sorting stay outside recipes. */
+export type ToggleItemOptions = ButtonOptions;
+function missingArea(name:string):never { throw Error("Use app recipes for " + name); }
+export function createDisplayRecipes(extensions: {card?:()=>string; badge?:(kind:'prepared'|'tag')=>string; accountError?:()=>string} = {}) {
+
 function cardRecipeStyles({ variant = "surface" }: CardOptions = {}) {
-  if (variant === "library") return libraryCardRecipe();
+  if (variant === "library") return extensions.card?.() ?? missingArea("library card");
   if (variant === "tour" || variant === "power-hint") return "tw:box-border tw:m-flush tw:border-0 tw:bg-ink tw:text-surface-sunken tw:font-body tw:leading-leading-body " + (variant === "tour" ? "ds-tour-note tw:absolute tw:left-flush tw:top-flush tw:w-tour-note-width tw:opacity-opacity-hidden tw:motion-panel-tour-transition tw:[&.shown]:opacity-opacity-visible tw:[&.shown]:duration-note-in tw:px-action tw:pt-row tw:pb-control tw:rounded-tile tw:shadow-note-shadow" : "ds-power-note tw:fixed tw:left-1/2 tw:bottom-toast-bottom tw:z-note tw:w-power-note-width tw:[transform:var(--ds-panel-note-enter-transform)] tw:opacity-opacity-hidden tw:motion-panel-toast-transition tw:[&.show]:opacity-opacity-visible tw:[&.show]:[transform:var(--ds-panel-toast-shown-transform)] tw:max-panel:bottom-toast-bottom-phone tw:px-content tw:pt-row tw:pb-inline tw:rounded-card tw:shadow-component-toast-shadow");
   const appearances = {
     surface: "tw:bg-surface tw:text-ink tw:border-rule-strong tw:rounded-card",
@@ -33,19 +79,7 @@ function cardRecipeStyles({ variant = "surface" }: CardOptions = {}) {
     appearances[variant]
   );
 }
-export const surfaceRecipe = cardRecipe;
-export const feedbackIntents = [
-  "neutral",
-  "success",
-  "warning",
-  "error",
-  "accent",
-] as const;
-export type FeedbackIntent = (typeof feedbackIntents)[number];
-export interface FeedbackOptions {
-  variant?: "standard" | "admin" | "account" | "library" | "account-delete" | "offline-prepared";
-  intent?: FeedbackIntent;
-}
+const surfaceRecipe = cardRecipe;
 const feedback: Record<FeedbackIntent, string> = {
   neutral: "tw:text-ink-secondary tw:border-rule-strong",
   success: "tw:text-success tw:border-success",
@@ -54,27 +88,13 @@ const feedback: Record<FeedbackIntent, string> = {
   accent: "tw:text-accent tw:border-accent",
 };
 function badgeRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
-  if (variant === "offline-prepared") return libraryBadgeRecipe("prepared");
-  if (variant === "library") return libraryBadgeRecipe("tag");
+  if (variant === "offline-prepared") return extensions.badge?.("prepared") ?? missingArea("prepared badge");
+  if (variant === "library") return extensions.badge?.("tag") ?? missingArea("library badge");
   if(variant === "admin")return "tw:inline-block tw:box-border tw:px-segment tw:py-micro tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent tw:font-auth-body tw:text-body-small tw:leading-leading-body " + (intent === "accent" ? "tw:text-admin-accent tw:border-admin-accent" : "tw:text-admin-ink tw:border-admin-rule");
   return (
     "tw:inline-block tw:box-border tw:px-segment tw:py-micro tw:rounded-pill tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-transparent tw:font-body tw:text-small tw:leading-leading-body " +
     feedback[intent]
   );
-}
-/** admin/presets share unselected items pending D10; admin selected is underlined. */
-export const toggleGroupVariants = [
-  "segmented",
-  "language",
-  "transcription",
-  "admin",
-  "admin-language",
-  "presets",
-] as const;
-export interface ToggleGroupOptions {
-  /** Optional inline separator preserves text choices without a flex gap. */
-  separator?: string;
-  variant?: (typeof toggleGroupVariants)[number];
 }
 function toggleGroupRecipeStyles({
   variant = "segmented",
@@ -122,22 +142,13 @@ function toolbarRecipeStyles() {
   return "tw:flex tw:items-center tw:flex-wrap tw:gap-control tw:font-body tw:text-ink";
 }
 function statusRecipeStyles({ intent = "neutral", variant = "standard" }: FeedbackOptions = {}) {
-  if (variant === "account-delete") return accountErrorRecipe();
+  if (variant === "account-delete") return extensions.accountError?.() ?? missingArea("account error");
   if (variant === "account") return "tw:block tw:my-content tw:font-auth-body tw:text-body tw:leading-leading-account tw:text-center " + feedback[intent];
   if(variant === "admin")return "tw:normal-nums tw:block tw:my-content tw:font-auth-body tw:text-body tw:leading-leading-body tw:text-admin-ink";
   return (
     "tw:m-flush tw:font-body tw:text-body-small tw:leading-leading-field " +
     feedback[intent]
   );
-}
-export const emptyStateVariants = [
-  "landing-actions",
-  "library-text",
-  "admin-text",
-  "jobs-hidden",
-] as const;
-export interface EmptyStateOptions {
-  variant?: (typeof emptyStateVariants)[number];
 }
 function emptyStateRecipeStyles({
   variant = "library-text",
@@ -159,13 +170,6 @@ function emptyStateRecipeStyles({
 }
 function loadingRecipeStyles() {
   return statusRecipe() + " tw:animate-animation-loading tw:motion-reduce:animate-none";
-}
-/** scroll/metrics intentionally alias until D16; records owns the responsive layout. */
-export const tableVariants = ["records", "scroll", "metrics"] as const;
-export interface TableOptions {
-  bounded?: boolean;
-  mono?: boolean;
-  variant?: (typeof tableVariants)[number];
 }
 function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }: TableOptions = {}) {
   return {
@@ -192,45 +196,46 @@ function tableRecipeStyles({ variant = "scroll", bounded = false, mono = false }
       "tw:flex tw:items-center tw:flex-wrap tw:gap-control tw:mt-control tw:mb-section tw:font-auth-body tw:text-body tw:leading-leading-body tw:text-admin-ink tw:tabular-nums",
   };
 }
-/** Shared appearances; screen-owned data/selection/sorting stay outside recipes. */
-export type ToggleItemOptions = ButtonOptions;
-export function cardRecipe(
+function cardRecipe(
   ...args: Parameters<typeof cardRecipeStyles>
 ): ReturnType<typeof cardRecipeStyles> {
   return normalizeRecipe(cardRecipeStyles(...args));
 }
-export function badgeRecipe(
+function badgeRecipe(
   ...args: Parameters<typeof badgeRecipeStyles>
 ): ReturnType<typeof badgeRecipeStyles> {
   return normalizeRecipe(badgeRecipeStyles(...args));
 }
-export function toggleGroupRecipe(
+function toggleGroupRecipe(
   ...args: Parameters<typeof toggleGroupRecipeStyles>
 ): ReturnType<typeof toggleGroupRecipeStyles> {
   return normalizeRecipe(toggleGroupRecipeStyles(...args));
 }
-export function toolbarRecipe(
+function toolbarRecipe(
   ...args: Parameters<typeof toolbarRecipeStyles>
 ): ReturnType<typeof toolbarRecipeStyles> {
   return normalizeRecipe(toolbarRecipeStyles(...args));
 }
-export function statusRecipe(
+function statusRecipe(
   ...args: Parameters<typeof statusRecipeStyles>
 ): ReturnType<typeof statusRecipeStyles> {
   return normalizeRecipe(statusRecipeStyles(...args));
 }
-export function emptyStateRecipe(
+function emptyStateRecipe(
   ...args: Parameters<typeof emptyStateRecipeStyles>
 ): ReturnType<typeof emptyStateRecipeStyles> {
   return normalizeRecipe(emptyStateRecipeStyles(...args));
 }
-export function loadingRecipe(
+function loadingRecipe(
   ...args: Parameters<typeof loadingRecipeStyles>
 ): ReturnType<typeof loadingRecipeStyles> {
   return normalizeRecipe(loadingRecipeStyles(...args));
 }
-export function tableRecipe(
+function tableRecipe(
   ...args: Parameters<typeof tableRecipeStyles>
 ): ReturnType<typeof tableRecipeStyles> {
   return normalizeRecipe(tableRecipeStyles(...args));
 }
+return { surfaceRecipe, cardRecipe, badgeRecipe, toggleGroupRecipe, toolbarRecipe, statusRecipe, emptyStateRecipe, loadingRecipe, tableRecipe };
+}
+export const { surfaceRecipe, cardRecipe, badgeRecipe, toggleGroupRecipe, toolbarRecipe, statusRecipe, emptyStateRecipe, loadingRecipe, tableRecipe } = /* @__PURE__ */ createDisplayRecipes();

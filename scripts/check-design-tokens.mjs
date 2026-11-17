@@ -293,7 +293,7 @@ export function scanDesignFile(file, source, options = {}) {
     const specifier = importNode ? node.moduleSpecifier : dynamicImport ? node.arguments[0] : undefined;
     if (specifier && /\.css(?:\?|$)/.test(specifier.text ?? '') && file !== 'src/design-system/app.css') {
       // Root's ?url eager link is the sole TS boundary; side-effect CSS imports bypass layers.
-      if (!(file === 'src/routes/__root.tsx' && specifier.text === '../design-system/app.css?url')) add('unlayered-css-import', 'import', specifier.text);
+      if (!(file === 'src/routes/__root.tsx' && specifier.text === '../design-system/app.css?url') && !(file === 'src/routes/app.tsx' && specifier.text === '../design-system/workspace.css?url')) add('unlayered-css-import', 'import', specifier.text);
     }
     if (/^src\/design-system\/recipes(?:\/|\.ts)/.test(file) && (importNode || dynamicImport)) {
       const clause = ts.isImportDeclaration(node) ? node.importClause : undefined;
