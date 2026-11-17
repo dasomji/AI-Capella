@@ -128,6 +128,7 @@ export const themeRoleNames = [
   "leading-label",
   "leading-song",
   "leading-song-player",
+  "leading-transcription-heading",
   "left-sheet",
   "material-card",
   "material-edge",
