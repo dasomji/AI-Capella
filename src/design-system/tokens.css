@@ -1237,3 +1237,8 @@
   --color-material-vellum-strong: var(--ds-material-vellum-strong);
   --spacing-50: var(--ds-space-50);
 }
+
+@theme inline {
+  --z-index-note: var(--ds-layer-note);
+  --z-index-tour: var(--ds-layer-tour);
+}

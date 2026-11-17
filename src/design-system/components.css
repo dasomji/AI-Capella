@@ -73,3 +73,8 @@ body:has(.domain-sheet) .ds-toast-placement { top:var(--ds-space-16); bottom:aut
   color-scheme:inherit; visibility:inherit; pointer-events:inherit;
   accent-color:inherit; print-color-adjust:inherit;
 }
+
+/* Native overlays retain their named material independently of panel geometry. */
+.ds-domain-sheet { background:var(--ds-material-vellum-strong);backdrop-filter:var(--ds-material-filter-strong); }
+.ds-transcription-panel { background-image:var(--ds-material-fibre); }
+.ds-transcription-panel::backdrop { backdrop-filter:blur(var(--ds-overlay-blur)); }
