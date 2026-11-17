@@ -284,7 +284,8 @@ export async function makePdf(req: PdfRequest, progress: (step: 'engraver' | 'en
 
   // svg2pdf measures text through the page, so each page's drawing is put in for that moment.
   const host = document.createElement('div');
-  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:840px;visibility:hidden;pointer-events:none';
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;visibility:hidden;pointer-events:none';
+  host.style.width = readTheme().roles['print-export-viewport-width'];
   document.body.appendChild(host);
   try {
     for (let page = 1; page <= pages; page++) {
