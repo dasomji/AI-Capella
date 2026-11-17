@@ -1,3 +1,4 @@
+import { bindRowMenu } from "./design-system/behavior";
 import { transcriptionJobRecipe } from "./design-system/recipes/shell";
 import {
   createButton,
@@ -285,6 +286,7 @@ export function installTranscription(options: {
         }
       };
       menu.append(built.element);
+      jobMenus.push(bindRowMenu(menu, built.element));
       actions.append(menu);
       card.append(actions);
       host.append(card);
