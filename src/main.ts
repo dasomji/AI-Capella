@@ -1,6 +1,6 @@
 import { themeRegistry } from './design-system/theme';
 import { appShellRecipe, landingRecipe } from "./design-system/recipes/shell";
-import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
+import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, updateField, createLoading, createEmptyState, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
 import { matchBreakpoint, setAppearanceRehearsing } from './design-system/theme';
 import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
@@ -1211,21 +1211,18 @@ function renderSongList() {
   const shown = q ? songs.filter((s) => s.title.toLowerCase().includes(q)) : songs;
   const items: HTMLElement[] = shown.map(songCard);
   if (libraryState === 'loading') {
-    for (let i = 0; i < 3; i++) {
-      const sk = createCard({as:'li',variant:'library'});
-      sk.classList.add('skeleton');
-      sk.setAttribute('aria-hidden', 'true');
-      items.push(sk);
-    }
+    const loading = createLibraryPart('li', 'empty-note');
+    loading.append(createLoading({text:t('loadingLibrary')}));
+    items.push(loading);
   }
   if (q && !shown.length) {
     const empty = createLibraryPart('li', 'empty-note');
-    empty.textContent = t('noMatches', { q: searchInput.value.trim() });
+    empty.append(createEmptyState({title:t('noMatches', { q: searchInput.value.trim() })}));
     items.push(empty);
   }
   coverCanvases.clear();
   songGridEl.replaceChildren(...items);
-  if (!songs.length && libraryState === 'ready') {const empty=createLibraryPart('li','empty-note');empty.textContent=pt(editable()?'emptyEditable':'emptyPieces');songGridEl.append(empty);}
+  if (!songs.length && libraryState === 'ready') {const empty=createLibraryPart('li','empty-note');empty.append(createEmptyState({title:pt(editable()?'emptyEditable':'emptyPieces')}));songGridEl.append(empty);}
   const count = countLabel(songs.length, 'arrangementsOne', 'arrangementsMany');
   libCountEl.textContent = !serverLibraryEnabled ? t('onThisDevice', { count }) : inPublicFolder() ? t('publicCount', { count }) : libraryState === 'ready' ? t('sharedWithChoir', { count }) : t('onThisDevice', { count });
   renderLibraryBanner();
@@ -3960,6 +3957,7 @@ async function openAccountArea(anchor: HTMLElement) {
     confirm.onclick = async () => {
       if(leavingAccount)return;
       inlineError.textContent="";
+      updateField(passwordField,{error:undefined});
       leavingAccount=true;
       updateButton(confirm,{busy:true});
       leavePlaybackSession();
@@ -3978,7 +3976,10 @@ async function openAccountArea(anchor: HTMLElement) {
         updateButton(confirm,{busy:false});
         if((e as Error).message === "SESSION_EXPIRED") {location.replace("/?state=expired");return;}
         accountEvents.connect();
-        inlineError.textContent = (e as Error).message === "recent_auth_required" ? t("accountPasswordInvalid") : domainError((e as Error).message);
+        if ((e as Error).message === "recent_auth_required") {
+          updateField(passwordField,{error:t("accountPasswordInvalid")});
+          password.focus();
+        } else inlineError.textContent = domainError((e as Error).message);
       }
     };
     sheet.append(confirm);
