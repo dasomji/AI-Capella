@@ -195,30 +195,6 @@ button:disabled {
 
 /* Engraved rehearsal letter: bold serif capital in a square box, as printed in choral scores. A
    mark that is a word ("Refrain", "Intro 4 Takte") gets a box as wide as it, in smaller type. */
-.rmark {
-  display: inline-block;
-  min-width: 36px;
-  max-width: 100%;
-  height: 36px;
-  padding: 0 6px;
-  border: 1.5px solid var(--paper);
-  border-radius: 3px;
-  font: 700 17px/33px var(--f-display);
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--paper);
-  background: var(--ink-1);
-}
-
-.rmark.word {
-  font-size: 13px;
-}
-
-.rmark:hover {
-  background: var(--ink-3);
-}
 
 /* ---- App shell & views -------------------------------------------------------------- */
 
@@ -502,88 +478,6 @@ button:disabled {
   touch-action: none;
 }
 
-#section-marks {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-#section-marks .rmark {
-  position: absolute;
-  top: 3px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 2px;
-  font-size: 11px;
-  line-height: 15.6px;
-  border-width: 1.2px;
-  border-radius: 2px;
-  pointer-events: auto;
-  transform: translateX(-1px);
-}
-
-#section-add-btn {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--ink-1);
-}
-
-.stepper {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  height: 44px;
-  border-radius: 11px;
-  background: var(--ink-0);
-  border: 1px solid var(--hair);
-  padding: 0 5px;
-}
-
-.stepper .label {
-  padding: 0 4px 0 8px;
-}
-
-.stepper > button:not(.stepper-value) {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  color: var(--paper-dim);
-}
-
-.stepper > button:not(.stepper-value):hover {
-  background: var(--ink-3);
-  color: var(--paper);
-}
-
-.stepper > button .ic {
-  width: 16px;
-  height: 16px;
-}
-
-.stepper-value {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 32px;
-  padding: 0 8px;
-  border-radius: 8px;
-  font: 600 16px/1 var(--f-mono);
-  white-space: nowrap;
-}
-
-button.stepper-value:hover {
-  background: var(--ink-3);
-}
-
-.stepper-value .ic {
-  width: 17px;
-  height: 17px;
-}
-
 /* Phones and narrow tablets: voice chips on top, score in the middle, everything else in a dock
    within thumb reach at the bottom. */
 @media (width < theme(--breakpoint-panel)) {
@@ -592,20 +486,7 @@ button.stepper-value:hover {
     grid-template-rows: calc(54px + var(--safe-t)) 48px minmax(0, 1fr) 36px 42px auto;
     grid-template-areas: 'top' 'chips' 'stage' 'ov' 'info' 'tr';
   }
-  #section-add-btn {
-    display: none !important;
-  }
   /* The strip is too short on a phone for legible letters; sections live in the Tempo & key sheet. */
-  #section-marks {
-    display: none;
-  }
-  #section-marks .rmark {
-    top: 2px;
-    min-width: 14px;
-    height: 14px;
-    font-size: 9px;
-    line-height: 11.6px;
-  }
 }
 
 /* Phones held sideways: the score gets the height; voices live behind the mixer button. */
@@ -665,12 +546,6 @@ button.stepper-value:hover {
 
 .popover-root.closing .popover {
   opacity: 0;
-}
-
-.popover-body {
-  padding: 6px 8px;
-  width: 320px;
-  max-width: 100%;
 }
 
 .sheet {
@@ -913,143 +788,14 @@ button.stepper-value:hover {
   border-top: 1px solid var(--hair);
 }
 
-.popover-body .ctl-block:first-child,
 .sheet-body > .ctl-block:first-child {
   border-top: 0;
-}
-
-.ctl-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
 }
 
 .ctl-note {
   display: block;
   font-size: 13.5px;
   color: var(--paper-dim);
-}
-
-.big-stepper {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 12px;
-}
-
-.round-btn {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 1px solid var(--hair-2);
-  background: var(--ink-3);
-  display: grid;
-  place-items: center;
-  touch-action: manipulation;
-}
-
-.round-btn:hover {
-  border-color: var(--paper-dim);
-}
-
-.big-value {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font: 600 36px/1 var(--f-mono);
-}
-
-.big-value .ic {
-  width: 28px;
-  height: 28px;
-}
-
-.big-value small {
-  font: 500 15px/1 var(--f-text);
-  color: var(--paper-dim);
-}
-
-.presets {
-  display: flex;
-  gap: 6px;
-  margin-top: 14px;
-}
-
-.bpm-preset {
-  flex: 1;
-  height: 38px;
-  border-radius: 999px;
-  border: 1px solid var(--hair-2);
-  font: 600 14px/1 var(--f-mono);
-  color: var(--paper-dim);
-  min-width: 0;
-}
-
-.bpm-preset[aria-pressed='true'] {
-  background: var(--paper);
-  border-color: var(--paper);
-  color: var(--ink-0);
-}
-
-.custom-tempo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 12px;
-  font-size: 14px;
-  color: var(--paper-dim);
-}
-
-.bpm-input {
-  width: 84px;
-  height: 38px;
-  border-radius: 999px;
-  text-align: center;
-  font: 600 14px/1 var(--f-mono);
-  padding: 0 6px;
-  appearance: textfield;
-}
-
-.bpm-input::-webkit-inner-spin-button,
-.measure-input::-webkit-inner-spin-button {
-  appearance: none;
-}
-
-.mark-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.mark-row .rmark {
-  min-width: 42px;
-  height: 42px;
-  font-size: 19px;
-  line-height: 39px;
-}
-
-#section-marks .rmark.word {
-  font-size: 9.5px;
-  font-weight: 600;
-}
-
-.mark-row .rmark.word {
-  font-size: 14px;
-}
-
-.goto-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.goto-row .field {
-  flex: 1;
-  font-family: var(--f-mono);
-  appearance: textfield;
 }
 
 /* While a rehearsal plays here but the browser holds the sound up until the screen is touched. */
@@ -1068,8 +814,7 @@ button.stepper-value:hover {
 
 /* Following another device's lead: shared transport controls are shown locked (they still respond
    with a short explanation). Mute, solo and zoom stay fully usable -- they're personal. */
-.following #overview,
-.following #section-marks {
+.following #overview {
   opacity: 0.4;
 }
 
@@ -1125,62 +870,14 @@ button.stepper-value:hover {
   padding-bottom: 4px;
 }
 
-.scan-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.scan-actions .btn.primary {
-  flex: 1 1 100%;
-}
-
 /* The scan's questions: an excerpt of the page with the bar lit, the readings to choose from, or
    one's own words (scan.ts renderQuestions). The same cards list a song's places to check. */
-.scan-mark-list {
-  list-style: none;
-  margin: 0 0 18px;
-  padding: 0;
-  display: grid;
-  gap: 14px;
-}
 
-.scan-q,
-.scan-mark {
+.scan-q {
   padding: 12px 12px 14px;
   border-radius: var(--r-md);
   background: var(--ink-1);
   border: 1px solid var(--hair);
-}
-
-.scan-q-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 10px;
-  font-size: 14px;
-}
-
-.scan-q-head span {
-  color: var(--paper-dim);
-}
-
-.scan-q-text {
-  margin: 0 0 10px;
-  line-height: 1.45;
-}
-
-.scan-mark-img {
-  display: block;
-  width: 100%;
-  height: auto;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  background: #f4f1ea;
-}
-
-.scan-mark .scan-actions .btn {
-  flex: 1 1 0;
 }
 
 @keyframes pulse {
@@ -1254,12 +951,6 @@ body:has(#app.mode-landing)::after {
 
 .lib-top {
   box-shadow: var(--ds-player-p-top-box-shadow-111);
-}
-
-.stepper {
-  background: rgb(8 6 14 / 0.35);
-  border-color: var(--glass-edge);
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35);
 }
 
 /* Overlays: the same glass, denser, since text sits on it. */
@@ -1443,27 +1134,6 @@ body:has(#app.mode-landing)::after {
 /* The mode used last time: a thin line of the lamp's light along its lower edge. */
 
 /* Light and sound: the per-device fine adjustment (⋯ menu). */
-.offset-body {
-  display: grid;
-  gap: 14px;
-}
-.offset-row {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.85rem;
-  color: var(--paper-dim);
-}
-.offset-row input {
-  width: 100%;
-  accent-color: var(--paper);
-}
-.offset-value {
-  margin: 0;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
 
 /* ---- Draft title "Die erste Zeile" (?start=zeile, titleStaff.ts) -----------------------------
    The name stands still on the ruled staff: no rising in, no floating (the staff is drawn to its
@@ -1701,18 +1371,7 @@ body:has(#app.mode-landing)::after {
 }
 
 /* The frame-rate probe (?fps=1, main.ts). */
-.fps-probe {
-  position: fixed;
-  left: 8px;
-  bottom: 8px;
-  z-index: 2000;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: rgb(0 0 0 / 0.75);
-  color: #fff;
-  font: 500 12px/1.3 ui-monospace, monospace;
-  pointer-events: none;
-}
+
 
 /* The hint when an energy saver caps the frames at 30 a second (powerHint.ts): a note on paper,
    where the toasts appear, that stays until it's answered. Keep it below overlays (900) so it
@@ -1832,50 +1491,6 @@ body:has(#app.mode-landing)::after {
 }
 
 /* Export as PDF (main.ts openExportSheet). */
-.export-body {
-  display: grid;
-  gap: 14px;
-}
-.export-body .ctl-note {
-  margin: 0;
-}
-.export-voices summary {
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--paper-dim);
-}
-.export-voice-list {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-.export-voice-list li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.export-voice-list input[type='checkbox'] {
-  width: 20px;
-  height: 20px;
-  flex: none;
-  accent-color: var(--c);
-}
-.export-voice-list .field {
-  flex: 1;
-  min-width: 0;
-  height: 38px;
-}
-.export-voice-list li.off .field {
-  opacity: 0.45;
-}
-.export-status {
-  min-height: 1.3em;
-  margin: 0;
-  font-size: 14px;
-  color: var(--paper-dim);
-}
 
 .domain-sheet { display:grid; gap:1.2rem; }
 .domain-sheet form { display:grid; gap:1rem; }
@@ -1905,39 +1520,3 @@ body:has(#app.mode-landing)::after {
 }
 
 /* Shared native ranges remain for output/light offset panels until their P5 migration. */
-input[type='range'] {
-  flex: 1;
-  appearance: none;
-  height: 22px;
-  background: none;
-}
-
-input[type='range']::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--ds-surface-hover);
-}
-
-input[type='range']::-webkit-slider-thumb {
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  margin-top: -7px;
-  border-radius: 50%;
-  background: var(--ds-ink);
-  box-shadow: var(--ds-range-thumb-shadow);
-}
-
-input[type='range']::-moz-range-track {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--ds-surface-hover);
-}
-
-input[type='range']::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--ds-ink);
-}

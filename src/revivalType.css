@@ -34,10 +34,4 @@
   line-height: 1.25;
 }
 
-:root[data-type='revival'] .rmark {
-  font-family: 'Baltimore Bold 1832', var(--f-display);
-  font-weight: 400;
-  font-synthesis: none;
-}
-
 /* The typewriter is wider than Atkinson: the cards' "6 Stimmen · 8 Takte · G-Dur" stays one line. */

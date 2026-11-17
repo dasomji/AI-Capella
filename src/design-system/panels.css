@@ -1,0 +1,580 @@
+/* P5 slice 4: named numeric, SectionMark, export and utility compositions. */
+.ds-panel-part,
+.ds-panel-button,
+.ds-panel-input {
+  font: inherit;
+  color: inherit;
+  -webkit-font-smoothing: inherit;
+  -webkit-locale: inherit;
+  -webkit-tap-highlight-color: inherit;
+}
+.ds-panel-part {
+  user-select: text;
+}
+.ds-panel-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+}
+.ds-panel-button:disabled {
+  cursor: default;
+  opacity: var(--ds-opacity-disabled);
+}
+.ds-panel-button:focus-visible,
+.ds-panel-input:focus-visible {
+  outline: var(--ds-stroke-focus) solid var(--ds-ink);
+  outline-offset: var(--ds-space-2);
+}
+.ds-panel-input {
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 0;
+}
+.ds-panel-sheet-body {
+  display: block;
+}
+.ds-panel-scan-button {
+  flex: 1 1 0;
+}
+
+.ds-panel-label {
+  font: var(--ds-panel-label-font-1);
+  letter-spacing: var(--ds-panel-label-letter-spacing-2);
+  text-transform: uppercase;
+  color: var(--ds-ink-muted);
+}
+
+.ds-panel-field {
+  height: 42px;
+  border-radius: var(--ds-radius-card);
+  border: var(--ds-panel-field-border-3);
+  background: var(--ds-surface);
+  padding: var(--ds-panel-field-padding-4);
+  font-size: var(--ds-panel-field-font-size-5);
+  min-width: 0;
+}
+
+.ds-panel-field:focus {
+  border-color: var(--ds-ink-secondary);
+  outline: none;
+}
+.ds-panel-rmark {
+  display: inline-block;
+  min-width: 36px;
+  max-width: 100%;
+  height: 36px;
+  padding: var(--ds-panel-rmark-padding-6);
+  border: var(--ds-panel-rmark-border-7);
+  border-radius: var(--ds-panel-rmark-border-radius-8);
+  font: var(--ds-panel-rmark-font-9);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ds-ink);
+  background: var(--ds-surface);
+}
+
+.ds-panel-rmark.word {
+  font-size: var(--ds-panel-rmark-word-font-size-10);
+}
+
+.ds-panel-rmark:hover {
+  background: var(--ds-surface-overlay);
+}
+
+.ds-panel-section-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ds-panel-section-marks .ds-panel-rmark {
+  position: absolute;
+  top: 3px;
+  min-width: 18px;
+  height: 18px;
+  padding: var(--ds-panel-section-marks-rmark-padding-11);
+  font-size: var(--ds-panel-section-marks-rmark-font-size-12);
+  line-height: 15.6px;
+  border-width: var(--ds-panel-section-marks-rmark-border-width-13);
+  border-radius: var(--ds-panel-section-marks-rmark-border-radius-14);
+  pointer-events: auto;
+  transform: var(--ds-panel-section-marks-rmark-transform-15);
+}
+
+.ds-panel-section-add {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: var(--ds-panel-section-add-btn-transform-16);
+  background: var(--ds-surface);
+}
+
+.ds-panel-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-panel-stepper-gap-17);
+  height: 44px;
+  border-radius: var(--ds-panel-stepper-border-radius-18);
+  background: var(--ds-surface-sunken);
+  border: var(--ds-panel-stepper-border-19);
+  padding: var(--ds-panel-stepper-padding-20);
+}
+
+.ds-panel-stepper .ds-panel-label {
+  padding: var(--ds-panel-stepper-label-padding-21);
+}
+
+.ds-panel-stepper > button:not(.ds-panel-stepper-value) {
+  width: 32px;
+  height: 32px;
+  border-radius: var(
+    --ds-panel-stepper-button-not-stepper-value-border-radius-22
+  );
+  display: grid;
+  place-items: center;
+  color: var(--ds-ink-secondary);
+}
+
+.ds-panel-stepper > button:not(.ds-panel-stepper-value):hover {
+  background: var(--ds-surface-overlay);
+  color: var(--ds-ink);
+}
+
+.ds-panel-stepper > button .ic {
+  width: 16px;
+  height: 16px;
+}
+
+.ds-panel-stepper-value {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-panel-stepper-value-gap-23);
+  height: 32px;
+  padding: var(--ds-panel-stepper-value-padding-24);
+  border-radius: var(
+    --ds-panel-stepper-button-not-stepper-value-border-radius-22
+  );
+  font: var(--ds-panel-stepper-value-font-25);
+  white-space: nowrap;
+}
+
+button.ds-panel-stepper-value:hover {
+  background: var(--ds-surface-overlay);
+}
+
+.ds-panel-stepper-value .ic {
+  width: 17px;
+  height: 17px;
+}
+@media (width < theme(--breakpoint-panel)) {
+  .ds-panel-section-add {
+    display: none !important;
+  }
+}
+@media (width < theme(--breakpoint-panel)) {
+  .ds-panel-section-marks {
+    display: none;
+  }
+}
+@media (width < theme(--breakpoint-panel)) {
+  .ds-panel-section-marks .ds-panel-rmark {
+    top: 2px;
+    min-width: 14px;
+    height: 14px;
+    font-size: var(--ds-panel-section-marks-rmark-font-size-26);
+    line-height: 11.6px;
+  }
+}
+
+.ds-panel-popover-body {
+  padding: var(--ds-panel-popover-body-padding-27);
+  width: 320px;
+  max-width: 100%;
+}
+.ds-panel-ctl-block {
+  padding: var(--ds-panel-ctl-block-padding-28);
+  border-top: var(--ds-panel-ctl-block-border-top-29);
+}
+
+.ds-panel-popover-body .ds-panel-ctl-block:first-child {
+  border-top: 0;
+}
+
+.ds-panel-ctl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--ds-panel-ctl-head-gap-30);
+}
+
+.ds-panel-ctl-note {
+  display: block;
+  font-size: var(--ds-panel-ctl-note-font-size-31);
+  color: var(--ds-ink-secondary);
+}
+
+.ds-panel-big-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--ds-panel-big-stepper-margin-top-32);
+}
+
+.ds-panel-round-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--ds-panel-round-btn-border-radius-33);
+  border: var(--ds-panel-field-border-3);
+  background: var(--ds-surface-overlay);
+  display: grid;
+  place-items: center;
+  touch-action: manipulation;
+}
+
+.ds-panel-round-btn:hover {
+  border-color: var(--ds-ink-secondary);
+}
+
+.ds-panel-big-value {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-panel-big-value-gap-34);
+  font: var(--ds-panel-big-value-font-35);
+}
+
+.ds-panel-big-value .ic {
+  width: 28px;
+  height: 28px;
+}
+
+.ds-panel-big-value small {
+  font: var(--ds-panel-big-value-small-font-36);
+  color: var(--ds-ink-secondary);
+}
+
+.ds-panel-presets {
+  display: flex;
+  gap: var(--ds-panel-presets-gap-37);
+  margin-top: var(--ds-panel-presets-margin-top-38);
+}
+
+.ds-panel-bpm-preset {
+  flex: 1;
+  height: 38px;
+  border-radius: var(--ds-panel-bpm-preset-border-radius-39);
+  border: var(--ds-panel-field-border-3);
+  font: var(--ds-panel-bpm-preset-font-40);
+  color: var(--ds-ink-secondary);
+  min-width: 0;
+}
+
+.ds-panel-bpm-preset[aria-pressed="true"] {
+  background: var(--ds-ink);
+  border-color: var(--ds-ink);
+  color: var(--ds-surface-sunken);
+}
+
+.ds-panel-custom-tempo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-panel-ctl-head-gap-30);
+  margin-top: var(--ds-panel-big-stepper-margin-top-32);
+  font-size: var(--ds-panel-custom-tempo-font-size-41);
+  color: var(--ds-ink-secondary);
+}
+
+.ds-panel-bpm-input {
+  width: 84px;
+  height: 38px;
+  border-radius: var(--ds-panel-bpm-preset-border-radius-39);
+  text-align: center;
+  font: var(--ds-panel-bpm-preset-font-40);
+  padding: var(--ds-panel-rmark-padding-6);
+  appearance: textfield;
+}
+
+.ds-panel-bpm-input::-webkit-inner-spin-button,
+.ds-panel-measure-input::-webkit-inner-spin-button {
+  appearance: none;
+}
+
+.ds-panel-mark-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-panel-mark-row-gap-42);
+  margin-top: var(--ds-panel-big-stepper-margin-top-32);
+}
+
+.ds-panel-mark-row .ds-panel-rmark {
+  min-width: 42px;
+  height: 42px;
+  font-size: var(--ds-panel-mark-row-rmark-font-size-43);
+  line-height: 39px;
+}
+
+.ds-panel-section-marks .ds-panel-rmark.word {
+  font-size: var(--ds-panel-section-marks-rmark-word-font-size-44);
+  font-weight: var(--ds-panel-section-marks-rmark-word-font-weight-45);
+}
+
+.ds-panel-mark-row .ds-panel-rmark.word {
+  font-size: var(--ds-panel-custom-tempo-font-size-41);
+}
+
+.ds-panel-goto-row {
+  display: flex;
+  gap: var(--ds-panel-mark-row-gap-42);
+  margin-top: var(--ds-panel-goto-row-margin-top-46);
+}
+
+.ds-panel-goto-row .ds-panel-field {
+  flex: 1;
+  font-family: var(--ds-font-mono);
+  appearance: textfield;
+}
+.following .ds-panel-section-marks {
+  opacity: var(--ds-panel-following-section-marks-opacity-47);
+}
+
+.ds-panel-scan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-panel-mark-row-gap-42);
+}
+
+.ds-panel-scan-actions .ds-panel-scan-button.primary {
+  flex: 1 1 100%;
+}
+.ds-panel-scan-mark-list {
+  list-style: none;
+  margin: var(--ds-panel-scan-mark-list-margin-48);
+  padding: 0;
+  display: grid;
+  gap: var(--ds-panel-scan-mark-list-gap-49);
+}
+
+.ds-panel-scan-mark {
+  padding: var(--ds-panel-scan-mark-padding-50);
+  border-radius: var(--ds-radius-card);
+  background: var(--ds-surface);
+  border: var(--ds-panel-stepper-border-19);
+}
+
+.ds-panel-scan-q-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-panel-mark-row-gap-42);
+  margin-bottom: var(--ds-panel-scan-q-head-margin-bottom-51);
+  font-size: var(--ds-panel-custom-tempo-font-size-41);
+}
+
+.ds-panel-scan-q-head span {
+  color: var(--ds-ink-secondary);
+}
+
+.ds-panel-scan-q-text {
+  margin: var(--ds-panel-scan-q-text-margin-52);
+  line-height: 1.45;
+}
+
+.ds-panel-scan-mark-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: var(--ds-panel-scan-q-head-margin-bottom-51);
+  border-radius: var(
+    --ds-panel-stepper-button-not-stepper-value-border-radius-22
+  );
+  background: var(--ds-panel-scan-mark-img-background-53);
+}
+
+.ds-panel-scan-mark .ds-panel-scan-actions .ds-panel-scan-button {
+  flex: 1 1 0;
+}
+
+.ds-panel-stepper {
+  background: var(--ds-panel-stepper-background-54);
+  border-color: var(--ds-material-edge);
+  box-shadow: var(--ds-panel-stepper-box-shadow-55);
+}
+.ds-panel-offset-body {
+  display: grid;
+  gap: var(--ds-panel-scan-mark-list-gap-49);
+}
+.ds-panel-offset-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--ds-panel-ctl-head-gap-30);
+  font-size: var(--ds-panel-offset-row-font-size-56);
+  color: var(--ds-ink-secondary);
+}
+.ds-panel-offset-row input {
+  width: 100%;
+  accent-color: var(--ds-ink);
+}
+.ds-panel-offset-value {
+  margin: 0;
+  text-align: center;
+  font-variant-numeric: var(--ds-panel-offset-value-font-variant-numeric-57);
+}
+.ds-panel-export-body {
+  display: grid;
+  gap: var(--ds-panel-scan-mark-list-gap-49);
+}
+.ds-panel-export-body .ds-panel-ctl-note {
+  margin: 0;
+}
+.ds-panel-export-voices summary {
+  cursor: pointer;
+  font-size: var(--ds-panel-custom-tempo-font-size-41);
+  color: var(--ds-ink-secondary);
+}
+.ds-panel-export-voice-list {
+  list-style: none;
+  margin: var(--ds-panel-export-voice-list-margin-58);
+  padding: 0;
+  display: grid;
+  gap: var(--ds-panel-big-value-gap-34);
+}
+.ds-panel-export-voice-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-panel-mark-row-gap-42);
+}
+.ds-panel-export-voice-list input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  accent-color: var(--c);
+}
+.ds-panel-export-voice-list .ds-panel-field {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+}
+.ds-panel-export-voice-list li.off .ds-panel-field {
+  opacity: var(--ds-panel-export-voice-list-li-off-field-opacity-59);
+}
+.ds-panel-export-status {
+  min-height: 1.3em;
+  margin: 0;
+  font-size: var(--ds-panel-custom-tempo-font-size-41);
+  color: var(--ds-ink-secondary);
+}
+.ds-panel-range {
+  flex: 1;
+  appearance: none;
+  height: 22px;
+  background: none;
+}
+
+.ds-panel-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--ds-panel-section-marks-rmark-border-radius-14);
+  background: var(--ds-surface-hover);
+}
+
+.ds-panel-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: var(
+    --ds-panel-input-type-range-webkit-slider-thumb-margin-top-60
+  );
+  border-radius: var(--ds-panel-round-btn-border-radius-33);
+  background: var(--ds-ink);
+  box-shadow: var(--ds-range-thumb-shadow);
+}
+
+.ds-panel-range::-moz-range-track {
+  height: 4px;
+  border-radius: var(--ds-panel-section-marks-rmark-border-radius-14);
+  background: var(--ds-surface-hover);
+}
+
+.ds-panel-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: var(--ds-panel-round-btn-border-radius-33);
+  background: var(--ds-ink);
+}
+
+:root[data-theme="parchment"] .ds-panel-stepper {
+  background: var(--ds-panel-stepper-background-61);
+  box-shadow: var(--ds-panel-stepper-box-shadow-62);
+}
+
+:root[data-type="revival"] .ds-panel-rmark {
+  font-family: var(--ds-panel-rmark-font-family-63);
+  font-weight: var(--ds-panel-rmark-font-weight-64);
+  font-synthesis: none;
+}
+.ds-panel-scan-quiet {
+  border-color: transparent;
+  color: var(--ds-ink-secondary);
+}
+/* The scan confirmation retains its existing native disabled treatment. */
+.ds-panel-scan-button:disabled {
+  opacity: var(--ds-opacity-disabled-action);
+  pointer-events: none;
+}
+.ds-panel-export-check {
+  appearance: auto;
+  margin: var(--ds-space-4) var(--ds-space-3) var(--ds-space-3)
+    var(--ds-space-4);
+  padding: 0;
+  border: 0;
+}
+.ds-panel-sync-debug {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 10000;
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  padding: var(--ds-space-8);
+  pointer-events: none;
+}
+
+.ds-panel-fps-probe {
+  position: fixed;
+  left: 8px;
+  bottom: 8px;
+  z-index: 2000;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--ds-debug-ground);
+  color: var(--ds-print-paper);
+  font: var(--ds-debug-font);
+  pointer-events: none;
+}
+/* Native defaults retained through the opt-in reset. */
+p.ds-panel-ctl-note {
+  margin: var(--ds-panel-ctl-note-font-size-31) 0;
+}
+.ds-panel-export-body p.ds-panel-ctl-note {
+  margin: 0;
+}
+.ds-panel-range {
+  margin: var(--ds-space-2);
+}
+.ds-panel-sheet-body > .ds-panel-ctl-block:first-child {
+  border-top: 0;
+}
+.ds-panel-export-check {
+  margin: var(--ds-space-3) var(--ds-space-3) var(--ds-space-3)
+    var(--ds-space-4);
+}
+.ds-panel-scan-button {
+  text-align: center;
+}
+.ds-panel-scan-mark {list-style:none;}

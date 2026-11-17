@@ -62,11 +62,6 @@
   background: #3d2e22;
 }
 
-:root[data-ground='pergament'] .stepper {
-  background: rgb(110 75 35 / 0.07);
-  box-shadow: inset 0 1px 2px rgb(90 60 25 / 0.2);
-}
-
 :root[data-ground='pergament'] .menu-item::before {
   background: radial-gradient(closest-side, rgb(220 150 60 / 0.18), rgb(220 150 60 / 0.07) 60%, rgb(220 150 60 / 0));
 }

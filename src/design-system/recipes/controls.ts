@@ -8,6 +8,8 @@ const actionDisabled = "tw:disabled:opacity-(--ds-opacity-disabled-action) tw:ar
 const denseDisabled =
   "tw:disabled:opacity-(--ds-opacity-disabled-admin) tw:aria-disabled:opacity-(--ds-opacity-disabled-admin)";
 export const buttonVariants = [
+  "scan-mark-go", "scan-mark-ok",
+  "panel-step", "panel-tempo", "panel-round", "panel-preset", "section-mark", "section-word",
   "player-back",
   "player-mode",
   "player-info",
@@ -76,7 +78,7 @@ const parityButtonShapes = {
   "hint-link": "tw:min-h-0 tw:rounded-control tw:px-6 tw:py-4 tw:border-0 tw:bg-transparent tw:text-hint-secondary tw:hover:text-surface-sunken tw:font-control tw:text-label tw:font-label tw:leading-body",
   hint: "tw:min-h-control-height tw:rounded-card tw:px-18 tw:py-0 tw:text-button tw:font-label tw:font-control tw:leading-body tw:border-rule-strong tw:hover:border-ink-secondary tw:bg-transparent tw:text-surface-sunken",
 } as const;
-const buttonShapes: Record<Exclude<ButtonVariant, keyof typeof parityButtonShapes>, string> = {
+const buttonShapes: Record<Exclude<ButtonVariant, "scan-mark-go" | "scan-mark-ok" | keyof typeof panelButtons | keyof typeof parityButtonShapes>, string> = {
   standard:
     "tw:min-h-control-height tw:rounded-card tw:px-18 tw:py-0 tw:text-button tw:font-label tw:font-control",
   cta: "tw:min-h-control-height-auth tw:rounded-card tw:px-18 tw:py-0 tw:w-full tw:text-button tw:font-label tw:font-auth-body",
@@ -98,12 +100,17 @@ const buttonIntents: Record<ButtonIntent, string> = {
   quiet:
     "tw:bg-transparent tw:text-ink-secondary tw:border-transparent tw:hover:text-ink",
 };
+const panelButtons = {
+ "panel-step":"ds-panel-button", "panel-tempo":"ds-panel-button ds-panel-stepper-value stepper-value", "panel-round":"ds-panel-button ds-panel-round-btn round-btn", "panel-preset":"ds-panel-button ds-panel-bpm-preset bpm-preset", "section-mark":"ds-panel-button ds-panel-rmark rmark", "section-word":"ds-panel-button ds-panel-rmark rmark word",
+} as const;
 function buttonRecipeStyles({
   variant = "standard",
   intent = "secondary",
   pressed = false,
   playing = false,
 }: ButtonOptions = {}): string {
+  if (variant === "scan-mark-go" || variant === "scan-mark-ok") return [...new Set((buttonRecipeStyles({variant:'standard',intent,pressed}).split(' ').filter(c=>variant!=='scan-mark-ok'||!['tw:border-rule-strong','tw:text-ink','tw:border-ink','tw:border-danger'].includes(c)).join(' ') + ' ds-panel-scan-button' + (variant === 'scan-mark-ok' ? ' ds-panel-scan-quiet tw:border-transparent tw:text-ink-secondary' : '')).split(' '))].join(' ');
+  if (variant in panelButtons) return panelButtons[variant as keyof typeof panelButtons];
   if (variant in playerButtonShapes) return playerButtonShapes[variant as keyof typeof playerButtonShapes] + (variant === "player-play" && playing ? " playing" : "");
   if (variant === 'landing-create') return buttonRecipeStyles({variant:'standard',intent,pressed}).replace('tw:text-button','tw:text-body-small').replace('tw:inline-flex','tw:block').replace('tw:m-0','') + ' tw:mx-auto tw:mt-18 tw:text-center';
   if (variant === 'library-action' || variant === 'offline-update') {
@@ -150,7 +157,7 @@ function buttonRecipeStyles({
   ].join(" ");
 }
 export const iconButtonVariants = [
-  "player", "player-landscape", "player-zoom", "player-follow", "voice-more",
+  "section-add", "player", "player-landscape", "player-zoom", "player-follow", "voice-more",
   "standard",
   "small",
   "library-more",
@@ -164,10 +171,11 @@ export interface IconButtonOptions {
 function iconButtonRecipeStyles({
   variant = "standard",
 }: IconButtonOptions = {}) {
+  if (variant === "section-add") return "ds-player-button ds-player-icon ds-player-icon-small ds-panel-section-add icon-btn small";
   if (["player", "player-landscape", "player-zoom", "player-follow", "voice-more"].includes(variant)) return "ds-player-button ds-player-icon icon-btn" + ({player:"", "player-landscape":" ds-player-landscape-only landscape-only", "player-zoom":"", "player-follow":" ds-player-follow-btn follow-btn", "voice-more":" ds-player-voice-more voice-more ds-player-icon-small small"} as Record<string,string>)[variant];
   if (variant === "library-more") return "ds-library-button ds-library-song-more song-more tw:inline-grid tw:place-items-center tw:flex-none tw:size-40 tw:rounded-icon";
   const shapes: Record<NonNullable<IconButtonOptions["variant"]>, string> = {
-    player:"", "player-landscape":"", "player-zoom":"", "player-follow":"", "voice-more":"",
+    "section-add":"", player:"", "player-landscape":"", "player-zoom":"", "player-follow":"", "voice-more":"",
     "library-more": "ds-library-song-more song-more tw:min-h-0 tw:size-40 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:hover:bg-surface-overlay tw:hover:text-ink",
     standard:
       "tw:min-h-0 tw:size-40 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:text-ink-secondary tw:hover:bg-surface-overlay tw:hover:text-ink",
@@ -189,6 +197,7 @@ function iconButtonRecipeStyles({
 }
 /** ruled/transcription intentionally preserve identical looks pending D09/D10. */
 export const fieldVariants = [
+  "panel-tempo", "panel-measure", "panel-export", "panel-offset",
   "player-volume",
   "account-password",
   "library-prompt",
@@ -210,6 +219,10 @@ function fieldRecipeStyles(
   { variant = "boxed", invalid = false }: FieldOptions = {},
   kind: "input" | "select" | "textarea" = "input",
 ): Record<'root'|'label'|'control'|'hint'|'error', string> {
+  if (variant.startsWith("panel-")) {
+    const controls = {"panel-tempo":"ds-panel-field ds-panel-bpm-input bpm-input field", "panel-measure":"ds-panel-field ds-panel-measure-input measure-input field", "panel-export":"ds-panel-field field", "panel-offset":"ds-panel-range"};
+    return {root:"ds-panel-part",label:"ds-panel-label label",control:"ds-panel-input " + controls[variant as keyof typeof controls],hint:"tw:sr-only",error:"tw:sr-only"};
+  }
   if (variant === "player-volume") return {root:"ds-player-duck-row",label:"ds-player-label label",control:"ds-player-input ds-player-volume duck-range",hint:"tw:sr-only",error:"tw:sr-only"};
   if (variant === "account-password") return {root:"ds-account-password",label:"ds-account-label",control:"ds-account-input tw:rounded-field",hint:"tw:sr-only",error:"ds-account-error"};
   if (variant === 'library-prompt') {
@@ -266,11 +279,12 @@ function selectRecipeStyles(options: FieldOptions = {}) {
 function textareaRecipeStyles(options: FieldOptions = {}) {
   return fieldRecipe(options, "textarea").control;
 }
-export const checkboxVariants = ["standard", "permission", "export"] as const;
+export const checkboxVariants = ["standard", "permission", "export", "export-voice"] as const;
 export interface CheckboxOptions {
   variant?: (typeof checkboxVariants)[number];
 }
 function checkboxRecipeStyles({ variant = "standard" }: CheckboxOptions = {}) {
+  if (variant === "export-voice") return {root:"ds-panel-part",control:"ds-panel-input ds-panel-export-check"};
   return {
     root: "tw:inline-flex tw:items-center tw:gap-8 tw:font-auth-body tw:text-label tw:leading-body " + (variant === "permission" ? "tw:text-admin-ink" : "tw:text-ink"),
     control:

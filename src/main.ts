@@ -1,4 +1,4 @@
-import { createTransport, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
+import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
 import { matchBreakpoint } from './design-system/theme';
 import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
@@ -49,7 +49,7 @@ import type { PdfVoice } from './exportPdf';
 import { INTRO_ON, introDue, introRunning, startIntro, stopIntro } from './intro';
 import { canSwing, swingMap, swingScore } from './swing';
 import { loadScriptFont } from './goldInk';
-import { closeOverlay, confirmDialog, isNarrow, openMenu, openPopover, openSheet, promptDialog } from './ui';
+import { closeOverlay, isNarrow, type MenuItem } from './ui';
 import * as sync from './sync';
 import { account, canEditPieces, canManageMembers, activeEnsemble, ensembleById, forgetEnsemble, leads, ensembleName, PUBLIC_ID, refreshEnsembleNames, renameEnsemble, setActiveEnsemble, unlockedEnsembles } from './ensembles';
 import type { PlaybackState } from './sync';
@@ -74,8 +74,7 @@ function openLibrarySheet(
     behavior: { opener, onClose, ...(closeVariant === "player" ? { initialFocus: (): HTMLElement => sheet.element } : {}) },
   });
   const head = sheet.element.querySelector("header")!;
-  const grab = document.createElement("span");
-  grab.className = "ds-library-sheet-grab";
+  const grab = createLibraryPart("span","sheet-grab");
   grab.setAttribute("aria-hidden", "true");
   head.prepend(grab);
   head.append(
@@ -91,12 +90,12 @@ function openLibrarySheet(
 }
 function openLibraryMenu(
   anchor: HTMLElement,
-  items: Parameters<typeof openMenu>[1],
+  items: MenuItem[],
   title = "",
 ) {
   let overlay: ReturnType<typeof createDialog>;
   const convert = (
-    items: Parameters<typeof openMenu>[1],
+    items: MenuItem[],
   ): Parameters<typeof createMenu>[0]["items"] =>
     items.map((item) => ({
       ...item,
@@ -145,6 +144,10 @@ function openLibraryMenu(
     place();
     requestAnimationFrame(place);
   }
+}
+function openPlayerPopover(anchor:HTMLElement,content:HTMLElement,align:'start'|'center') {
+ const panel=createDialog({variant:'library-popover',title:'',content,behavior:{opener:anchor,initialFocus:()=>panel.element}});panel.open();
+ const place=()=>{const a=anchor.getBoundingClientRect(),p=panel.element.getBoundingClientRect();let left=align==='start'?a.left:a.left+(a.width-p.width)/2;left=Math.max(8,Math.min(window.innerWidth-p.width-8,left));const below=a.bottom+8;panel.element.style.left=`${left}px`;panel.element.style.top=`${Math.max(8,below+p.height>window.innerHeight-8?a.top-p.height-8:below)}px`;};place();requestAnimationFrame(place);return panel;
 }
 function libraryPrompt(options: {
   title: string;
@@ -266,239 +269,7 @@ function importEnsemble(): string {
   return currentEnsemble;
 }
 const backdrop = new WaveBackdrop();
-app.innerHTML = `
-  <section id="landing" class="view" aria-label="LightScore">
-    <canvas class="ribbons" id="landing-ribbons" aria-hidden="true"></canvas>
-    <h1 class="landing-name" aria-label="LightScore"><span class="ls-l">Light</span>Score</h1>
-    <div class="landing-choice">
-      <p class="landing-dedication" id="landing-dedication" hidden></p>
-      <div class="landing-empty" id="landing-empty" hidden><p>${pt('noEnsemble')}</p><p class="ctl-note">${pt('invitationNeeded')}</p><button class="link-btn" id="landing-samples">${pt('viewSamples')}</button></div>
-      <div class="landing-modes">
-        <button type="button" class="mode-btn" id="mode-solo-btn">${icon('user')}<span>${t('practiseAlone')}</span></button>
-        <button type="button" class="mode-btn" id="mode-ensemble-btn">${icon('users')}<span>${t('rehearseTogether')}</span></button>
-      </div>
-      <button type="button" class="link-btn landing-aside" id="landing-create">${pt('createEnsemble')}</button>
-    </div>
-  </section>
-
-  <section id="library" class="view">
-    <header class="lib-top">
-      <span class="brand"><canvas class="mark" aria-hidden="true"></canvas><span class="wordmark" aria-label="LightScore"><span class="ls-l">Light</span>Score</span></span>
-      <div class="lib-top-r">
-        <div class="seg mode-seg" id="mode-seg" role="group" aria-label="${t('mode')}">
-          <button type="button" data-action="mode" data-mode="solo">${icon('user')}<span>${modeName('solo')}</span></button>
-          <button type="button" data-action="mode" data-mode="ensemble">${icon('users')}<span>${modeName('ensemble')}</span><i class="live-dot" aria-hidden="true"></i></button>
-        </div>
-        <button type="button" class="icon-btn" id="lib-menu-btn" aria-label="${t('menu')}">${icon('more')}</button>
-      </div>
-    </header>
-    <div class="lib-scroll">
-      <div class="lib-head">
-        <div>
-          <h1 id="lib-title">${t('repertoire')}</h1>
-          <p id="lib-count"></p>
-        </div>
-        <div class="lib-tools">
-          <label class="search" id="lib-search-wrap" hidden>${icon('search')}<input id="lib-search" type="search" placeholder="${t('searchTitles')}" aria-label="${t('searchTitles')}" /></label>
-          <button type="button" class="btn" id="transcription-entry" hidden><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H5v18h14V9M14 3v6h5M8 12h7M8 16h7M19 1v6M16 4h6"/></svg><span>${tr('entry')}</span></button>
-          <button type="button" class="btn primary" id="import-btn">${icon('plus')}<span>${t('addArrangement')}</span></button>
-        </div>
-      </div>
-      <section id="transcription-jobs" hidden aria-label="${tr('work')}"></section>
-      <div id="lib-banner" class="banner" role="status" hidden></div>
-      <ul id="song-grid" class="song-grid"></ul>
-      <p class="lib-tip">${icon('upload')}<span>${t('dropTip')}</span></p>
-    </div>
-    <div class="drop-veil" aria-hidden="true"><span>${icon('upload')}${t('dropHere')}</span></div>
-    <input id="import-input" type="file" accept=".musicxml,.xml,.mxl,.mid,.midi" multiple hidden />
-  </section>
-
-  <section id="player" class="view">
-    <header class="p-top">
-      <button type="button" class="back-btn" id="library-back-btn">${icon('back')}<span>${t('back')}</span></button>
-      <div class="p-title">
-        <h2 id="song-title"></h2>
-        <span id="song-meta"></span>
-      </div>
-      <div class="p-top-r">
-        <div class="seg view-seg" id="view-seg" role="group" aria-label="${t('view')}">
-          <button type="button" data-action="view" data-view="roll" aria-label="${t('pianoRoll')}">${icon('roll')}<span>${t('pianoRoll')}</span></button>
-          <button type="button" data-action="view" data-view="staff" aria-label="${t('sheetMusic')}">${icon('sheet')}<span>${t('sheetMusic')}</span></button>
-        </div>
-        <button type="button" class="badge" id="mode-badge"></button>
-        <button type="button" class="icon-btn landscape-only" data-action="open-mixer" aria-label="${t('voices')}">${icon('mixer')}</button>
-        <button type="button" class="icon-btn" id="player-menu-btn" aria-label="${t('menu')}">${icon('more')}</button>
-      </div>
-    </header>
-    <aside class="voices-panel" aria-label="${t('voices')}">
-      <div class="panel-head"><span class="label">${t('voices')}</span><button type="button" class="link-btn" data-action="mix-reset">${t('reset')}</button></div>
-      <ul class="voice-list" id="voice-list"></ul>
-      <div class="duck">
-        <label class="label" for="duck-range-side">${t('othersWhileSoloing')}</label>
-        <div class="duck-row"><input type="range" class="duck-range" id="duck-range-side" min="0" max="0.75" step="0.05" /><output class="duck-value"></output></div>
-      </div>
-    </aside>
-    <div class="chips" id="voice-chips" role="group" aria-label="${t('voices')}"></div>
-    <div class="chips-mixer"><button type="button" class="chip mixer-chip" data-action="open-mixer" aria-label="${t('voices')}">${icon('mixer')}</button></div>
-    <div class="stage" id="stage">
-      <canvas id="roll"></canvas>
-      <canvas id="staff" hidden></canvas>
-      <div class="zoom" role="group" aria-label="Zoom">
-        <button type="button" class="icon-btn follow-btn" data-action="follow" aria-pressed="true" aria-label="${t('followMusic')}" title="${t('followMusicHint')}">${icon('fitHeight')}</button>
-        <span class="zoom-sep" aria-hidden="true"></span>
-        <button type="button" class="icon-btn" data-action="zoom-out" aria-label="${t('zoomOut')}">${icon('minus')}</button>
-        <span id="zoom-value">100%</span>
-        <button type="button" class="icon-btn" data-action="zoom-in" aria-label="${t('zoomIn')}">${icon('plus')}</button>
-      </div>
-    </div>
-    <div class="overview" id="overview-wrap">
-      <canvas id="overview" title="${t('wholePiece')}"></canvas>
-      <div id="section-marks"></div>
-      <button type="button" class="icon-btn small" id="section-add-btn" data-action="section-add" aria-label="${t('addSection')}" title="${t('addSection')}">${icon('flag')}</button>
-    </div>
-    <button type="button" class="info-row" data-action="open-controls">
-      <span><b data-bind="pos-bar"></b> <span data-bind="pos-beat-short"></span></span>
-      <span class="info-tempo">${icon('quarter')}<b data-bind="bpm"></b></span>
-      <span>${t('key')} <b data-bind="transpose"></b></span>
-      <span class="info-metro" data-bind-metro>${icon('metronome')}</span>
-      <span class="info-metro" data-bind-tones>${icon('fork')}</span>
-      ${icon('chevronUp')}
-    </button>
-    <footer class="transport">
-      <button type="button" class="pos" data-action="goto" aria-label="${t('goToBar')}">
-        <b data-bind="pos-bar"></b><span data-bind="pos-beat"></span>
-      </button>
-      <div class="t-center">
-        <button type="button" class="t-btn t-stop-left" data-action="stop" aria-label="${t('stop')}" title="${t('stop')}">${icon('stop')}</button>
-        <button type="button" class="t-btn" data-hold="-1" aria-label="${t('prevBar')}" title="${t('prevBar')}">${icon('prev')}</button>
-        <button type="button" class="t-btn t-stop-mid" data-action="stop" aria-label="${t('stop')}" title="${t('stop')}">${icon('stop')}</button>
-        <button type="button" class="play-btn" data-action="play" aria-label="${t('play')}">${icon('play')}</button>
-        <button type="button" class="t-btn" data-hold="1" aria-label="${t('nextBar')}" title="${t('nextBar')}">${icon('next')}</button>
-        <span class="t-sep" aria-hidden="true"></span>
-        <button type="button" class="t-btn toggle" data-action="loop" aria-pressed="false">${icon('loop')}</button>
-        <button type="button" class="t-btn toggle t-metro" data-action="metronome" aria-pressed="false" aria-label="${t('metronome')}" title="${t('metronome')}">${icon('metronome')}</button>
-        <button type="button" class="t-btn toggle t-metro" data-action="start-tones" aria-pressed="false" aria-label="${t('startTones')}" title="${t('startTonesHint')}">${icon('fork')}</button>
-      </div>
-      <div class="t-right">
-        <div class="stepper" role="group" aria-label="${t('tempo')}">
-          <button type="button" data-action="bpm-down" aria-label="${t('slower')}">${icon('minus')}</button>
-          <button type="button" class="stepper-value" data-action="open-tempo">${icon('quarter')}<span>= <b data-bind="bpm"></b></span></button>
-          <button type="button" data-action="bpm-up" aria-label="${t('faster')}">${icon('plus')}</button>
-        </div>
-        <div class="stepper" role="group" aria-label="${t('key')}">
-          <span class="label">${t('key')}</span>
-          <button type="button" data-action="transpose-down" aria-label="${t('lower')}">${icon('minus')}</button>
-          <span class="stepper-value static"><b data-bind="key-short"></b></span>
-          <button type="button" data-action="transpose-up" aria-label="${t('higher')}">${icon('plus')}</button>
-        </div>
-        <button type="button" class="t-btn t-save" data-action="save-defaults" aria-label="${t('saveDefaults')}" title="${t('saveDefaults')}" hidden>${icon('save')}</button>
-      </div>
-    </footer>
-  </section>
-`;
-
-// Build migrated controls before capturing the existing ID/delegation hooks.
-for (const [id, variant, intent] of [
-  ["mode-solo-btn", "landing-mode", "secondary"],
-  ["mode-ensemble-btn", "landing-mode", "secondary"],
-  ["landing-create", "landing-aside", "secondary"],
-  ["landing-samples", "landing-link", "secondary"],
-  ["import-btn", "library-action", "primary"],
-  ["transcription-entry", "library-action", "secondary"],
-] as const) {
-  const prior = document.getElementById(id)!;
-  const button = createButton({
-    text: "",
-    variant,
-    intent,
-    layout:
-      id === "import-btn" || id === "transcription-entry"
-        ? "tw:max-compact:flex-1"
-        : undefined,
-    attrs: { id, hidden: prior.hidden || undefined },
-  });
-  button.append(...prior.childNodes);
-  if (id === "landing-create") button.classList.add("ds-library-landing-aside");
-  prior.replaceWith(button);
-}
-const oldMenu = document.getElementById("lib-menu-btn")!;
-const libMenu = createIconButton({
-  label: t("menu"),
-  attrs: { id: "lib-menu-btn" },
-});
-libMenu.append(...oldMenu.childNodes);
-oldMenu.replaceWith(libMenu);
-const oldSearch = document.getElementById("lib-search-wrap")!;
-const searchControl = createInput({
-  variant: "library-search",
-  type: "search",
-  id: "lib-search",
-  attrs: { placeholder: t("searchTitles"), "aria-label": t("searchTitles") },
-});
-const searchField = createField({
-  variant: "library-search",
-  label: t("searchTitles"),
-  control: searchControl,
-  attrs: { id: "lib-search-wrap", hidden: true },
-});
-searchField.prepend(oldSearch.firstChild!);
-oldSearch.replaceWith(searchField);
-for (const [id, part] of [
-  ["song-grid", "song-grid"],
-  ["lib-banner", "banner"],
-  ["landing-empty", "landing-empty"],
-] as const) {
-  const prior = document.getElementById(id)!;
-  const next = createLibraryPart(id === "song-grid" ? "ul" : "div", part, {
-    attrs: {
-      id,
-      hidden: prior.hidden || undefined,
-      ...(id === "lib-banner" ? { role: "status" } : {}),
-    },
-  });
-  next.append(...prior.childNodes);
-  prior.replaceWith(next);
-}
-
-// Player domain compositions retain the original tree and delegation hooks. Slice 4 owns
-// tempo/key/goto/section/export panels; the chrome around those slots is shared here.
-for (const [selector, part] of [
- [".p-top","header"],[".p-title","title"],[".p-top-r","header-actions"],
- ["#song-title","song-title"],["#song-meta","song-meta"],[".voices-panel","voices-panel"],
- [".panel-head","panel-head"],["#voice-list","voice-list"],["#voice-chips","chips"],
- [".chips-mixer","chips-mixer"],[".t-sep","transport-separator"],[".info-metro","info-indicator"],
- [".zoom","zoom"],[".zoom-sep","zoom-separator"],["#zoom-value","zoom-value"],
- ["#mode-seg","mode-group"],["#view-seg","view-group"],[".live-dot","live-dot"],
- [".voices-panel .label","label"],
-] as const) {
- for (const prior of app.querySelectorAll<HTMLElement>(selector)) {
-  const next=createPlayerPart(prior.tagName.toLowerCase() as keyof HTMLElementTagNameMap,part,{attrs:Object.fromEntries([...prior.attributes].filter(a=>a.name!=="class").map(a=>[a.name,a.value]))});
-  next.append(...prior.childNodes);prior.replaceWith(next);
- }
-}
-for (const [selector, variant] of [
- ["#library-back-btn","player-back"],["#mode-badge","player-mode"],[".info-row","player-info"],
- [".transport .pos","player-position"],[".t-stop-left","player-stop-left"],[".t-stop-mid","player-stop-mid"],
- [".play-btn","player-play"],[".t-btn[data-hold]","player-transport"],
- ['.t-btn[data-action="loop"]',"player-toggle"],[".t-metro","player-preference"],
- [".t-save","player-save"],[".mixer-chip","player-mixer-chip"],
- ['.panel-head [data-action="mix-reset"]',"player-reset"],[".seg button","player-segmented"],
-] as const) {
- for(const prior of app.querySelectorAll<HTMLButtonElement>(selector)) {
-  const attrs=Object.fromEntries([...prior.attributes].filter(a=>a.name!=="class"&&a.name!=="type"&&a.name!=="aria-pressed").map(a=>[a.name,a.value]));
-  const next=createButton({text:"",variant,pressed:prior.hasAttribute("aria-pressed")?prior.getAttribute("aria-pressed")==="true":undefined,attrs});next.append(...prior.childNodes);prior.replaceWith(next);
- }
-}
-for(const [selector,variant] of [["#player-menu-btn","player"],[".landscape-only","player-landscape"],['.zoom [data-action="follow"]',"player-follow"],[".zoom .icon-btn:not(.follow-btn)","player-zoom"]] as const) {
- for(const prior of app.querySelectorAll<HTMLButtonElement>(selector)) {
-  const attrs=Object.fromEntries([...prior.attributes].filter(a=>a.name!=="class"&&a.name!=="type"&&a.name!=="aria-label"&&a.name!=="aria-pressed").map(a=>[a.name,a.value]));
-  const next=createIconButton({variant,label:prior.getAttribute("aria-label")??"",pressed:prior.hasAttribute("aria-pressed")?prior.getAttribute("aria-pressed")==="true":undefined,attrs});next.append(...prior.childNodes);prior.replaceWith(next);
- }
-}
-const oldTransport=app.querySelector('.transport')!;
-oldTransport.replaceWith(createTransport({position:oldTransport.querySelector('.pos')!,commands:oldTransport.querySelector('.t-center')!.childNodes,controls:oldTransport.querySelector('.t-right')!.childNodes}));
-const sideVolume=app.querySelector(".voices-panel .duck")!;
-sideVolume.replaceWith(createMixerVolume({id:"duck-range-side",label:t("othersWhileSoloing")}));
+app.replaceChildren(createMainScreen({t,pt,tr,modeName,icon:libraryIcon}));
 
 const libraryEl = document.querySelector<HTMLElement>('#library')!;
 const songGridEl = document.querySelector<HTMLUListElement>('#song-grid')!;
@@ -698,10 +469,10 @@ function leavePlaybackSession() {sharedSeeks.cancel(); playerSession?.dispose();
 function sharedReadiness(ready:boolean) {
  sharedReady=ready;
  app.classList.toggle('sync-connecting',syncEnabled() && !ready);
- document.querySelectorAll<HTMLButtonElement>('.transport button, [data-action=play], [data-action=stop]').forEach(b=>{b.disabled=syncEnabled() && !ready;});
+ document.querySelectorAll<HTMLButtonElement>('.transport button, [data-action=play], [data-action=stop]').forEach(b=>updateButton(b,{disabled:syncEnabled() && !ready}));
  modeBadge.title=syncEnabled() && !ready ? t('syncConnecting') : '';
  let status=document.querySelector<HTMLElement>('#sync-status');
- if(!status){status=document.createElement('span');status.id='sync-status';status.className='ctl-note';status.setAttribute('role','status');document.querySelector('#mode-seg')?.after(status);}
+ if(!status){status=createPanelPart('span','ctl-note');status.id='sync-status';status.setAttribute('role','status');document.querySelector('#mode-seg')?.after(status);}
  status.textContent=t('syncConnecting');status.hidden=!syncEnabled() || ready;
  if(syncEnabled() && !ready)modeBadge.innerHTML=`${icon('users')}<span>${t('syncConnecting')}</span>`;else renderModeControls();
 }
@@ -789,7 +560,7 @@ window.setInterval(()=>{
   if(Math.abs(lastSharedDrift)>1000 || (playerSession.clock.diagnostics!.uncertaintyMs<15 && Math.abs(lastSharedDrift)>30)){const beat=positionAt(sharedState,now,timing);const delta=(secondsAt(Math.ceil(beat+.01),timing)-secondsAt(beat,timing))*timing.baseBpm/sharedState.bpm*1000;scheduleSharedAudio(now+(delta>=80 && delta<=300?delta:80));}
  }
  if(joined.status==='stopped')syncPlayButtons(false);
- if(syncDebug){let el=document.querySelector<HTMLElement>('#sync-debug');if(!el){el=document.createElement('pre');el.id='sync-debug';el.style.cssText='position:fixed;bottom:0;left:0;z-index:10000;background:var(--ds-surface);color:var(--ds-ink);padding:8px;pointer-events:none';document.body.append(el);}el.textContent=JSON.stringify({offset:playerSession.clock.diagnostics?.offsetMs,uncertainty:playerSession.clock.diagnostics?.uncertaintyMs,drift:lastSharedDrift,revision:sharedState.revision});}
+ if(syncDebug){let el=document.querySelector<HTMLElement>('#sync-debug');if(!el){el=createPanelPart('pre','sync-debug');el.id='sync-debug';document.body.append(el);}el.textContent=JSON.stringify({offset:playerSession.clock.diagnostics?.offsetMs,uncertainty:playerSession.clock.diagnostics?.uncertaintyMs,drift:lastSharedDrift,revision:sharedState.revision});}
 },2000);
 function syncEnabled(): boolean {
   return serverLibraryEnabled && sessionMode === 'ensemble';
@@ -847,7 +618,7 @@ async function requestModeSwitch(mode: 'solo' | 'ensemble') {
   if (mode === 'ensemble' && isOffline()) { toast(off('together')); return; }
   if (mode === sessionMode) return;
   const name = modeName(mode);
-  const ok = await confirmDialog({
+  const ok = await libraryPrompt({
     title: t('switchToTitle', { mode: name }),
     body: mode === 'solo' ? t('switchToSolo') : t('switchToEnsemble'),
     confirmLabel: t('switchAction'),
@@ -866,7 +637,7 @@ modeBadge.addEventListener('click', () => {
     openLibraryMenu(modeBadge, [{ label: isOffline() ? off('together') : t('rehearseTogether'), disabled:isOffline(), icon: 'users', onSelect: () => void requestModeSwitch('ensemble') }], t('mode'));
     return;
   }
-  const items: Parameters<typeof openMenu>[1] = [];
+  const items: MenuItem[] = [];
   items.push({ label: t('practiseAlone'), icon: 'user', onSelect: () => void requestModeSwitch('solo') });
   openLibraryMenu(modeBadge, items, modeName('ensemble'));
 });
@@ -917,7 +688,7 @@ function renderLibraryHead() {
  importBtn.hidden=inPublicFolder();importBtn.querySelector('span')!.textContent=editable()?t('addArrangement'):pt('openLocal');document.querySelector<HTMLElement>('.lib-tip')!.hidden=!editable();
 }
 async function openEnsembleMenu(anchor:HTMLElement) {
- const items:Parameters<typeof openMenu>[1]=[...unlockedEnsembles(),PUBLIC_ID].map(id=>({label:ensembleName(id),icon:'users',checked:id===currentEnsemble,onSelect:()=>void switchEnsemble(id)}));
+ const items:MenuItem[]=[...unlockedEnsembles(),PUBLIC_ID].map(id=>({label:ensembleName(id),icon:'users',checked:id===currentEnsemble,onSelect:()=>void switchEnsemble(id)}));
  items.push({label:pt('createEnsemble'),disabled:isOffline(),icon:'plus',onSelect:()=>createEnsemble(anchor)});
  if(leads(currentEnsemble)||ensembleById(currentEnsemble)?.capabilities.manageMembers)items.push({label:pt('membersInvitations')+(isOffline()?' · '+off('online'):''),disabled:isOffline(),icon:'users',onSelect:()=>void membersSheet(currentEnsemble,anchor)});
  if(leads(currentEnsemble))items.push({disabled:isOffline(),label:t('renameEnsemble'),icon:'pencil',onSelect:()=>void renameCurrentEnsemble()});
@@ -955,7 +726,7 @@ async function renameCurrentEnsemble() {
   }
 }
 
-function moveItems(_song:SongEntry):Parameters<typeof openMenu>[1] {return [];}
+function moveItems(_song:SongEntry):MenuItem[] {return [];}
 
 // Playback sound, chosen per device (not synced -- each singer may prefer another).
 const SOUND_KEY = 'ai-capella-sound';
@@ -973,11 +744,9 @@ let lightOffsetMs = (() => {
 const OUTPUT_LATENCY_KEY='ai-capella-output-latency-ms';
 let outputLatencyMs=(()=>{try{return Math.max(-500,Math.min(500,Number(localStorage.getItem(OUTPUT_LATENCY_KEY))||0));}catch{return 0;}})();
 function openOutputLatencySheet(opener:HTMLElement|null){
- const body=document.createElement('div');body.className='sheet-body offset-body';
- body.innerHTML=`<p class="ctl-note">${t('outputLatencyHint')}</p><div class="offset-row"><span>−500 ms</span><input type="range" min="-500" max="500" step="5" value="${outputLatencyMs}" aria-label="${t('outputLatency')}"><span>500 ms</span></div><p class="offset-value"><output>${outputLatencyMs} ms</output></p>`;
- const input=body.querySelector('input')!,out=body.querySelector('output')!;
+ const {body,input,out}=createOffsetControl({hint:t('outputLatencyHint'),earlier:'−500 ms',later:'500 ms',value:outputLatencyMs,label:t('outputLatency'),min:-500,max:500,output:`${outputLatencyMs} ms`});
  input.addEventListener('change',()=>{outputLatencyMs=Number(input.value);out.textContent=`${outputLatencyMs} ms`;try{localStorage.setItem(OUTPUT_LATENCY_KEY,String(outputLatencyMs));}catch{}if(audioEngine)audioEngine.outputLatencyOffsetMs=outputLatencyMs;scheduleSharedAudio();});
- openSheet(t('outputLatency'),body,opener);
+ openLibrarySheet(t('outputLatency'),body,opener,undefined,'player');
 }
 
 /** The "?" by the bar numbers of a scanned song's places to check, in both rulers. */
@@ -994,22 +763,17 @@ function renderScanMarks() {
 function openScanMarksSheet(opener: HTMLElement | null) {
   const song = currentSong;
   if (!song?.scanMarks?.length) return;
-  const body = document.createElement('div');
-  body.className = 'sheet-body scan-marks-body';
+  const body = createPanelPart('div','scan-marks-body');
   const urls: string[] = [];
   const render = () => {
     const marks = song.scanMarks ?? [];
     body.replaceChildren();
-    const lead = document.createElement('p');
-    lead.className = 'ctl-note';
+    const lead = createPanelPart('p','ctl-note');
     lead.textContent = t('scanMarksLead');
-    const list = document.createElement('ul');
-    list.className = 'scan-mark-list';
+    const list = createPanelPart('ul','scan-mark-list');
     marks.forEach((mk, i) => {
-      const li = document.createElement('li');
-      li.className = 'scan-mark';
-      const head = document.createElement('div');
-      head.className = 'scan-q-head';
+      const li = createPanelPart('li','scan-mark');
+      const head = createPanelPart('div','scan-q-head');
       const bar = document.createElement('b');
       bar.textContent = t('scanBarShort', { n: mk.measure });
       const part = document.createElement('span');
@@ -1017,33 +781,24 @@ function openScanMarksSheet(opener: HTMLElement | null) {
       head.append(bar, part);
       li.appendChild(head);
       if (mk.img) {
-        const img = document.createElement('img');
+        const img = createPanelPart('img','scan-mark-img');
         const url = URL.createObjectURL(new Blob([mk.img as BlobPart], { type: 'image/jpeg' }));
         urls.push(url);
         img.src = url;
         img.alt = t('scanBarShort', { n: mk.measure });
-        img.className = 'scan-mark-img';
         li.appendChild(img);
       }
-      const note = document.createElement('p');
-      note.className = 'scan-q-text';
+      const note = createPanelPart('p','scan-q-text');
       note.textContent = mk.note;
-      const actions = document.createElement('div');
-      actions.className = 'scan-actions';
-      const go = document.createElement('button');
-      go.type = 'button';
-      go.className = 'btn';
-      go.textContent = t('scanMarkGo');
+      const actions = createPanelPart('div','scan-actions');
+      const go = createButton({variant:'scan-mark-go',text:t('scanMarkGo')});
       go.addEventListener('click', () => {
         jumpToMeasure(parseInt(mk.measure, 10));
         closeOverlay();
       });
-      const ok = document.createElement('button');
-      ok.type = 'button';
-      ok.className = 'btn ghost';
-      ok.textContent = t('scanMarkOk');
+      const ok = createButton({variant:'scan-mark-ok',text:t('scanMarkOk')});
       ok.addEventListener('click', async () => {
-        ok.disabled = true;
+        updateButton(ok,{disabled:true});
         const rest = marks.filter((_, k) => k !== i);
         try {
           await saveScanMarks(song.id, rest);
@@ -1053,7 +808,7 @@ function openScanMarksSheet(opener: HTMLElement | null) {
           if (rest.length) render();
           else closeOverlay();
         } catch (err) {
-          ok.disabled = false;
+          updateButton(ok,{disabled:false});
           toast(errorText(err), 'error');
         }
       });
@@ -1064,22 +819,11 @@ function openScanMarksSheet(opener: HTMLElement | null) {
     body.append(lead, list);
   };
   render();
-  openSheet(t('scanMarksTitle'), body, opener, () => urls.forEach((u) => URL.revokeObjectURL(u)));
+  openLibrarySheet(t('scanMarksTitle'), body, opener, () => urls.forEach((u) => URL.revokeObjectURL(u)),'player');
 }
 
 function openLightOffsetSheet(opener: HTMLElement | null) {
-  const body = document.createElement('div');
-  body.className = 'sheet-body offset-body';
-  body.innerHTML = `
-    <p class="ctl-note">${t('lightOffsetHint')}</p>
-    <div class="offset-row">
-      <span>${t('lightEarlier')}</span>
-      <input type="range" id="light-offset" min="-150" max="150" step="5" value="${lightOffsetMs}" aria-label="${t('lightOffset')}">
-      <span>${t('lightLater')}</span>
-    </div>
-    <p class="offset-value"><output for="light-offset">${lightOffsetLabel(lightOffsetMs)}</output></p>`;
-  const input = body.querySelector<HTMLInputElement>('#light-offset')!;
-  const out = body.querySelector('output')!;
+  const {body,input,out}=createOffsetControl({hint:t('lightOffsetHint'),earlier:t('lightEarlier'),later:t('lightLater'),value:lightOffsetMs,label:t('lightOffset'),id:'light-offset',min:-150,max:150,output:lightOffsetLabel(lightOffsetMs)});
   input.addEventListener('input', () => {
     lightOffsetMs = Number(input.value);
     out.textContent = lightOffsetLabel(lightOffsetMs);
@@ -1091,7 +835,7 @@ function openLightOffsetSheet(opener: HTMLElement | null) {
     }
     audioEngine?.setLightOffsetMs(lightOffsetMs);
   });
-  openSheet(t('lightOffset'), body, opener);
+  openLibrarySheet(t('lightOffset'), body, opener,undefined,'player');
 }
 
 /**
@@ -1103,16 +847,12 @@ function openExportSheet(opener: HTMLElement | null) {
   const score = currentScore;
   if (!song || !score) return;
   const key = transposedKeyName();
-  const body = document.createElement('div');
-  body.className = 'sheet-body export-body';
-  const note = document.createElement('p');
-  note.className = 'ctl-note';
-  const details = document.createElement('details');
-  details.className = 'export-voices';
-  const summary = document.createElement('summary');
+  const body = createPanelPart('div','export-body');
+  const note = createPanelPart('p','ctl-note');
+  const details = createPanelPart('details','export-voices');
+  const summary = createPanelPart('summary','export-summary');
   summary.textContent = t('exportVoices');
-  const list = document.createElement('ul');
-  list.className = 'export-voice-list';
+  const list = createPanelPart('ul','export-voice-list');
   // One row per part of the file: a part on several staves (a piano's two hands), even with its
   // staves made voices of their own, goes into the PDF whole, under its own name and clefs.
   const sources: { id: string; name: string; color: string; staves: boolean }[] = [];
@@ -1121,19 +861,12 @@ function openExportSheet(opener: HTMLElement | null) {
     if (!sources.some((s) => s.id === id)) sources.push({ id, name: part.sourceName ?? part.name, color: colorForPart(i, score.parts.length), staves: !!part.sourceId || !!part.staves });
   });
   const rows = sources.map((source) => {
-    const li = document.createElement('li');
+    const li = createPanelPart('li','export-row');
     li.style.setProperty('--c', source.color);
     li.dataset.themeVoice = String(score.parts.findIndex(part => (part.sourceId ?? part.id) === source.id));
     li.dataset.themeVoiceCount = String(score.parts.length);
-    const check = document.createElement('input');
-    check.type = 'checkbox';
-    check.checked = true;
-    check.setAttribute('aria-label', source.name);
-    const name = document.createElement('input');
-    name.type = 'text';
-    name.className = 'field';
-    name.value = source.name;
-    name.setAttribute('aria-label', t('renameVoice'));
+    const check = createCheckbox({variant:'export-voice',checked:true,label:source.name,attrs:{'aria-label':source.name}}).querySelector('input')!;
+    const name = createInput({variant:'panel-export',value:source.name,attrs:{'aria-label':t('renameVoice')}});
     li.append(check, name);
     list.appendChild(li);
     check.addEventListener('change', () => {
@@ -1143,20 +876,17 @@ function openExportSheet(opener: HTMLElement | null) {
     return { source, check, name };
   });
   details.append(summary, list);
-  const status = document.createElement('p');
-  status.className = 'export-status';
+  const status = createPanelPart('p','export-status');
   status.setAttribute('role', 'status');
-  const go = document.createElement('button');
-  go.type = 'button';
-  go.className = 'btn primary wide';
-  go.innerHTML = `${icon('file')}<span>${t('exportMake')}</span>`;
+  const go = createButton({variant:'library-action',intent:'primary',text:'',layout:'tw:w-full'});
+  go.append(libraryIcon('file'),document.createTextNode(t('exportMake')));
   body.append(note, details, status, go);
   const describe = () => {
     const n = rows.filter((r) => r.check.checked).length;
     note.textContent = `${t('exportNote', { title: score.title, key })} ${n === rows.length ? t('exportNoteAll') : t('exportNoteSome', { n, total: rows.length })}`;
   };
   describe();
-  const close = openSheet(t('exportItem'), body, opener);
+  const sheet = openLibrarySheet(t('exportItem'), body, opener,undefined,'player');
   go.addEventListener('click', async () => {
     const shown = new Set(sources.map((s) => s.id));
     const voices: PdfVoice[] = [
@@ -1173,7 +903,7 @@ function openExportSheet(opener: HTMLElement | null) {
       status.textContent = t('exportNone');
       return;
     }
-    go.disabled = true;
+    updateButton(go,{disabled:true});
     try {
       const { makePdf } = await import('./exportPdf');
       const xml = await readSongText(song);
@@ -1189,10 +919,10 @@ function openExportSheet(opener: HTMLElement | null) {
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       toast(t('exportDone'));
-      close();
+      sheet.close();
     } catch (err) {
       status.textContent = t('exportFailed', { msg: errorText(err) });
-      go.disabled = false;
+      updateButton(go,{disabled:false});
     }
   });
 }
@@ -1259,10 +989,8 @@ function paperItems(anchor: HTMLElement) {
 }
 
 function openPaperSheet(opener: HTMLElement | null) {
-  const body = document.createElement('div');
-  body.className = 'paper-body';
-  const lead = document.createElement('p');
-  lead.className = 'ctl-note';
+  const body = createPanelPart('div','paper-body');
+  const lead = createPanelPart('p','ctl-note');
   lead.textContent = t('paperLead');
   const list = createLibraryPart('div', 'paper-list');
   list.setAttribute('role', 'radiogroup');
@@ -1823,7 +1551,7 @@ async function loadSongLocally(song: SongEntry, replaceAt?:number) {
   currentSong = song;
   loadedSongId = song.id;
   document.querySelector('#local-practice-note')?.remove();
-  if(song.localOnly){const note=document.createElement('p');note.id='local-practice-note';note.className='ctl-note';note.textContent=pt('privatePractice');songMetaEl.after(note);}
+  if(song.localOnly){const note=createPanelPart('p','ctl-note');note.id='local-practice-note';note.textContent=pt('privatePractice');songMetaEl.after(note);}
   // Saving tempo, key and sections as the song's default (laptop: beside the key; library songs only).
   document.querySelector<HTMLElement>('.t-save')!.hidden = !song.imported || !editable();
   notesByPart = new Map(score.parts.map((p) => [p.id, score.notes.filter((n) => n.partId === p.id).sort((a, b) => a.startBeat - b.startBeat)]));
@@ -2114,7 +1842,7 @@ function refreshBindings() {
   const keyNow = transposedKeyName();
   document.querySelectorAll('[data-bind="key"]').forEach((el) => (el.textContent = keyNow));
   document.querySelectorAll('[data-bind="key-short"]').forEach((el) => (el.textContent = keyNow ? `${keyNow.split(/[ -]/)[0]} · ${signed(transpose)}` : signed(transpose)));
-  document.querySelectorAll<HTMLButtonElement>('.bpm-preset').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.bpm) === bpm)));
+  document.querySelectorAll<HTMLButtonElement>('.bpm-preset').forEach((b) => updateButton(b,{pressed:Number(b.dataset.bpm)===bpm,disabled:b.disabled}));
   // Skipped while a field has focus -- otherwise a remote BPM change (another device's preset
   // click, in Ensemble mode) would overwrite whatever this device is still mid-typing.
   document.querySelectorAll<HTMLInputElement>('.bpm-input').forEach((input) => {
@@ -2293,7 +2021,7 @@ async function renameVoice(partId: string) {
   if (!part || (!currentSong?.imported || !editable())) return;
   const songId = currentSong.id;
   const previousName = part.name;
-  const value = await promptDialog(t('renameVoice'), previousName, t('save'));
+  const value = await libraryPrompt({title:t("renameVoice"),value:previousName,confirmLabel:t("save")});
   if (!value) return;
   const setName = (name: string) => {
     part.name = name;
@@ -2402,7 +2130,7 @@ function currentClef(partId: string): VoiceClef {
 function openVoiceMenu(anchor: HTMLElement, partId: string) {
   const part = currentScore?.parts.find((p) => p.id === partId);
   if (!part || (!currentSong?.imported || !editable())) return;
-  const items: Parameters<typeof openMenu>[1] = [{ label: t('renameVoice'), icon: 'pencil', onSelect: () => void renameVoice(partId) }];
+  const items: MenuItem[] = [{ label: t('renameVoice'), icon: 'pencil', onSelect: () => void renameVoice(partId) }];
   // Clefs only matter for the sheet music view, which MIDI imports don't have; a part on several
   // staves keeps theirs.
   if (currentSong.format !== 'score' && !part.staves) {
@@ -2500,7 +2228,7 @@ async function confirmRemoveVoice(partId: string) {
     toast(t('lastVoice'), 'error');
     return;
   }
-  const ok = await confirmDialog({ title: t('removeVoiceTitle', { name: part.name }), body: t('removeVoiceBody'), confirmLabel: t('remove'), danger: true });
+  const ok = await libraryPrompt({ title: t('removeVoiceTitle', { name: part.name }), body: t('removeVoiceBody'), confirmLabel: t('remove'), danger: true });
   if (!ok) return;
   await setRemovedParts([...(currentSong.removedParts ?? []), partId]);
 }
@@ -2562,36 +2290,29 @@ function openMixerSheet(opener: HTMLElement) {
 // Tempo, key, sections, go-to-bar panels
 // ---------------------------------------------------------------------------------------------
 
-function tempoBlock(): HTMLElement {
-  const block = document.createElement('div');
-  block.className = 'ctl-block';
-  block.innerHTML = `
-    <div class="ctl-head"><span class="label">${t('tempo')}</span></div>
-    <div class="big-stepper">
-      <button type="button" class="round-btn" data-action="bpm-down" aria-label="${t('slower')}">${icon('minus')}</button>
-      <span class="big-value">${icon('quarter')}<span>= <b data-bind="bpm"></b></span></span>
-      <button type="button" class="round-btn" data-action="bpm-up" aria-label="${t('faster')}">${icon('plus')}</button>
-    </div>
-    <div class="presets">
-      ${BPM_PRESETS.map((b) => `<button type="button" class="bpm-preset" data-action="bpm-preset" data-bpm="${b}" aria-pressed="false">${b}</button>`).join('')}
-    </div>
-    <label class="custom-tempo"><span>${t('customTempo')}</span><input class="bpm-input field" type="number" min="${MIN_BPM}" max="${MAX_BPM}" step="0.1" inputmode="decimal" /></label>`;
-  return block;
+function panelHeading(label:string,note?:string) {
+ const head=createPanelPart('div','ctl-head');head.append(createPanelPart('span','label',{text:label}));
+ if(note!==undefined)head.append(createPanelPart('span','ctl-note',{text:note}));return head;
 }
-
+function panelStep(action:string,label:string,glyph:'minus'|'plus') {
+ const button=createButton({variant:'panel-round',text:'',attrs:{'data-action':action,'aria-label':label}});button.append(libraryIcon(glyph));return button;
+}
+function tempoBlock(): HTMLElement {
+ const block=createPanelPart('div','ctl-block'),stepper=createPanelPart('div','big-stepper'),value=createPanelPart('span','big-value'),text=document.createElement('span');
+ const bound=document.createElement('b');bound.dataset.bind='bpm';text.append('= ',bound);value.append(libraryIcon('quarter'),text);
+ stepper.append(panelStep('bpm-down',t('slower'),'minus'),value,panelStep('bpm-up',t('faster'),'plus'));
+ const presets=createPanelPart('div','presets');
+ for(const bpm of BPM_PRESETS)presets.append(createButton({variant:'panel-preset',text:String(bpm),pressed:false,attrs:{'data-action':'bpm-preset','data-bpm':bpm}}));
+ const custom=createPanelPart('label','custom-tempo'),label=document.createElement('span');label.textContent=t('customTempo');
+ custom.append(label,createInput({variant:'panel-tempo',type:'number',attrs:{min:MIN_BPM,max:MAX_BPM,step:0.1,inputmode:'decimal'}}));
+ block.append(panelHeading(t('tempo')),stepper,presets,custom);return block;
+}
 function keyBlock(): HTMLElement {
-  const block = document.createElement('div');
-  block.className = 'ctl-block';
-  const first = currentScore?.measures[0];
-  block.innerHTML = `
-    <div class="ctl-head"><span class="label">${t('key')}</span><span class="ctl-note"></span></div>
-    <div class="big-stepper">
-      <button type="button" class="round-btn" data-action="transpose-down" aria-label="${t('lower')}">${icon('minus')}</button>
-      <span class="big-value"><b data-bind="transpose"></b><small data-bind="key"></small></span>
-      <button type="button" class="round-btn" data-action="transpose-up" aria-label="${t('higher')}">${icon('plus')}</button>
-    </div>`;
-  if (first && currentSong?.format !== 'score') block.querySelector('.ctl-note')!.textContent = t('writtenIn', { key: keyName(first.fifths, first.mode) });
-  return block;
+ const block=createPanelPart('div','ctl-block'),stepper=createPanelPart('div','big-stepper'),value=createPanelPart('span','big-value');
+ const first=currentScore?.measures[0],note=first&&currentSong?.format!=='score'?t('writtenIn',{key:keyName(first.fifths,first.mode)}):'';
+ const transpose=document.createElement('b'),key=document.createElement('small');transpose.dataset.bind='transpose';key.dataset.bind='key';value.append(transpose,key);
+ stepper.append(panelStep('transpose-down',t('lower'),'minus'),value,panelStep('transpose-up',t('higher'),'plus'));
+ block.append(panelHeading(t('key'),note),stepper);return block;
 }
 
 // The bar last typed into "Go to bar" per song, for this visit (kept over a reload): the field
@@ -2599,8 +2320,8 @@ function keyBlock(): HTMLElement {
 const typedBarKey = (songId: string) => `ai-capella-typed-bar:${songId}`;
 
 function gotoBlock(): HTMLElement {
-  const block = document.createElement('form');
-  block.className = 'ctl-block goto';
+  const block = createPanelPart('form','ctl-block');
+  block.classList.add('goto');
   const maxBar = currentScore?.measures.at(-1)?.number ?? 1;
   let typed = '';
   try {
@@ -2608,12 +2329,9 @@ function gotoBlock(): HTMLElement {
   } catch {
     /* none remembered */
   }
-  block.innerHTML = `
-    <label class="label" for="goto-input">${t('goToBar')}</label>
-    <div class="goto-row">
-      <input id="goto-input" class="field measure-input" type="number" min="1" max="${maxBar}" step="1" inputmode="numeric" placeholder="1–${maxBar}" value="${typed}" />
-      <button type="submit" class="btn primary">${t('go')}</button>
-    </div>`;
+  const label=createPanelPart('label','label',{text:t('goToBar'),attrs:{for:'goto-input'}}),row=createPanelPart('div','goto-row');
+  row.append(createInput({variant:'panel-measure',type:'number',id:'goto-input',value:typed,attrs:{min:1,max:maxBar,step:1,inputmode:'numeric',placeholder:`1–${maxBar}`}}),createButton({variant:'library-action',intent:'primary',type:'submit',text:t('go')}));
+  block.append(label,row);
   block.addEventListener('submit', (e) => {
     e.preventDefault();
     const input = block.querySelector<HTMLInputElement>('input')!;
@@ -2634,17 +2352,7 @@ function gotoBlock(): HTMLElement {
 function sectionsBlock(): HTMLElement | null {
   const sections = effectiveSections();
   if (!sections.length) return null;
-  const block = document.createElement('div');
-  block.className = 'ctl-block';
-  const head = document.createElement('div');
-  head.className = 'ctl-head';
-  head.innerHTML = `<span class="label">${t('sections')}</span>`;
-  const note = document.createElement('span');
-  note.className = 'ctl-note';
-  if (sectionsEditable()) note.textContent = t('addSectionsOnLaptop');
-  head.appendChild(note);
-  const row = document.createElement('div');
-  row.className = 'mark-row';
+  const block=createPanelPart('div','ctl-block'),head=panelHeading(t('sections'),sectionsEditable()?t('addSectionsOnLaptop'):''),row=createPanelPart('div','mark-row');
   sections.forEach((s, i) => row.appendChild(sectionButton(s.label, i)));
   attachSectionMenu(row);
   block.append(head, row);
@@ -2662,14 +2370,13 @@ function metronomeBlock(): HTMLElement { return playerPreferenceBlock('metronome
 function startTonesBlock(): HTMLElement { return playerPreferenceBlock('start-tones',t('startTones'),t('startTonesHint')); }
 
 function openControlsSheet(opener: HTMLElement) {
-  const body = document.createElement('div');
-  body.className = 'sheet-body';
+  const body = createPanelPart('div','sheet-body');
   body.append(tempoBlock(), keyBlock(), metronomeBlock(), startTonesBlock());
   if(syncEnabled()){const count=createButton({text:'',variant:'landing-mode'});count.dataset.bind='count-in';count.textContent=t('syncCountIn',{bars:sharedState?.countIn.bars??0});count.onclick=()=>sendShared({type:'setCountIn',bars:sharedState?.countIn.bars?0:1});body.append(count);}
   const sections = sectionsBlock();
   if (sections) body.appendChild(sections);
   body.appendChild(gotoBlock());
-  openSheet(t('tempoAndKey'), body, opener);
+  openLibrarySheet(t('tempoAndKey'), body, opener,undefined,'player');
   refreshBindings();
 }
 
@@ -2871,15 +2578,7 @@ function effectiveSections(): { label: string; beat: number }[] {
 
 /** A boxed rehearsal letter that jumps to its section -- the same look as a printed score's marks. */
 function sectionButton(label: string, index: number): HTMLButtonElement {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = label.length > 2 ? 'rmark word' : 'rmark';
-  b.dataset.action = 'section-jump';
-  b.dataset.index = String(index);
-  b.textContent = label;
-  b.title = sectionsEditable() ? `${t('jumpToSection', { label })} · ${t(isNarrow() ? 'sectionHoldHint' : 'sectionRightClickHint')}` : t('jumpToSection', { label });
-  b.setAttribute('aria-label', t('jumpToSection', { label }));
-  return b;
+  return createSectionMark({label,index,title:sectionsEditable() ? `${t('jumpToSection', { label })} · ${t(isNarrow() ? 'sectionHoldHint' : 'sectionRightClickHint')}` : t('jumpToSection', { label }),ariaLabel:t('jumpToSection',{label})});
 }
 
 /** Hand-set marks can be removed; marks printed in the source file can't. */
@@ -2912,7 +2611,7 @@ function removeSection(index: number) {
 }
 
 async function removeAllSections() {
-  const ok = await confirmDialog({ title: t('removeAllSectionsTitle'), body: t('removeAllSectionsBody'), confirmLabel: t('removeAllSections'), danger: true });
+  const ok = await libraryPrompt({ title: t('removeAllSectionsTitle'), body: t('removeAllSectionsBody'), confirmLabel: t('removeAllSections'), danger: true });
   if (!ok) return;
   manualSections = [];
   sectionsChanged();
@@ -2923,12 +2622,12 @@ function openSectionMenu(anchor: HTMLElement) {
   const index = Number(anchor.dataset.index);
   const section = effectiveSections()[index];
   if (!section) return;
-  const items: Parameters<typeof openMenu>[1] = [{ label: t('jumpToSection', { label: section.label }), icon: 'flag', onSelect: () => seekToBeat(section.beat) }];
+  const items: MenuItem[] = [{ label: t('jumpToSection', { label: section.label }), icon: 'flag', onSelect: () => seekToBeat(section.beat) }];
   if (sectionsEditable()) {
     items.push({ label: t('removeSection', { label: section.label }), icon: 'trash', danger: true, onSelect: () => removeSection(index) });
     if (manualSections.length > 1) items.push({ label: t('removeAllSections'), icon: 'trash', danger: true, onSelect: () => void removeAllSections() });
   }
-  openMenu(anchor, items, t('sections'));
+  openLibraryMenu(anchor, items, t('sections'));
 }
 
 /** Section letters in `container` open the section menu on right-click or a long press. */
@@ -2996,7 +2695,7 @@ function renderSections() {
 }
 
 function openPlayerMenu(anchor: HTMLElement) {
-  const items: Parameters<typeof openMenu>[1] = [];
+  const items: MenuItem[] = [];
   if (currentSong?.imported && editable()) {
     items.push({ label: t('renameSong'), icon: 'pencil', onSelect: () => currentSong && void renameSong(currentSong) });
     const removed = currentSong.removedParts?.length ?? 0;
@@ -3016,7 +2715,7 @@ function openPlayerMenu(anchor: HTMLElement) {
 
 /** The player's settings, a menu of their own: swing, light and sound, paper. */
 function openSettingsMenu(anchor: HTMLElement) {
-  const items: Parameters<typeof openMenu>[1] = [];
+  const items: MenuItem[] = [];
   // Swing or straight, for this song (not in 6/8 and the like). Imported scores require
   // permission to edit.
   if (currentSong && currentScore && canSwing(currentScore) && (currentSong.imported ? editable() : true)) {
@@ -3121,18 +2820,16 @@ document.addEventListener('click', (e) => {
       openControlsSheet(el);
       break;
     case 'open-tempo': {
-      const panel = document.createElement('div');
-      panel.className = 'popover-body';
+      const panel = createPanelPart('div','popover-body');
       panel.appendChild(tempoBlock());
-      openPopover(el, panel, 'center');
+      openPlayerPopover(el,panel,'center');
       refreshBindings();
       break;
     }
     case 'goto': {
-      const panel = document.createElement('div');
-      panel.className = 'popover-body';
+      const panel = createPanelPart('div','popover-body');
       panel.appendChild(gotoBlock());
-      openPopover(el, panel, 'start');
+      openPlayerPopover(el,panel,'start');
       break;
     }
     case 'section-jump': {
@@ -3724,8 +3421,7 @@ if (import.meta.env.DEV) (window as unknown as { __repaintRoll: () => void }).__
 // only): frames per second, how long drawing a frame takes, and how many frames came late.
 const fpsProbe = new URLSearchParams(location.search).has('fps')
   ? (() => {
-      const el = document.createElement('div');
-      el.className = 'fps-probe';
+      const el = createPanelPart('div','fps-probe');
       document.body.appendChild(el);
       const stamps: number[] = [];
       const draws: number[] = [];

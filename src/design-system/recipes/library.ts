@@ -1,5 +1,6 @@
 import { normalizeRecipe } from "./normalize";
 export const libraryParts = [
+  "sheet-grab",
   "song-grid",
   "cover",
   "song-body",

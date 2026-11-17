@@ -243,7 +243,7 @@ Update pressed/playing state using `updateButton`, and checked state using `upda
 Voice colors arrive through `colorForPart` from the theme snapshot and set only `--c`.
 `createPlayerGlyph` builds trusted SMuFL text Nodes for the shared native player/voice menus.
 The unprefixed class hooks remain for delegation, introduction targets and state queries;
-`player.css` owns appearance. Tempo/key/goto/sections/export panels remain P5 slice 4.
+`player.css` owns appearance. Numeric, SectionMark, export and utility compositions are described below.
 
 Per-voice CSS expressions must resolve at the row/chip that owns `--c`. A compound custom
 property declared on `:root` resolves there, so a root material containing `var(--c)` loses
@@ -254,6 +254,21 @@ preserving the previous modal command boundary. Do not copy an initial `aria-pre
 builder `attrs`: pass `pressed`, then update it through `updateButton`. Play labels update
 through the same state API so construction-time attributes cannot restore an old label.
 
-Native range rules in legacy style.css still serve the output-latency and light-offset panels.
-Keep them until those consumers migrate; only the voice ducking ranges currently use the
-player-volume Input appearance. Their thumb shadow reads the shared per-theme range role.
+### Numeric, sections, export and utility parity (P5 slice 4)
+
+`createMainScreen` builds the main domain shell directly from shared controls, with translated
+text/icon callbacks and the existing canvas/layout hooks. No legacy-control template pass is
+needed. `createPanelPart` names numeric, export, scan-mark, offset and diagnostic slots;
+`createSectionMark` composes the printed mark from Button (`section-mark` / `section-word`).
+`panel-step`, `panel-tempo`, `panel-round`, `panel-preset` retain footer/sheet numeric variants.
+Fields use `panel-tempo`, `panel-measure`, `panel-export` and `panel-offset`; `export-voice`
+Checkbox retains its 20px native size, margins and per-voice accent, distinct from the existing
+18px `export` variant. Export options remain a native details/summary disclosure.
+
+Use updateButton for preset, busy/native-disabled and readiness changes. Offset range min/max,
+step, units, persistence and events stay screen-owned; its track/thumb appearance now belongs
+to panels.css. No global legacy range selector remains. Panels retain native paragraph/range
+margins and list-marker behavior through their opt-in reset. Native menus/prompts/sheets use
+the shared lifecycle; supply stable openers and dispose menus. The existing PDF-only export
+and automatic A/B/C section relabeling are unchanged; no new export format or rename command
+is introduced by this presentation migration.

@@ -27,3 +27,5 @@
 @utility max-h-sheet { max-height: var(--ds-max-height-sheet); }
 
 @utility bg-material-card { background: var(--ds-material-card); }
+
+@import './panels.css' layer(components);

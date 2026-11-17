@@ -858,20 +858,6 @@
     {
       "file": "src/parchment.css",
       "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .stepper / background",
-      "value": "rgb(110 75 35 / 0.07)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
-      "context": ":root[data-ground='pergament'] .stepper / box-shadow",
-      "value": "rgb(90 60 25 / 0.2)",
-      "count": 1
-    },
-    {
-      "file": "src/parchment.css",
-      "kind": "raw-color",
       "context": ":root[data-ground='pergament'] .wordmark[aria-label='LightScore'] / background",
       "value": "#6b4912",
       "count": 2
@@ -888,13 +874,6 @@
       "kind": "raw-color",
       "context": ":root[data-ground='pergament'], :root[data-ground='pergament'] body / background",
       "value": "#e8d8b6",
-      "count": 1
-    },
-    {
-      "file": "src/revivalType.css",
-      "kind": "raw-font",
-      "context": ":root[data-type='revival'] .rmark / font-family",
-      "value": "'Baltimore Bold 1832', var(--f-display)",
       "count": 1
     },
     {
@@ -1117,20 +1096,6 @@
     {
       "file": "src/style.css",
       "kind": "raw-color",
-      "context": ".fps-probe / background",
-      "value": "rgb(0 0 0 / 0.75)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".fps-probe / color",
-      "value": "#fff",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
       "context": ".intro-count / color",
       "value": "rgb(21 17 26 / 0.5)",
       "count": 1
@@ -1264,13 +1229,6 @@
     {
       "file": "src/style.css",
       "kind": "raw-color",
-      "context": ".scan-mark-img / background",
-      "value": "#f4f1ea",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
       "context": ".sheet / box-shadow",
       "value": "rgba(0, 0, 0, 0.5)",
       "count": 1
@@ -1301,20 +1259,6 @@
       "kind": "raw-color",
       "context": ".sheet-root.open, .dialog-root.open / background",
       "value": "rgba(8, 7, 14, 0.6)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".stepper / background",
-      "value": "rgb(8 6 14 / 0.35)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-color",
-      "context": ".stepper / box-shadow",
-      "value": "rgb(0 0 0 / 0.35)",
       "count": 1
     },
     {
@@ -1383,13 +1327,6 @@
     {
       "file": "src/style.css",
       "kind": "raw-font",
-      "context": ".fps-probe / font",
-      "value": "500 12px/1.3 ui-monospace, monospace",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "raw-font",
       "context": ".landing-dedication / font",
       "value": "400 clamp(34px, 4.8vw, 46px)/1.05 'Italianno', cursive",
       "count": 1
@@ -1406,48 +1343,6 @@
       "kind": "raw-font",
       "context": ".menu-item .glyph / font-family",
       "value": "'LightScore Engraving', 'Bravura'",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".export-voice-list input[type='checkbox']",
-      "value": ".export-voice-list input[type='checkbox']",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".offset-row input",
-      "value": ".offset-row input",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".stepper > button .ic",
-      "value": ".stepper > button .ic",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".stepper > button:not(.stepper-value):hover",
-      "value": ".stepper > button:not(.stepper-value):hover",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": ".stepper > button:not(.stepper-value)",
-      "value": ".stepper > button:not(.stepper-value)",
-      "count": 1
-    },
-    {
-      "file": "src/style.css",
-      "kind": "screen-control-selector",
-      "context": "button.stepper-value:hover",
-      "value": "button.stepper-value:hover",
       "count": 1
     }
   ],

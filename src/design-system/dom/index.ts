@@ -806,3 +806,7 @@ export function createAccountPart<K extends keyof HTMLElementTagNameMap>(
 }
 
 export { createTransport, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph } from "./player";
+
+export * from "./panels";
+
+export * from "./main-screen";

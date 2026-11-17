@@ -1699,3 +1699,73 @@
   --ds-player-voice-material-8: #eee2c6;
   --ds-player-voice-material-9: #d6c29a;
 }
+
+/* Retained P5 numeric/sections/export/utility appearances; owner decisions pending. */
+:root {
+    --ds-panel-label-font-1: 600 11px/1.2 var(--ds-font-mono);
+    --ds-panel-label-letter-spacing-2: 0.08em;
+    --ds-panel-field-border-3: 1px solid var(--ds-rule-strong);
+    --ds-panel-field-padding-4: 0 12px;
+    --ds-panel-field-font-size-5: 16px;
+    --ds-panel-rmark-padding-6: 0 6px;
+    --ds-panel-rmark-border-7: 1.5px solid var(--ds-ink);
+    --ds-panel-rmark-border-radius-8: 3px;
+    --ds-panel-rmark-font-9: 700 17px/33px var(--ds-font-display);
+    --ds-panel-rmark-word-font-size-10: 13px;
+    --ds-panel-section-marks-rmark-padding-11: 0 2px;
+    --ds-panel-section-marks-rmark-font-size-12: 11px;
+    --ds-panel-section-marks-rmark-border-width-13: 1.2px;
+    --ds-panel-section-marks-rmark-border-radius-14: 2px;
+    --ds-panel-section-marks-rmark-transform-15: translateX(-1px);
+    --ds-panel-section-add-btn-transform-16: translateY(-50%);
+    --ds-panel-stepper-gap-17: 2px;
+    --ds-panel-stepper-border-radius-18: 11px;
+    --ds-panel-stepper-border-19: 1px solid var(--ds-rule);
+    --ds-panel-stepper-padding-20: 0 5px;
+    --ds-panel-stepper-label-padding-21: 0 4px 0 8px;
+    --ds-panel-stepper-button-not-stepper-value-border-radius-22: 8px;
+    --ds-panel-stepper-value-gap-23: 4px;
+    --ds-panel-stepper-value-padding-24: 0 8px;
+    --ds-panel-stepper-value-font-25: 600 16px/1 var(--ds-font-mono);
+    --ds-panel-section-marks-rmark-font-size-26: 9px;
+    --ds-panel-popover-body-padding-27: 6px 8px;
+    --ds-panel-ctl-block-padding-28: 14px 0 16px;
+    --ds-panel-ctl-block-border-top-29: 1px solid var(--ds-rule);
+    --ds-panel-ctl-head-gap-30: 12px;
+    --ds-panel-ctl-note-font-size-31: 13.5px;
+    --ds-panel-big-stepper-margin-top-32: 12px;
+    --ds-panel-round-btn-border-radius-33: 50%;
+    --ds-panel-big-value-gap-34: 8px;
+    --ds-panel-big-value-font-35: 600 36px/1 var(--ds-font-mono);
+    --ds-panel-big-value-small-font-36: 500 15px/1 var(--ds-font-body);
+    --ds-panel-presets-gap-37: 6px;
+    --ds-panel-presets-margin-top-38: 14px;
+    --ds-panel-bpm-preset-border-radius-39: 999px;
+    --ds-panel-bpm-preset-font-40: 600 14px/1 var(--ds-font-mono);
+    --ds-panel-custom-tempo-font-size-41: 14px;
+    --ds-panel-mark-row-gap-42: 10px;
+    --ds-panel-mark-row-rmark-font-size-43: 19px;
+    --ds-panel-section-marks-rmark-word-font-size-44: 9.5px;
+    --ds-panel-section-marks-rmark-word-font-weight-45: 600;
+    --ds-panel-goto-row-margin-top-46: 10px;
+    --ds-panel-following-section-marks-opacity-47: 0.4;
+    --ds-panel-scan-mark-list-margin-48: 0 0 18px;
+    --ds-panel-scan-mark-list-gap-49: 14px;
+    --ds-panel-scan-mark-padding-50: 12px 12px 14px;
+    --ds-panel-scan-q-head-margin-bottom-51: 10px;
+    --ds-panel-scan-q-text-margin-52: 0 0 10px;
+    --ds-panel-scan-mark-img-background-53: #f4f1ea;
+    --ds-panel-stepper-background-54: rgb(8 6 14 / 0.35);
+    --ds-panel-stepper-box-shadow-55: inset 0 1px 2px rgb(0 0 0 / 0.35);
+    --ds-panel-offset-row-font-size-56: 0.85rem;
+    --ds-panel-offset-value-font-variant-numeric-57: tabular-nums;
+    --ds-panel-export-voice-list-margin-58: 12px 0 0;
+    --ds-panel-export-voice-list-li-off-field-opacity-59: 0.45;
+    --ds-panel-input-type-range-webkit-slider-thumb-margin-top-60: -7px;
+    --ds-panel-stepper-background-61: rgb(110 75 35 / 0.07);
+    --ds-panel-stepper-box-shadow-62: inset 0 1px 2px rgb(90 60 25 / 0.2);
+    --ds-panel-rmark-font-family-63: 'Baltimore Bold 1832', var(--ds-font-display);
+    --ds-panel-rmark-font-weight-64: 400
+}
+
+:root {--ds-debug-ground:rgb(0 0 0 / 0.75);--ds-debug-font:500 12px/1.3 ui-monospace, monospace;}
