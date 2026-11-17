@@ -92,4 +92,3 @@ export function swipeToDismiss(panel: HTMLElement, close: () => void) {
     panel.style.transform = '';
   };
 }
-
