@@ -4,7 +4,7 @@ import {
   type ToastOptions,
 } from "../recipes/overlays";
 import { readTheme } from "../theme";
-import { toastPart } from "../parts";
+import { toastPart } from "../parts-common";
 export interface ToastMessage {
   text: string;
   kind: NonNullable<ToastOptions["kind"]>;

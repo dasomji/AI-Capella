@@ -1,0 +1,11 @@
+/* /app output: same value source, layer order and utility ordering as the full entry.
+   Repeating shared utilities preserves their global Tailwind sort order when an area and
+   primitive class compete. Auth receives only the foundation candidate set in builds. */
+@layer theme, fonts, tokens, native, components, utilities;
+@reference './app.css';
+@import './library.css' layer(components);
+@import './account.css' layer(components);
+@import './player.css' layer(components);
+@import './panels.css' layer(components);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tw) source(none);
+@source '../';

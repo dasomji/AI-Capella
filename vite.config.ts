@@ -1,3 +1,4 @@
+import { designCssSplitPlugin } from './scripts/design-css-split.mjs';
 import { designAssetsPlugin } from './scripts/design-assets.mjs';
 import { inlineThemeSource } from './scripts/theme-source.mjs';
 import { writeRoleManifest } from './scripts/design-token-manifest.mjs';
@@ -23,7 +24,7 @@ export default defineConfig({
       hmr: { protocol: 'wss', host: previewOrigin.hostname, clientPort: Number(previewOrigin.port || 443) },
     } : {}),
   },
-  plugins: [designAssetsPlugin(), { name: 'theme-role-manifest', buildStart() { writeRoleManifest(); }, watchChange(id) { if (id.endsWith('/design-system/tokens.css')) writeRoleManifest(); } },
+  plugins: [designCssSplitPlugin(), designAssetsPlugin(), { name: 'theme-role-manifest', buildStart() { writeRoleManifest(); }, watchChange(id) { if (id.endsWith('/design-system/tokens.css')) writeRoleManifest(); } },
     {
       name: 'lightscore-offline-shell',
       generateBundle(_, bundle) {
@@ -31,7 +32,7 @@ export default defineConfig({
         const entry = Object.values(bundle).find(b => b.type === 'chunk' && b.name === 'offline-entry');
         if (!entry) throw Error('Missing offline entry');
         const paths = Object.keys(bundle).filter(p => /^assets\/[^?]+\.(?:js|css|woff2?|ttf|zip|wasm|svg|png|mp3)$/.test(p)).map(p => '/' + p);
-        const css = paths.filter(p => p.endsWith('.css')).map(p => `<link rel="stylesheet" href="${p}">`).join('');
+        const css = paths.filter(p => p.endsWith('.css')).sort((a,b)=>Number(a.includes('/workspace-'))-Number(b.includes('/workspace-'))).map(p => `<link rel="stylesheet" href="${p}">`).join('');
         const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>LightScore</title>${css}<script>${themeBootstrapScript}</script></head><body><div id="app"></div><script type="module" src="/${entry.fileName}"></script></body></html>`;
         this.emitFile({type:'asset',fileName:'offline.html',source:html});
 

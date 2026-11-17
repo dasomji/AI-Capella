@@ -1,7 +1,7 @@
 /** Development-only examples exercise real adapters, never alternate component markup. */
 import type { ReactNode } from "react";
 import * as r from "./recipes";
-import * as R from "./react";
+import * as R from "./react/app";
 import * as D from "./dom";
 export interface Specimen {
   name: string;
