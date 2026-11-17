@@ -1,4 +1,8 @@
 name: Production CI (no deployment)
+# Layout and how to read failures: docs/DEVELOPMENT.md#ci (CI section) and docs/CI_HARNESS_VERIFICATION.md.
+# Every suite step runs through scripts/ci/run-suite.mjs: full log kept, failures become ::error
+# annotations (file:line) plus a job-summary section; the `integration-browser` gate renders the
+# run overview (per-job timing, cache hits, what failed).
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -11,70 +15,154 @@ concurrency:
 defaults:
   run:
     shell: bash -euo pipefail {0}
+env:
+  CI: 'true'
+
 jobs:
+  # Fast independent checks. Job names `checks (<task>)` are stable: they are the required checks.
   checks:
+    name: checks (${{ matrix.task }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         task: [typecheck, unit, build, secrets, eval, migration, backup, docker, design-tokens]
+        include:
+          - { task: typecheck, title: 'Type check (tsc --noEmit)' }
+          - { task: unit, title: 'Unit tests in UTC and America/New_York (vitest)' }
+          - { task: build, title: 'Production build (vite build)' }
+          - { task: secrets, title: 'Secret leak scan of the client build (check:secrets)' }
+          - { task: eval, title: 'Transcription eval replay, no paid calls (eval:transcription --dry-run)' }
+          - { task: migration, title: 'Legacy Firestore migration against the emulator (test:migration)' }
+          - { task: backup, title: 'Backup and isolated restore (test:backup)' }
+          - { task: docker, title: 'Web and worker Docker images build and pass ops:canary' }
+          - { task: design-tokens, title: 'Design token and utility guards' }
+    env:
+      CI_JOB_LABEL: checks-${{ matrix.task }}
+      CI_JOB_TITLE: checks (${{ matrix.task }})
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - &clock
+        name: Start job clock
+        run: echo "CI_JOB_STARTED=$(date +%s)" >> "$GITHUB_ENV"
+      - &checkout
+        name: Check out the revision under test
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - &setup-node
+        name: Set up Node 22 with the npm download cache
+        id: node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+      - &npm-ci
+        name: Install npm dependencies (npm ci)
+        run: npm ci --no-audit --no-fund
+      - name: Set up Java 21 for the Firestore emulator
         if: matrix.task == 'migration'
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           distribution: temurin
           java-version: '21'
-      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      - name: Restore Firebase emulator cache
+        id: firebase-cache
         if: matrix.task == 'migration'
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ runner.os }}-${{ hashFiles('rules-test/package-lock.json') }}
-      - run: npm ci --prefix rules-test
+      - name: Restore rules-test node_modules cache
+        id: rules-cache
         if: matrix.task == 'migration'
-      - name: Sandbox dependencies
-        if: contains(fromJSON('["unit", "eval", "backup"]'), matrix.task)
-        run: sudo apt-get update && sudo apt-get install -y python3 libseccomp2 poppler-utils
-      - name: Run check
-        env:
-          CI: 'true'
-        run: |
-          mkdir -p .review-evidence
-          exec > >(tee .review-evidence/check-${{ matrix.task }}.log) 2>&1
-          case '${{ matrix.task }}' in
-            typecheck) npm run typecheck ;;
-            unit) npm test && TZ=America/New_York npm test ;;
-            build) npm run build ;;
-            secrets) npm run check:secrets ;;
-            design-tokens) npm run check:design-tokens && npm run check:design-utilities ;;
-            eval) npm run eval:transcription -- --dry-run ;;
-            migration) npm run build && npm run test:migration ;;
-            backup) npm run test:backup ;;
-            docker) docker build -t lightscore-ci-web -f Dockerfile . && docker build -t lightscore-ci-worker -f Dockerfile.worker . && docker run --rm lightscore-ci-web npm run ops:canary && docker run --rm lightscore-ci-worker npm run ops:canary ;;
-          esac
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: failure()
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
-          name: checks-${{ matrix.task }}
+          path: rules-test/node_modules
+          key: rules-test-modules-${{ runner.os }}-node${{ steps.node.outputs.node-version }}-${{ hashFiles('rules-test/package-lock.json') }}
+      - name: Install rules-test dependencies (npm ci --prefix rules-test)
+        if: matrix.task == 'migration' && steps.rules-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefix rules-test --no-audit --no-fund
+      - name: Install sandbox and PDF tools (python3, libseccomp2, poppler-utils)
+        if: contains(fromJSON('["unit", "eval", "backup"]'), matrix.task)
+        run: bash scripts/ci/install-system-deps.sh
+      - name: ${{ matrix.title }}
+        env:
+          TASK: ${{ matrix.task }}
+        run: |
+          suite() { node scripts/ci/run-suite.mjs "$@"; }
+          status=0
+          case "$TASK" in
+            typecheck) suite --id typecheck --title 'Type check' -- npm run typecheck ;;
+            unit)
+              # Both time zones always run, so one report shows whether a failure is zone dependent.
+              # --reporter=default: run-suite annotates (Vitest's own GitHub reporter would duplicate it).
+              suite --id unit-utc --title 'Unit tests (runner time zone, UTC)' --repro 'npm test' -- npm test -- --reporter=default || status=$?
+              suite --id unit-new-york --title 'Unit tests (TZ=America/New_York)' --repro 'TZ=America/New_York npm test' -- env TZ=America/New_York npm test -- --reporter=default || status=$? ;;
+            build) suite --id build --title 'Production build' -- npm run build ;;
+            secrets) suite --id secrets --title 'Secret leak scan' -- npm run check:secrets ;;
+            design-tokens)
+              suite --id design-tokens --title 'Design token guard' -- npm run check:design-tokens || status=$?
+              suite --id design-utilities --title 'Design utility guard' -- npm run check:design-utilities || status=$? ;;
+            eval) suite --id eval --title 'Transcription eval replay (dry run)' --repro 'npm run eval:transcription -- --dry-run' -- npm run eval:transcription -- --dry-run ;;
+            migration)
+              suite --id migration-build --title 'Build for the migration suite' -- npm run build
+              suite --id migration --title 'Legacy migration against the Firestore emulator' -- npm run test:migration ;;
+            backup) suite --id backup --title 'Backup and isolated restore' -- npm run test:backup ;;
+            docker)
+              suite --id docker-web --title 'Build web image (Dockerfile)' --repro 'docker build -f Dockerfile .' -- docker build -t lightscore-ci-web -f Dockerfile .
+              suite --id canary-web --title 'Web image ops:canary (sandbox + PDF support)' -- docker run --rm lightscore-ci-web npm run ops:canary
+              suite --id docker-worker --title 'Build worker image (Dockerfile.worker)' --repro 'docker build -f Dockerfile.worker .' -- docker build -t lightscore-ci-worker -f Dockerfile.worker .
+              suite --id canary-worker --title 'Worker image ops:canary (sandbox + PDF support)' -- docker run --rm lightscore-ci-worker npm run ops:canary ;;
+            *) echo "::error::Unknown check task '$TASK'"; exit 2 ;;
+          esac
+          exit "$status"
+      - &upload-failure
+        name: Upload failure evidence (logs, screenshots, Playwright traces)
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: failure-${{ env.CI_JOB_LABEL || github.job }}
           include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: ignore
           path: |
             .review-evidence/**/*.log
             .review-evidence/**/*.png
             .review-evidence/**/*.zip
+            .review-evidence/**/*.json
+            !.review-evidence/**/vite-cache/**
+            !.review-evidence/browser-build-*/**
+            !.review-evidence/npm/**
+            !.review-evidence/browsers/**
             test-results/
             playwright-report/
+      - &record-job
+        name: Record job result and timing
+        if: always()
+        env:
+          CI_JOB_STATUS: ${{ job.status }}
+          CI_STEPS: ${{ toJSON(steps) }}
+        run: node scripts/ci/summary.mjs job
+      - &upload-result
+        name: Upload job result for the CI overview
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-result-${{ env.CI_JOB_LABEL || github.job }}
+          include-hidden-files: true
+          retention-days: 1
           if-no-files-found: ignore
-  integration-browser:
+          path: |
+            .review-evidence/ci/job.json
+            .review-evidence/ci/results.jsonl
+
+  # The former single integration-browser job (15–29 min), split into parallel jobs with their own
+  # fixtures. Each browser harness invocation owns a fresh Postgres/Mailpit/build; the
+  # timing-sensitive Together sync suites have a job to themselves. The `integration-browser`
+  # gate below keeps the required check name.
+  integration:
+    name: integration (API, hosting, admin, domain, transcription; schema drift)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 20
     services:
       mailpit:
         image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
@@ -86,7 +174,7 @@ jobs:
           POSTGRES_DB: fixture
         ports: ['5432:5432']
         options: --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 30
-    env:
+    env: &fixture-env
       NODE_ENV: test
       DATABASE_URL: postgres://postgres:fixture-only@127.0.0.1:5432/fixture
       BETTER_AUTH_SECRET: ci-fixture-only-secret-at-least-32-characters
@@ -100,63 +188,265 @@ jobs:
       S3_ACCESS_KEY_ID: local-only
       S3_SECRET_ACCESS_KEY: local-only
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: sudo apt-get update && sudo apt-get install -y python3 libseccomp2 poppler-utils
-      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser:theme-extension
-      - run: npm run test:browser:design-system
-      - run: npm run test:browser:keyboard
-      - run: npm run test:browser:renderer-themes
-      - name: Start local S3 service
-        run: docker run -d --name ci-seaweedfs -p 127.0.0.1:28333:8333 -v "$PWD/scripts/s3-local.json:/etc/seaweedfs/s3.json:ro" -v "$PWD/scripts/s3-local-master.toml:/etc/seaweedfs/master.toml:ro" chrislusf/seaweedfs:4.06@sha256:a064c6923daf4451c943cec2f437a67523d7792ee589089bc4d4c27a61d78dea server -master.volumeSizeLimitMB=64 -s3 -s3.config=/etc/seaweedfs/s3.json
-      - name: Wait for S3
+      - *clock
+      - *checkout
+      - &start-fixtures
+        name: Start local S3 and pre-pull fixture images (in the background)
+        run: |
+          docker run -d --name ci-seaweedfs -p 127.0.0.1:28333:8333 -v "$PWD/scripts/s3-local.json:/etc/seaweedfs/s3.json:ro" -v "$PWD/scripts/s3-local-master.toml:/etc/seaweedfs/master.toml:ro" chrislusf/seaweedfs:4.06@sha256:a064c6923daf4451c943cec2f437a67523d7792ee589089bc4d4c27a61d78dea server -master.volumeSizeLimitMB=64 -s3 -s3.config=/etc/seaweedfs/s3.json
+          # Harness-owned containers (scripts/browser-isolated.mjs, integration.mjs, ops-backup.mjs).
+          (docker pull -q postgres:17-alpine && docker pull -q axllent/mailpit:v1.27) > "$RUNNER_TEMP/prepull.log" 2>&1 &
+      - *setup-node
+      - *npm-ci
+      - &system-deps-always
+        name: Install sandbox and PDF tools (python3, libseccomp2, poppler-utils)
+        run: bash scripts/ci/install-system-deps.sh
+      - &wait-s3
+        name: Wait for local S3 to accept connections
         run: |
           for attempt in $(seq 1 60); do
-            if curl --silent --output /dev/null http://127.0.0.1:28333/; then exit 0; fi
+            if curl --silent --output /dev/null http://127.0.0.1:28333/; then echo "S3 ready after ${attempt} check(s)"; exit 0; fi
             sleep 1
           done
+          echo "::error title=Local S3 did not start::SeaweedFS was not reachable on 127.0.0.1:28333 after 60 s; its log follows."
           docker logs ci-seaweedfs
           exit 1
-      - run: npm run db:migrate
-      - name: Schema drift
-        run: npm run db:generate && git diff --exit-code -- drizzle && test -z "$(git ls-files --others --exclude-standard drizzle)"
-      - run: mkdir -p .review-evidence && npm run build 2>&1 | tee .review-evidence/build.log
-      - run: mkdir -p .review-evidence && npm run test:ops 2>&1 | tee .review-evidence/test-ops.log
-      - run: mkdir -p .review-evidence && npm run test:integration 2>&1 | tee .review-evidence/test-integration.log
-      - run: mkdir -p .review-evidence && npm run test:browser 2>&1 | tee .review-evidence/test-browser.log
-        env:
-          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
-      - run: npm run test:browser:admin-parity
-      - run: npm run test:browser:auth-flows
-      - run: mkdir -p .review-evidence && npm run test:browser:transcription 2>&1 | tee .review-evidence/test-browser-transcription.log
-        env:
-          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
-      - name: Collect service logs
-        if: failure()
+      - &ready
+        name: Setup complete — suites start (each suite below runs even if an earlier one failed)
+        id: ready
+        run: echo "Setup took $(( $(date +%s) - CI_JOB_STARTED )) s"
+      - name: Apply all migrations to a fresh database (db:migrate)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id db-migrate --title 'Migrations apply to a fresh database' -- npm run db:migrate
+      - name: Schema drift — committed drizzle/ matches the schema (db:generate)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id schema-drift --title 'Schema drift' --repro 'npm run db:generate && git status drizzle' -- bash scripts/ci/schema-drift.sh
+      - name: Build client and server — the start/hosting tests serve dist/ (vite build)
+        id: int-build
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id build --title 'Build for test:integration' -- npm run build
+      - name: Integration tests — admin, HTTP/dev/start hosting, domain, transcription (test:integration)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' && steps.int-build.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id integration --title 'Integration tests' -- npm run test:integration
+      - &s3-logs
+        name: Collect local S3 log
+        if: failure() || cancelled()
         run: |
-          mkdir -p .review-evidence
-          docker logs ci-seaweedfs > .review-evidence/seaweedfs.log 2>&1
-      - name: Stop owned S3 service
+          mkdir -p .review-evidence/ci/logs
+          docker logs ci-seaweedfs > .review-evidence/ci/logs/seaweedfs.log 2>&1 || true
+      - &stop-s3
+        name: Stop local S3
         if: always()
-        run: docker rm -fv ci-seaweedfs
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: failure()
+        run: docker rm -fv ci-seaweedfs || true
+      - *upload-failure
+      - *record-job
+      - *upload-result
+
+  browser-accounts:
+    name: browser (power hint; accounts, roles, invitations · Phase 2b)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env: *fixture-env
+    steps:
+      - *clock
+      - *checkout
+      - *start-fixtures
+      - *setup-node
+      - *npm-ci
+      - *system-deps-always
+      - &playwright-version
+        name: Resolve the Playwright version for the browser cache key
+        id: pw
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - &playwright-cache
+        name: Restore Playwright Chromium cache
+        id: pw-cache
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
-          name: integration-browser
-          include-hidden-files: true
-          path: |
-            .review-evidence/**/*.log
-            .review-evidence/**/*.png
-            .review-evidence/**/*.zip
-            test-results/
-            playwright-report/
-          if-no-files-found: ignore
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - &playwright-install
+        name: Install Playwright Chromium and its OS libraries
+        run: npx playwright install --with-deps chromium
+      - *wait-s3
+      - *ready
+      - name: Power hint — overlays, sign-out clicks and dismissals (browser-power-hint)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          BROWSER_SCRIPT: scripts/browser-power-hint.mjs
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id power-hint --title 'Power hint' --repro 'BROWSER_SCRIPT=scripts/browser-power-hint.mjs npm run test:browser' -- npm run test:browser
+      - name: Phase 2b — signup, invitations, roles, conflicts, design capture (browser-phase2b)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          BROWSER_SCRIPT: scripts/browser-phase2b.mjs
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id phase2b --title 'Phase 2b accounts and roles' --repro 'BROWSER_SCRIPT=scripts/browser-phase2b.mjs npm run test:browser' -- npm run test:browser
+      - *s3-logs
+      - *stop-s3
+      - *upload-failure
+      - *record-job
+      - *upload-result
+
+  # Timing-sensitive: Together sync runs alone on its runner, one suite after another.
+  browser-sync:
+    name: browser (offline · Phase 5a; Together sync and acceptance; graceful shutdown)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env: *fixture-env
+    steps:
+      - *clock
+      - *checkout
+      - *start-fixtures
+      - *setup-node
+      - *npm-ci
+      - *system-deps-always
+      - *playwright-version
+      - *playwright-cache
+      - *playwright-install
+      - *wait-s3
+      - *ready
+      - name: Phase 5a — offline library, service worker, logout purge (browser-phase5a)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          BROWSER_SCRIPT: scripts/browser-phase5a.mjs
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id phase5a --title 'Phase 5a offline' --repro 'BROWSER_SCRIPT=scripts/browser-phase5a.mjs npm run test:browser' -- npm run test:browser
+      - name: Together — minimal two-account sync (browser-sync)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          BROWSER_SCRIPT: scripts/browser-sync.mjs
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id sync --title 'Together two-account sync' --repro 'BROWSER_SCRIPT=scripts/browser-sync.mjs npm run test:browser' -- npm run test:browser
+      - name: Together — sync acceptance a–n incl. server restart (test:browser:sync)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id sync-acceptance --title 'Together sync acceptance' -- npm run test:browser:sync
+      - name: Build the server for the shutdown suite (vite build)
+        id: ops-build
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id ops-build --title 'Build for test:ops' -- npm run build
+      - name: Graceful shutdown — drain, leases, owner release, deadlines (test:ops)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' && steps.ops-build.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id ops --title 'Graceful operations' -- npm run test:ops
+      - *s3-logs
+      - *stop-s3
+      - *upload-failure
+      - *record-job
+      - *upload-result
+
+  browser-admin:
+    name: browser (admin parity; auth flows; transcription · Phase 4c)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env: *fixture-env
+    steps:
+      - *clock
+      - *checkout
+      - *start-fixtures
+      - *setup-node
+      - *npm-ci
+      - *system-deps-always
+      - *playwright-version
+      - *playwright-cache
+      - *playwright-install
+      - *wait-s3
+      - *ready
+      - name: Admin area parity and AA contrast (test:browser:admin-parity)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id admin-parity --title 'Admin parity' -- npm run test:browser:admin-parity
+      - name: Auth flows — sign-up, verification, reset (test:browser:auth-flows)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id auth-flows --title 'Auth flows' -- npm run test:browser:auth-flows
+      - name: Transcription upload, review and import (test:browser:transcription)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id transcription --title 'Transcription Phase 4c' -- npm run test:browser:transcription
+      - *s3-logs
+      - *stop-s3
+      - *upload-failure
+      - *record-job
+      - *upload-result
+
+  # Vite dev-server harnesses: no database, mail or S3 needed (env kept identical to the former job).
+  design-showcase:
+    name: design (design-system showcase; theme extension)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env: *fixture-env # same environment these suites had in the former single job
+    steps:
+      - *clock
+      - *checkout
+      - *setup-node
+      - *npm-ci
+      - *system-deps-always
+      - *playwright-version
+      - *playwright-cache
+      - *playwright-install
+      - *ready
+      - name: Theme extension — a loud test theme repaints every screen (test:browser:theme-extension)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id theme-extension --title 'Theme extension' -- npm run test:browser:theme-extension
+      - name: Design-system showcase and screen fixtures (test:browser:design-system)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id design-system --title 'Design-system showcase' -- npm run test:browser:design-system
+      - *upload-failure
+      - *record-job
+      - *upload-result
+
+  design-renderers:
+    name: design (keyboard parity; renderer themes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env: *fixture-env
+    steps:
+      - *clock
+      - *checkout
+      - *setup-node
+      - *npm-ci
+      - *system-deps-always
+      - *playwright-version
+      - *playwright-cache
+      - *playwright-install
+      - *ready
+      - name: Keyboard parity (test:browser:keyboard)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id keyboard --title 'Keyboard parity' -- npm run test:browser:keyboard
+      - name: Renderer themes — staff, roll, paper, PDF repaint (test:browser:renderer-themes)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id renderer-themes --title 'Renderer themes' -- npm run test:browser:renderer-themes
+      - *upload-failure
+      - *record-job
+      - *upload-result
+
+  # Required check `integration-browser`: passes only when every integration/browser/design job
+  # passed and the split still covers every browser script. Also renders the run overview.
+  integration-browser:
+    name: integration-browser
+    if: always()
+    needs: [checks, integration, browser-accounts, browser-sync, browser-admin, design-showcase, design-renderers]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the CI scripts
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Collect job results
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: ci-result-*
+          path: ${{ runner.temp }}/ci-results
+      - name: CI overview and gate — every integration/browser/design job passed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          GATED_JOBS: integration browser-accounts browser-sync browser-admin design-showcase design-renderers
+        run: node scripts/ci/summary.mjs overview "$RUNNER_TEMP/ci-results"
+      - name: Coverage guard — CI still runs every browser script and test/check npm script
+        if: always()
+        run: node scripts/ci/check-coverage.mjs
