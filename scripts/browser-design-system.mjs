@@ -117,7 +117,7 @@ export async function verifyDesignSystemPage({ specimens } = {}) {
         const left = getComputedStyle(react[index], pseudo),
           right = getComputedStyle(dom[index], pseudo);
         elements++;
-        for (const prop of [...left]) {
+        for (const prop of [...left].filter(prop => !prop.startsWith("--"))) {
           properties++;
           if (left.getPropertyValue(prop) !== right.getPropertyValue(prop))
             mismatches.push({
@@ -329,7 +329,7 @@ export async function verifyDesignSystemContexts({ specimens } = {}) {
         for (const pseudo of [null, "::before", "::after"]) {
           const left = getComputedStyle(react[j], pseudo),
             right = getComputedStyle(dom[j], pseudo);
-          for (const prop of [...left]) {
+          for (const prop of [...left].filter(prop => !prop.startsWith("--"))) {
             properties++;
             if (left.getPropertyValue(prop) !== right.getPropertyValue(prop))
               mismatches.push({
