@@ -102,6 +102,11 @@ export interface DialogProps
   /** Static, nonmodal specimen for the dev showcase only. */
   specimen?: boolean;
 }
+export interface ConfirmDialogProps extends Omit<DialogProps, "variant"> {
+  variant?: "confirm" | "admin-confirm" | "admin-reason";
+  /** Use the generated action to inherit deliberate danger treatment. */
+  confirmAction?: { label: string; onConfirm: () => void };
+}
 export interface MenuProps
   extends
     r.MenuOptions,
@@ -640,11 +645,6 @@ const Sheet = ({variant="sheet",...props}: Omit<DialogProps, "variant"> & {varia
 const Drawer = (props: Omit<DialogProps, "variant">) => (
   <Dialog {...props} variant="drawer" />
 );
-export interface ConfirmDialogProps extends Omit<DialogProps, "variant"> {
-  variant?: "confirm" | "admin-confirm" | "admin-reason";
-  /** Use the generated action to inherit deliberate danger treatment. */
-  confirmAction?: { label: string; onConfirm: () => void };
-}
 const ConfirmDialog = ({variant="confirm", confirmAction, actions, ...props}: ConfirmDialogProps) => (
   <Dialog {...props} variant={variant} role="alertdialog" actions={<>{actions}{confirmAction && <Button intent={props.destructive ? "danger" : "primary"} onClick={confirmAction.onConfirm}>{confirmAction.label}</Button>}</>} />
 );
