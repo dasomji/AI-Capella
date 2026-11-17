@@ -38,7 +38,7 @@ export const buttonVariants = [
   "player-segmented",
   "player-reset",
 
-  "ensemble-switch", "ensemble-other", "device-link", "account-delete-confirm",
+  "ensemble-switch", "ensemble-other", "device-link",
   "landing-create", "library-action", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt", "offline-update",
   "standard",
   "account-link",
