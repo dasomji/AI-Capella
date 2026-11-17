@@ -61,7 +61,15 @@ export function bindRowMenu(details: HTMLDetailsElement, panel: HTMLElement) {
     if (details.open && !panel.contains(event.target as Node) && !anchor.contains(event.target as Node))
       details.open = false;
   };
-  // MutationObserver runs before the queued toggle event, including keyboard opens.
+  const onKey = (event: KeyboardEvent) => {
+    // Existing disclosure handlers focus the first/last command synchronously on ArrowDown/Up.
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      details.open = true;
+      sync();
+    }
+  };
+  anchor.addEventListener("keydown", onKey, true);
+  // MutationObserver runs before the queued toggle event, including programmatic opens.
   const observer = new MutationObserver(sync);
   observer.observe(details, { attributes: true, attributeFilter: ["open"] });
   details.addEventListener("toggle", sync);
@@ -69,6 +77,7 @@ export function bindRowMenu(details: HTMLDetailsElement, panel: HTMLElement) {
   return () => {
     observer.disconnect();
     details.removeEventListener("toggle", sync);
+    anchor.removeEventListener("keydown", onKey, true);
     panel.ownerDocument.removeEventListener("pointerdown", outside);
     unplace?.();
     panel.hidePopover?.();
