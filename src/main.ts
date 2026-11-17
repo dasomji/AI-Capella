@@ -95,6 +95,7 @@ function openLibraryMenu(
   items: MenuItem[],
   title = "",
 ) {
+  const label = title || anchor.getAttribute("aria-label") || t("menu");
   let overlay: ReturnType<typeof createDialog>;
   const convert = (
     items: MenuItem[],
@@ -112,7 +113,7 @@ function openLibraryMenu(
     }));
   const menu = createMenu({
     variant: "library",
-    label: title,
+    label,
     items: convert(items),
     onEscape: () => overlay.requestClose(),
   });
@@ -133,7 +134,7 @@ function openLibraryMenu(
     overlay = createDialog({
       variant: "library-popover",
       title,
-      attrs: { "aria-label": title || anchor.getAttribute("aria-label") || t("menu") },
+      attrs: { "aria-label": label },
       content: menu.element,
       behavior,
     });
@@ -148,8 +149,8 @@ function openLibraryMenu(
     requestAnimationFrame(place);
   }
 }
-function openPlayerPopover(anchor:HTMLElement,content:HTMLElement,align:'start'|'center') {
- const panel=createDialog({variant:'library-popover',title:'',attrs:{'aria-label':anchor.getAttribute('aria-label')||anchor.textContent?.trim()||t('menu')},content,behavior:{opener:anchor,initialFocus:()=>panel.element}});panel.open();
+function openPlayerPopover(anchor:HTMLElement,content:HTMLElement,align:'start'|'center', label:string) {
+ const panel=createDialog({variant:'library-popover',title:'',attrs:{'aria-label':label},content,behavior:{opener:anchor,initialFocus:()=>panel.element}});panel.open();
  const place=()=>{const a=anchor.getBoundingClientRect(),p=panel.element.getBoundingClientRect();let left=align==='start'?a.left:a.left+(a.width-p.width)/2;left=Math.max(8,Math.min(window.innerWidth-p.width-8,left));const below=a.bottom+8;panel.element.style.left=`${left}px`;panel.element.style.top=`${Math.max(8,below+p.height>window.innerHeight-8?a.top-p.height-8:below)}px`;};place();requestAnimationFrame(place);return panel;
 }
 function libraryPrompt(options: {
@@ -2829,14 +2830,14 @@ document.addEventListener('click', (e) => {
     case 'open-tempo': {
       const panel = createPanelPart('div','popover-body');
       panel.appendChild(tempoBlock());
-      openPlayerPopover(el,panel,'center');
+      openPlayerPopover(el,panel,'center',t('tempo'));
       refreshBindings();
       break;
     }
     case 'goto': {
       const panel = createPanelPart('div','popover-body');
       panel.appendChild(gotoBlock());
-      openPlayerPopover(el,panel,'start');
+      openPlayerPopover(el,panel,'start',t('goToBar'));
       break;
     }
     case 'section-jump': {
