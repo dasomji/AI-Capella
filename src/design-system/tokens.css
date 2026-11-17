@@ -597,6 +597,18 @@
   --ds-library-sound-prompt-box-shadow: 0 0 0 6px rgba(200, 161, 90, 0.25), 0 16px 40px rgba(0, 0, 0, 0.5);
   --ds-library-card-spotlight: rgb(255 250 240 / 0.13);
   --ds-library-phone-more-background: none;
+  --ds-library-neu--mode-btn-background: var(--ds-material-fibre), linear-gradient(180deg, #2b2432, #231d2a);
+  --ds-library-neu--mode-btn-color: #efe6d8;
+  --ds-library-neu--mode-btn-text-shadow: 0 -1px 0 rgb(0 0 0 / 0.55), 0 1px 0 rgb(255 244 228 / 0.06);
+  --ds-library-neu--mode-btn-box-shadow: var(--emboss-raised), 0 12px 24px -14px rgb(0 0 0 / 0.85);
+  --ds-library-neu--mode-btn-ic-filter: drop-shadow(0 -1px 0 rgb(0 0 0 / 0.5));
+  --ds-library-neu--mode-btn-hover-background: var(--ds-material-fibre), linear-gradient(180deg, #2e2735, #251f2c);
+  --ds-library-neu--mode-btn-hover-box-shadow: var(--emboss-raised), 0 16px 28px -14px rgb(0 0 0 / 0.9);
+  --ds-library-neu--mode-btn-last-used-box-shadow: var(--emboss-raised), 0 12px 24px -14px rgb(0 0 0 / 0.85), inset 0 -2px 0 rgb(255 210 158 / 0.35), 0 6px 16px -8px rgb(255 200 140 / 0.25);
+  --ds-library-buehne--mode-btn-last-used-box-shadow: inset 0 1px 0 rgb(255 246 222 / 0.6),
+    inset 0 -1px 0 rgb(90 60 20 / 0.4),
+    0 0 26px -4px rgb(255 200 120 / 0.45),
+    0 12px 24px -14px rgb(0 0 0 / 0.9);
 }
 
 :root[data-theme="parchment"] {
@@ -742,6 +754,15 @@
   --ds-library-sound-prompt-box-shadow: 0 0 0 6px rgb(180 120 40 / 0.25), 0 16px 40px rgb(90 60 25 / 0.3);
   --ds-library-card-spotlight: rgb(255 252 240 / 0.35);
   --ds-library-phone-more-background: var(--ds-library-song-more-background);
+  --ds-library-neu--mode-btn-background: var(--ds-library-mode-btn-background-2);
+  --ds-library-neu--mode-btn-color: var(--ds-library-mode-btn-color);
+  --ds-library-neu--mode-btn-text-shadow: var(--ds-library-mode-btn-text-shadow);
+  --ds-library-neu--mode-btn-box-shadow: var(--ds-library-mode-btn-box-shadow);
+  --ds-library-neu--mode-btn-ic-filter: var(--ds-library-mode-btn-ic-filter);
+  --ds-library-neu--mode-btn-hover-background: var(--ds-library-mode-btn-hover-background);
+  --ds-library-neu--mode-btn-hover-box-shadow: var(--ds-library-mode-btn-hover-box-shadow);
+  --ds-library-neu--mode-btn-last-used-box-shadow: var(--ds-library-mode-btn-last-used-box-shadow);
+  --ds-library-buehne--mode-btn-last-used-box-shadow: var(--ds-library-mode-btn-last-used-box-shadow);
 }
 
 :root[data-theme="velvet"] {
@@ -880,6 +901,18 @@
   --ds-library-sound-prompt-box-shadow: 0 0 0 6px rgba(200, 161, 90, 0.25), 0 16px 40px rgba(0, 0, 0, 0.5);
   --ds-library-card-spotlight: rgb(255 250 240 / 0.13);
   --ds-library-phone-more-background: none;
+  --ds-library-neu--mode-btn-background: var(--ds-material-fibre), linear-gradient(180deg, #2b2432, #231d2a);
+  --ds-library-neu--mode-btn-color: #efe6d8;
+  --ds-library-neu--mode-btn-text-shadow: 0 -1px 0 rgb(0 0 0 / 0.55), 0 1px 0 rgb(255 244 228 / 0.06);
+  --ds-library-neu--mode-btn-box-shadow: var(--emboss-raised), 0 12px 24px -14px rgb(0 0 0 / 0.85);
+  --ds-library-neu--mode-btn-ic-filter: drop-shadow(0 -1px 0 rgb(0 0 0 / 0.5));
+  --ds-library-neu--mode-btn-hover-background: var(--ds-material-fibre), linear-gradient(180deg, #2e2735, #251f2c);
+  --ds-library-neu--mode-btn-hover-box-shadow: var(--emboss-raised), 0 16px 28px -14px rgb(0 0 0 / 0.9);
+  --ds-library-neu--mode-btn-last-used-box-shadow: var(--emboss-raised), 0 12px 24px -14px rgb(0 0 0 / 0.85), inset 0 -2px 0 rgb(255 210 158 / 0.35), 0 6px 16px -8px rgb(255 200 140 / 0.25);
+  --ds-library-buehne--mode-btn-last-used-box-shadow: inset 0 1px 0 rgb(255 246 222 / 0.6),
+    inset 0 -1px 0 rgb(90 60 20 / 0.4),
+    0 0 26px -4px rgb(255 200 120 / 0.45),
+    0 12px 24px -14px rgb(0 0 0 / 0.9);
 }
 
 /* Additional renderer pigments retained separately from UI ink (P2 inputs). */
@@ -1431,24 +1464,12 @@
   --ds-library-opaque-search-background: var(--ds-surface-raised);
   --ds-library-opaque-mode-btn-background: var(--ds-surface-raised);
   --ds-library-neu--mode-btn-padding: 0 26px 0 22px;
-  --ds-library-neu--mode-btn-background: var(--ds-material-fibre), linear-gradient(180deg, #2b2432, #231d2a);
-  --ds-library-neu--mode-btn-color: #efe6d8;
-  --ds-library-neu--mode-btn-text-shadow: 0 -1px 0 rgb(0 0 0 / 0.55), 0 1px 0 rgb(255 244 228 / 0.06);
-  --ds-library-neu--mode-btn-box-shadow: var(--emboss-raised), 0 12px 24px -14px rgb(0 0 0 / 0.85);
   --ds-library-neu--mode-btn-transition: transform var(--ds-duration-fast), box-shadow var(--ds-duration-normal);
-  --ds-library-neu--mode-btn-ic-filter: drop-shadow(0 -1px 0 rgb(0 0 0 / 0.5));
-  --ds-library-neu--mode-btn-hover-background: var(--ds-material-fibre), linear-gradient(180deg, #2e2735, #251f2c);
   --ds-library-neu--mode-btn-hover-transform: translateY(-1px);
-  --ds-library-neu--mode-btn-hover-box-shadow: var(--emboss-raised), 0 16px 28px -14px rgb(0 0 0 / 0.9);
   --ds-library-neu--mode-btn-active-box-shadow: var(--emboss-pressed);
-  --ds-library-neu--mode-btn-last-used-box-shadow: var(--emboss-raised), 0 12px 24px -14px rgb(0 0 0 / 0.85), inset 0 -2px 0 rgb(255 210 158 / 0.35), 0 6px 16px -8px rgb(255 200 140 / 0.25);
   --ds-library-buehne--mode-btn-last-used-background: linear-gradient(180deg, #e6c98a, #c9a05a 55%, #b48a48);
   --ds-library-buehne--mode-btn-last-used-color: #2a2016;
   --ds-library-buehne--mode-btn-last-used-text-shadow: 0 1px 0 rgb(255 240 210 / 0.35);
-  --ds-library-buehne--mode-btn-last-used-box-shadow: inset 0 1px 0 rgb(255 246 222 / 0.6),
-    inset 0 -1px 0 rgb(90 60 20 / 0.4),
-    0 0 26px -4px rgb(255 200 120 / 0.45),
-    0 12px 24px -14px rgb(0 0 0 / 0.9);
   --ds-library-song-card-lifted-background: var(--ds-surface-raised);
   --ds-library-song-card-lifted-border: 1px solid var(--ds-rule-strong);
   --ds-library-song-card-lifted-scale: 1.03;

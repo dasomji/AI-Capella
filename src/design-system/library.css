@@ -785,3 +785,8 @@
 .ds-library-landing-empty [data-ds='button'] { display:block; margin:var(--ds-library-landing-empty-btn-margin); }
 .ds-library-link { text-align:center; }
 .ds-library-prompt-body { user-select:text; -webkit-font-smoothing:inherit; -webkit-locale:inherit; -webkit-tap-highlight-color:inherit; }
+/* Native list/replaced-element defaults must survive the opt-in primitive reset. */
+.ds-library-empty-note { list-style:none; }
+.ds-library-cover,.ds-library-paper-swatch { overflow:clip; }
+.ds-library-menu-check { font:inherit; }
+.ds-library-overlay,.ds-library-prompt-content,.ds-library-prompt-body { -webkit-font-smoothing:inherit; -webkit-locale:inherit; -webkit-tap-highlight-color:inherit; }
