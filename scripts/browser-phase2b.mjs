@@ -212,7 +212,7 @@ try {
   );
 
   await request(p, `/ensembles/${e}/members/${member.id}`, "PATCH", { manageMembers: true });
-  await captureDesign(browser, p, q, base, evidence);
+  if (process.env.P4C_FUNCTIONAL_ONLY !== "1") await captureDesign(browser, p, q, base, evidence);
   await request(p, `/ensembles/${e}/members/${member.id}`, "PATCH", { manageMembers: false });
   console.log("invitation errors");
   const emailC = `other-${suffix}@example.test`;
