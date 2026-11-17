@@ -282,6 +282,7 @@ export const themeRoleNames = [
   "size-toast",
   "size-transcription-mobile",
   "size-transcription-title",
+  "size-transcription-title-phone",
   "size-wordmark",
   "size-workspace-heading",
   "size-workspace-wordmark",
