@@ -109,7 +109,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-sheet-body .ds-player-voice-row:has(.ds-player-voice-more)
     "tw:[&_.ds-player-voice-row:has(.ds-player-voice-more)]:grid-cols-player-utility-sheet-body-grid-template-columns",
     // .ds-player-sheet-body .ds-player-voice-more
-    "tw:[&_.ds-player-voice-more]:w-player-utility-sheet-body-width tw:[&_.ds-player-voice-more]:opacity-100",
+    "tw:[&_.ds-player-voice-row_.ds-player-voice-more]:w-player-utility-sheet-body-width tw:[&_.ds-player-voice-more]:opacity-100",
     // .ds-player-sheet-body .ds-player-voice-list
     "tw:[&_.ds-player-voice-list]:p-player-sheet-body-voice-list-padding-95",
     // .ds-player-sheet-body .ds-player-voice-row
@@ -319,7 +319,7 @@ const playerUtilities: Readonly<Record<string, string>> = {
     // .ds-player-chips · (width < theme(--breakpoint-panel)) and (max-height: theme(--viewport-short-landscape-height)) and (orientation: landscape)
     "tw:player-short-landscape:hidden!",
     // #app.sing-along .ds-player-chips · (width < theme(--breakpoint-panel))
-    "tw:max-panel:[#app.sing-along_&]:justify-center-safe tw:max-panel:[#app.sing-along_&]:gap-player-chips-gap-56 tw:max-panel:[#app.sing-along_&]:p-player-app-sing-along-chips-padding-107 tw:max-panel:[#app.sing-along_&]:player-duck-border-top tw:max-panel:[#app.sing-along_&]:player-chips-background",
+    "tw:max-panel:[#app.sing-along_&]:justify-center-safe tw:max-panel:[#app.sing-along_&]:gap-player-chips-gap-56 tw:max-panel:[#app.sing-along_&]:p-player-app-sing-along-chips-padding-107 tw:max-panel:[#app.sing-along_&]:player-duck-border-top",
     // #app.sing-along .ds-player-chips .ds-player-chip · (width < theme(--breakpoint-panel))
     "tw:max-panel:[#app.sing-along_&_.ds-player-chip]:h-player-utility-chips-height tw:max-panel:[#app.sing-along_&_.ds-player-chip]:p-player-app-sing-along-chips-chip-padding-108 tw:max-panel:[#app.sing-along_&_.ds-player-chip]:text-player-app-sing-along-chips-chip-font-size-109",
     // #app.sing-along .ds-player-chips
