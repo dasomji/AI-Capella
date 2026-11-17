@@ -546,6 +546,7 @@ export const themeRoleNames = [
   "radius-transcription-card",
   "radius-transcription-dialog",
   "radius-transcription-tile",
+  "range-thumb-shadow",
   "review-columns",
   "ribbon-flare-core",
   "ribbon-flare-edge",

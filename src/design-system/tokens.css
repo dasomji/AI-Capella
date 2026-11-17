@@ -609,6 +609,7 @@
     inset 0 -1px 0 rgb(90 60 20 / 0.4),
     0 0 26px -4px rgb(255 200 120 / 0.45),
     0 12px 24px -14px rgb(0 0 0 / 0.9);
+  --ds-range-thumb-shadow: var(--ds-player-input-type-range-webkit-slider-thumb-box-shadow-55);
 }
 
 :root[data-theme="parchment"] {
@@ -763,6 +764,7 @@
   --ds-library-neu--mode-btn-hover-box-shadow: var(--ds-library-mode-btn-hover-box-shadow);
   --ds-library-neu--mode-btn-last-used-box-shadow: var(--ds-library-mode-btn-last-used-box-shadow);
   --ds-library-buehne--mode-btn-last-used-box-shadow: var(--ds-library-mode-btn-last-used-box-shadow);
+  --ds-range-thumb-shadow: var(--ds-player-input-type-range-webkit-slider-thumb-box-shadow-156);
 }
 
 :root[data-theme="velvet"] {
@@ -913,6 +915,7 @@
     inset 0 -1px 0 rgb(90 60 20 / 0.4),
     0 0 26px -4px rgb(255 200 120 / 0.45),
     0 12px 24px -14px rgb(0 0 0 / 0.9);
+  --ds-range-thumb-shadow: var(--ds-player-input-type-range-webkit-slider-thumb-box-shadow-55);
 }
 
 /* Additional renderer pigments retained separately from UI ink (P2 inputs). */

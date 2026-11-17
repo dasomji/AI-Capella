@@ -253,3 +253,7 @@ Player global shortcuts ignore open native dialogs as well as retained legacy ov
 preserving the previous modal command boundary. Do not copy an initial `aria-pressed` into
 builder `attrs`: pass `pressed`, then update it through `updateButton`. Play labels update
 through the same state API so construction-time attributes cannot restore an old label.
+
+Native range rules in legacy style.css still serve the output-latency and light-offset panels.
+Keep them until those consumers migrate; only the voice ducking ranges currently use the
+player-volume Input appearance. Their thumb shadow reads the shared per-theme range role.
