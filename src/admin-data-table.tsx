@@ -1,3 +1,4 @@
+import { Button, Field, Input, Select, Table, TableWrap, TableHeader, TableCell, TableRow, TablePagination, EmptyState, Loading, Status, Workspace } from "./design-system/react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   useTable,
@@ -38,7 +39,7 @@ export function AdminDataTable({
   language: Lang;
   filters?: Record<string, string>;
   search?: string;
-  onOpen?: (row: AdminRow) => void;
+  onOpen?: (row: AdminRow, opener: HTMLElement) => void;
   revision?: number;
   onZone?: (zone: string) => void;
   caption: string;
@@ -151,35 +152,32 @@ export function AdminDataTable({
     };
   }, [signature, pagination.pageIndex, revision, retry]);
   return (
-    <section className="admin-data-table" aria-label={caption} aria-busy={busy}>
+    <Workspace as="section" part="region" data-admin="data-table" aria-label={caption} aria-busy={busy}>
       {externalSearch === undefined && (
-        <label>
-          {d.search}
-          <input
+        <Field variant="admin" label={d.search}>{association => <Input {...association}
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-          />
-        </label>
+          />}</Field>
       )}
       {error && (
         <div>
-          <p role="alert">{error}</p>
-          <button type="button" onClick={() => setRetry((v) => v + 1)}>
+          <Status variant="admin" role="alert">{error}</Status>
+          <Button variant="dense" type="button" onClick={() => setRetry((v) => v + 1)}>
             {m.retry}
-          </button>
+          </Button>
         </div>
       )}
-      <div className="admin-table-wrap admin-data-wrap" tabIndex={0}>
-        <table>
-          <caption className="admin-sr-only">{caption}</caption>
+      <TableWrap variant="records" bounded data-admin="table-wrap" tabIndex={0}>
+        <Table>
+          <caption hidden>{caption}</caption>
           <thead>
             {table.getHeaderGroups().map((group) => (
-              <tr key={group.id}>
+              <TableRow key={group.id}>
                 {group.headers.map((header) => {
                   const sorted = header.column.getIsSorted();
                   return (
-                    <th
+                    <TableHeader
                       key={header.id}
                       scope="col"
                       aria-sort={
@@ -193,7 +191,7 @@ export function AdminDataTable({
                       }
                     >
                       {header.column.getCanSort() ? (
-                        <button
+                        <Button variant="dense-sort"
                           type="button"
                           aria-disabled={busy}
                           onClick={() => {
@@ -209,26 +207,26 @@ export function AdminDataTable({
                             : sorted === "desc"
                               ? " ↓"
                               : ""}
-                        </button>
+                        </Button>
                       ) : (
                         flexRender(
                           header.column.columnDef.header,
                           header.getContext(),
                         )
                       )}
-                    </th>
+                    </TableHeader>
                   );
                 })}
-              </tr>
+              </TableRow>
             ))}
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr
+              <TableRow
                 key={row.id}
                 data-row-id={row.id}
                 tabIndex={onOpen ? 0 : undefined}
-                onClick={onOpen ? () => onOpen(row.original) : undefined}
+                onClick={onOpen ? event => onOpen(row.original,event.currentTarget) : undefined}
                 onKeyDown={(e) => {
                   if (
                     onOpen &&
@@ -236,28 +234,29 @@ export function AdminDataTable({
                     ["Enter", " "].includes(e.key)
                   ) {
                     e.preventDefault();
-                    onOpen(row.original);
+                    onOpen(row.original,e.currentTarget);
                   }
                 }}
               >
                 {row.getAllCells().map((cell) => (
-                  <td
+                  <TableCell
                     key={cell.id}
                     data-label={
                       columns.find((c) => c.id === cell.column.id)?.label
                     }
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
           </tbody>
-        </table>
-      </div>
-      {!busy && !error && !rows.length && <p>{d.empty}</p>}
-      <div className="admin-pagination">
-        <button
+        </Table>
+      </TableWrap>
+      {busy && <Loading layout="tw:sr-only">{m.loading}</Loading>}
+      {!busy && !error && !rows.length && <EmptyState variant="admin-text" title={d.empty}/>}
+      <TablePagination data-admin="pagination">
+        <Button variant="dense"
           type="button"
           aria-disabled={busy || !pagination.pageIndex}
           onClick={() => {
@@ -265,12 +264,12 @@ export function AdminDataTable({
           }}
         >
           {m.previous}
-        </button>
+        </Button>
         <span aria-live="polite">
           {m.page} {pagination.pageIndex + 1}
           {busy ? " · " + m.loading : ""}
         </span>
-        <button
+        <Button variant="dense"
           type="button"
           aria-disabled={busy || !next}
           onClick={() => {
@@ -283,10 +282,8 @@ export function AdminDataTable({
           }}
         >
           {m.next}
-        </button>
-        <label>
-          {m.pageSize}
-          <select
+        </Button>
+        <Field variant="admin" label={m.pageSize} layout="tw:ml-auto">{association => <Select {...association}
             aria-label={m.pageSize}
             value={pagination.pageSize}
             onChange={(e) => table.setPageSize(Number(e.target.value))}
@@ -296,9 +293,8 @@ export function AdminDataTable({
                 {size}
               </option>
             ))}
-          </select>
-        </label>
-      </div>
-    </section>
+          </Select>}</Field>
+      </TablePagination>
+    </Workspace>
   );
 }

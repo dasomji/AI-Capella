@@ -70,7 +70,7 @@ async function ids(scope) {
 async function pageNumber(scope, number) {
   await loaded(scope);
   assert.match(
-    await scope.locator(".admin-pagination").innerText(),
+    await scope.locator("[data-admin=pagination]").innerText(),
     new RegExp("Page " + number + "(?:\\D|$)"),
   );
 }
@@ -82,7 +82,7 @@ async function tabTo(locator) {
   throw Error("Tab did not reach requested control");
 }
 async function confirmation(reason) {
-  const dialog = page.locator("dialog[open]");
+  const dialog = page.locator("[role=alertdialog][open]");
   await dialog.waitFor();
   await dialog.getByLabel("Reason", { exact: true }).fill(reason);
   await dialog
@@ -145,8 +145,8 @@ try {
   await users.getByRole("alert").waitFor();
   await users.getByRole("button", {name: "Retry", exact: true}).waitFor();
   await page.getByRole("button", {name: "DE", exact: true}).click();
-  await page.locator("main > .admin-data-table").getByRole("button", {name: "Erneut versuchen", exact: true}).click();
-  await loaded(page.locator("main > .admin-data-table"));
+  await page.locator("main > [data-admin=data-table]").getByRole("button", {name: "Erneut versuchen", exact: true}).click();
+  await loaded(page.locator("main > [data-admin=data-table]"));
   await page.getByRole("button", {name: "EN", exact: true}).click();
   await pageNumber(users, 2);
   assert.deepEqual(await ids(users), (await db.query('select id from "user" order by id offset 10 limit 10')).rows.map((r) => r.id));
@@ -259,8 +259,8 @@ try {
   await ensembles
     .getByRole("cell", { name: ensemble.name, exact: true })
     .click();
-  const detail = page.locator(".admin-detail"),
-    management = detail.locator(".admin-management");
+  const detail = page.locator("[data-admin=detail]"),
+    management = detail.locator("[data-admin=management]");
   await management
     .getByRole("button", { name: "Add member", exact: true })
     .click();
@@ -354,7 +354,7 @@ try {
     .filter({ hasText: "Change saved. Refreshing the view failed." })
     .waitFor();
   assert.equal(
-    await page.locator("dialog[open]").count(),
+    await page.locator("[role=alertdialog][open]").count(),
     0,
     "Refresh failure does not reopen mutation dialog",
   );
@@ -426,7 +426,7 @@ try {
     .filter({ hasText: "admin@test.com" })
     .getByRole("button", { name: "Remove member", exact: true })
     .click();
-  const dialog = page.locator("dialog[open]");
+  const dialog = page.locator("[role=alertdialog][open]");
   await dialog
     .getByLabel("Reason", { exact: true })
     .fill("Browser: last lead guard");
@@ -443,7 +443,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "DE", exact: true }).click();
   await page
-    .locator("main > .admin-data-table tbody tr")
+    .locator("main > [data-admin=data-table] tbody tr")
     .filter({ hasText: ensemble.name })
     .click();
   await management
@@ -457,7 +457,7 @@ try {
     ),
     true,
   );
-  const wrap = management.locator(".admin-table-wrap").first();
+  const wrap = management.locator("[data-admin=table-wrap]").first();
   assert.equal(
     await wrap.evaluate((el) => el.scrollWidth <= el.clientWidth),
     true,
@@ -481,42 +481,42 @@ try {
   await page.getByRole("link", { name: "Users", exact: true }).click();
   await page.getByRole("searchbox").fill("admin@test.com");
   await page
-    .locator("main > .admin-data-table tbody tr")
+    .locator("main > [data-admin=data-table] tbody tr")
     .filter({ hasText: "admin@test.com" })
     .waitFor();
   await loaded();
   await page
-    .locator("main > .admin-data-table tbody tr")
+    .locator("main > [data-admin=data-table] tbody tr")
     .filter({ hasText: "admin@test.com" })
     .click();
   await page
     .getByRole("button", { name: "Revoke sysadmin", exact: true })
     .click();
   await page
-    .locator("dialog[open]")
+    .locator("[role=alertdialog][open]")
     .getByLabel("Reason", { exact: true })
     .fill("Browser: self revoke guard");
   await page
-    .locator("dialog[open]")
+    .locator("[role=alertdialog][open]")
     .getByRole("button", { name: "Confirm change", exact: true })
     .click();
   await page
-    .locator("dialog[open]")
+    .locator("[role=alertdialog][open]")
     .getByRole("alert")
     .filter({ hasText: "cannot revoke your own" })
     .waitFor();
   await shot("self-revoke-error");
   await page
-    .locator("dialog[open]")
+    .locator("[role=alertdialog][open]")
     .getByRole("button", { name: "Cancel", exact: true })
     .click();
   await page.getByRole("button", { name: "Close", exact: true }).click();
   // Legacy audit tables share the phone card rule; their labels and data remain readable.
   await page.getByRole("link", { name: "Audit log", exact: true }).click();
-  await page.locator(".admin-table-wrap tbody tr").first().waitFor();
+  await page.locator("[data-admin=table-wrap] tbody tr").first().waitFor();
   assert.equal(
     await page
-      .locator(".admin-table-wrap tbody tr")
+      .locator("[data-admin=table-wrap] tbody tr")
       .first()
       .evaluate((el) => getComputedStyle(el).display),
     "block",
