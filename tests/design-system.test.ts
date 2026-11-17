@@ -255,3 +255,14 @@ it('keeps the eager toast import graph limited to overlay recipes', async () => 
   expect(source).toContain('from "../recipes/overlays"');
   expect(source).not.toMatch(/from ["']\.\.\/recipes["']/);
 });
+
+it('builds a loud fourth theme from every resolved paint alias', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { loudThemeBlock } = await import('./theme-extension-fixture.mjs');
+  const block = loudThemeBlock(readFileSync('src/design-system/tokens.css','utf8'));
+  const paint = new Map<string,string>(); block.walkDecls(d=>{paint.set(d.prop,d.value);});
+  expect(paint.get('--ds-accent')).not.toMatch(/var\(--pigment-/);
+  expect(paint.get('--ds-ink')).toMatch(/rgba\(/);
+  expect(paint.get('--ds-library-cover-background')).not.toBe('#15131f');
+  expect(paint.size).toBeGreaterThan(200);
+});

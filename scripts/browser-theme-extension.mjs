@@ -17,13 +17,32 @@ const server=await createServer({root:process.cwd(),configFile:false,cacheDir:pa
  resolveId(id){if(id==='/proof-entry.tsx')return '\0proof-entry';},load(id){if(id==='\0proof-entry')return entry;},
  transform(code,id){if(id.endsWith('/src/main.ts'))return code+mainHooks;},
 }],server:{host:'127.0.0.1',port:0,watch:null,hmr:false}});
-const records=[];let browser;
+const records=[];let browser;let noEnsembles=false;
 try{
  await server.listen();const base=server.resolvedUrls.local[0];browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-accelerated-2d-canvas']});
  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.route('**/api/**',route=>{const url=new URL(route.request().url());let data={};if(url.pathname==='/api/auth/list-sessions')data=[];else if(url.pathname==='/api/me')data={user:{id:'lead',name:'Test lead',email:'admin@test.com',sysadmin:true}};else if(url.pathname==='/api/ensembles')data=[{id:'fixture',name:'Testchor',kind:'choir',isLead:true,membershipId:'membership',capabilities:{manageMembers:true,editPieces:true,transcribe:true}}];else if(url.pathname.includes('/invitations/'))data={ensembleName:'Testchor',inviter:'Test lead',email:'admin@test.com',state:'pending'};else if(url.pathname.startsWith('/api/admin/'))data={items:[],nextCursor:null,timeZone:'UTC',paused:false,groups:[]};else if(url.pathname.endsWith('/members')||url.pathname.endsWith('/invitations')||url.pathname.endsWith('/pieces')||url.pathname.endsWith('/transcriptions'))data=[];else if(url.pathname==='/api/transcription/config')data={pdf:50e6,photo:20e6,pages:20};return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});});
+ await page.route('**/api/**',route=>{const url=new URL(route.request().url());let data={};if(url.pathname==='/api/auth/list-sessions')data=[];else if(url.pathname==='/api/me')data={user:{id:'lead',name:'Test lead',email:'admin@test.com',sysadmin:true}};else if(url.pathname==='/api/ensembles')data=noEnsembles?[]:[{id:'fixture',name:'Testchor',kind:'choir',isLead:true,membershipId:'membership',capabilities:{manageMembers:true,editPieces:true,transcribe:true}}];else if(url.pathname.includes('/invitations/'))data={ensembleName:'Testchor',inviter:'Test lead',email:'admin@test.com',state:'pending'};else if(url.pathname.startsWith('/api/admin/'))data={items:[],nextCursor:null,timeZone:'UTC',paused:false,groups:[]};else if(url.pathname.endsWith('/members')||url.pathname.endsWith('/invitations')||url.pathname.endsWith('/pieces')||url.pathname.endsWith('/transcriptions'))data=[];else if(url.pathname==='/api/transcription/config')data={pdf:50e6,photo:20e6,pages:20};return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});});
  await page.routeWebSocket('**',ws=>ws.close());
- async function roles(screen){await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(150);const result=await page.evaluate(async()=>{const m=await import('/src/design-system/theme/index.ts');const t=m.readTheme();const missing=Object.entries(t.roles).filter(([,v])=>!v||/var\(/.test(v));return{id:t.id,roles:Object.keys(t.roles).length,missing,legacy:document.documentElement.hasAttribute('data-design')||document.documentElement.hasAttribute('data-ground'),color:t.colors.accent.css,rects:[...document.querySelectorAll('button,input,canvas,h1,h2')].filter(e=>e.getBoundingClientRect().width>0).length};});assert.equal(result.id,testTheme.id);assert.equal(result.legacy,false);assert.deepEqual(result.missing,[]);assert.equal(result.color,'rgb(40, 102, 102)');records.push({screen,...result});}
+ async function roles(screen){await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(150);const result=await page.evaluate(async()=>{const m=await import('/src/design-system/theme/index.ts');const t=m.readTheme();const missing=Object.entries(t.roles).filter(([,v])=>!v||/var\(/.test(v));return{id:t.id,roles:Object.keys(t.roles).length,missing,legacy:document.documentElement.hasAttribute('data-design')||document.documentElement.hasAttribute('data-ground'),color:t.colors.accent.css,rects:[...document.querySelectorAll('button,input,canvas,h1,h2')].filter(e=>e.getBoundingClientRect().width>0).length};});assert.equal(result.id,testTheme.id);assert.equal(result.legacy,false);assert.deepEqual(result.missing,[]);// Acceptance check: compare actual rendered paint on every screen, not just token values.
+ await page.addStyleTag({content:'*,*::before,*::after{transition:none!important;animation:none!important}'});
+ const paints = await page.evaluate(async ({theme}) => {
+   const api = await import('/src/design-system/theme/index.ts');
+   const candidates = [...document.querySelectorAll('button,input,h1,h2,[role=dialog],#mode-badge,#play-btn,.play-btn,#landing-empty p,#transcription-entry,.mode-btn')]
+     .filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0;}).slice(0,60);
+   const properties=['color','background-color','background-image'];
+   const sample=()=>candidates.map(el=>Object.fromEntries(properties.map(p=>[p,getComputedStyle(el).getPropertyValue(p)])));
+   api.setThemePreference('night-paper'); await new Promise(r=>setTimeout(r,40));
+   const before=sample();
+   api.setThemePreference(theme); await new Promise(r=>setTimeout(r,40));
+   const after=sample();
+   return before.flatMap((paint,i)=>properties.filter(p=> /(?:rgb|hsl|#[a-f0-9]{3})/i.test(paint[p]) && !/^rgba\(0, 0, 0, 0\)$/.test(paint[p])).map(property=>({element:candidates[i].id||candidates[i].getAttribute('data-ds')||candidates[i].tagName,text:candidates[i].textContent?.slice(0,50),property,before:paint[property],after:after[i][property]})));
+ }, {theme:testTheme.id});
+ const unchanged=paints.filter(p=>p.before===p.after);
+ records.push({screen,...result,paints,unchanged});
+ if(!screen.startsWith('renderer-'))assert.ok(paints.length,screen+' has rendered themed paint');
+ // Save a diagnostic before asserting so a hard-coded component identifies itself.
+ await fs.writeFile(path.join(evidence,'proof.json'),JSON.stringify({theme:testTheme,records,errors},null,2));
+ assert.deepEqual(unchanged,[], screen+' loud-theme acceptance: every visible key paint must differ from night-paper');}
  await page.goto(base+'proof.html');await page.evaluate(async()=>{localStorage.setItem('ai-capella-lang','en');await import('/proof-entry.tsx');});await page.waitForFunction(()=>window.proofReady);
  for(const screen of ['signin','signup','reset','verify','account','invite','admin','showcase']){await page.evaluate(screen=>{history.replaceState(null,'',screen==='signup'?'/?mode=signup':screen==='reset'?'/?token=fixture':screen==='verify'?'/?verify=fixture':screen==='admin'?'/admin/users':'/proof.html');renderProofScreen(screen);},screen);await page.waitForTimeout(200);await roles(screen);assert.ok(await page.locator('#root').innerText(),screen+' rendered');}
  await page.evaluate(()=>{unmountProof();document.body.innerHTML='<div id="app"></div>';localStorage.setItem('ai-capella-intro-off','1');window.textureJobs=[];window.requestIdleCallback=fn=>{textureJobs.push(fn);return textureJobs.length;};});
@@ -31,11 +50,22 @@ try{
  await roles('library');assert.ok(await page.evaluate(()=>proofMain.appearance()[0].options.some(option=>option.label==='Test aurora')), 'New registry entry appears in the appearance menu');await page.evaluate(()=>proofMain.account());await roles('account-sheet');await page.evaluate(async()=>{(await import('/src/design-system/behavior/index.ts')).closeOverlay();});
  await page.evaluate(async()=>{(await import('/src/ensemble-ui.ts')).createEnsembleSheet(()=>{});});await roles('ensemble-sheet');await page.evaluate(async()=>{(await import('/src/design-system/behavior/index.ts')).closeOverlay();});
  await page.evaluate(async()=>{proofMain.library();document.querySelector('#transcription-entry').click();});await roles('transcription');await page.evaluate(async()=>{(await import('/src/design-system/behavior/index.ts')).closeOverlay();});
- await page.evaluate(()=>proofMain.landing());await roles('landing');await page.evaluate(()=>proofMain.player());await roles('player-roll');
+ noEnsembles=true;await page.evaluate(async()=>{await(await import('/src/ensembles.ts')).initializeEnsembles();proofMain.landing();});await roles('landing');assert.equal(await page.locator('#landing-empty p').first().evaluate(el=>getComputedStyle(el).textAlign),'center','First-run landing invitation copy inherits centering');noEnsembles=false;await page.evaluate(()=>proofMain.player());await roles('player-roll');
  await page.evaluate(async()=>{(await import('/src/intro.ts')).startIntro('player');});await roles('tour');await page.evaluate(async()=>{(await import('/src/intro.ts')).stopIntro();(await import('/src/powerHint.ts')).showPowerHint();});await roles('power-hint');
  // Every renderer uses the same extended roles and real canvas/font resources.
  await page.evaluate(fixture);await page.evaluate(async()=>{window.checks=await import('/scripts/renderer-theme-checks.mjs');});
- for(const mode of ['roll','staff','overview','cover','light','stage','title-staff']){await page.evaluate(async mode=>{await p2.draw(mode,4);},mode);await roles('renderer-'+mode);assert.ok(await page.locator('canvas').count(),mode+' canvas rendered');}
- for(const mode of ['paper','gel','stage-fill','ribbons','backdrop']){await page.evaluate(mode=>checks.draw(mode),mode);await roles('renderer-'+mode);assert.ok(await page.locator('canvas').count(),mode+' canvas rendered');}
+ for(const mode of ['roll','staff','overview','cover','light','stage','title-staff','paper','gel','stage-fill','ribbons','backdrop']) {
+  const pixels=await page.evaluate(async({mode,id})=>{
+   const api=await import('/src/design-system/theme/index.ts');
+   api.setThemePreference('night-paper');await checks.draw(mode);
+   const before=[...document.querySelectorAll('canvas')].map(c=>c.toDataURL());
+   api.setThemePreference(id);await checks.draw(mode);
+   const after=[...document.querySelectorAll('canvas')].map(c=>c.toDataURL());
+   return {before,after};
+  },{mode,id:testTheme.id});
+  assert.ok(pixels.before.length,mode+' has real canvas paint');
+  assert.notDeepEqual(pixels.before,pixels.after,mode+' canvas pixels must differ under the loud theme');
+  records.push({screen:'renderer-'+mode,canvases:pixels.after.length,pixelsDiffer:true});
+ }
  assert.deepEqual(errors,[]);await fs.writeFile(path.join(evidence,'proof.json'),JSON.stringify({theme:testTheme,records,errors},null,2));console.log('Fourth-theme proof passed:',records.length,'screens/renderers, complete roles, no legacy attributes.');
 }finally{await browser?.close();await server.close();}
