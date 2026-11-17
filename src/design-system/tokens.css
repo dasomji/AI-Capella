@@ -2269,7 +2269,8 @@
   --ds-library-banner-max-width: var(--ds-width-library);
   --ds-library-song-grid-max-width: var(--ds-width-library);
   --ds-library-card-width: 280px;
-  --ds-library-song-grid-grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--ds-library-card-width)), var(--ds-library-card-width)));
+  --ds-library-song-grid-grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  --ds-library-card-columns-comfortable: repeat(auto-fill, minmax(min(100%, var(--ds-library-card-width)), var(--ds-library-card-width)));
   --ds-library-cover-aspect-ratio: 16 / 10;
   --ds-library-song-card-min-height: 260px;
   --ds-library-song-card-border-radius: var(--ds-radius-none);
@@ -2653,6 +2654,7 @@
   --frame-all-transcription-job-border: var(--ds-transcription-job-border);
   --grid-template-columns-paper-options: var(--ds-library-paper-option-grid-template-columns);
   --grid-template-columns-library-cards: var(--ds-library-song-grid-grid-template-columns);
+  --grid-template-columns-library-comfortable: var(--ds-library-card-columns-comfortable);
   --grid-template-columns-library-open: var(--ds-library-song-open-grid-template-columns);
   --grid-template-columns-mixer-actions: var(--ds-player-sheet-body-grid-template-columns);
   --grid-template-columns-transport: var(--ds-player-transport-grid-template-columns);
