@@ -2611,6 +2611,8 @@
   --font-auth-display: var(--ds-font-auth-display);
   --font-auth-mono: var(--ds-font-auth-mono);
   --font-body: var(--ds-font-body);
+  --font-brand: var(--ds-font-brand);
+  --font-song-title: var(--ds-font-song-title);
   --font-close: var(--ds-font-close);
   --font-control: var(--ds-font-control);
   --font-display: var(--ds-font-display);
