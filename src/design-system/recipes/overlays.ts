@@ -1,3 +1,4 @@
+import { libraryAccountUtilityRecipe } from "./library";
 import { normalizeRecipe } from "./normalize";
 import { controlBase, disabledRecipe, buttonRecipe } from "./controls";
 /** dialog/confirm share appearance pending D14; confirm adds alertdialog semantics. */
@@ -17,13 +18,13 @@ export interface DialogOptions {
   variant?: DialogVariant;
 }
 function dialogRecipeStyles({ variant = "dialog" }: DialogOptions = {}) {
-  if (variant === "library-prompt" || variant === "library-sheet" || variant === "library-popover") return {
+  if (variant === "library-prompt" || variant === "library-sheet" || variant === "library-popover") return libraryAccountUtilityRecipe({
     panel: "ds-library-overlay " + (variant === "library-sheet" ? "ds-library-sheet ds-sheet-motion" : variant === "library-popover" ? "ds-library-popover" : "ds-library-prompt"),
     content: variant === "library-prompt" ? "ds-library-prompt-content" : "ds-library-overlay-content",
     header: variant === "library-sheet" ? "ds-library-sheet-head" : variant === "library-popover" ? "tw:sr-only" : "ds-library-prompt-head",
     title: variant === "library-sheet" ? "ds-library-sheet-title" : "ds-library-prompt-title",
     body: "ds-library-prompt-body", actions: "ds-library-prompt-actions",
-  };
+  });
   if(variant==='drawer'||variant==='admin-confirm'||variant==='admin-reason') {
     const drawer=variant==='drawer';
     return {
@@ -79,7 +80,7 @@ export interface MenuOptions {
   variant?: (typeof menuVariants)[number];
 }
 function menuRecipeStyles({ variant = "popover" }: MenuOptions = {}) {
-  if (variant === "library") return {root: "ds-library-menu", item: "ds-library-menu-item ds-menu-item", danger: "ds-library-menu-danger", check: "ds-library-menu-check"};
+  if (variant === "library") return libraryAccountUtilityRecipe({root: "ds-library-menu", item: "ds-library-menu-item ds-menu-item", danger: "ds-library-menu-danger", check: "ds-library-menu-check"});
   if (variant === "member" || variant === "job") return {
     root: "tw:absolute tw:right-0 tw:grid tw:box-border tw:border tw:border-solid tw:border-rule-strong tw:bg-surface-raised tw:text-ink tw:shadow-menu " + (variant === "member" ? "tw:top-full tw:z-stage tw:min-w-menu-member tw:p-0 tw:gap-0" : "tw:z-transcription tw:min-w-menu-job tw:p-12 tw:gap-8 tw:rounded-menu"),
     item: variant === "member" ? controlBase + " " + disabledRecipe + " ds-menu-item tw:flex tw:items-center tw:gap-12 tw:min-h-44 tw:px-12 tw:py-0 tw:rounded-control tw:border-0 tw:bg-transparent tw:font-body tw:font-label tw:text-button tw:text-left tw:text-ink tw:cursor-pointer" : "ds-job-menu-item " + buttonRecipe().replace("tw:font-control", "tw:font-auth-body"),
