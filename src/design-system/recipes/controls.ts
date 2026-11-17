@@ -1,3 +1,4 @@
+import { libraryAccountUtilityRecipe } from "./library";
 import { panelButtonStyles, panelSectionMarkStyles, panelInputStyles, panelCheckboxStyles, panelPartRecipe } from "./panels";
 import { playerUtilityClasses } from "./player";
 import { normalizeRecipe } from "./normalize";
@@ -117,10 +118,10 @@ function buttonRecipeStyles({
   if (variant === 'landing-create') return buttonRecipeStyles({variant:'standard',intent,pressed}).replace('tw:text-button','tw:text-body-small').replace('tw:inline-flex','tw:block').replace('tw:m-0','') + ' tw:mx-auto tw:mt-18 tw:text-center';
   if (variant === 'library-action' || variant === 'offline-update') {
     const standard = buttonRecipeStyles({variant:'standard',intent,pressed});
-    return variant === 'offline-update' ? standard + ' ds-library-offline-update' : standard.replace('tw:text-on-danger','tw:text-surface-sunken') + ' tw:text-center';
+    return variant === 'offline-update' ? libraryAccountUtilityRecipe(standard + ' ds-library-offline-update') : standard.replace('tw:text-on-danger','tw:text-surface-sunken') + ' tw:text-center';
   }
   if (["ensemble-switch", "ensemble-other", "device-link", "account-delete-confirm", "landing-link", "landing-aside", "library-open", "landing-mode", "paper-choice", "sound-prompt"].includes(variant))
-    return "ds-library-button " + parityButtonShapes[variant as keyof typeof parityButtonShapes];
+    return libraryAccountUtilityRecipe("ds-library-button " + parityButtonShapes[variant as keyof typeof parityButtonShapes]);
   // D08/D10: retain account navigation and password reveal typography separately.
   if (variant === "account-link" || variant === "password-toggle")
     return [
@@ -175,7 +176,7 @@ function iconButtonRecipeStyles({
 }: IconButtonOptions = {}) {
   if (variant === "section-add") return playerUtilityClasses("ds-player-button ds-player-icon ds-player-icon-small ds-panel-section-add icon-btn small") + " tw:absolute tw:right-4 tw:top-1/2 tw:-translate-y-1/2 tw:bg-surface tw:max-panel:hidden!";
   if (["player", "player-landscape", "player-zoom", "player-follow", "voice-more"].includes(variant)) return playerUtilityClasses("ds-player-button ds-player-icon icon-btn" + ({player:"", "player-landscape":" ds-player-landscape-only landscape-only", "player-zoom":"", "player-follow":" ds-player-follow-btn follow-btn", "voice-more":" ds-player-voice-more voice-more ds-player-icon-small small"} as Record<string,string>)[variant]);
-  if (variant === "library-more") return "ds-library-button ds-library-song-more song-more tw:inline-grid tw:place-items-center tw:flex-none tw:size-40 tw:rounded-icon";
+  if (variant === "library-more") return libraryAccountUtilityRecipe("ds-library-button ds-library-song-more song-more tw:inline-grid tw:place-items-center tw:flex-none tw:size-40 tw:rounded-icon");
   const shapes: Record<NonNullable<IconButtonOptions["variant"]>, string> = {
     "section-add":"", player:"", "player-landscape":"", "player-zoom":"", "player-follow":"", "voice-more":"",
     "library-more": "ds-library-song-more song-more tw:min-h-0 tw:size-40 tw:rounded-icon tw:p-0 tw:font-control tw:text-body tw:leading-body tw:hover:bg-surface-overlay tw:hover:text-ink",
@@ -225,12 +226,12 @@ function fieldRecipeStyles(
     return {root:"ds-panel-part ds-panel-field-group tw:panel-inherit tw:select-text tw:grid",label:panelPartRecipe("label"),control:"ds-panel-input " + panelInputStyles[variant as keyof typeof panelInputStyles],hint:"tw:sr-only",error:"tw:sr-only"};
   }
   if (variant === "player-volume") return {root:playerUtilityClasses("ds-player-duck-row"),label:playerUtilityClasses("ds-player-label label"),control:playerUtilityClasses("ds-player-input ds-player-volume duck-range"),hint:"tw:sr-only",error:"tw:sr-only"};
-  if (variant === "account-password") return {root:"ds-account-password",label:"ds-account-label",control:"ds-account-input tw:rounded-field",hint:"tw:sr-only",error:"ds-account-error"};
+  if (variant === "account-password") return libraryAccountUtilityRecipe({root:"ds-account-password",label:"ds-account-label",control:"ds-account-input tw:rounded-field",hint:"tw:sr-only",error:"ds-account-error"});
   if (variant === 'library-prompt') {
     const boxed = fieldRecipeStyles({variant:'boxed',invalid},kind);
     return {...boxed,control:boxed.control.split(' ').filter(c=>!c.startsWith('tw:focus-visible:')).join(' ') + ' tw:outline-none tw:outline-offset-2'};
   }
-  if (variant === "library-search") return {root: "ds-library-search", label: "tw:sr-only", control: "ds-library-search-input tw:rounded-field", hint: "tw:sr-only", error: "tw:sr-only"};
+  if (variant === "library-search") return libraryAccountUtilityRecipe({root: "ds-library-search", label: "tw:sr-only", control: "ds-library-search-input tw:rounded-field", hint: "tw:sr-only", error: "tw:sr-only"});
   const admin = variant === "admin";
   const domain = variant === "domain" || variant === "domain-create";
   const ruled = variant !== "boxed";
@@ -309,7 +310,7 @@ function switchRecipeStyles({
 }: SwitchOptions = {}) {
   if (variant === "player-preference") return {label:"ds-player-switch-label",input:"tw:sr-only",root:playerUtilityClasses("ds-player-button ds-player-switch switch"),thumb:"tw:hidden"};
   // D11: the offline policy retains its native checkbox, rather than a drawn track.
-  if (variant === "shared-device") return {label:"ds-account-shared",input:"ds-account-shared-input",root:"tw:hidden",thumb:"tw:hidden"};
+  if (variant === "shared-device") return libraryAccountUtilityRecipe({label:"ds-account-shared",input:"ds-account-shared-input",root:"tw:hidden",thumb:"tw:hidden"});
   const sizes = {
     player: "tw:w-52 tw:h-32 tw:p-4",
     admin: "tw:w-48 tw:h-26 tw:p-0",
