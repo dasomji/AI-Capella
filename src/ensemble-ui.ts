@@ -133,12 +133,15 @@ async function action(panel: HTMLElement, fn: () => Promise<void>) {
     panelErrors.get(panel)?.remove();
     panelErrors.delete(panel);
   } catch (e) {
+    const message = domainError((e as Error).message);
+    // The operation may finish after the user has closed its panel.
+    if (!panel.isConnected) { toast(message, "error"); return; }
     let feedback = panelErrors.get(panel);
     if (!feedback) {
       feedback = createStatus({intent:"error",text:"",attrs:{role:"alert"}});
       panelErrors.set(panel, feedback);
     }
-    feedback.textContent = domainError((e as Error).message);
+    feedback.textContent = message;
     // A failed operation stays beside the active work until a successful retry.
     if (!panel.contains(feedback)) panel.prepend(feedback);
   }
