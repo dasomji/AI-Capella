@@ -359,7 +359,6 @@ export async function verifyDesignSystemContexts({ specimens } = {}) {
 export async function verifyP3ReviewFixes() {
   const D = await import("/src/design-system/dom/index.ts");
   const B = await import("/src/design-system/behavior/index.ts");
-  const L = await import("/src/ui.ts");
   const F = await import("/src/design-system/browser-fixture.tsx");
   const results = [];
   const assert = (condition, message) => {
@@ -490,34 +489,33 @@ export async function verifyP3ReviewFixes() {
   );
   const content = document.createElement("div");
   content.textContent = "Sheet contents";
-  const close = L.openSheet("Exit regression", content, opener);
+  const sheet = D.createSheet({ title: "Exit regression", content, behavior: { opener } });
+  sheet.open();
+  const close = sheet.close;
   await wait(80);
-  const legacy = document.querySelector("dialog:modal");
-  B.toast("Legacy toast then close");
+  const nativeSheet = sheet.element;
+  B.toast("Sheet toast then close");
   close();
   assert(
-    legacy.open && legacy.isConnected && legacy.querySelector(".closing"),
-    "M2 legacy remains in top layer during exit",
+    nativeSheet.open && nativeSheet.isConnected && nativeSheet.dataset.sheetState === "closing",
+    "M2 sheet remains in top layer during exit",
   );
   assert(
-    document.getElementById("toast").textContent === "Legacy toast then close",
-    "M1 legacy toast survives close request",
+    document.getElementById("toast").textContent === "Sheet toast then close",
+    "M1 sheet toast survives close request",
   );
-  await wait(190);
+  await wait(260);
   assert(
-    !legacy.isConnected &&
+    !nativeSheet.isConnected &&
       document.getElementById("toast").getClientRects().length > 0,
-    "M1/M2 legacy completes exit and toast persists",
+    "M1/M2 sheet completes exit and toast persists",
   );
   // Swipe uses the existing touch transport, real layout and the same exit lifecycle.
-  const swipeClose = L.openSheet(
-    "Swipe regression",
-    document.createElement("div"),
-    opener,
-  );
+  const swipeSheet = D.createSheet({ title: "Swipe regression", content: document.createElement("div"), behavior: { opener } });
+  swipeSheet.open();
+  const swipeClose = swipeSheet.close;
   await wait(240);
-  const swipeDialog = document.querySelector("dialog:modal"),
-    panel = swipeDialog.querySelector(".sheet");
+  const swipeDialog = swipeSheet.element, panel = swipeDialog;
   const touch = (type, y) =>
     panel.dispatchEvent(
       new TouchEvent(type, {
@@ -541,15 +539,15 @@ export async function verifyP3ReviewFixes() {
   touch("touchend", 240);
   await wait(25);
   assert(
-    swipeDialog.open && swipeDialog.querySelector(".closing"),
+    swipeDialog.open && swipeDialog.dataset.sheetState === "closing",
     "M2 swipe starts exit transition",
   );
-  await wait(180);
+  await wait(260);
   assert(!swipeDialog.isConnected, "M2 swipe completes dismissal");
   swipeClose();
   B.dismissToast();
   assert(
-    document.getElementById("toast").textContent === "Legacy toast then close",
+    document.getElementById("toast").textContent === "Sheet toast then close",
     "M1 text retained during fade",
   );
   await wait(310);
@@ -637,8 +635,10 @@ export async function verifyP3ReviewFixes() {
 export async function verifyP3ReducedMotion() {
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
     throw Error("Requires reduced-motion browser context");
-  const L = await import("/src/ui.ts");
-  const close = L.openSheet("Reduced motion", document.createElement("div"));
+  const D = await import("/src/design-system/dom/index.ts");
+  const sheet = D.createSheet({ title: "Reduced motion", content: document.createElement("div") });
+  sheet.open();
+  const close = sheet.close;
   const dialog = document.querySelector("dialog:modal");
   close();
   if (dialog.open || dialog.isConnected)
