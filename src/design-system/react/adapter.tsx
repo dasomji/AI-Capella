@@ -777,7 +777,6 @@ function Table({
 }: Native<HTMLAttributes<HTMLTableElement>> & r.TableOptions) {
   const inherited = useContext(TableVariant);
   variant ??= inherited;
-  density ??= useContext(FieldDensity);
   return (
     <TableVariant value={variant}>
       <table
