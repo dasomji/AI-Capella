@@ -357,3 +357,6 @@
 
 /* Player material shadows retain their authored list without synthetic transparent ring layers. */
 @utility player-shadow-* { box-shadow: --value(--shadow-*); }
+
+/* Tailwind has no cursor-inherit keyword utility. */
+@utility cursor-library-inherit { cursor: inherit; }
