@@ -45,7 +45,6 @@ export const themeRoleNames = [
   "admin-header-rule",
   "admin-ink",
   "admin-metric-columns",
-  "admin-metrics-width",
   "admin-page-inset",
   "admin-page-width",
   "admin-picker-height",

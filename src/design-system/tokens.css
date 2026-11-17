@@ -1985,7 +1985,6 @@
   --ds-admin-metric-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   --ds-admin-definition-columns: minmax(7rem, 2fr) 3fr;
   --ds-admin-records-width: 44rem;
-  --ds-admin-metrics-width: 30rem;
   --ds-admin-filter-width: 11rem;
   --ds-admin-search-width: 16rem;
   --ds-admin-content-height: 24rem;
