@@ -14,7 +14,6 @@ const scripts = JSON.parse(readFileSync('package.json', 'utf8')).scripts;
 
 const NOT_IN_CI = {
   'test:browser:foundation': 'needs an already running built server (BROWSER_BASE); manual verification suite',
-  'test:browser:design-parity': 'compares against the prototype checkout; manual parity evidence',
   'test:design-mutants': 'mutation proof of the design guard; manual, slow',
 };
 

@@ -396,6 +396,9 @@ jobs:
       - name: Design-system showcase and screen fixtures (test:browser:design-system)
         if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
         run: node scripts/ci/run-suite.mjs --id design-system --title 'Design-system showcase' -- npm run test:browser:design-system
+      - name: Component forms and immediate settings (test:browser:components)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id components --title 'Component forms' -- npm run test:browser:components
       - *upload-failure
       - *record-job
       - *upload-result

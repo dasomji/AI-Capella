@@ -129,7 +129,7 @@ together. Superseded runs of the same PR are cancelled.
 | `browser (power hint; accounts …)` | power hint, Phase 2b | harness-owned Postgres/Mailpit/build per script, SeaweedFS |
 | `browser (offline …; Together sync …)` | Phase 5a, Together sync, sync acceptance, then build + test:ops | same; **timing-sensitive sync runs alone on this runner, sequentially** |
 | `browser (admin parity; auth flows; transcription …)` | admin parity, auth flows, transcription | same |
-| `design (design-system showcase; theme extension)` | theme extension, design-system showcase | Vite dev server only |
+| `design (design-system showcase; theme extension)` | theme extension, design-system showcase, component forms | Vite dev server only |
 | `design (keyboard parity; renderer themes)` | keyboard parity, renderer themes | Vite dev server only |
 | `integration-browser` | gate + run overview + coverage guard | none |
 

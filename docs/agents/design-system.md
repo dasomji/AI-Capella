@@ -260,7 +260,7 @@ The guard is local AST analysis with the limitations above, not an interprocedur
 
 | Decision | Contract |
 | --- | --- |
-| D01 | One accent family per theme: `accent`, `admin-accent`, `transcription-accent`, `accent-offline`, `accent-invitation` and domain gold all resolve to one accent. Main-app night gold `#d4ad65` is retained; Parchment uses existing invitation gold `#795315`, which also meets normal-text contrast. Admin's independently authored palette supplies no design precedent. |
+| D01 | One accent family per theme: `accent`, `transcription-accent`, `accent-offline`, `accent-invitation` and domain gold all resolve to one accent. Main-app night gold `#d4ad65` is retained; Parchment uses existing invitation gold `#795315`, which also meets normal-text contrast. Admin's independently authored palette supplies no design precedent. |
 | D02 | One paper hierarchy, with intentional sunken/page/raised/overlay/hover shades. Admin uses `surface`, `ink`, `ink-secondary` and `rule-strong`; canvas elevations and stage stops consume the same hierarchy. Night layers retain the main app's warm dark paper; Parchment retains `#e3d2ae` / `#e8d8b6` / `#eee2c6` / `#f3e9d3` / `#f7f0df`. Velvet retains its experimental wave/glass materials. Texture, transmission, occlusion and glow remain distinct material inputs. |
 | D03 | Default type is antique for named brand (`Baltimore Black Slope`) and piece-title (`Modern Antique`) roles. Atkinson Hyperlegible supplies body, controls, instructional headings, forms, lyrics and monospace information. The compatibility `revival` preset name now means this mixed policy. Remington no longer overrides body/control/mono. Auth branding explicitly uses `font-brand`. |
 | D04 | Supported main looks are Night paper and Parchment, with the current title. `theme/resolver.js` catalogues Velvet, earlier/staff/stage titles, earlier ribbon, alternate paper kinds, Bodoni and gel overrides in `experimentalPresets`. Legacy URLs/storage remain readable; active IDs are exposed as `data-experimental`, menus identify experimental appearance, and the paper menu is explicitly experimental in EN/DE. Velvet no longer forces an older title. |
@@ -346,13 +346,17 @@ paints fail except these property/element-specific Chromium defaults in `theme-p
 Literal fill/stroke on visible SVG geometry and colors in shadows/gradients remain subject
 to both the guard and loud-theme test. The hardcoded-paint mutant must still fail.
 
-`npm run test:browser:design-parity` compares all rendered computed properties, generated
-content and exact screenshot pixels on auth/admin and main app states at 1440/768/390 for
-all three themes. Supply `PARITY_BASE`, `PARITY_BASE_BUILD` and `PARITY_BUILD` for the
-reference git revision and the two production builds, and an external `BROWSER_EVIDENCE`.
-The source fixture is archived from git; both sides use production CSS so minification does
-not become a false pixel regression. Large computed values use SHA-256 dictionary entries
-with full originals retained in each compressed artifact. Only Parchment’s Administration
-link color and pixels inside its measured box are allowed to differ.
+The pre-decision cross-revision parity comparison is retired; see
+[the parity decision](../out-of-scope/pre-decision-parity.md).
 The offline browser flow verifies the precached area sheet has rules, its library stays a
 grid, and card geometry matches the online render.
+
+## Retired pre-decision administration APIs
+
+D06/D16 integration removed the unused workspace/navigation adapters and the old admin card,
+badge, field, checkbox, switch, toggle, menu and confirmation variants after checking product
+consumers. `Status variant="admin"` and `Dialog variant="admin-detail"` remain in active use.
+Admin layout roles remain; the retired admin paint aliases no longer form a second public palette.
+The historic cross-revision pixel-parity script is retired; see
+[the parity decision](../out-of-scope/pre-decision-parity.md). Current React/DOM adapter parity,
+keyboard, theme-extension, renderer and admin browser journeys remain the regression contracts.
