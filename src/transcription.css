@@ -28,6 +28,7 @@
 .tx-job details {margin-left:auto;position:relative}
 .tx-job summary {cursor:pointer;font-size:25px;padding:0 12px;list-style:none;color:var(--paper-dim)}
 .tx-job summary::-webkit-details-marker {display:none}
+.tx-job summary:focus-visible {outline:2px solid var(--tx-gold);outline-offset:4px}
 .tx-review-layout {display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:32px}
 .tx-score-wrap {display:flex;gap:24px;min-width:0;overflow:auto;align-items:flex-start;max-height:calc(100dvh - 110px);min-height:60dvh;padding-top:clamp(24px,10vh,100px);box-sizing:border-box}
 .tx-score {min-width:0;flex:1}
