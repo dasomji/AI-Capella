@@ -15,6 +15,7 @@ import {
   createSelect,
   createField,
   createSwitch,
+  createCheckbox,
   updateSwitch,
   createSheet,
   createIconButton,
@@ -115,6 +116,7 @@ function confirmDialog(options: {
       }),
     );
     const dialog = createConfirmDialog({
+      destructive: options.danger,
       title: options.title,
       body: options.body,
       actions,
@@ -427,7 +429,12 @@ export async function membersSheet(id: string, anchor?: HTMLElement) {
     caps.className = ensemblePanelRecipe().capabilities;
     if (isLead)
       for (const cap of capabilities)
-        grants[cap] = capabilitySwitch(caps, pt(cap));
+        {
+          // Invitation choices are submitted together; member settings above apply immediately.
+          const choice = createCheckbox({label: pt(cap)});
+          caps.append(choice);
+          grants[cap] = choice.querySelector<HTMLInputElement>("input")!;
+        }
     form.append(caps);
     const send = createButton({
       text: pt("invite"),
