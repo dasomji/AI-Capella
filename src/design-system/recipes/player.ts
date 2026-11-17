@@ -1,5 +1,4 @@
 import { normalizeRecipe } from "./normalize";
-import { buttonRecipe, iconButtonRecipe } from "./controls";
 /** D08/D10/D12: typed player slots compose shared controls and semantic materials. */
 const playerStyles = {
   part: "tw:[:where(&)]:font-inherit tw:[:where(&)]:text-inherit tw:[:where(&)]:font-smoothing-inherit tw:[:where(&)]:locale-inherit tw:[:where(&)]:tap-highlight-inherit tw:[:where(&)]:select-text tw:[:where(&)]:[text-align:inherit]",
@@ -131,7 +130,7 @@ const playerControls = {
 export type PlayerControl = keyof typeof playerControls;
 export function playerControlRecipe(variant: PlayerControl) { return playerControls[variant]; }
 
-export function transportRecipe() { return {root:playerPartRecipe("transport"),center:playerPartRecipe("transport-center"),right:playerPartRecipe("transport-right"),play:buttonRecipe({variant:"player-play"}),command:buttonRecipe({variant:"player-transport"}),toggle:buttonRecipe({variant:"player-toggle"})}; }
-export function voiceRowRecipe() { return {root:playerPartRecipe("voice-row"),light:playerPartRecipe("light"),name:buttonRecipe({variant:"player-voice-name"}),mute:buttonRecipe({variant:"player-mute"}),solo:buttonRecipe({variant:"player-solo"}),more:iconButtonRecipe({variant:"voice-more"})}; }
-export function voiceChipRecipe() { return buttonRecipe({variant:"player-chip"}); }
+export function transportRecipe() { return {root:playerPartRecipe("transport"),center:playerPartRecipe("transport-center"),right:playerPartRecipe("transport-right"),play:normalizeRecipe(playerControlRecipe("player-play")),command:normalizeRecipe(playerControlRecipe("player-transport")),toggle:normalizeRecipe(playerControlRecipe("player-toggle"))}; }
+export function voiceRowRecipe() { return {root:playerPartRecipe("voice-row"),light:playerPartRecipe("light"),name:normalizeRecipe(playerControlRecipe("player-voice-name")),mute:normalizeRecipe(playerControlRecipe("player-mute")),solo:normalizeRecipe(playerControlRecipe("player-solo")),more:normalizeRecipe(playerControlRecipe("voice-more"))}; }
+export function voiceChipRecipe() { return normalizeRecipe(playerControlRecipe("player-chip")); }
 export function playerGlyphRecipe(kind: ""|"treble"|"treble8"|"bass") { return ["ds-player-glyph menu-glyph", playerStyles.glyph].join(" ") + " " + kind; }
