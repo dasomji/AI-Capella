@@ -1,4 +1,4 @@
-import { readTheme, subscribeTheme, getThemeRevision, type ThemeSnapshot } from './design-system/theme';
+import { readTheme, subscribeTheme, getThemeRevision, requestAppearanceChange, type ThemeSnapshot } from './design-system/theme';
 // The paper of the paper design (design.ts). One texture, made on the device when the app starts
 // (seeded, so the same everywhere), and used by every paper surface: the CSS ones -- the ground,
 // the song cards, the bars, the sheets -- as a background image (--ds-material-fibre), the canvases -- the
@@ -45,6 +45,9 @@ export function paperKind(): PaperKind {
 
 /** Switches this device to another paper (remembered), and tells the views to paint it. */
 export function setPaperKind(next: PaperKind) {
+  return requestAppearanceChange('paper', () => applyPaperKind(next));
+}
+function applyPaperKind(next: PaperKind) {
   if (next === kind) return;
   deferredTexture = false;
   textureJob++;
