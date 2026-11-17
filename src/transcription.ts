@@ -524,7 +524,6 @@ export function installTranscription(options: {
         },
         { variant: "transcription-language" },
       );
-      chip.classList.add("tx-language-chip");
       chip.dataset.value = value;
       updateButton(chip, { pressed: value === "" });
       language.append(chip);
@@ -738,7 +737,7 @@ export function installTranscription(options: {
           block: "center",
           inline: "center",
         });
-        target?.classList.remove(transcriptionJobRecipe().flash);
+        target?.classList.remove(...transcriptionJobRecipe().flash.split(" "));
         requestAnimationFrame(() => target?.classList.add(...transcriptionJobRecipe().flash.split(" ")));
         if (item.page) {
           updateSwitch(comparison, {
