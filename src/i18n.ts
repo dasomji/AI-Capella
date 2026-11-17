@@ -891,3 +891,16 @@ export const adminUiMessages: Record<Lang, typeof adminUiEn> = {
   noUsage:'Keine Transkriptionsaufrufe in diesem Zeitraum.', noFailures:'Keine fehlgeschlagenen Aufrufe in diesem Zeitraum.', cancel:'Abbrechen', close:'Schließen',
   },
 };
+
+/** D26 interim tour copy describes the current shared-control model. */
+export const sharedPlaybackTourMessages = {
+  library: {
+    de: 'Wähle »Gemeinsam«: Alle steuern die gemeinsame Wiedergabe auf allen Geräten.',
+    en: 'Choose “Together”: everyone controls shared playback on every device.',
+  },
+  title: { de: 'Gemeinsam steuern', en: 'Shared playback' },
+  player: {
+    de: 'In »Gemeinsam« steuern alle die gemeinsame Wiedergabe. Änderungen gelten auf allen Geräten.',
+    en: 'In Together, everyone controls shared playback. Changes apply on every device.',
+  },
+} as const;
