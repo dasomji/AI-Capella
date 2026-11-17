@@ -17,7 +17,7 @@ const server=await createServer({root,configFile:false,cacheDir:path.join(out,'v
  {name:'review-baseline',enforce:'pre',transform(code,id){
   const file=id.split('?')[0];
   if(baseline&&file.startsWith(root+'/src/')&&!id.includes('?url')) {const source=execFileSync('git',['show',`${baseline}:${path.relative(root,file)}`],{encoding:'utf8'});return id.includes('?raw')?'export default '+JSON.stringify(source):source;}
- }},react(),tailwind(),{name:'review-fixture',configureServer(server){server.middlewares.use((req,res,next)=>{if(!req.url.startsWith('/review.html'))return next();res.setHeader('Content-Type','text/html');res.end('<!doctype html><html><head><link rel="stylesheet" href="/src/design-system/app.css"></head><body><div id="app"></div></body></html>');});},transform(code,id){if(id.endsWith('/src/main.ts'))return code+hooks;}}
+ }},react(),tailwind(),{name:'review-fixture',resolveId(id){if(id==='/review-recovery.tsx')return '\0review-recovery';},load(id){if(id==='\0review-recovery')return `import {createRoot} from 'react-dom/client';import {createElement} from 'react';import {ReviewNotFound} from '/src/routes/__root.tsx';export function recover(){const root=document.createElement('div');document.body.replaceChildren(root);createRoot(root).render(createElement(ReviewNotFound));}`;},configureServer(server){server.middlewares.use((req,res,next)=>{if(!req.url.startsWith('/review.html'))return next();res.setHeader('Content-Type','text/html');res.end('<!doctype html><html><head><link rel="stylesheet" href="/src/design-system/app.css"></head><body><div id="app"></div></body></html>');});},transform(code,id){if(id.endsWith('/src/main.ts'))return code+hooks;if(id.endsWith('/src/routes/__root.tsx'))return code+'\nexport {NotFound as ReviewNotFound};';}}
  ],server:{host:'127.0.0.1',port:0,hmr:false,watch:null}});
 let browser;const records=[];
 try {
@@ -64,6 +64,16 @@ try {
   assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
   await page.evaluate(()=>review.landing());
   if(!baseline)assert.equal(await page.locator('html').getAttribute('data-theme'),target);
+  // Render the original/current recovery component; the isolated suite also checks routed 404 status.
+  await page.evaluate(async theme=>{
+   const T=await import('/src/design-system/theme/index.ts');T.setAppearanceRehearsing(false);T.setThemePreference(theme);
+   (await import('/review-recovery.tsx')).recover();
+  },theme);
+  await page.getByRole('heading',{name:'Seite nicht gefunden',exact:true}).waitFor();
+  await shot('404-de');
+  await page.getByRole('button',{name:'EN',exact:true}).click();
+  await page.getByRole('heading',{name:'Page not found',exact:true}).waitFor();
+  await shot('404-en');
   await context.close();
   console.log('Review visuals',baseline??'current',theme,width,height,'PASS');
  }

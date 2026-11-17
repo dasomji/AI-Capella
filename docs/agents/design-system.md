@@ -40,7 +40,7 @@ flowchart LR
    `flush` (`tw:p-flush`), leaving native `max-w-none` / `max-h-none` limits intact.
    Position roles such as `center` do not reuse a radius merely because the values match. Radii use `field`, `track`,
    `control-dense`, `media`, `indicator`, `tile-dense`, `menu`, `control`, `icon`, `segment`,
-   `card`, `tile`, `card-roomy`, `dialog`, `dialog-roomy`, `sheet`, `pill`, and `round`.
+   `card`, `tile`, `card-roomy`, `dialog`, `dialog-roomy`, `pill`, and `round`.
    D08/D10 retain distinct control/card densities; D12 uses centered dialog geometry; active compatibility names retain their own content widths.
 3. Define shared dimensions, type metrics and motion once on `:root`. Define every display
    paint, including pigments mapped to renderer roles, gradients, glows, shadows and transparent

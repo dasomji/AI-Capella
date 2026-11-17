@@ -119,6 +119,8 @@ try {
   records.push({theme,width,height,variant:'player-action-toast',...toast});
   await page.screenshot({path:`${out}/${theme}-${width}x${height}-player-action-toast.png`});
   if(!baseline) {
+   assert.equal(toast.buttons.length,2,'Action and dismissal buttons are present');
+   assert.ok(toast.controls.length>=(width<1200?2:1),'Real player controls are visible for overlap checks');
    assert.ok(Math.abs(toast.host.width-Math.min(520,width-32))<2,`F1 token width and gutters: ${JSON.stringify(toast)}`);
    assert.ok(toast.host.left>=15&&toast.host.right<=width-15,'Toast has viewport gutters');
    assert.ok(toast.message&&toast.message.width>=(width<900?toast.host.width-50:150),'Message retains readable wrapping width beside actions');
