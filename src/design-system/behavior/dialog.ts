@@ -1,7 +1,7 @@
 import { panelMotion } from "./panel";
 
 /** Native showModal owns background inertness, including later portals and stacked modals. */
-export type CancelReason = "escape" | "outside" | "button" | "swipe";
+export type CancelReason = "escape" | "outside" | "button";
 export interface DialogBehaviorOptions {
   opener?: Element | null;
   /** Historical sheet motion name aliases centered fade; no swipe dismissal. */
@@ -13,7 +13,7 @@ export interface DialogBehaviorOptions {
   busy?: boolean;
   /** Notification after an actual close. Never called by React effect cleanup. */
   onClose?: () => void;
-  /** A user cancellation request (Escape, outside, cancel button or swipe). */
+  /** A user cancellation request (Escape, outside or cancel button). */
   onCancel?: (reason: CancelReason) => void;
   /** Transport hook: retain the native top layer until the exit completes. */
   exit?: (finish: () => void) => void;
