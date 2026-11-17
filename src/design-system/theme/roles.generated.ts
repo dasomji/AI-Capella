@@ -189,6 +189,7 @@ export const themeRoleNames = [
   "on-accent",
   "on-danger",
   "opacity-disabled",
+  "opacity-disabled-action",
   "opacity-disabled-admin",
   "opacity-disabled-auth",
   "opacity-disabled-offline",
