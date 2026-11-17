@@ -265,7 +265,9 @@ it('builds a loud fourth theme from every resolved paint alias', async () => {
   const paint = new Map<string,string>(); block.walkDecls(d=>{paint.set(d.prop,d.value);});
   expect(paint.get('--ds-accent')).not.toMatch(/var\(--pigment-/);
   expect(paint.get('--ds-ink')).toMatch(/rgba\(/);
-  expect(paint.get('--ds-library-cover-background')).not.toBe('#15131f');
+  expect(paint.get('--ds-artwork-cover-ground')).toMatch(/rgba\(/);
+  expect(paint.get('--ds-voice-fallback-saturation')).toBe('92');
+  expect(paint.get('--ds-voice-fallback-lightness')).toBe('50');
   expect(paint.size).toBeGreaterThan(200);
 });
 
