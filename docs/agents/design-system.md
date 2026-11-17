@@ -140,12 +140,16 @@ sinks), font stacks, default-palette/font utilities, arbitrary aesthetic utiliti
 screen-context control selectors and forbidden recipe imports. Font/font-family declarations and canvas/style font sinks use an allowlist: a variable,
 inherit/initial, or snapshot font (with tokenized sizing in shorthand). Named-color identifiers
 are checked throughout CSS values and style/cssText/setProperty/canvas sinks, skipping url(),
-var(), font-family, animation-name and content. Recipe dependencies use an allowlist. Outside
-the system, computed custom-property reads, legacy dataset theme reads, raw width/height media
-queries and direct viewport breakpoint comparisons are baseline-able violations. Unlayered CSS
-imports are forbidden outside app.css (root's eager app.css?url link is the explicit boundary).
-Arbitrary aesthetics, spacing, dimensions and stacking allow only semantic variable forms
-`-(--ds-…)` / `-[var(--ds-…)]`; use named adapter scales first.
+var(), font-family, animation-name and content. Recipe dependencies use an allowlist. Outside the system, computed custom-property reads and direct viewport breakpoint comparisons
+are rejected. Theme/type selectors belong only in tokens.css; attribute reads belong in the
+canonical theme runtime. Raw media/custom-variant breakpoints are checked in system CSS too.
+Every CSS import, including app.css imports, needs layer(); root's eager app.css?url link is
+the explicit TypeScript boundary. Arbitrary utility values require semantic variables (including
+Tailwind type hints and token-only expressions); use named adapter scales first. Native cascade
+keywords and the documented local geometry/material inputs below are structural exceptions.
+Numeric design-scale utilities require explicit authored token mappings. Rule-index and
+value-encoding names are rejected for tokens, utilities and variants. Shared screen paint
+belongs in complete theme blocks; only dedicated print paper/ink remain fixed (D18).
 
 Geometry triples alone and measured popup/drag positioning are permitted. This is conservative
 local AST/lexical analysis, **not a security boundary** or an interprocedural color-flow proof.
@@ -170,6 +174,12 @@ so review new presentation-producing tooling and root HTML explicitly.
 
 Named narrow exceptions:
 
+- Native cascade keywords (`inherit`, `revert`, `initial`, `unset`, `none`) select inheritance
+  or structure rather than author a new design value. The typed font compiler utility reads
+  `--type-*` mappings, whose authored source remains tokens.css.
+- Token-backed material expressions may consume local `--c` (voice paint), `--rx`/`--ry`
+  (pointer tilt), and `--written`/`--ded-delay`/`--ded-wait` (writing progress/delay).
+  Generated table labels may use `content-[attr(data-label)]`.
 - `paper-noise-geometry`: only formation/flocs/tooth noise tuples in `paper.ts`, interpreted as
   cell counts and amplitude; color tuples at other sinks still fail.
 - `notation-stem-shape`: `black` in the existing filled/half stem-shape conditional, not paint.
@@ -209,7 +219,8 @@ Run `npm run typecheck`, `npm test`, `npm run build`, `npm run check:design-toke
 `npm run test:browser:design-system`, `npm run test:browser:theme-extension`,
 `npm run test:browser:renderer-themes`, and the isolated authentication/admin browser suites.
 Set `BROWSER_EVIDENCE` to an external evidence directory when collecting captures. CI runs the
-reusable contracts. Production-built browser checks cover auth, library, roll, staff, ensemble
+reusable contracts. `npm run test:design-mutants` proves the regression checks reject the
+review mutations without editing checkout files. Production-built browser checks cover auth, library, roll, staff, ensemble
 and account sheets, transcription and admin; renderer checks also compare live token edits
 against fresh instances. The repository currently has no ladder `docs/agents/verify.md` or
 `check:fast`/`check:full`/`verify:app` contract; these commands do not claim those rungs.
