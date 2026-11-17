@@ -140,3 +140,184 @@
 @utility panel-sheet-enter { transform: var(--ds-panel-sheet-enter-transform); }
 @utility panel-specimen-transform { transform: var(--ds-panel-specimen-transform); }
 @utility panel-vellum { background: var(--ds-material-vellum-strong); backdrop-filter: var(--ds-material-filter-strong); }
+
+/* Library/account selector variants retain native interaction and compatibility contexts. */
+@custom-variant library-button-disabled (&:disabled);
+@custom-variant library-button-focus-visible (&:focus-visible);
+@custom-variant library-mode-btn-last-used (&.last-used);
+@custom-variant library-mode-btn-hover (&:hover);
+@custom-variant library-mode-btn-active (&:active);
+@custom-variant library-mode-btn-base-max-phone-wide { @media (max-width: theme(--breakpoint-phone-wide)) { & { @slot; } } }
+@custom-variant library-search-input (& input);
+@custom-variant library-search-focus-within (&:focus-within);
+@custom-variant library-banner-b (& b);
+@custom-variant library-banner-muted (&.muted);
+@custom-variant library-song-card-hover (&:hover);
+@custom-variant library-song-open-focus-visible (&:focus-visible);
+@custom-variant library-vdots-i (& i);
+@custom-variant library-song-card-ds-library-tag (& > .ds-library-tag);
+@custom-variant library-song-card-skeleton (&.skeleton);
+@custom-variant library-search-base-max-compact { @media (max-width: theme(--breakpoint-compact)) { & { @slot; } } }
+@custom-variant library-song-grid-base-max-compact { @media (max-width: theme(--breakpoint-compact)) { & { @slot; } } }
+@custom-variant library-song-card-base-max-compact { @media (max-width: theme(--breakpoint-compact)) { & { @slot; } } }
+@custom-variant library-song-card-hover-max-compact { @media (max-width: theme(--breakpoint-compact)) { &:hover { @slot; } } }
+@custom-variant library-song-open-base-max-compact { @media (max-width: theme(--breakpoint-compact)) { & { @slot; } } }
+@custom-variant library-song-open-ds-library-cover-max-compact { @media (max-width: theme(--breakpoint-compact)) { & .ds-library-cover { @slot; } } }
+@custom-variant library-song-body-base-max-compact { @media (max-width: theme(--breakpoint-compact)) { & { @slot; } } }
+@custom-variant library-song-title-base-max-compact { @media (max-width: theme(--breakpoint-compact)) { & { @slot; } } }
+@custom-variant library-song-more-base-max-compact { @media (max-width: theme(--breakpoint-compact)) { & { @slot; } } }
+@custom-variant library-song-card-ds-library-tag-max-compact { @media (max-width: theme(--breakpoint-compact)) { & > .ds-library-tag { @slot; } } }
+@custom-variant library-song-card-skeleton-max-compact { @media (max-width: theme(--breakpoint-compact)) { &.skeleton { @slot; } } }
+@custom-variant library-sound-prompt-show (&.show);
+@custom-variant library-sound-prompt-svg (& svg);
+@custom-variant library-paper-option-hover (&:hover);
+@custom-variant library-paper-option-aria-checked-true (&[aria-checked="true"]);
+@custom-variant library-paper-text-b (& b);
+@custom-variant library-paper-option-base-max-phone { @media (max-width: theme(--breakpoint-phone)) { & { @slot; } } }
+@custom-variant library-paper-swatch-base-max-phone { @media (max-width: theme(--breakpoint-phone)) { & { @slot; } } }
+@custom-variant library-banner-base-opaque { @media (prefers-reduced-transparency: reduce) { & { @slot; } } }
+@custom-variant library-search-base-opaque { @media (prefers-reduced-transparency: reduce) { & { @slot; } } }
+@custom-variant library-mode-btn-base-opaque { @media (prefers-reduced-transparency: reduce) { & { @slot; } } }
+@custom-variant library-mode-btn-root-data-start-neu (:root[data-start="neu"] &);
+@custom-variant library-mode-btn-root-data-start-neu-ic (:root[data-start="neu"] & .ic);
+@custom-variant library-mode-btn-root-data-start-neu-hover (:root[data-start="neu"] &:hover);
+@custom-variant library-mode-btn-root-data-start-neu-active (:root[data-start="neu"] &:active);
+@custom-variant library-mode-btn-root-data-start-neu-last-used (:root[data-start="neu"] &.last-used);
+@custom-variant library-mode-btn-root-data-title-buehne-last-used (:root[data-title="buehne"] &.last-used);
+@custom-variant library-mode-btn-root-data-title-buehne-last-used-ic (:root[data-title="buehne"] &.last-used .ic);
+@custom-variant library-song-card-data-id (&[data-id]);
+@custom-variant library-song-card-lifted (&.lifted);
+@custom-variant library-landing-empty-p-first-child (& > p:first-child);
+@custom-variant library-landing-empty-btn (& .btn);
+@custom-variant library-landing-empty-link-btn (& .link-btn);
+@custom-variant library-mode-btn-ic (& .ic);
+@custom-variant library-song-title-root-data-type-revival (:root[data-type="revival"] &);
+@custom-variant library-song-meta-root-data-type-revival (:root[data-type="revival"] &);
+@custom-variant library-overlay-backdrop (&::backdrop);
+@custom-variant library-prompt-form-empty (& form:empty);
+@custom-variant library-popover-backdrop (&::backdrop);
+@custom-variant library-sheet-base-min-panel { @media (min-width: theme(--breakpoint-panel)) { & { @slot; } } }
+@custom-variant library-menu-item-hover (&:hover);
+@custom-variant library-menu-item-focus-visible (&:focus-visible);
+@custom-variant library-menu-item-disabled (&:disabled);
+@custom-variant library-menu-item-ic (& .ic);
+@custom-variant library-menu-item-aria-checked-true-ds-library-menu-check (&[aria-checked="true"] .ds-library-menu-check);
+@custom-variant library-menu-item-ds-library-menu-chevron (& .ds-library-menu-chevron);
+@custom-variant library-menu-item-aria-expanded-true-ds-library-menu-chevron (&[aria-expanded="true"] .ds-library-menu-chevron);
+@custom-variant library-menu-danger-ic (& .ic);
+@custom-variant library-prompt-title-root-data-type-revival (:root[data-type="revival"] &);
+@custom-variant library-link-hover (&:hover);
+@custom-variant library-landing-empty-ds-library-link (& .ds-library-link);
+@custom-variant library-link-ds-library-landing-aside (&.ds-library-landing-aside);
+@custom-variant library-song-more-hover (&:hover);
+@custom-variant library-popover-data-panel-state-entering (&[data-panel-state='entering']);
+@custom-variant library-popover-data-panel-state-open (&[data-panel-state='open']);
+@custom-variant library-popover-data-panel-state-closing (&[data-panel-state='closing']);
+@custom-variant library-landing-empty-data-ds-button (& [data-ds='button']);
+@custom-variant library-prompt-data-panel-state-entering (&[data-panel-state='entering']);
+@custom-variant library-prompt-data-panel-state-closing (&[data-panel-state='closing']);
+@custom-variant library-prompt-data-panel-state-open (&[data-panel-state='open']);
+@custom-variant library-overlay-base (& *);
+@custom-variant navigation-switch-ic (& .ic);
+@custom-variant navigation-switch-hover-ic (&:hover .ic);
+@custom-variant navigation-other-hover (&:hover);
+@custom-variant library-song-card-data-offline-unavailable (&[data-offline-unavailable]);
+@custom-variant account-heading-first-child (&:first-child);
+@custom-variant account-shared-span (& > span);
+@custom-variant account-body-focus-visible (& :focus-visible);
+@custom-variant account-body-base (& *);
+
+/* Shorthand values and native inheritance have no equivalent @theme namespace. */
+@utility font-inherit { font: inherit; }
+@utility color-inherit { color: inherit; }
+@utility outline-library-button-outline { outline: var(--ds-library-button-outline); }
+@utility border-library-mode-btn-border { border: var(--ds-library-mode-btn-border); }
+@utility background-library-mode-btn-background-2 { background: var(--ds-library-mode-btn-background-2); }
+@utility backdrop-filter-library-mode-btn-backdrop-filter-2 { backdrop-filter: var(--ds-library-mode-btn-backdrop-filter-2); }
+@utility transition-library-mode-btn-transition { transition: var(--ds-library-mode-btn-transition); }
+@utility webkit-backdrop-filter-library-mode-btn-webkit-backdrop-filter { -webkit-backdrop-filter: var(--ds-library-mode-btn-webkit-backdrop-filter); }
+@utility background-library-mode-btn-hover-background { background: var(--ds-library-mode-btn-hover-background); }
+@utility transform-library-mode-btn-active-transform { transform: var(--ds-library-mode-btn-active-transform); }
+@utility border-library-search-border { border: var(--ds-library-search-border); }
+@utility background-library-search-background-2 { background: var(--ds-library-search-background-2); }
+@utility webkit-backdrop-filter-library-search-webkit-backdrop-filter { -webkit-backdrop-filter: var(--ds-library-search-webkit-backdrop-filter); }
+@utility backdrop-filter-library-search-backdrop-filter { backdrop-filter: var(--ds-library-search-backdrop-filter); }
+@utility background-library-banner-background-2 { background: var(--ds-library-banner-background-2); }
+@utility border-library-banner-border { border: var(--ds-library-banner-border); }
+@utility webkit-backdrop-filter-library-banner-webkit-backdrop-filter { -webkit-backdrop-filter: var(--ds-library-banner-webkit-backdrop-filter); }
+@utility backdrop-filter-library-banner-backdrop-filter { backdrop-filter: var(--ds-library-banner-backdrop-filter); }
+@utility background-library-song-card-background-2 { background: var(--ds-library-song-card-background-2); }
+@utility border-library-song-card-border { border: var(--ds-library-song-card-border); }
+@utility transition-library-song-card-transition { transition: var(--ds-library-song-card-transition); }
+@utility transform-library-song-card-hover-transform { transform: var(--ds-library-song-card-hover-transform); }
+@utility background-library-cover-background-2 { background: var(--ds-library-cover-background-2); }
+@utility font-library-song-title-font { font: var(--ds-library-song-title-font); }
+@utility bg-library-voice { background: var(--c); }
+@utility background-library-song-more-background { background: var(--ds-library-song-more-background); }
+@utility background-library-song-card-tag-background { background: var(--ds-library-song-card-tag-background); }
+@utility background-library-song-card-skeleton-background-2 { background: var(--ds-library-song-card-skeleton-background-2); }
+@utility border-bottom-library-phone-song-card-border-bottom { border-bottom: var(--ds-library-phone-song-card-border-bottom); }
+@utility transform-library-phone-song-more-transform { transform: var(--ds-library-phone-song-more-transform); }
+@utility background-library-phone-more-background { background: var(--ds-library-phone-more-background); }
+@utility transform-library-phone-song-card-tag-transform { transform: var(--ds-library-phone-song-card-tag-transform); }
+@utility background-library-sound-prompt-background { background: var(--ds-library-sound-prompt-background); }
+@utility font-library-sound-prompt-font { font: var(--ds-library-sound-prompt-font); }
+@utility white-space-library-sound-prompt-white-space { white-space: var(--ds-library-sound-prompt-white-space); }
+@utility transform-library-sound-prompt-transform { transform: var(--ds-library-sound-prompt-transform); }
+@utility cursor-library-sound-prompt-cursor { cursor: var(--ds-library-sound-prompt-cursor); }
+@utility border-library-paper-option-border { border: var(--ds-library-paper-option-border); }
+@utility transition-library-paper-option-transition { transition: var(--ds-library-paper-option-transition); }
+@utility background-library-paper-option-aria-checked-true-background { background: var(--ds-library-paper-option-aria-checked-true-background); }
+@utility background-library-paper-swatch-background { background: var(--ds-library-paper-swatch-background); }
+@utility webkit-backdrop-filter-none { -webkit-backdrop-filter: none; }
+@utility background-library-opaque-banner-background { background: var(--ds-library-opaque-banner-background); }
+@utility background-library-opaque-search-background { background: var(--ds-library-opaque-search-background); }
+@utility background-library-opaque-mode-btn-background { background: var(--ds-library-opaque-mode-btn-background); }
+@utility background-library-neu-mode-btn-background { background: var(--ds-library-neu--mode-btn-background); }
+@utility transition-library-neu-mode-btn-transition { transition: var(--ds-library-neu--mode-btn-transition); }
+@utility filter-library-neu-mode-btn-ic-filter { filter: var(--ds-library-neu--mode-btn-ic-filter); }
+@utility background-library-neu-mode-btn-hover-background { background: var(--ds-library-neu--mode-btn-hover-background); }
+@utility transform-library-neu-mode-btn-hover-transform { transform: var(--ds-library-neu--mode-btn-hover-transform); }
+@utility background-library-buehne-mode-btn-last-used-background { background: var(--ds-library-buehne--mode-btn-last-used-background); }
+@utility webkit-touch-callout-none { -webkit-touch-callout: none; }
+@utility webkit-user-select-none { -webkit-user-select: none; }
+@utility background-library-song-card-lifted-background { background: var(--ds-library-song-card-lifted-background); }
+@utility border-library-song-card-lifted-border { border: var(--ds-library-song-card-lifted-border); }
+@utility transition-library-song-card-lifted-transition { transition: var(--ds-library-song-card-lifted-transition); }
+@utility border-top-library-landing-empty-border-top { border-top: var(--ds-library-landing-empty-border-top); }
+@utility font-library-landing-empty-p-first-child-font { font: var(--ds-library-landing-empty-p-first-child-font); }
+@utility filter-library-mode-btn-ic-filter { filter: var(--ds-library-mode-btn-ic-filter); }
+@utility white-space-library-revival-song-meta-white-space { white-space: var(--ds-library-revival--song-meta-white-space); }
+@utility background-material-vellum-strong { background: var(--ds-material-vellum-strong); }
+@utility backdrop-filter-material-filter-strong { backdrop-filter: var(--ds-material-filter-strong); }
+@utility border-library-overlay-border { border: var(--ds-library-overlay-border); }
+@utility webkit-font-smoothing-inherit { -webkit-font-smoothing: inherit; }
+@utility webkit-locale-inherit { -webkit-locale: inherit; }
+@utility webkit-tap-highlight-color-inherit { -webkit-tap-highlight-color: inherit; }
+@utility background-library-overlay-backdrop { background: var(--ds-library-overlay-backdrop); }
+@utility transition-library-prompt-transition { transition: var(--ds-library-prompt-transition); }
+@utility font-library-prompt-heading { font: var(--ds-library-prompt-heading); }
+@utility transition-library-popover-transition { transition: var(--ds-library-popover-transition); }
+@utility max-width-none { max-width: none; }
+@utility border-top-library-sheet-border-top { border-top: var(--ds-library-sheet-border-top); }
+@utility background-rule-strong { background: var(--ds-rule-strong); }
+@utility border-library-sheet-border { border: var(--ds-library-sheet-border); }
+@utility transition-library-menu-item-transition { transition: var(--ds-library-menu-item-transition); }
+@utility transition-library-menu-item-transition-phone { transition: var(--ds-library-menu-item-transition-phone); }
+@utility transform-library-menu-item-transform { transform: var(--ds-library-menu-item-transform); }
+@utility font-library-tag-font { font: var(--ds-library-tag-font); }
+@utility border-library-tag-border { border: var(--ds-library-tag-border); }
+@utility background-surface-overlay { background: var(--ds-surface-overlay); }
+@utility transform-library-popover-enter { transform: var(--ds-library-popover-enter); }
+@utility transform-library-prompt-enter { transform: var(--ds-library-prompt-enter); }
+@utility transition-account-navigation-switch-transition { transition: var(--ds-account-navigation-switch-transition); }
+@utility transform-account-navigation-switch-transform { transform: var(--ds-account-navigation-switch-transform); }
+@utility transition-account-navigation-other-transition { transition: var(--ds-account-navigation-other-transition); }
+@utility font-account-email-font { font: var(--ds-account-email-font); }
+@utility border-top-account-heading-border-top { border-top: var(--ds-account-heading-border-top); }
+@utility font-account-heading-font { font: var(--ds-account-heading-font); }
+@utility color-revert { color: revert; }
+@utility text-decoration-revert { text-decoration: revert; }
+@utility border-bottom-account-input-border-bottom { border-bottom: var(--ds-account-input-border-bottom); }
+@utility font-account-input-font { font: var(--ds-account-input-font); }
+@utility outline-account-body-outline { outline: var(--ds-account-body-outline); }
