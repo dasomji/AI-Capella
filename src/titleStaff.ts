@@ -200,8 +200,8 @@ export function animateStaff(canvas: HTMLCanvasElement, name: TitleName): () => 
       const ink = readTheme().color('title-staff-ink').rgba(Number(readTheme().roles['title-staff-ink-alpha']));
       const g = ctx.createLinearGradient(x0, 0, x1, 0);
       if (lampOn) {
-        const hot = readTheme().color('title-staff-reading-line').rgba(Number((0.34 + 0.6 * fade * rise).toFixed(3)));
-        const after = readTheme().color('title-staff-afterglow').rgba(Number((0.34 + 0.16 * fade).toFixed(3)));
+        const hot = readTheme().color('title-staff-reading-line').rgba(Number((Number(readTheme().roles['title-staff-reading-base-alpha']) + Number(readTheme().roles['title-staff-reading-peak-alpha']) * fade * rise).toFixed(3)));
+        const after = readTheme().color('title-staff-afterglow').rgba(Number((Number(readTheme().roles['title-staff-afterglow-base-alpha']) + Number(readTheme().roles['title-staff-afterglow-peak-alpha']) * fade).toFixed(3)));
         g.addColorStop(0, ink);
         g.addColorStop(at(lamp - 320), ink);
         g.addColorStop(at(lamp - 90), after);
