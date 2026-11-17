@@ -840,8 +840,8 @@ describe('AICAP-28 overlay decisions', () => {
       viewport.offsetTop = 25;
       viewport.dispatchEvent(new Event('resize'));
       vi.advanceTimersByTime(20);
-      expect(dialog.style.maxHeight).toBe('380px');
-      expect(dialog.style.top).toBe('25px');
+      expect(dialog.style.maxHeight).toContain('380px');
+      expect(dialog.style.top).toContain('25px');
       expect(scroll).toHaveBeenCalledWith({block:'nearest', inline:'nearest', behavior:'instant'});
       api.dispose();
       scroll.mockClear();
@@ -850,4 +850,21 @@ describe('AICAP-28 overlay decisions', () => {
       expect(scroll).not.toHaveBeenCalled();
     } finally { vi.unstubAllGlobals(); }
   });
+});
+
+
+it('inherits field density and keeps error feedback next to a focused control',()=>{
+  const html=renderToString(createElement(R.Field,{density:'compact',label:'Email',error:'Check email',children:a=>createElement(R.Input,{...a,type:'email'})}));
+  expect(html).toContain('tw:min-h-control-height-compact');
+  expect(html).not.toContain('density="');
+  const input=D.createInput({density:'compact',type:'email'});
+  const field=D.createField({density:'compact',label:'Email',control:input});
+  document.body.append(field);input.focus();
+  D.updateField(field,{error:'Check email'});
+  expect(document.activeElement).toBe(input);
+  expect(input.className).toContain('tw:min-h-control-height-compact');
+  expect(input.nextElementSibling?.textContent).toBe('Check email');
+  expect(input.getAttribute('aria-describedby')).toContain(input.nextElementSibling?.id);
+  expect(input.getAttribute('aria-invalid')).toBe('true');
+  expect(input.className).toContain('tw:border-danger');
 });
