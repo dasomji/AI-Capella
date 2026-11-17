@@ -1,23 +1,3 @@
-/* Measured card-local tilt coordinates must resolve on the card. */
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-.ds-library-song-card {
-    transform: perspective(var(--ds-library-card-perspective))
-      rotateX(calc(var(--ry, 0) * var(--ds-library-card-tilt-negative)))
-      rotateY(calc(var(--rx, 0) * var(--ds-library-card-tilt)));
-    transition: var(--ds-library-pointer-song-card-transition);
-  }
-}
-/* Measured card-local tilt coordinates must resolve on the card. */
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-.ds-library-song-card.is-tilted {
-    transform: perspective(var(--ds-library-card-perspective))
-      translateY(var(--ds-library-card-lift))
-      rotateX(calc(var(--ry, 0) * var(--ds-library-card-tilt-negative)))
-      rotateY(calc(var(--rx, 0) * var(--ds-library-card-tilt)));
-    transition: var(--ds-library-pointer-song-card-is-tilted-transition);
-    box-shadow: var(--ds-library-pointer-song-card-is-tilted-box-shadow);
-  }
-}
 /* Generated decoration preserves native pseudo-element rendering. */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
 .ds-library-song-card::after {

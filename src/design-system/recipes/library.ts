@@ -98,6 +98,11 @@ const librarySlots = {
     "tw:library-song-card-ds-library-tag-max-compact:p-library-phone-song-card-tag-padding " +
     "tw:library-song-card-ds-library-tag-max-compact:text-library-phone-song-card-tag-font-size " +
     "tw:library-song-card-skeleton-max-compact:min-h-library-song-card-min-height-phone " +
+    "tw:library-song-card-base-fine-pointer:transform-library-card-tilt " +
+    "tw:library-song-card-base-fine-pointer:transition-library-pointer-song-card-transition " +
+    "tw:library-song-card-is-tilted-fine-pointer:transform-library-card-lifted-tilt " +
+    "tw:library-song-card-is-tilted-fine-pointer:transition-library-pointer-song-card-is-tilted-transition " +
+    "tw:library-song-card-is-tilted-fine-pointer:shadow-library-pointer-song-card-is-tilted-box-shadow " +
     "tw:library-song-card-data-id:webkit-touch-callout-none tw:library-song-card-data-id:webkit-user-select-none " +
     "tw:library-song-card-data-id:select-none tw:library-song-card-lifted:z-toolbar " +
     "tw:library-song-card-lifted:pointer-events-none " +
@@ -312,7 +317,7 @@ export function libraryPartRecipe(part: LibraryPart) {
 
 /** Expand only this domain's slots; adapters retain every historical behavior hook. */
 export function libraryAccountUtilityRecipe<T>(value: T): T {
-  if (typeof value === "string") return accountUtilityRecipe(libraryUtilityRecipe(value)) as T;
+  if (typeof value === "string") return [...new Set(accountUtilityRecipe(libraryUtilityRecipe(value)).split(/\s+/))].join(" ") as T;
   if (value && typeof value === "object")
     return Object.fromEntries(Object.entries(value).map(([slot, classes]) => [slot, libraryAccountUtilityRecipe(classes)])) as T;
   return value;
