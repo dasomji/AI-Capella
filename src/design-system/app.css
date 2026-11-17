@@ -115,3 +115,28 @@
 @utility player-chip-background-13 { background: var(--ds-player-chip-is-dimmed-i-background-162); }
 @utility player-chips-mixer-background-3 { background: var(--ds-player-chips-mixer-background-165); }
 @utility player-badge-background-2 { background: var(--ds-player-badge-is-leading-background-169); }
+
+/* Shorthands/vendor inheritance cannot be represented by @theme namespaces. */
+@utility panel-inherit {
+  font: inherit;
+  color: inherit;
+  -webkit-font-smoothing: inherit;
+  -webkit-locale: inherit;
+  -webkit-tap-highlight-color: inherit;
+}
+@utility appearance-textfield { appearance: textfield; }
+@utility panel-mark-stroke { border-width: var(--ds-panel-stroke-mark); }
+@utility panel-overview-stroke { border-width: var(--ds-panel-section-marks-rmark-border-width-13); }
+@utility panel-offset-columns { grid-template-columns: auto minmax(0, 1fr) auto; }
+@utility panel-voice-accent { accent-color: var(--c); }
+@utility font-synthesis-none { font-synthesis: none; }
+@utility panel-toast-transition { transition: var(--ds-panel-toast-transition); }
+@utility panel-sheet-transition { transition: var(--ds-panel-sheet-transition); }
+@utility panel-backdrop-transition { transition: var(--ds-panel-backdrop-transition); }
+@utility panel-tour-transition { transition: var(--ds-panel-tour-transition); }
+@utility panel-toast-enter { transform: var(--ds-panel-toast-enter-transform); }
+@utility panel-toast-shown { transform: var(--ds-panel-toast-shown-transform); }
+@utility panel-note-enter { transform: var(--ds-panel-note-enter-transform); }
+@utility panel-sheet-enter { transform: var(--ds-panel-sheet-enter-transform); }
+@utility panel-specimen-transform { transform: var(--ds-panel-specimen-transform); }
+@utility panel-vellum { background: var(--ds-material-vellum-strong); backdrop-filter: var(--ds-material-filter-strong); }
