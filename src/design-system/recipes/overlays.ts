@@ -1,7 +1,7 @@
 import { normalizeRecipe } from "./normalize";
 import { controlBase, disabledRecipe, buttonRecipe } from "./controls";
 
-/** D12: centered dialogs; only score review occupies the full screen. */
+/** D12 centers forms/panels; D48 anchors small desktop menus. */
 export const dialogVariants = [
   "library-prompt", "library-sheet", "library-popover",
   "dialog",
@@ -27,15 +27,21 @@ export interface ToastOptions {
   kind?: (typeof toastVariants)[number];
   font?: "body" | "auth";
 }
+/** Geometry is a typed recipe variant, shared with library dialogs and extension recipes. */
+export function dialogPresentationRecipe(presentation: DialogOptions["presentation"] = "centered") {
+  return presentation === "anchored"
+    ? "tw:inset-auto tw:m-flush tw:w-panel-popover-width tw:max-w-none tw:max-h-none tw:p-small tw:rounded-menu tw:backdrop:bg-transparent"
+    : "tw:inset-flush tw:m-auto tw:max-w-max-width-dialog tw:max-h-max-height-dialog tw:p-section tw:rounded-dialog tw:backdrop:bg-backdrop";
+}
 function missingArea(name:string):never { throw Error("Use app recipes for " + name); }
 export function createOverlayRecipes(extensions: {
- dialog?:(variant:'library-prompt'|'library-sheet'|'library-popover',destructive:boolean)=>Record<'panel'|'content'|'header'|'title'|'body'|'actions',string>;
+ dialog?:(variant:'library-prompt'|'library-sheet'|'library-popover',destructive:boolean,presentation:DialogOptions['presentation'])=>Record<'panel'|'content'|'header'|'title'|'body'|'actions',string>;
  menu?:()=>{root:string;item:string;danger:string;check:string;option?:string;value?:string;chevron?:string;sub?:string};
 } = {}) {
 
-const centeredPanel = "tw:fixed tw:inset-flush tw:m-auto tw:h-fit tw:box-border tw:overflow-auto tw:overscroll-contain tw:outline-none tw:max-w-max-width-dialog tw:max-h-max-height-dialog tw:border-(length:--ds-stroke-thin) tw:border-solid tw:rounded-dialog tw:p-section tw:bg-surface-raised tw:text-ink tw:font-body tw:leading-leading-body tw:shadow-component-overlay-shadow tw:backdrop:bg-backdrop tw:motion-library-prompt-transition tw:data-[panel-state=entering]:opacity-opacity-hidden tw:data-[panel-state=closing]:opacity-opacity-hidden tw:motion-reduce:transition-none";
-function dialogRecipeStyles({ variant = "dialog", destructive = false }: DialogOptions = {}) {
-  if (variant === "library-prompt" || variant === "library-sheet" || variant === "library-popover") return extensions.dialog?.(variant, destructive) ?? missingArea("library dialog");
+const dialogPanel = "tw:fixed tw:h-fit tw:box-border tw:overflow-auto tw:overscroll-contain tw:outline-none tw:border-(length:--ds-stroke-thin) tw:border-solid tw:bg-surface-raised tw:text-ink tw:font-body tw:leading-leading-body tw:shadow-component-overlay-shadow tw:motion-library-prompt-transition tw:data-[panel-state=entering]:opacity-opacity-hidden tw:data-[panel-state=closing]:opacity-opacity-hidden tw:motion-reduce:transition-none";
+function dialogRecipeStyles({ variant = "dialog", destructive = false, presentation = "centered" }: DialogOptions = {}) {
+  if (variant === "library-prompt" || variant === "library-sheet" || variant === "library-popover") return extensions.dialog?.(variant, destructive, presentation) ?? missingArea("library dialog");
   if (variant === "transcription-review") return {
     panel: "tw:box-border tw:border-0 tw:border-solid tw:outline-none tw:overflow-auto tw:text-ink tw:font-auth-body tw:leading-leading-body ds-transcription-panel tw:[background-image:var(--ds-material-fibre)] tw:border-rule-strong tw:backdrop:bg-transcription-backdrop tw:backdrop:backdrop-blur-(--ds-space-control-dense) tw:w-screen tw:h-dvh tw:max-w-none tw:max-h-none tw:m-flush tw:rounded-field tw:p-section tw:max-score:p-content tw:bg-surface",
     content: "tw:block tw:font-auth-body tw:leading-leading-body tw:text-ink",
@@ -45,7 +51,7 @@ function dialogRecipeStyles({ variant = "dialog", destructive = false }: DialogO
   };
   const admin = variant === "admin-detail";
   return {
-    panel: centeredPanel + (variant === "domain-sheet" || variant === "sheet" || admin ? " tw:w-width-sheet" : variant === "transcription" ? " tw:w-width-transcription" : " tw:w-width-dialog") + (admin ? " tw:tabular-nums" : "") + (destructive ? " tw:border-danger" : " tw:border-rule-strong"),
+    panel: dialogPanel + " " + dialogPresentationRecipe(presentation) + (presentation === "anchored" ? "" : (variant === "domain-sheet" || variant === "sheet" || admin ? " tw:w-width-sheet" : variant === "transcription" ? " tw:w-width-transcription" : " tw:w-width-dialog")) + (admin ? " tw:tabular-nums" : "") + (destructive ? " tw:border-danger" : " tw:border-rule-strong"),
     content: "tw:grid tw:gap-row tw:min-w-flush",
     header: "tw:flex tw:items-center tw:justify-between tw:gap-group",
     title: "tw:m-flush tw:font-body tw:text-dialog tw:font-weight-strong tw:leading-leading-label tw:wrap-anywhere",
@@ -90,14 +96,10 @@ function toastPlacementRecipe() {
   return "ds-toast-placement tw:fixed tw:z-toast tw:pointer-events-auto tw:inset-auto tw:left-1/2 tw:bottom-toast-bottom tw:max-panel:bottom-toast-bottom-phone tw:w-toast-max-width tw:max-w-toast-max-width tw:[transform:var(--ds-panel-toast-enter-transform)] tw:opacity-opacity-hidden tw:motion-panel-toast-transition tw:[&.show]:opacity-opacity-visible tw:[&.show]:[transform:var(--ds-panel-toast-shown-transform)] tw:flex tw:flex-wrap tw:items-center tw:justify-end tw:gap-control tw:wrap-anywhere";
 }
 
-/** D48: retain dialog semantics/focus while presenting a compact desktop popup. */
-const anchoredPanel = "tw:fixed tw:inset-auto tw:m-flush tw:w-panel-popover-width tw:max-w-none tw:max-h-none tw:p-small tw:rounded-menu tw:backdrop:bg-transparent";
 function dialogRecipe(
   ...args: Parameters<typeof dialogRecipeStyles>
 ): ReturnType<typeof dialogRecipeStyles> {
-  const slots = dialogRecipeStyles(...args);
-  return normalizeRecipe(args[0]?.presentation === "anchored"
-    ? { ...slots, panel: slots.panel.split(" ").filter(token => !["tw:inset-flush", "tw:m-auto", "tw:w-width-sheet", "tw:w-width-dialog", "tw:max-w-max-width-dialog", "tw:max-h-max-height-dialog", "tw:p-section", "tw:rounded-dialog", "tw:backdrop:bg-backdrop"].includes(token)).join(" ") + " " + anchoredPanel } : slots);
+  return normalizeRecipe(dialogRecipeStyles(...args));
 }
 function menuRecipe(
   ...args: Parameters<typeof menuRecipeStyles>
