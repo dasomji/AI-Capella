@@ -1096,6 +1096,7 @@ export const themeRoleNames = [
   "voice-fallback-saturation",
   "voice-glow-spread",
   "voice-glow-strength",
+  "voice-key-area",
   "voice-lamp-height",
   "voice-lamp-position",
   "voice-lamp-start",
