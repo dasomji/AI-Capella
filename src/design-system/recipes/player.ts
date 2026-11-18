@@ -134,3 +134,7 @@ export function transportRecipe() { return {root:playerPartRecipe("transport"),c
 export function voiceRowRecipe() { return {root:playerPartRecipe("voice-row"),light:playerPartRecipe("light"),name:normalizeRecipe(playerControlRecipe("player-voice-name")),mute:normalizeRecipe(playerControlRecipe("player-mute")),solo:normalizeRecipe(playerControlRecipe("player-solo")),more:normalizeRecipe(playerControlRecipe("voice-more"))}; }
 export function voiceChipRecipe() { return normalizeRecipe(playerControlRecipe("player-chip")); }
 export function playerGlyphRecipe(kind: ""|"treble"|"treble8"|"bass") { return ["ds-player-glyph menu-glyph", playerStyles.glyph].join(" ") + " " + kind; }
+
+/** D42: identity key stays available when notes/callouts overlap or are too short. */
+export const voiceNumberRecipe = "tw:inline-flex tw:items-center tw:justify-center tw:border tw:border-ink tw:rounded-segment tw:px-tight tw:text-ink tw:bg-surface tw:font-mono tw:text-note tw:mr-tight";
+export const voiceKeyRecipe = "tw:flex tw:gap-small tw:overflow-x-auto tw:shrink-0 tw:p-tight tw:text-note";
