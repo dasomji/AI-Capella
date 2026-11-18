@@ -88,7 +88,9 @@ try {
   await page.evaluate(()=>qa.mixer());await audit('mixer');await page.keyboard.press('Escape');
   await page.evaluate(()=>qa.controls());await audit('controls');
   if(width<=900||hasTouch){
-   const metro=page.locator('dialog[open] [data-action=metronome]'),box=await metro.boundingBox(),before=await metro.getAttribute('aria-checked');
+   const metro=page.locator('dialog[open] [data-action=metronome]');
+   await metro.evaluate(el=>el.scrollIntoView({block:'center'}));
+   const box=await metro.boundingBox(),before=await metro.getAttribute('aria-checked');
    if(!baseline){
     const mutation=await metro.evaluate(el=>{const saved=el.className;el.className=saved.split(' ').filter(c=>!c.startsWith('tw:touch:before:')).join(' ');return saved;});
     const missingExtension=await page.evaluate(auditTouchTargets);
@@ -97,6 +99,7 @@ try {
     await metro.evaluate((el,saved)=>el.className=saved,mutation);
     for(const [i,y] of [box.y-4,box.y+box.height+4].entries()){if(hasTouch)await page.touchscreen.tap(box.x+box.width/2,y);else await page.mouse.click(box.x+box.width/2,y);assert.equal(await metro.getAttribute('aria-checked'),i===0?String(before!=='true'):before,'Extended edge toggles the preference');}
     assert.equal(await metro.getAttribute('aria-checked'),before,'Both outer hit-area edges toggle the rehearsal preference');
+    if(lang==='en'&&[768,390,844].includes(width))await page.screenshot({path:`${evidence}/${theme}-${lang}-${width}x${height}-controls-hit-area.png`});
    }
   }
   await page.keyboard.press('Escape');
