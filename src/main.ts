@@ -1,5 +1,5 @@
 import { createVoiceKey } from './design-system/dom/player';
-import { assignVoiceNumbers, voiceColor } from './voiceIdentity';
+import { assignVoiceNumbers, voiceColor, voiceLabel } from './voiceIdentity';
 import { themeRegistry } from './design-system/theme';
 import { appShellRecipe, landingRecipe } from "./design-system/recipes/shell";
 import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, updateField, createLoading, createEmptyState, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, createMenuOverlay, toast } from './design-system/dom';
@@ -842,15 +842,14 @@ function openExportSheet(opener: HTMLElement | null) {
   // One row per part of the file: a part on several staves (a piano's two hands), even with its
   // staves made voices of their own, goes into the PDF whole, under its own name and clefs.
   const sources: { id: string; name: string; color: string; staves: boolean }[] = [];
-  score.parts.forEach((part, i) => {
+  score.parts.forEach((part) => {
     const id = part.sourceId ?? part.id;
     if (!sources.some((s) => s.id === id)) sources.push({ id, name: part.sourceName ?? part.name, color: voiceColor(part, score), staves: !!part.sourceId || !!part.staves });
   });
   const rows = sources.map((source) => {
     const li = createPanelPart('li','export-row');
     li.style.setProperty('--c', source.color);
-    li.dataset.themeVoice = String(score.parts.findIndex(part => (part.sourceId ?? part.id) === source.id));
-    li.dataset.themeVoiceCount = String(score.parts.length);
+    li.dataset.part = score.parts.find(part => (part.sourceId ?? part.id) === source.id)!.id;
     const checkbox = createCheckbox({variant:'export-voice',checked:true,label:'',attrs:{'aria-label':source.name}});
     const check = checkbox.querySelector('input')!;
     const name = createInput({variant:'panel-export',value:source.name,attrs:{'aria-label':t('renameVoice')}});
@@ -1985,7 +1984,7 @@ function renderChipTitles() {
   document.querySelectorAll<HTMLElement>('.chip[data-part]').forEach((chip) => {
     const part = currentScore?.parts.find(part => part.id === chip.dataset.part);
     if (!part) return;
-    const name = `${part.voiceNumber} · ${part.name}`;
+    const name = voiceLabel(part);
     chip.title = singAlong ? t('voiceOnOff', { name }) : t('onlyVoice', { name });
   });
 }
