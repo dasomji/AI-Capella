@@ -598,8 +598,8 @@ export function tr(key:string,values:Record<string,string|number>={},language:La
 }
 
 export const adminMessages = {
- en:{title:'Administration',users:'Users',ensembles:'Ensembles',pieces:'Pieces',audit:'Audit log',transcription:'Transcription',search:'Search',more:'Load more',close:'Close',empty:'No results',reason:'Reason',optional:'Optional reason',confirm:'Confirm',logged:'This access will be recorded in the audit log.',content:'View content',original:'Download original',stop:'Emergency stop',paused:'Processing paused',running:'Processing enabled',apply:'Apply filters',from:'From (ISO, offset / Z)',to:'To (exclusive, ISO, offset / Z)',all:'All',verified:'Verified',sysadmin:'Sysadmin',memberships:'Memberships',members:'Members',invitations:'Invitations',versions:'Versions',originals:'Originals',jobs:'Jobs',profile:'Profile',sessions:'Sessions',devices:'Devices',roles:'Platform roles',lead:'Lead',manage_members:'Manage members',edit_music_pieces:'Edit pieces',ai_transcription:'AI transcription',error:'Request failed. Check the filters or try again.',back:'Rehearsal',usage:'Usage · USD',calls:'Calls',pages:'Pages',tokens:'Tokens',cost:'Estimated cost',unknown:'Unknown cost',latency:'Latency p50 / p95 (ms)',failures:'Failures by reason',yes:'Yes',no:'No',sort:'Sort',created:'Created',name:'Name',id:'ID',asc:'Ascending',desc:'Descending',state:'State',format:'Format',ensemble:'Ensemble ID',actor:'Actor ID',target:'Target ID',targetType:'Target type',action:'Action',outcome:'Outcome'},
- de:{title:'Verwaltung',users:'Nutzer',ensembles:'Ensembles',pieces:'Stücke',audit:'Protokoll',transcription:'Transkription',search:'Suchen',more:'Weitere laden',close:'Schließen',empty:'Keine Ergebnisse',reason:'Begründung',optional:'Begründung (optional)',confirm:'Bestätigen',logged:'Dieser Zugriff wird protokolliert.',content:'Inhalt ansehen',original:'Original herunterladen',stop:'Notstopp',paused:'Verarbeitung pausiert',running:'Verarbeitung aktiv',apply:'Filter anwenden',from:'Von (ISO, Offset / Z)',to:'Bis (exklusiv, ISO, Offset / Z)',all:'Alle',verified:'Bestätigt',sysadmin:'Sysadmin',memberships:'Mitgliedschaften',members:'Mitglieder',invitations:'Einladungen',versions:'Versionen',originals:'Originale',jobs:'Aufträge',profile:'Profil',sessions:'Sitzungen',devices:'Geräte',roles:'Plattformrollen',lead:'Leitung',manage_members:'Mitglieder verwalten',edit_music_pieces:'Stücke bearbeiten',ai_transcription:'KI-Transkription',error:'Anfrage fehlgeschlagen. Filter prüfen oder erneut versuchen.',back:'Probe',usage:'Nutzung · USD',calls:'Aufrufe',pages:'Seiten',tokens:'Tokens',cost:'Geschätzte Kosten',unknown:'Kosten unbekannt',latency:'Latenz p50 / p95 (ms)',failures:'Fehler nach Grund',yes:'Ja',no:'Nein',sort:'Sortierung',created:'Erstellt',name:'Name',id:'ID',asc:'Aufsteigend',desc:'Absteigend',state:'Status',format:'Format',ensemble:'Ensemble-ID',actor:'Akteur-ID',target:'Ziel-ID',targetType:'Zieltyp',action:'Aktion',outcome:'Ergebnis'},
+ en:{title:'Administration',users:'Users',ensembles:'Ensembles',pieces:'Pieces',audit:'Audit log',transcription:'Transcription',search:'Search',more:'Load more',close:'Close',empty:'No results',reason:'Reason',optional:'Optional reason',confirm:'Confirm',logged:'Your reason for this access is recorded in server logs.',content:'View content',original:'Download original',stop:'Emergency stop',paused:'Processing paused',running:'Processing enabled',apply:'Apply filters',from:'From (ISO, offset / Z)',to:'To (exclusive, ISO, offset / Z)',all:'All',verified:'Verified',sysadmin:'Sysadmin',memberships:'Memberships',members:'Members',invitations:'Invitations',versions:'Versions',originals:'Originals',jobs:'Jobs',profile:'Profile',sessions:'Sessions',devices:'Devices',roles:'Platform roles',lead:'Lead',manage_members:'Manage members',edit_music_pieces:'Edit pieces',ai_transcription:'AI transcription',error:'Request failed. Check the filters or try again.',back:'Rehearsal',usage:'Usage · USD',calls:'Calls',pages:'Pages',tokens:'Tokens',cost:'Estimated cost',unknown:'Unknown cost',latency:'Latency p50 / p95 (ms)',failures:'Failures by reason',yes:'Yes',no:'No',sort:'Sort',created:'Created',name:'Name',id:'ID',asc:'Ascending',desc:'Descending',state:'State',format:'Format',ensemble:'Ensemble ID',actor:'Actor ID',target:'Target ID',targetType:'Target type',action:'Action',outcome:'Outcome'},
+ de:{title:'Verwaltung',users:'Nutzer',ensembles:'Ensembles',pieces:'Stücke',audit:'Protokoll',transcription:'Transkription',search:'Suchen',more:'Weitere laden',close:'Schließen',empty:'Keine Ergebnisse',reason:'Begründung',optional:'Begründung (optional)',confirm:'Bestätigen',logged:'Deine Begründung für diesen Zugriff wird in Serverlogs gespeichert.',content:'Inhalt ansehen',original:'Original herunterladen',stop:'Notstopp',paused:'Verarbeitung pausiert',running:'Verarbeitung aktiv',apply:'Filter anwenden',from:'Von (ISO, Offset / Z)',to:'Bis (exklusiv, ISO, Offset / Z)',all:'Alle',verified:'Bestätigt',sysadmin:'Sysadmin',memberships:'Mitgliedschaften',members:'Mitglieder',invitations:'Einladungen',versions:'Versionen',originals:'Originale',jobs:'Aufträge',profile:'Profil',sessions:'Sitzungen',devices:'Geräte',roles:'Plattformrollen',lead:'Leitung',manage_members:'Mitglieder verwalten',edit_music_pieces:'Stücke bearbeiten',ai_transcription:'KI-Transkription',error:'Anfrage fehlgeschlagen. Filter prüfen oder erneut versuchen.',back:'Probe',usage:'Nutzung · USD',calls:'Aufrufe',pages:'Seiten',tokens:'Tokens',cost:'Geschätzte Kosten',unknown:'Kosten unbekannt',latency:'Latenz p50 / p95 (ms)',failures:'Fehler nach Grund',yes:'Ja',no:'Nein',sort:'Sortierung',created:'Erstellt',name:'Name',id:'ID',asc:'Aufsteigend',desc:'Absteigend',state:'Status',format:'Format',ensemble:'Ensemble-ID',actor:'Akteur-ID',target:'Ziel-ID',targetType:'Zieltyp',action:'Aktion',outcome:'Ergebnis'},
 };
 
 export const adminFieldMessages = {
@@ -793,7 +793,7 @@ export const notFoundMessages = {
 const adminUiEn = {
   area:'Administration', back:'Back to rehearsal', sections:'Administration sections', language:'Language / Sprache',
   usersLede:'Accounts, their ensembles and platform role.', ensemblesLede:'Ensembles with their members, pieces and invitations.',
-  piecesLede:'Music pieces across all ensembles. Opening content is audited.', transcriptionLede:'Sheet-music transcription health, cost and the emergency stop.',
+  piecesLede:'Music pieces across all ensembles.', transcriptionLede:'Sheet-music transcription health, cost and the emergency stop.',
   auditLede:'Who did what, and when.',
   searchUsers:'Search name or email', searchEnsembles:'Search ensemble name', searchPieces:'Search title', searchAudit:'Search action', searchJobs:'Search job ID',
   any:'Any', yes:'Yes', no:'No', verified:'Email verified', sysadmin:'Sysadmin', format:'Format', targetType:'Target type', outcome:'Outcome', action:'Action',
@@ -812,7 +812,7 @@ const adminUiEn = {
   sessions:'Active sessions', lastSignIn:'Latest sign-in (active sessions)', devices:'Devices', uiLanguage:'Language', none:'None',
   roleTitle:'Platform role', isSysadmin:'This account is a platform sysadmin.', notSysadmin:'This account is not a sysadmin.',
   grant:'Grant sysadmin…', revoke:'Revoke sysadmin…', grantTitle:'Grant sysadmin to {email}?', revokeTitle:'Revoke sysadmin from {email}?',
-  grantBody:'They get this administration area, including audited content access and the emergency stop.',
+  grantBody:'They get this administration area, including content access with a required reason and the emergency stop.',
   revokeBody:'They lose administration access on their next request. Pending invitations they issued as sysadmin are revoked.',
   grantConfirm:'Grant sysadmin', revokeConfirm:'Revoke sysadmin', needsVerified:'Requires a verified email.',
   userMemberships:'Ensembles', ensembleMembers:'Members', addToEnsemble:'Add to ensemble…', addMember:'Add member…', inviteByEmail:'Invite by email…',
@@ -824,9 +824,9 @@ const adminUiEn = {
   pickEnsemble:'Choose an ensemble', pickUser:'Choose an existing person', choose:'Choose', chosen:'Chosen', change:'Change', addConfirm:'Add member',
   inviteTitle:'Invite someone to {name}', inviteLanguage:'The invitation email is written in {language}.', inviteConfirm:'Create invitation',
   reasonHint:'Required. Stored in the audit log with this change (up to 1000 characters).', accessHint:'Required. Stored in the audit log with this access (up to 1000 characters).',
-  contentTitle:'Current content', contentNote:'Opening the score body is recorded in the audit log with your reason.', viewContent:'View content…',
+  contentTitle:'Current content', contentNote:'Opening the score body is recorded in server logs with your reason.', viewContent:'View content…',
   contentDialogTitle:'View the current content of “{title}”?', contentConfirm:'View content', hideContent:'Hide content',
-  download:'Download…', downloadTitle:'Download the original “{file}”?', downloadBody:'A signed link valid for 60 seconds is created for this file only. The download is recorded in the audit log.',
+  download:'Download…', downloadTitle:'Download the original “{file}”?', downloadBody:'A signed link valid for 60 seconds is created for this file only. The download and your reason are recorded in server logs.',
   downloadConfirm:'Download original', noOriginals:'No originals. This piece was not transcribed from sheet music.',
   invitations:'Invitations', jobs:'Transcription jobs', recentAudit:'Recent audit events', more:'Load more', openAuditLog:'Open in audit log',
   processing:'Processing', running:'Running', stopped:'Stopped',
@@ -844,7 +844,7 @@ export const adminUiMessages: Record<Lang, typeof adminUiEn> = {
   de: {
   area:'Verwaltung', back:'Zurück zur Probe', sections:'Bereiche der Verwaltung', language:'Language / Sprache',
   usersLede:'Konten, ihre Ensembles und ihre Plattformrolle.', ensemblesLede:'Ensembles mit Mitgliedern, Stücken und Einladungen.',
-  piecesLede:'Musikstücke aller Ensembles. Das Öffnen von Inhalten wird protokolliert.', transcriptionLede:'Zustand, Kosten und Notstopp der Notenerkennung.',
+  piecesLede:'Musikstücke aller Ensembles.', transcriptionLede:'Zustand, Kosten und Notstopp der Notenerkennung.',
   auditLede:'Wer hat was wann getan.',
   searchUsers:'Name oder E-Mail suchen', searchEnsembles:'Ensemblename suchen', searchPieces:'Titel suchen', searchAudit:'Aktion suchen', searchJobs:'Auftrags-ID suchen',
   any:'Alle', yes:'Ja', no:'Nein', verified:'E-Mail bestätigt', sysadmin:'Sysadmin', format:'Format', targetType:'Zieltyp', outcome:'Ergebnis', action:'Aktion',
@@ -863,7 +863,7 @@ export const adminUiMessages: Record<Lang, typeof adminUiEn> = {
   sessions:'Aktive Sitzungen', lastSignIn:'Letzte Anmeldung (aktive Sitzungen)', devices:'Geräte', uiLanguage:'Sprache', none:'Keine',
   roleTitle:'Plattformrolle', isSysadmin:'Dieses Konto ist Plattform-Sysadmin.', notSysadmin:'Dieses Konto ist kein Sysadmin.',
   grant:'Sysadmin vergeben …', revoke:'Sysadmin entziehen …', grantTitle:'{email} zum Sysadmin machen?', revokeTitle:'{email} die Sysadmin-Rolle entziehen?',
-  grantBody:'Die Person erhält diese Verwaltung, einschließlich protokolliertem Inhaltszugriff und Notstopp.',
+  grantBody:'Die Person erhält diese Verwaltung, einschließlich Inhaltszugriff mit Pflichtbegründung und Notstopp.',
   revokeBody:'Der Verwaltungszugriff endet mit der nächsten Anfrage. Offene Einladungen, die sie als Sysadmin ausgestellt hat, werden widerrufen.',
   grantConfirm:'Sysadmin vergeben', revokeConfirm:'Sysadmin entziehen', needsVerified:'Erfordert eine bestätigte E-Mail.',
   userMemberships:'Ensembles', ensembleMembers:'Mitglieder', addToEnsemble:'Zu Ensemble hinzufügen …', addMember:'Mitglied hinzufügen …', inviteByEmail:'Per E-Mail einladen …',
@@ -874,10 +874,10 @@ export const adminUiMessages: Record<Lang, typeof adminUiEn> = {
   removeConfirm:'Mitglied entfernen', addUserTitle:'{name} zu einem Ensemble hinzufügen', addEnsembleTitle:'Mitglied zu {name} hinzufügen',
   pickEnsemble:'Ensemble auswählen', pickUser:'Bestehende Person auswählen', choose:'Auswählen', chosen:'Ausgewählt', change:'Ändern', addConfirm:'Mitglied hinzufügen',
   inviteTitle:'Jemanden zu {name} einladen', inviteLanguage:'Die Einladungs-E-Mail wird auf {language} verfasst.', inviteConfirm:'Einladung erstellen',
-  reasonHint:'Pflichtfeld. Wird mit dieser Änderung im Auditprotokoll gespeichert (bis 1000 Zeichen).', accessHint:'Pflichtfeld. Wird mit diesem Zugriff im Auditprotokoll gespeichert (bis 1000 Zeichen).',
-  contentTitle:'Aktueller Inhalt', contentNote:'Das Öffnen des Partiturinhalts wird mit deiner Begründung protokolliert.', viewContent:'Inhalt ansehen …',
+  reasonHint:'Pflichtfeld. Wird mit dieser Änderung im Auditprotokoll gespeichert (bis 1000 Zeichen).', accessHint:'Pflichtfeld. Wird mit diesem Zugriff in Serverlogs gespeichert (bis 1000 Zeichen).',
+  contentTitle:'Aktueller Inhalt', contentNote:'Das Öffnen des Partiturinhalts wird mit deiner Begründung in Serverlogs gespeichert.', viewContent:'Inhalt ansehen …',
   contentDialogTitle:'Aktuellen Inhalt von „{title}“ ansehen?', contentConfirm:'Inhalt ansehen', hideContent:'Inhalt ausblenden',
-  download:'Herunterladen …', downloadTitle:'Original „{file}“ herunterladen?', downloadBody:'Für genau diese Datei wird ein 60 Sekunden gültiger, signierter Link erstellt. Der Download wird protokolliert.',
+  download:'Herunterladen …', downloadTitle:'Original „{file}“ herunterladen?', downloadBody:'Für genau diese Datei wird ein 60 Sekunden gültiger, signierter Link erstellt. Der Download wird mit deiner Begründung in Serverlogs gespeichert.',
   downloadConfirm:'Original herunterladen', noOriginals:'Keine Originale. Dieses Stück wurde nicht aus Noten erkannt.',
   invitations:'Einladungen', jobs:'Transkriptionsaufträge', recentAudit:'Letzte Protokolleinträge', more:'Weitere laden', openAuditLog:'Im Protokoll öffnen',
   processing:'Verarbeitung', running:'Läuft', stopped:'Angehalten',
