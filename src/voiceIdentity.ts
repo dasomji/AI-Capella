@@ -17,7 +17,7 @@ export function voiceLabel(part: PartInfo) {
 }
 export function voiceColor(part: PartInfo, score: Score, theme: ThemeSnapshot = readTheme()) {
   const index = score.parts.indexOf(part);
-  return colorForPart(score.parts.length > 8 && score.parts.length <= 16 ? (part.voiceNumber ?? index + 1) - 1 : index, Math.max(score.parts.length, part.voiceNumber ?? 0), theme);
+  return colorForPart(score.parts.length > 8 && score.parts.length <= 16 ? (part.voiceNumber ?? index + 1) - 1 : index, score.parts.length <= 8 ? score.parts.length : Math.max(score.parts.length, part.voiceNumber ?? 0), theme);
 }
 /** A neutral tab, independent of voice pigment. Text/geometry come from shared roles. */
 export function drawVoiceNumber(ctx: CanvasRenderingContext2D, number: number, x: number, y: number, theme = readTheme()) {

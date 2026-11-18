@@ -1,5 +1,6 @@
 import { getThemeRevision, subscribeTheme } from './design-system/theme';
 import { colorForPart } from './palette';
+import { voiceColor } from './voiceIdentity';
 import { canvasFontsLoaded, canvasFontsReady } from './theme';
 import type { Score } from './score';
 
@@ -13,7 +14,7 @@ export function subscribeRendererTheme(options: {
     const score = options.score();
     document.querySelectorAll<HTMLElement>('[data-part]').forEach(el => {
       const index = score?.parts.findIndex(part => part.id === el.dataset.part) ?? -1;
-      if (index >= 0 && score) el.style.setProperty('--c', colorForPart(index, score.parts.length, theme));
+      if (index >= 0 && score) el.style.setProperty('--c', voiceColor(score.parts[index], score, theme));
     });
     document.querySelectorAll<HTMLElement>('[data-theme-voice]').forEach(el => {
       el.style.setProperty('--c', colorForPart(Number(el.dataset.themeVoice), Number(el.dataset.themeVoiceCount), theme));

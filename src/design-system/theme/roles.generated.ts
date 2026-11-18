@@ -1104,6 +1104,7 @@ export const themeRoleNames = [
   "voice-muted-glow-strength",
   "voice-muted-stop",
   "voice-muted-tint",
+  "voice-number-size",
   "voice-paper-glow-strength",
   "voice-paper-tint",
   "voice-solo-spread",

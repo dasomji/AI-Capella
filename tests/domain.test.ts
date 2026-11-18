@@ -1158,13 +1158,13 @@ test(
   async () => {
     const u = await account();
     const e = await ok("ensembles", "POST", { name: "Sole" }, u.cookie);
-    const missingConfirmation=await request('account','DELETE',undefined,u.cookie);
+    const missingConfirmation=await request('account','DELETE',{password:'domain-fixture-password-42'},u.cookie);
     assert.equal(missingConfirmation.status,409);
     assert.deepEqual((await missingConfirmation.json()).current,[e.id]);
     let r = await request(
       "account",
       "DELETE",
-      { deleteEnsembleIds: [] },
+      { deleteEnsembleIds: [], password:"domain-fixture-password-42" },
       u.cookie,
     );
     assert.equal(r.status, 409);

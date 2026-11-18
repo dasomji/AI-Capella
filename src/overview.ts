@@ -1,3 +1,4 @@
+import { drawVoiceNumber } from './voiceIdentity';
 import { readTheme } from './design-system/theme';
 import { backingSize } from './pixels';
 import type { Score } from './score';
@@ -105,6 +106,17 @@ export class OverviewStrip {
           ctx.fillRect(x, y(n.midi) - lineH / 2, w, lineH);
         }
       }
+    }
+    // Avoid overlapping callouts, including unison. Every voice also stays in the DOM key.
+    const labels: {x:number;y:number;width:number;height:number}[] = [];
+    const theme = readTheme(), size = parseFloat(theme.roles['voice-number-size']);
+    for (const part of this.score.parts) {
+      if (!part.voiceNumber || this.hidden.has(part.id)) continue;
+      const note = this.score.notes.find(n => n.partId === part.id);
+      if (!note) continue;
+      const box = {x:this.beatToX(note.startBeat), y:Math.max(top, Math.min(bottom-size*1.4,y(note.midi)-size*.7)),width:size*(String(part.voiceNumber).length+1),height:size*1.4};
+      if (labels.some(b => box.x < b.x+b.width && box.x+box.width > b.x && box.y < b.y+b.height && box.y+box.height > b.y)) continue;
+      labels.push(drawVoiceNumber(ctx,part.voiceNumber,box.x,box.y,theme));
     }
     this.notesLayer = layer;
     this.dirty = false;

@@ -1,3 +1,4 @@
+import { voiceLabel } from './voiceIdentity';
 import { readTheme, breakpoint, memoizeByTheme } from './design-system/theme';
 import { backingSize } from './pixels';
 import type { MeasureInfo, NoteEvent, PartInfo, Score } from './score';
@@ -948,7 +949,8 @@ export class StaffView {
         }
       }
       if (layout.staff > 1) continue;
-      const name = this.score.parts.find((p) => p.id === layout.partId)?.name ?? '';
+      const part = this.score.parts.find((p) => p.id === layout.partId);
+      const name = part ? voiceLabel(part) : '';
       // Above the treble clef's top curl (the G clef reaches ~10px above the top line).
       const labelY = layout.topY - 21;
       ctx.fillStyle = this.partColor(layout.partId);

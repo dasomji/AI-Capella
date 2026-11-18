@@ -1,3 +1,4 @@
+import { drawVoiceNumber } from './voiceIdentity';
 import { readTheme, subscribeTheme, type ThemeSnapshot } from './design-system/theme';
 import { backingSize } from './pixels';
 import type { NoteEvent, Score, SlurArc } from './score';
@@ -1293,6 +1294,11 @@ export class PianoRoll {
       if (!LANTERN) for (const [px, py, pw] of pills) gelPill(ctx, px, py, pw, pillH, color);
       if (!LANTERN) this.paintSlurThreads(ctx, partId, localBeatToX, widthCss, rowHeight, color, dimmed, clear);
       ctx.globalAlpha = 1;
+      const number = this.score.parts.find(p => p.id === partId)?.voiceNumber;
+      if (number) for (const [px, py, pw] of pills) {
+        const size = parseFloat(this.theme.roles['voice-number-size']);
+        if (pw >= size * (String(number).length + 2)) drawVoiceNumber(ctx, number, px + 1, py + (pillH - size * 1.4) / 2, this.theme);
+      }
       for (const w of words) {
         if (w.bmp) ctx.drawImage(w.bmp.canvas, w.x, w.y, w.w, w.h);
         else {

@@ -144,6 +144,11 @@ const TOURS: Record<TourId, Step[]> = {
       title: { de: "Gemeinsam proben", en: "Rehearse together" },
       text: sharedPlaybackTourMessages.library,
     },
+    {
+      at: ["#lib-menu-btn"],
+      title: {de:"Einstellungen",en:"Settings"},
+      text: {de:"Darstellung, Sprache und Konto findest du in den Einstellungen.",en:"Find appearance, language and account options in Settings."},
+    },
   ],
   player: [
     {
