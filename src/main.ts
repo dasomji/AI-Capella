@@ -2857,7 +2857,7 @@ songTitleEl.addEventListener('dblclick', () => currentSong?.imported && editable
 window.addEventListener('keydown', (e) => {
   if (!app.classList.contains('mode-player') || document.querySelector('dialog[open], .overlay')) return;
   const tag = (e.target as HTMLElement | null)?.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
+  if ((e.target as HTMLElement | null)?.closest('button, a[href], [role=button]') || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.code === 'Space') {
     e.preventDefault();
     togglePlay();
