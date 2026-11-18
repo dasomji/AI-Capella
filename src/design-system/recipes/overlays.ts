@@ -15,6 +15,7 @@ export type DialogVariant = (typeof dialogVariants)[number];
 export interface DialogOptions {
   variant?: DialogVariant;
   destructive?: boolean;
+  presentation?: "centered" | "anchored";
 }
 /** D13: compact row menus remain anchored at every viewport width. */
 export const menuVariants = ["library", "popover", "sheet", "member", "job"] as const;
@@ -89,10 +90,14 @@ function toastPlacementRecipe() {
   return "ds-toast-placement tw:fixed tw:z-toast tw:pointer-events-auto tw:inset-auto tw:left-1/2 tw:bottom-toast-bottom tw:max-panel:bottom-toast-bottom-phone tw:w-toast-max-width tw:max-w-toast-max-width tw:[transform:var(--ds-panel-toast-enter-transform)] tw:opacity-opacity-hidden tw:motion-panel-toast-transition tw:[&.show]:opacity-opacity-visible tw:[&.show]:[transform:var(--ds-panel-toast-shown-transform)] tw:flex tw:flex-wrap tw:items-center tw:justify-end tw:gap-control tw:wrap-anywhere";
 }
 
+/** D48: retain dialog semantics/focus while presenting a compact desktop popup. */
+const anchoredPanel = "tw:fixed tw:inset-auto! tw:m-flush! tw:w-panel-popover-width! tw:max-w-none tw:max-h-none tw:p-small! tw:rounded-menu! tw:backdrop:bg-transparent!";
 function dialogRecipe(
   ...args: Parameters<typeof dialogRecipeStyles>
 ): ReturnType<typeof dialogRecipeStyles> {
-  return normalizeRecipe(dialogRecipeStyles(...args));
+  const slots = dialogRecipeStyles(...args);
+  return normalizeRecipe(args[0]?.presentation === "anchored"
+    ? { ...slots, panel: slots.panel + " " + anchoredPanel } : slots);
 }
 function menuRecipe(
   ...args: Parameters<typeof menuRecipeStyles>
