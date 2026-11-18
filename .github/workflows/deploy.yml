@@ -288,6 +288,18 @@ jobs:
           BROWSER_SCRIPT: scripts/browser-phase2b.mjs
           NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
         run: node scripts/ci/run-suite.mjs --id phase2b --title 'Phase 2b accounts and roles' --repro 'BROWSER_SCRIPT=scripts/browser-phase2b.mjs npm run test:browser' -- npm run test:browser
+      - name: Player regressions — Together opening, optional writes and shortcuts (browser-player-regressions)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          BROWSER_SCRIPT: scripts/browser-player-regressions.mjs
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id player-regressions --title 'Player regressions' --repro 'BROWSER_SCRIPT=scripts/browser-player-regressions.mjs npm run test:browser' -- npm run test:browser
+      - name: Owner decisions — voice numbers, mixer and full titles (browser-owner-decisions)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          BROWSER_SCRIPT: scripts/browser-owner-decisions.mjs
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id owner-decisions --title 'Owner decisions' --repro 'BROWSER_SCRIPT=scripts/browser-owner-decisions.mjs npm run test:browser' -- npm run test:browser
       - *s3-logs
       - *stop-s3
       - *upload-failure
