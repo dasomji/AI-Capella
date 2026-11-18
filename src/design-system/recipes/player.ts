@@ -53,7 +53,7 @@ const playerStyles = {
   tMetro: "tw:max-transport:hidden!",
   tStopMid: "tw:max-transport:hidden!",
   switchRow: "tw:flex tw:items-center tw:justify-between tw:gap-content tw:[&_b]:block tw:[&_b]:mb-micro",
-  switch: "tw:relative tw:w-switch tw:h-panel tw:rounded-pill tw:surface-surface-hover tw:flex-none tw:motion-player-switch-transition tw:after:content-(--ds-content-empty) tw:after:absolute tw:after:left-compact tw:after:top-compact tw:after:size-section tw:after:rounded-round tw:after:bg-ink-secondary tw:after:motion-player-switch-after-transition tw:aria-checked:after:transform-(--ds-player-switch-checked-after-transform) tw:aria-checked:after:bg-surface-sunken tw:[&[aria-checked='true']]:surface-ink",
+  switch: "tw:touch:before:content-(--ds-content-empty) tw:touch:before:absolute tw:touch:before:left-flush tw:touch:before:top-center tw:touch:before:-translate-y-1/2 tw:touch:before:w-full tw:touch:before:min-w-control-target-touch tw:touch:before:h-control-target-touch tw:relative tw:w-switch tw:h-panel tw:rounded-pill tw:surface-surface-hover tw:flex-none tw:motion-player-switch-transition tw:after:content-(--ds-content-empty) tw:after:absolute tw:after:left-compact tw:after:top-compact tw:after:size-section tw:after:rounded-round tw:after:bg-ink-secondary tw:after:motion-player-switch-after-transition tw:aria-checked:after:transform-(--ds-player-switch-checked-after-transform) tw:aria-checked:after:bg-surface-sunken tw:[&[aria-checked='true']]:surface-ink",
   zoomSep: "tw:w-hairline tw:h-group tw:m-player-zoom-sep-margin tw:surface-rule-strong",
   label: "tw:type-player-label-font tw:tracking-intro-count-letter-spacing tw:uppercase tw:text-ink-muted",
   ctlBlock: "tw:p-player-ctl-block-padding tw:frame-top-player-duck-border-top",
