@@ -966,7 +966,7 @@
   --ds-voice-3: var(--pigment-feedback-idea-parchment);
   --ds-voice-6: var(--pigment-feedback-wish-parchment);
   --ds-voice-8: var(--pigment-feedback-survey-parchment);
-  --ds-component-action-hover: var(--ds-surface-hover);
+  --ds-component-action-hover: var(--ds-ink-secondary);
   --ds-domain-backdrop: rgb(60 40 20 / 0.28);
   --ds-note-secondary: rgb(243 233 211 / 0.62);
   --ds-hint-secondary: rgb(243 233 211 / 0.62);
