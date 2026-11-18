@@ -14,6 +14,7 @@
 
 /* Primitive palette; only semantic --ds-* roles are public. */
 :root {
+  --ds-voice-number-size: 10px;
   --ds-space-chips: 46px;
   --ds-size-title-cap: 46px;
   --ds-width-library: 1240px;
