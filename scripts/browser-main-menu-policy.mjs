@@ -15,12 +15,12 @@ export async function verifyMainMenuPolicy(page, viewport) {
         { label: 'Account', onSelect() {} }, { label: 'Settings', onSelect() {} },
       ], onEscape: () => window.policyMenu.requestClose() });
       window.policyMenu = D.createMenuOverlay({ variant: 'library-popover', anchor: button,
-        title: 'Main menu', content: menu.element, behavior: { onClose: () => menu.dispose() } });
+        title: 'Main menu', content: menu.element, attrs: { id: "menu-policy-dialog" }, behavior: { onClose: () => menu.dispose() } });
       window.policyMenu.open();
     };
     window.openPolicyMenu();
   });
-  const menu = page.locator('dialog[open]').last();
+  const menu = page.locator('#menu-policy-dialog');
   const expected = viewport.width >= 1200 ? 'anchored' : 'centered';
   assert.equal(await menu.getAttribute('data-dialog-layout'), expected);
   const geometry = async () => menu.evaluate(el => {
@@ -52,7 +52,7 @@ export async function verifyMainMenuPolicy(page, viewport) {
   await menu.waitFor({state:'detached'});
   assert.equal(await page.locator('#menu-policy-opener').evaluate(el=>el===document.activeElement),true);
   await page.evaluate(() => window.openPolicyMenu());
-  const reopened = page.locator('dialog[open]').last();
+  const reopened = page.locator('#menu-policy-dialog');
   assert.equal(await reopened.getAttribute('data-dialog-layout'), expected === 'anchored' ? 'centered' : 'anchored', 'Next open adapts');
   await page.mouse.click(4,4);
   await reopened.waitFor({state:'detached'});
