@@ -17,7 +17,8 @@ async function req(path: string, cookie = '', method = 'GET', body?: unknown) { 
 async function json(path: string, cookie = '', method = 'GET', body?: unknown) { const r = await req('/api/admin/' + path, cookie, method, body); assert.equal(r.status, 200, await r.clone().text()); return r.json(); }
 async function person(name: string, verified = true) { const email = `admin-${name}-${crypto.randomUUID()}@example.test`, password = 'Test-only-password-3456'; const r = await req('/api/auth/sign-up/email', '', 'POST', { email, password, name }); assert.equal(r.status, 200); const id = (await pool.query('select id from "user" where email=$1', [email])).rows[0].id; if (verified)
     await pool.query('update "user" set email_verified=true where id=$1', [id]); const sign = await req('/api/auth/sign-in/email', '', 'POST', { email, password }); return { id, email, cookie: sign.headers.getSetCookie().map(s => s.split(';')[0]).join('; ') }; }
-test('admin: real sessions, every boundary, projection, CLI, audit, pagination and limits', async () => {
+test('admin: real sessions, every boundary, projection, CLI, audit, pagination and limits', async t => {
+    const stdout = t.mock.method(console, 'log', () => {});
     const member = await person('member'), lead = await person('lead'), manager = await person('manager'), sys = await person('sys'), unverified = await person('unverified', false);
     await assert.rejects(changeAdminRole(process.env.DATABASE_URL!, unverified.email, true), /verified/);
     const e = (await (await req('/api/ensembles', lead.cookie, 'POST', { name: 'Admin fixture', kind: 'choir' })).json()).id;
@@ -58,6 +59,8 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     }
     assert.equal((await fetch(base+'/api/admin/transcription/control',{method:'PUT',body:'invalid-json'})).status,404);
     await changeAdminRole(process.env.DATABASE_URL!, sys.email, true);
+    const auditCount = async () => Number((await pool.query('select count(*) from audit_events where actor_id=$1', [sys.id])).rows[0].count);
+    const beforeReads = await auditCount();
     for (const path of endpoints) {
         const value = await json(path, sys.cookie);
         const text = JSON.stringify(value);
@@ -70,11 +73,12 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
         } }
         scan(value);
     }
+    assert.equal(await auditCount(), beforeReads, 'List, detail and statistics reads write no audit rows');
     for(const kind of ['users','ensembles','pieces','memberships','invitations','audit','transcription/jobs']){
       const before=Number((await pool.query("select count(*) from audit_events where actor_id=$1 and metadata->>'endpoint'=$2",[sys.id,'/api/admin/'+kind])).rows[0].count);
       await json(kind+'?search=DO_NOT_LOG_SEARCH',sys.cookie);
       const events=(await pool.query("select metadata from audit_events where actor_id=$1 and metadata->>'endpoint'=$2",[sys.id,'/api/admin/'+kind])).rows;
-      assert.equal(events.length,before+1);assert.doesNotMatch(JSON.stringify(events),/DO_NOT_LOG_SEARCH/);assert.equal(typeof events.at(-1).metadata.resultCount,'number');
+      assert.equal(events.length,before,'Search reads write no audit rows');assert.doesNotMatch(JSON.stringify(events),/DO_NOT_LOG_SEARCH/);
     }
     for(const query of ['sort=created&cursor='+Buffer.from(JSON.stringify(['2026-02-30 00:00:00+00',sys.id])).toString('base64url'),'search=%00','ensemble=%00','user=%00','sort=created&cursor='+Buffer.from(JSON.stringify(['oops',sys.id])).toString('base64url'),'sort=created&cursor='+Buffer.from(JSON.stringify(['2026-99-99 00:00:00+00',sys.id])).toString('base64url')])assert.equal((await req('/api/admin/users?'+query,sys.cookie)).status,422,query);
     for(const reason of ['', '\0','\ud800'])assert.equal((await req('/api/admin/pieces/'+p+'/content',sys.cookie,'POST',{reason})).status,422);
@@ -87,7 +91,7 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     const newer=(await pool.query("insert into music_pieces(ensemble_id,title,sort_key,format,created_at,updated_at) values($1,'Sort fixture','2','musicxml','2026-03-01T00:00:00Z','2026-02-01T00:00:00Z') returning id",[e])).rows[0].id;
     assert.equal((await json('pieces?ensemble='+e+'&sort=created&direction=desc',sys.cookie)).items[0].id,newer);
     assert.equal((await json('pieces?ensemble='+e+'&sort=updated&direction=desc',sys.cookie)).items[0].id,p);
-    assert.ok((await pool.query("select 1 from audit_events where actor_id=$1 and action='admin.memberships.list'",[sys.id])).rowCount);
+    assert.equal((await pool.query("select 1 from audit_events where actor_id=$1 and action='admin.memberships.list'",[sys.id])).rowCount,0);
     const first = await json('users?limit=1&sort=name', sys.cookie);
     assert.equal(first.items.length, 1);
     assert.ok(first.nextCursor);
@@ -107,15 +111,24 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     assert.equal((await req('/api/admin/users?from=2026-01-01', sys.cookie)).status, 422);
     assert.equal((await req('/api/admin/transcription/control', sys.cookie, 'PUT', { paused: true })).status, 422);
     await json('transcription/control', sys.cookie, 'PUT', { paused: true, reason: 'Local test stop' });
+    const beforeMutation = await auditCount();
     await json('transcription/control', sys.cookie, 'PUT', { paused: false, reason: 'Local test resume' });
+    assert.equal(await auditCount(), beforeMutation + 1, 'A successful mutation writes exactly one audit row');
+    const beforeContent = await auditCount();
     assert.equal((await json('pieces/' + p + '/content', sys.cookie, 'POST', { reason: 'Support case' })).body, 'PRIVATE_SCORE_SENTINEL');
     const download = await json('pieces/' + p + '/originals/' + object + '/download', sys.cookie, 'POST', {reason:'Support download'});
     assert.equal(download.expiresIn, 60);
     assert.ok(download.url);
     const events = (await pool.query("select action,metadata from audit_events where actor_id=$1 and action in ('admin.piece.content','admin.original.download')", [sys.id])).rows;
-    assert.equal(events.length, 2);
+    assert.equal(events.length, 0, 'Content and download reads write no audit rows');
+    assert.equal(await auditCount(), beforeContent);
     assert.doesNotMatch(JSON.stringify(events), /PRIVATE_SCORE_SENTINEL|private-admin-source/);
-    assert.ok((await pool.query("select 1 from audit_events where actor_id=$1 and action='admin.piece.content' and ensemble_id=$2",[sys.id,e])).rowCount);
+    const operational = stdout.mock.calls.flatMap(call => { try { return [JSON.parse(String(call.arguments[0]))]; } catch { return []; } });
+    assert.deepEqual(operational.filter(record => record.event === 'admin.content_access').map(({ actor, targetType, targetId, reason }) => ({ actor, targetType, targetId, reason })), [
+      { actor: sys.id, targetType: 'piece', targetId: p, reason: 'Support case' },
+      { actor: sys.id, targetType: 'original', targetId: object, reason: 'Support download' },
+    ]);
+    assert.doesNotMatch(JSON.stringify(operational), /PRIVATE_SCORE_SENTINEL|private-admin-source/);
     await changeAdminRole(process.env.DATABASE_URL!, manager.email, true);
     await changeAdminRole(process.env.DATABASE_URL!, sys.email, false);
     assert.equal((await req('/api/admin/users', sys.cookie)).status, 404);
@@ -123,17 +136,39 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     assert.equal((await req('/api/admin/users', sys.cookie)).status, 200);
     await pool.query('delete from rate_limit where key like $1',['admin:list:%:'+sys.id]);
     await pool.query("insert into rate_limit(key,count,last_request) values($1,120,$2) on conflict(key) do update set count=120,last_request=$2", ['admin:read:' + sys.id, Date.now()]);
-    assert.equal((await req('/api/admin/users', sys.cookie)).status, 429);
+    assert.equal((await req('/api/admin/users', sys.cookie)).status, 200, 'Retired aggregate read counters do not block requests');
     await pool.query('delete from rate_limit where key=$1', ['admin:read:' + sys.id]);
     await pool.query("insert into rate_limit(key,count,last_request) values($1,10,$2) on conflict(key) do update set count=10,last_request=$2", ['admin:content:' + sys.id, Date.now()]);
     assert.equal((await req('/api/admin/pieces/' + p + '/content', sys.cookie, 'POST', {reason:'Limit test'})).status, 429);
+    assert.equal((await req('/api/admin/pieces/' + p + '/originals/' + object + '/download', sys.cookie, 'POST', {reason:'Limit test'})).status, 429);
     for(const [kind,count] of [['content-hour',30],['content-day',200]] as const){
       await pool.query('delete from rate_limit where key like $1',['admin:content%:'+sys.id]);
       await pool.query('insert into rate_limit(key,count,last_request) values($1,$2,$3)',['admin:'+kind+':'+sys.id,count,Date.now()]);
       const r=await req('/api/admin/pieces/'+p+'/content',sys.cookie,'POST',{reason:'Cap test'});assert.equal(r.status,429);const body=await r.json();assert.equal(body.max,count);assert.equal(body.unit,kind==='content-hour'?'hour':'day');assert.match(body.message,new RegExp(`${count} per ${body.unit}`));
+      const downloadCap=await req('/api/admin/pieces/'+p+'/originals/'+object+'/download',sys.cookie,'POST',{reason:'Download cap test'});assert.equal(downloadCap.status,429);assert.equal((await downloadCap.json()).max,count);
     }
     await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);
-    for(let i=0;i<30;i++)await json('users',sys.cookie);assert.equal((await req('/api/admin/users',sys.cookie)).status,429);
+    const beforeUnboundedReads = await auditCount();
+    for(const [kind,path] of [['users','users'],['versions','pieces/'+p+'/versions'],['originals','pieces/'+p+'/originals']]) {
+      await pool.query('insert into rate_limit(key,count,last_request) values($1,30,$2) on conflict(key) do update set count=30,last_request=$2', ['admin:list:'+kind+':'+sys.id,Date.now()]);
+      for(let i=0;i<35;i++)await json(path,sys.cookie);
+    }
+    assert.equal(await auditCount(),beforeUnboundedReads,'Repeated list reads create no audit rows');
+    const capLogs=stdout.mock.calls.flatMap(call=>{try{return [JSON.parse(String(call.arguments[0]))];}catch{return [];}}).filter(record=>record.event==='admin.cap_hit');
+    assert.deepEqual([...new Set(capLogs.map(record=>record.kind))].sort(),['content','content-day','content-hour']);
+    assert.ok(capLogs.every(record=>record.timestamp.endsWith('Z')&&record.level==='warn'&&record.actor===sys.id));
+    // D49: the real SQL endpoint searches the full relationship, beyond its first 100 rows.
+    const detail=(await (await req('/api/ensembles',lead.cookie,'POST',{name:'Testchor'})).json()).id;
+    const memberPrefix='search-'+detail+'-';
+    await pool.query("insert into \"user\"(id,name,email,email_verified) select $1||n,case when n=110 then 'Anna' else 'Member '||lpad(n::text,3,'0') end,$1||n||'@test.com',true from generate_series(0,110) n",[memberPrefix]);
+    await pool.query('insert into memberships(ensemble_id,user_id) select $1,$2||n from generate_series(0,110) n',[detail,memberPrefix]);
+    const firstMembers=await json('memberships?ensemble='+detail+'&limit=100&sort=name&direction=desc',sys.cookie);
+    assert.equal(firstMembers.items.length,100);assert.ok(firstMembers.nextCursor);assert.ok(!firstMembers.items.some((row:any)=>row.name==='Anna'));
+    for(const filter of ['ensemble='+detail,'user='+encodeURIComponent(memberPrefix+'110')]){
+      const match=await json('memberships?'+filter+'&limit=10&search=Anna%20Testchor',sys.cookie);
+      assert.equal(match.items.length,1);assert.equal(match.items[0].name,'Anna');assert.equal(match.nextCursor,null);
+    }
+    assert.equal((await json('memberships?ensemble='+detail+'&limit=10&search=Testchor',sys.cookie)).items.length,10);
     await changeAdminRole(process.env.DATABASE_URL!, sys.email, true);
     const cli=(await pool.query("select metadata from audit_events where action='admin.user.sysadmin' and target_id=$1 order by created_at desc limit 1",[sys.id])).rows[0].metadata;assert.equal(cli.changed,false);assert.ok(cli.operator);assert.ok(cli.hostname);
 

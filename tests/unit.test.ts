@@ -275,3 +275,22 @@ it('delays restart reconnects and cancels reconnect on disposal',async()=>{
  handlers.get('server:restarting')({reconnectAfterMs:1000});owner.dispose();await vi.advanceTimersByTimeAsync(1000);expect(socket.connect).toHaveBeenCalledOnce();expect(handlers.size).toBe(0);
  }finally{vi.useRealTimers();}
 });
+
+it('admin operational logs use structured stdout and retain only explicit fields', async () => {
+  const { logAdminContentAccess, logAdminCapHit, withRequestLog } = await import('../server/logger.server');
+  const capture = vi.spyOn(console, 'log').mockImplementation(() => {});
+  try {
+    withRequestLog('admin-request-1', () => {
+      logAdminContentAccess('actor-1', 'original', 'object-1', 'Support case\nsecond line');
+      logAdminCapHit('actor-1', 'content-hour', 30, 3600000);
+    });
+    const [access, cap] = capture.mock.calls.map(call => JSON.parse(String(call[0])));
+    expect(access).toEqual({ timestamp: expect.stringMatching(/Z$/), level: 'info', event: 'admin.content_access', requestId: 'admin-request-1',
+      actor: 'actor-1', targetType: 'original', targetId: 'object-1', reason: 'Support case\nsecond line' });
+    expect(cap).toEqual({ timestamp: expect.stringMatching(/Z$/), level: 'warn', event: 'admin.cap_hit', requestId: 'admin-request-1',
+      actor: 'actor-1', kind: 'content-hour', max: 30, windowMs: 3600000 });
+    expect(String(capture.mock.calls[0][0]).split('\n')).toHaveLength(1);
+  } finally {
+    capture.mockRestore();
+  }
+});
