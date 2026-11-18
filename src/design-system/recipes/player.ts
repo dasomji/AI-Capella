@@ -137,4 +137,4 @@ export function playerGlyphRecipe(kind: ""|"treble"|"treble8"|"bass") { return [
 
 /** D42: identity key stays available when notes/callouts overlap or are too short. */
 export const voiceNumberRecipe = "tw:inline-flex tw:items-center tw:justify-center tw:border tw:border-ink tw:rounded-segment tw:px-tight tw:text-ink tw:bg-surface tw:font-mono tw:text-note tw:mr-tight";
-export const voiceKeyRecipe = "tw:flex tw:gap-small tw:overflow-x-auto tw:shrink-0 tw:p-tight tw:text-note";
+export const voiceKeyRecipe = "tw:[grid-area:var(--ds-voice-key-area)] tw:min-w-flush tw:flex tw:gap-small tw:overflow-x-auto tw:shrink-0 tw:p-tight tw:text-note";
