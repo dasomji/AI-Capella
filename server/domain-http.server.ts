@@ -454,12 +454,8 @@ domain.delete("/account", async (c) => {
       const text = await c.req.text();
       return text ? JSON.parse(text) : {};
     }}));
-  const session = await currentSession(c.req.raw.headers);
-  if (
-    !session ||
-    clock.now().getTime() - new Date(session.session.createdAt).getTime() >
-      600000
-  ) {
+  // D44: the confirmation always asks for a password, even after a fresh sign-in.
+  {
     const failureKey = "account-password:" + u.id;
     const failures = (await pool.query("select count,last_request from rate_limit where key=$1", [failureKey])).rows[0];
     if (failures && failures.count >= 5 && Number(failures.last_request) > clock.now().getTime()-900000) throw new DomainError("rate_limited", 429);

@@ -1904,3 +1904,22 @@ test('sign-out returns cache clearing and revokes session',async()=>{
  assert.equal(response.status,200);assert.equal(response.headers.get('clear-site-data'),'"cache"');
  assert.equal((await request('me','GET',undefined,user.cookie)).status,401);
 });
+
+
+test('account deletion verifies fresh and aged session passwords before confirmation', async () => {
+  for (const aged of [false, true]) {
+    const singer = await account();
+    if (aged) await pool.query("update session set created_at=now()-interval '11 minutes' where user_id=$1", [singer.id]);
+    for (const password of [undefined, '', 'wrong-password']) {
+      const response = await request('account', 'DELETE', {password}, singer.cookie);
+      assert.equal(response.status, 401);
+      assert.equal((await response.json()).error, 'recent_auth_required');
+      assert.equal((await pool.query('select id from "user" where id=$1', [singer.id])).rowCount, 1);
+    }
+    const e = await ok('ensembles', 'POST', {name:'Deletion confirmation'}, singer.cookie);
+    const wrong = await request('account', 'DELETE', {password:'domain-fixture-password-42',deleteEnsembleIds:[]}, singer.cookie);
+    assert.equal(wrong.status, 409, 'existing wrong-confirmation handling remains');
+    await ok('account', 'DELETE', {password:'domain-fixture-password-42',deleteEnsembleIds:[e.id]}, singer.cookie);
+    assert.equal((await pool.query('select id from "user" where id=$1', [singer.id])).rowCount, 0);
+  }
+});
