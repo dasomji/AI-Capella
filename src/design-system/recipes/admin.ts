@@ -50,7 +50,7 @@ export function adminRecipe() {
     badges: "tw:inline-flex tw:flex-wrap tw:items-center tw:gap-compact",
     identifier: "tw:inline-flex tw:items-center tw:gap-micro tw:min-w-flush tw:font-mono tw:text-small tw:text-ink-secondary",
     rowLink:
-      "tw:touch:inline-flex tw:touch:items-center tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:rounded-field tw:font-weight-label tw:text-ink tw:underline tw:decoration-rule-strong tw:underline-offset-(--ds-space-micro) tw:hover:decoration-ink " + focus,
+      "tw:max-w-full tw:wrap-anywhere tw:touch:inline-flex tw:touch:items-center tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:rounded-field tw:font-weight-label tw:text-ink tw:underline tw:decoration-rule-strong tw:underline-offset-(--ds-space-micro) tw:hover:decoration-ink " + focus,
     metrics: "tw:grid tw:gap-small tw:min-w-flush tw:grid-cols-(--ds-admin-metric-columns)",
     metric: "tw:grid tw:gap-micro tw:min-w-flush tw:p-control " + panel,
     metricLabel: "tw:font-control tw:text-small tw:leading-leading-body tw:text-ink-secondary",
