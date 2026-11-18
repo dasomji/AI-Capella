@@ -272,6 +272,23 @@ try {
   await ensembles.getByRole("link", { name: ensemble.name, exact: true }).click();
   const detail = page.locator("[data-admin=detail]"),
     management = detail.locator("[data-admin=management]");
+  const memberSearch = management.getByRole("searchbox");
+  await loaded();
+  const memberRows = await management.locator("tbody tr").count();
+  assert.ok(memberRows > 0);
+  const whitespaceRequests = [];
+  const trackMemberSearch = request => {
+    const url = new URL(request.url());
+    if (url.pathname === '/api/admin/memberships') whitespaceRequests.push(url.searchParams.get('search'));
+  };
+  page.on('request', trackMemberSearch);
+  await memberSearch.fill('   ');
+  await page.waitForTimeout(400);
+  await loaded();
+  assert.equal(await management.locator("tbody tr").count(), memberRows, "Whitespace means no member filter");
+  assert.ok(whitespaceRequests.every(search => !search || search.trim()), "Never send a whitespace-only server search");
+  page.off('request', trackMemberSearch);
+  await memberSearch.fill('');
   const addButton = management.getByRole("button", { name: "Add member…", exact: true });
   await addButton.click();
   const addDialog = page.locator("dialog[open][data-admin=confirm]");

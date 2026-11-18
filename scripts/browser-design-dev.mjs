@@ -21,4 +21,9 @@ try {
   const child=spawn(process.execPath,[process.env.DESIGN_BROWSER_SCRIPT??'scripts/browser-design-system-runner.mjs'],{stdio:'inherit',env:{...process.env,BASE_URL:base,EVIDENCE_DIR:evidence,BROWSER_EVIDENCE:evidence}});
   const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',resolve);});
   if(code!==0)process.exitCode=code??1;
+  else if (process.env.P4C_KEYBOARD === '1') {
+    const player = spawn(process.execPath, ['scripts/browser-player-regressions.mjs'], {stdio:'inherit',env:{...process.env,BROWSER_EVIDENCE:path.join(evidence,'player')}});
+    const result = await new Promise((resolve,reject) => {player.once('error',reject);player.once('exit',resolve);});
+    if (result !== 0) process.exitCode = result ?? 1;
+  }
 }finally{await server.close();}

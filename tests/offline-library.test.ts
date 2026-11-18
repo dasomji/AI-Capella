@@ -4,7 +4,7 @@ vi.mock('../src/ensembles',()=>({account:{id:'A'},ensembleById:()=>({id:'E'}),ac
 vi.mock('../src/domain-client',async original=>({...await original<any>(),api:async()=>state.rows}));
 vi.mock('socket.io-client',()=>({io:()=>({on(){},off(){},emit(){},disconnect(){},connect(){}})}));
 vi.mock('../src/offline-store',async original=>({...await original<any>(),readPrepared:async()=>state.saved,writeOfflineCatalog:async()=>{},removePrepared:async()=>{},writePrepared:async(_user:any,row:any,valid:any)=>{if(state.quota)throw new DOMException('full','QuotaExceededError');if(valid())state.writes.push(row);}}));
-import {subscribeToSongs,preparePiece,unpreparePiece,isPrepared,clearLibrary,scoreBody,preparePieces} from '../src/library';
+import {subscribeToSongs,preparePiece,unpreparePiece,isPrepared,clearLibrary,scoreBody,preparePieces,saveVoiceNumbers} from '../src/library';
 import {offlineQuotaMessages,lang} from '../src/i18n';
 import {isOffline,setOffline} from '../src/offline-state';
 const row=(id:string,hash='old')=>({id,ensembleId:'E',contentHash:hash,revision:1,settings:{},sortKey:id});
@@ -57,4 +57,29 @@ test('a denied persistence request retries quietly only after one week',async()=
  vi.mocked(Date.now).mockReturnValue(now+86400000);await preparePiece('two');expect(persist).toHaveBeenCalledTimes(1);
  vi.mocked(Date.now).mockReturnValue(now+7*86400000);await preparePiece('two');await vi.waitFor(()=>expect(persist).toHaveBeenCalledTimes(2));
  }finally{vi.restoreAllMocks();}
+});
+
+
+test('voice defaults are quiet, revision-independent writes for concurrent editors', async () => {
+ const conflict = vi.fn(), error = vi.fn();
+ window.addEventListener('piece:conflict', conflict);
+ window.addEventListener('domain:error', error);
+ const write = vi.fn().mockResolvedValueOnce(new Response('{}', {status:409}))
+   .mockResolvedValueOnce(new Response(JSON.stringify({...row('one'),revision:2})));
+ vi.stubGlobal('fetch', write);
+ try {
+   expect(await Promise.all([saveVoiceNumbers('one',{P1:1}),saveVoiceNumbers('one',{P1:1})])).toEqual([true,true]);
+   for (const [, options] of write.mock.calls) expect(JSON.parse(options.body)).toEqual({op:'defaults',key:'voiceNumbers',value:{P1:1}});
+   expect(conflict).not.toHaveBeenCalled();expect(error).not.toHaveBeenCalled();
+ } finally {window.removeEventListener('piece:conflict',conflict);window.removeEventListener('domain:error',error);}
+});
+
+test('voice defaults ignore a network failure and can retry without taking rehearsal offline', async () => {
+ const write = vi.fn().mockRejectedValueOnce(new TypeError('network unavailable'))
+   .mockResolvedValueOnce(new Response(JSON.stringify({...row('one'),revision:2})));
+ vi.stubGlobal('fetch',write);
+ expect(await saveVoiceNumbers('one',{P1:1})).toBe(false);
+ expect(isOffline()).toBe(false);
+ expect(await saveVoiceNumbers('one',{P1:1})).toBe(true);
+ expect(write).toHaveBeenCalledTimes(2);
 });

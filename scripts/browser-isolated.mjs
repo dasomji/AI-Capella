@@ -117,6 +117,7 @@ try {
     await run(["node_modules/playwright/cli.js", "install", "chromium"], env);
   }
   if (!process.env.BROWSER_SCRIPT) {
+    await run(["scripts/browser-player-regressions.mjs"], env);
     await run(["scripts/browser-owner-decisions.mjs"], env);
     await run(["scripts/browser-review-routes.mjs"], env);
     await run(["scripts/browser-power-hint.mjs"], env);
