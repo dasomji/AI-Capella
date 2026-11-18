@@ -948,3 +948,96 @@ it('passes destructive intent from libraryPrompt through the real dialog adapter
   }
   vi.unstubAllGlobals();
 });
+
+
+describe("D48 menu presentation policy", () => {
+  it.each([1199, 1200, 1440].flatMap(width =>
+    [false, true].flatMap(fine => [false, true].map(hover => ({ width, fine, hover })))
+  ))("chooses once from width=$width fine=$fine hover=$hover", async ({ width, fine, hover }) => {
+    document.documentElement.style.setProperty("--tw-breakpoint-transport", "1200px");
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("min-width") ? width >= 1200 : fine && hover,
+    }));
+    try {
+      const { menuPresentation } = await import("../src/design-system/behavior/popover");
+      expect(menuPresentation()).toBe(width >= 1200 && fine && hover ? "anchored" : "centered");
+    } finally {
+      vi.unstubAllGlobals();
+      document.documentElement.style.removeProperty("--tw-breakpoint-transport");
+    }
+  });
+});
+
+describe("D49 server table query", () => {
+  it("clamps the visible page against available pages including an empty set", async () => {
+    const { clampedPageIndex } = await import("../src/admin-table-query");
+    expect(clampedPageIndex(1, Math.ceil(30 / 30))).toBe(0);
+    expect(clampedPageIndex(1, Math.ceil(31 / 30))).toBe(1);
+    expect(clampedPageIndex(5, 0)).toBe(0);
+    expect(clampedPageIndex(-1, 4)).toBe(0);
+  });
+  it.each(["user", "ensemble"])("wires search together with the %s filter, sort, limit and cursor", async filter => {
+    const { adminTableParams } = await import("../src/admin-table-query");
+    const params = adminTableParams({ filters: { [filter]: "detail-id" }, search: "Anna Testchor", pageSize: 30,
+      sort: "name", descending: true, cursor: "page-2" });
+    expect(Object.fromEntries(params)).toEqual({ [filter]: "detail-id", search: "Anna Testchor", limit: "30", sort: "name", direction: "desc", cursor: "page-2" });
+    expect(adminTableParams({ filters: {}, search: "", pageSize: 10 }).has("search")).toBe(false);
+  });
+});
+
+describe("D49 table render and request regressions", () => {
+  it("resets a page-2 query before commit, debounces server search and retreats from a deleted final row", async () => {
+    const { act, Profiler } = await import("react");
+    const { createRoot } = await import("react-dom/client");
+    const { AdminDataTable } = await import("../src/admin-data-table");
+    vi.useFakeTimers();
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    let members = Array.from({ length: 31 }, (_, i) => ({ id: String(i), name: i === 30 ? "Anna" : `Member ${i}` }));
+    const requests: URL[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (path: string) => {
+      const url = new URL(path, "https://fixture.test");
+      requests.push(url);
+      const matches = members.filter(member => !url.searchParams.get("search") || `${member.name} Testchor`.includes(url.searchParams.get("search")!));
+      const start = Number(url.searchParams.get("cursor") ?? 0), limit = Number(url.searchParams.get("limit"));
+      return { ok: true, json: async () => ({ items: matches.slice(start, start + limit), nextCursor: start + limit < matches.length ? String(start + limit) : null }) };
+    }));
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const commits: string[] = [];
+    const render = async (search = "", revision = 0) => act(async () => root.render(createElement(Profiler, {
+      id: "table", onRender: () => commits.push(`${host.querySelector('section')?.getAttribute('aria-busy')}:${host.textContent}`),
+    }, createElement(AdminDataTable, { path: "memberships", columns: [{ id: "name", label: "Name", sort: "name" }],
+      caption: "Members", search, filters: { ensemble: "detail-id" }, filtered: !!search, revision }))));
+    const settle = () => act(async () => { await vi.advanceTimersByTimeAsync(251); });
+    const next = () => act(async () => { [...host.querySelectorAll("button")].find(button => button.textContent === "Next")!.click(); });
+    try {
+      await render(); await settle();
+      expect(requests).toHaveLength(1);
+      await next(); await settle();
+      expect(host.textContent).toContain("Page 2");
+      expect(host.textContent).toContain("Anna");
+      commits.length = 0;
+      requests.length = 0;
+      await render("A"); await render("Anna"); await render("Anna Testchor");
+      expect(requests).toHaveLength(0);
+      expect(commits.every(commit => commit.startsWith("true:") && !commit.includes("Page 2") && !commit.includes("Nothing matches"))).toBe(true);
+      await settle();
+      expect(requests).toHaveLength(1);
+      expect(requests[0].searchParams.get("search")).toBe("Anna Testchor");
+      expect(requests[0].searchParams.has("cursor")).toBe(false);
+      expect(requests[0].searchParams.get("ensemble")).toBe("detail-id");
+      expect(host.textContent).toContain("Anna");
+      await render(); await settle(); await next(); await settle();
+      members = members.slice(0, 30);
+      commits.length = 0;
+      await render("", 1); await settle(); await settle();
+      expect(host.textContent).toContain("Page 1");
+      expect(host.querySelectorAll("tbody tr")).toHaveLength(30);
+      expect(commits.some(commit => commit.includes("No members") || commit.includes("Nothing matches"))).toBe(false);
+    } finally {
+      await act(async () => root.unmount());
+      vi.unstubAllGlobals();
+    }
+  });
+});

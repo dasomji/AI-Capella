@@ -177,7 +177,8 @@ describe("every recipe property is exclusive within a state and breakpoint", () 
     for (const variant of r.tableVariants)
       cases.push(r.tableRecipe({ variant }));
     for (const variant of r.dialogVariants)
-      cases.push(r.dialogRecipe({ variant }));
+      for (const presentation of ["centered", "anchored"] as const)
+        cases.push(r.dialogRecipe({ variant, presentation }));
     for (const variant of r.menuVariants) cases.push(r.menuRecipe({ variant }));
     for (const kind of r.toastVariants) cases.push(r.toastRecipe({ kind }));
     cases.push(r.toolbarRecipe(), r.loadingRecipe(), r.toastPlacementRecipe());
@@ -306,4 +307,28 @@ it('keeps errors adjacent, colors invalid writing lines, and restores compact to
   expect(r.emptyStateRecipe({variant:'standard'}).title).toBe(r.emptyStateRecipe({variant:'compact'}).title);
   expect(r.cardRecipe({variant:'tour'})).toContain('tw:bg-surface');
   expect(r.cardRecipe({variant:'tour'})).toContain('tw:text-ink');
+});
+
+
+describe("D48 typed dialog presentation", () => {
+  it("composes exclusive anchored geometry for library and generic dialogs", () => {
+    for (const variant of ["library-popover", "library-sheet", "library-prompt", "dialog"] as const) {
+      const anchored = r.dialogRecipe({ variant, presentation: "anchored" }).panel.split(/\s+/);
+      for (const token of ["tw:inset-auto", "tw:m-flush", "tw:w-panel-popover-width", "tw:p-small", "tw:rounded-menu", "tw:backdrop:bg-transparent"])
+        expect(anchored).toContain(token);
+      for (const token of ["tw:inset-flush", "tw:m-auto", "tw:w-width-sheet", "tw:w-width-dialog", "tw:p-section", "tw:rounded-dialog", "tw:backdrop:bg-backdrop"])
+        expect(anchored).not.toContain(token);
+      expect(r.dialogRecipe({ variant }).panel).toContain("tw:m-auto");
+    }
+  });
+  it("passes presentation through the typed extension seam without stripping extension classes", async () => {
+    const { createOverlayRecipes } = await import("../src/design-system/recipes/overlays");
+    let received: string | undefined;
+    const custom = createOverlayRecipes({ dialog: (_variant, _danger, presentation) => {
+      received = presentation;
+      return { panel: "custom-panel", content: "custom-content", header: "", title: "", body: "", actions: "" };
+    }});
+    expect(custom.dialogRecipe({ variant: "library-popover", presentation: "anchored" }).panel).toContain("custom-panel");
+    expect(received).toBe("anchored");
+  });
 });

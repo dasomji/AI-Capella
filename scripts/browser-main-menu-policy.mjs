@@ -8,7 +8,10 @@ export async function verifyMainMenuPolicy(page, viewport) {
     button.id = 'menu-policy-opener';
     // Put the anchor at the lower right to require both vertical flip and horizontal clamp.
     Object.assign(button.style, { position: 'fixed', right: '0px', bottom: '0px' });
-    document.body.append(button);
+    const region = document.createElement("section");
+    region.id = "menu-policy-region";
+    region.append(button);
+    document.body.append(region);
     window.preparePolicyMenu = () => {
       button.focus();
       const menu = D.createMenu({ label: 'Policy menu', items: [
@@ -71,6 +74,49 @@ export async function verifyMainMenuPolicy(page, viewport) {
     await page.keyboard.press('Escape');
     await menu.waitFor({state:'detached'});
   }
-  await page.locator('#menu-policy-opener').evaluate(el=>el.remove());
+  if (fine) {
+    await page.setViewportSize({width:1440,height:900});
+    for (const change of ['hidden', 'replace']) {
+      await page.evaluate(() => {
+        window.preparePolicyMenu();
+        window.policyMenu.element.classList.add('caller-menu-hook');
+        window.policyMenu.open();
+      });
+      await menu.waitFor({state:'visible'});
+      await page.waitForTimeout(100);
+      const before = await menu.boundingBox();
+      await page.evaluate(change => {
+        const anchor = document.querySelector('#menu-policy-opener');
+        const replacement = anchor.cloneNode(true);
+        if (change === 'replace') anchor.parentElement.replaceChildren(replacement);
+        else {
+          anchor.hidden = true;
+          replacement.id = 'menu-policy-fallback';
+          anchor.parentElement.append(replacement);
+        }
+        window.dispatchEvent(new Event('resize'));
+      }, change);
+      await page.waitForTimeout(100);
+      const after = await menu.boundingBox();
+      assert.ok(Math.abs(before.x-after.x)<1 && Math.abs(before.y-after.y)<1, 'Lost anchors keep the last valid placement');
+      assert.equal(await menu.evaluate(el => el.contains(document.activeElement)),true,'Focus stays in open menu during refresh');
+      assert.equal(await menu.evaluate(el => el.classList.contains('caller-menu-hook')),true,'Opening preserves caller classes');
+      await page.keyboard.press('Escape');
+      await menu.waitFor({state:'detached'});
+      assert.equal(await page.evaluate(() => document.activeElement?.id),change === 'replace' ? 'menu-policy-opener' : 'menu-policy-fallback','Dismissal focuses the refreshed containing region');
+      if (change === 'hidden') {
+        await page.evaluate(() => { document.querySelector('#menu-policy-opener').hidden = false; document.querySelector('#menu-policy-fallback').remove(); });
+      }
+      if (change === 'replace') {
+        // The original test closure holds the removed anchor; prepare using its replacement next.
+        await page.evaluate(() => {
+          const old = document.querySelector('#menu-policy-opener');
+          old.remove();
+        });
+        break;
+      }
+    }
+  }
+  await page.locator('#menu-policy-region').evaluate(el=>el.remove());
   await page.setViewportSize(viewport);
 }
