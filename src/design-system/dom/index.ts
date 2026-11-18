@@ -522,9 +522,10 @@ export function createDialog(options: DialogOptions) {
   let controller: DialogController | undefined;
   return {
     element: dialog,
-    open: () =>
+    open: (behavior: DialogBehaviorOptions = {}) =>
       (controller = openDialog(dialog, {
         ...options.behavior,
+        ...behavior,
         motion: "panel",
         onClose: () => {
           options.behavior?.onClose?.();
@@ -536,17 +537,23 @@ export function createDialog(options: DialogOptions) {
     setBusy: (value: boolean) => controller?.setBusy(value),
   };
 }
-/** Small main menus share D48 policy; forms and sheets retain D12 centering. */
+/** All small library/player menus share D48; forms and panels retain D12 centering. */
 export function createMenuOverlay(options: DialogOptions & { anchor: HTMLElement }) {
-  const { anchor, ...dialog } = options;
-  const config: DialogOptions = { ...dialog, behavior: { ...dialog.behavior, opener: anchor } };
+  const { anchor, ...config } = options;
   const overlay = createDialog(config);
+  let panelClasses = r.dialogRecipe(config).panel.split(/\s+/);
   return { ...overlay, open: () => {
+    if (overlay.element.open) return overlay.open();
     const presentation = menuPresentation();
-    overlay.element.className = r.withLayout(r.dialogRecipe({ ...config, presentation }).panel, config.layout);
+    const nextClasses = r.dialogRecipe({ ...config, presentation }).panel.split(/\s+/);
+    overlay.element.classList.remove(...panelClasses.filter(token => !nextClasses.includes(token)));
+    overlay.element.classList.add(...nextClasses);
+    panelClasses = nextClasses;
     overlay.element.dataset.dialogLayout = presentation;
-    config.behavior!.anchor = presentation === "anchored" ? anchor : undefined;
-    return overlay.open();
+    // Clear measured geometry from a previous opening; the current transport measures again.
+    for (const property of ["left", "right", "top", "bottom", "max-width", "max-height"])
+      overlay.element.style.removeProperty(property);
+    return overlay.open({ opener: anchor, anchor: presentation === "anchored" ? anchor : undefined });
   } };
 }
 export const createSheet = ({
