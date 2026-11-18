@@ -109,6 +109,7 @@ try {
   if (await page.locator('#mode-solo-btn').isVisible()) await page.locator('#mode-solo-btn').click();
   await page.locator('#lib-menu-btn').click();
   await page.getByText('Account and devices', { exact: true }).click();
+  await page.locator('dialog[data-panel-state=closing]').waitFor({state:'detached'});
   const shared = page.getByLabel('This device is shared (24 h offline)', { exact: true });
   assert.equal(await shared.getAttribute('role'), 'switch');
   assert.equal(await shared.isChecked(), false);
