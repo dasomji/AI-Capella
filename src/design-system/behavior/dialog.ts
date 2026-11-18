@@ -1,9 +1,13 @@
 import { panelMotion } from "./panel";
+import { anchorPopover } from "./popover";
 
 /** Native showModal owns background inertness, including later portals and stacked modals. */
 export type CancelReason = "escape" | "outside" | "button";
 export interface DialogBehaviorOptions {
   opener?: Element | null;
+  /** D48 anchored presentation; fixed for this opening, including resize. */
+  anchor?: HTMLElement;
+  align?: "start" | "end" | "center";
   /** Historical sheet motion name aliases centered fade; no swipe dismissal. */
   motion?: "sheet" | "panel";
   initialFocus?: HTMLElement | (() => HTMLElement | null);
@@ -86,6 +90,7 @@ export function openDialog(
     closed = true;
     motion?.dispose();
     unbindViewport();
+    unplace?.();
     // Layers opened after an exit starts replace the closing layer; they are not its children.
     const index = stack.findIndex((entry) => entry.controller === controller);
     for (const child of (
@@ -201,7 +206,7 @@ export function openDialog(
   const viewport = view.visualViewport;
   let viewportFrame = 0;
   const fitViewport = () => {
-    if (dialog.dataset.dialogLayout === "fullscreen") return;
+    if (options.anchor || dialog.dataset.dialogLayout === "fullscreen") return;
     // Measured viewport geometry: inset the native centered dialog within the visible area.
     const gap = parseFloat(getComputedStyle(doc.documentElement).getPropertyValue("--ds-space-content")) || 0;
     const width = viewport?.width ?? view.innerWidth;
@@ -242,6 +247,7 @@ export function openDialog(
   if (!stack.length) previousOverflow = doc.body.style.overflow;
   dialog.showModal();
   fitViewport();
+  const unplace = options.anchor ? anchorPopover(dialog, options.anchor, options.align) : undefined;
   stack.push({ dialog, controller });
   stackListeners.forEach(listener => listener());
   motion?.enter();
