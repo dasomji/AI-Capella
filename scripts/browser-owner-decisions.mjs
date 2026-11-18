@@ -4,7 +4,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {chromium} from 'playwright';
 import {ownerFixture} from './owner-decisions-fixture.mjs';
-const out=path.resolve(process.env.BROWSER_EVIDENCE||'/tmp/aicap-design/impl/d42-d47');
+const out=path.resolve(process.env.BROWSER_EVIDENCE||'.review-evidence/owner-decisions');
 await fs.mkdir(out,{recursive:true});await fs.mkdir(path.join(out,'d43-comparison'),{recursive:true});
 const {server,base}=await ownerFixture(out),browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-accelerated-2d-canvas']});
 const results=[],errors=[],baseline=process.env.OWNER_BASELINE==='1';

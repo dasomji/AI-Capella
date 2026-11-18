@@ -341,6 +341,7 @@ export function AdminMemberships({ entity, profile, onChanged, searchLabel }: {
     [revision, setRevision] = useState(0),
     [status, setStatus] = useState(""),
     [rows, setRows] = useState<AdminRow[]>([]);
+  const memberSearch = search.trim();
   const opener = useRef<HTMLElement | null>(null),
     heading = useRef<HTMLDivElement>(null);
   const open = (next: Action) => {
@@ -426,8 +427,8 @@ export function AdminMemberships({ entity, profile, onChanged, searchLabel }: {
         <AdminToolbar query={search ? { search } : {}} setQuery={q => setSearch(q.search ?? "")} fields={[]} search={searchLabel} />
         <AdminDataTable
           data-admin="memberships"
-          search={search}
-          filtered={!!search.trim()}
+          search={memberSearch}
+          filtered={!!memberSearch}
           onClear={() => setSearch("")}
           path="memberships"
           caption={entity === "users" ? t.userMemberships : t.ensembleMembers}
