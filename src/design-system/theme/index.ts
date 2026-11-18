@@ -58,6 +58,7 @@ export type ThemeSnapshot = Readonly<{
   colors: Readonly<Record<typeof colorRoles[number], Color>>;
   fonts: Readonly<Record<typeof fontRoles[number], string>>;
   spectrum: readonly Color[];
+  extendedSpectrum: readonly Color[];
   fallback: Readonly<{ hueStep: number; saturation: number; lightness: number }>;
   material: Readonly<{ surface: 'paper' | 'waves' } & MaterialStrategy>;
   print: Readonly<{ paper: Color; ink: Color; textFont: string; musicFont: string; notationScale: number }>;
@@ -218,6 +219,7 @@ export function readTheme(): ThemeSnapshot {
     color: (role: typeof colorRoles[number]) => colors[role],
     material: Object.freeze({ surface: value('material-fibre') === 'none' ? 'waves' : 'paper', ...materialStrategy(value('material-strategy')) }),
     colors, fonts, spectrum: Object.freeze(Array.from({ length: 8 }, (_, i) => concreteColor(value(`voice-${i + 1}`)))),
+    extendedSpectrum: Object.freeze(Array.from({ length: 16 }, (_, i) => concreteColor(value(`voice-${i + 1}`)))),
     fallback: Object.freeze({ hueStep: number('voice-fallback-hue-step'), saturation: number('voice-fallback-saturation'), lightness: number('voice-fallback-lightness') }),
     print: Object.freeze({ paper: concreteColor(value('print-paper')), ink: concreteColor(value('print-ink')), textFont: value('print-font-text'), musicFont: value('print-font-music'), notationScale: number('print-notation-scale') }),
     roles: Object.freeze(roles),

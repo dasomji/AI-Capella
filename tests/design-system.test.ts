@@ -161,7 +161,7 @@ describe('client theme lifecycle API', () => {
     const values: Record<string,string> = Object.fromEntries(themeRoleNames.map(role=>['--ds-'+role,'1']));
     for (const role of api.colorRoles) values['--ds-'+role]='#123456';
     for (const role of api.fontRoles) values['--ds-font-'+role]='Snapshot Font';
-    for (let i=1;i<=8;i++) values['--ds-voice-'+i]='#123456';
+    for (let i=1;i<=16;i++) values['--ds-voice-'+i]='#123456';
     Object.assign(values, {'--ds-material-strategy':'light','--ds-print-paper':'#ffffff','--ds-print-ink':'#000000','--ds-print-font-text':'Print Font','--ds-print-font-music':'Music Font','--tw-breakpoint-panel':'56.25rem'});
     // Deliberately not iterable: Safari's custom-property enumeration is not a contract.
     const computed = vi.fn(()=>({getPropertyValue:(key:string)=>values[key]??'',fontSize:'16px'}));

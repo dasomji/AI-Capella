@@ -11,6 +11,7 @@ export function colorForPart(index: number, count: number, theme: ThemeSnapshot 
     const slot = n === 1 ? 0 : Math.round((index * (spectrum.length - 1)) / (n - 1));
     return spectrum[slot].css;
   }
+  if (n <= theme.extendedSpectrum.length) return theme.extendedSpectrum[index].css;
   const hue = (index * theme.fallback.hueStep) % 360;
   return `hsl(${hue}, ${theme.fallback.saturation}%, ${theme.fallback.lightness}%)`;
 }

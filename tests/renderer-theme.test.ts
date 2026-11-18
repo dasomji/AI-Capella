@@ -15,7 +15,7 @@ async function clientTheme() {
   const values: Record<string, string> = Object.fromEntries(themeRoleNames.map(role => ['--ds-' + role, '1']));
   for (const role of colorRoles) values['--ds-' + role] = '#123456';
   for (const role of fontRoles) values['--ds-font-' + role] = 'Snapshot Font';
-  for (let i = 1; i <= 8; i++) values['--ds-voice-' + i] = `rgb(${i * 20}, 40, 60)`;
+  for (let i = 1; i <= 16; i++) values['--ds-voice-' + i] = `rgb(${i * 20}, 40, 60)`;
   Object.assign(values, { '--ds-print-paper': '#ffffff', '--ds-print-ink': '#000000', '--ds-print-font-text': 'Print Font',
     '--ds-print-font-music': 'Music Font', '--ds-color-scheme': 'dark', '--ds-material-strategy': 'light', '--ds-material-fibre': 'none',
     '--ds-voice-fallback-hue-step': '47', '--ds-voice-fallback-saturation': '70', '--ds-voice-fallback-lightness': '72' });
@@ -48,7 +48,9 @@ it('uses supplied spectrum/fallback inputs for all voice counts and keeps frozen
   expect(colorForPart(0, 1, theme)).toBe(theme.spectrum[0].css);
   expect(colorForPart(1, 4, theme)).toBe(theme.spectrum[2].css);
   expect(colorForPart(7, 8, theme)).toBe(theme.spectrum[7].css);
-  expect(colorForPart(2, 12, theme)).toBe('hsl(94, 70%, 72%)');
+  expect(colorForPart(2, 12, theme)).toBe(theme.extendedSpectrum[2].css);
+  expect(colorForPart(15, 16, theme)).toBe(theme.extendedSpectrum[15].css);
+  expect(colorForPart(2, 17, theme)).toBe('hsl(94, 70%, 72%)');
   expect(computed).toHaveBeenCalledTimes(reads);
   values['--ds-material-strategy'] = 'ink'; // Browser scheme deliberately remains dark.
   values['--ds-material-fibre'] = 'paper texture';
