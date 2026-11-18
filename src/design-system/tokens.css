@@ -14,6 +14,7 @@
 
 /* Primitive palette; only semantic --ds-* roles are public. */
 :root {
+  --ds-voice-key-area: key;
   --ds-voice-number-size: var(--ds-size-overview-word);
   --ds-space-chips: 46px;
   --ds-size-title-cap: 46px;
@@ -2296,30 +2297,30 @@
   --ds-library-tip-margin: var(--ds-space-heading) auto var(--ds-space-none);
   --ds-drop-veil-z-index: 5;
   --ds-player-grid-template-columns: 252px minmax(0, 1fr);
-  --ds-player-grid-template-rows: 60px minmax(0, 1fr) var(--ds-space-chips) 80px;
+  --ds-player-grid-template-rows: 60px minmax(0, 1fr) var(--ds-space-chips) 80px auto;
   --ds-player-grid-template-areas: 'top top'
     'side stage'
     'ov ov'
-    'tr tr';
+    'tr tr' 'key key';
   --ds-roll-staff-transform: translateZ(0);
-  --ds-player-tablet-rows: 60px minmax(0, 1fr) var(--ds-space-chips) var(--ds-control-target-touch) auto;
-  --ds-player-tablet-areas: 'top top' 'side stage' 'ov ov' 'info info' 'tr tr';
+  --ds-player-tablet-rows: 60px minmax(0, 1fr) var(--ds-space-chips) var(--ds-control-target-touch) auto auto;
+  --ds-player-tablet-areas: 'top top' 'side stage' 'ov ov' 'info info' 'tr tr' 'key key';
   --ds-player-grid-template-columns-phone: minmax(0, 1fr);
-  --ds-player-grid-template-rows-phone: calc(54px + var(--ds-safe-top)) var(--ds-control-height-touch) minmax(0, 1fr) var(--ds-space-toolbar-dense) var(--ds-control-height-touch) auto;
-  --ds-player-grid-template-areas-phone: 'top' 'chips' 'stage' 'ov' 'info' 'tr';
-  --ds-player-grid-template-rows-landscape: calc(var(--ds-space-chips) + var(--ds-safe-top)) minmax(0, 1fr) var(--ds-space-heading) var(--ds-control-target-touch) auto;
-  --ds-player-grid-template-areas-landscape: 'top' 'stage' 'ov' 'info' 'tr';
+  --ds-player-grid-template-rows-phone: calc(54px + var(--ds-safe-top)) var(--ds-control-height-touch) minmax(0, 1fr) var(--ds-space-toolbar-dense) var(--ds-control-height-touch) auto auto;
+  --ds-player-grid-template-areas-phone: 'top' 'chips' 'stage' 'ov' 'info' 'tr' 'key';
+  --ds-player-grid-template-rows-landscape: calc(var(--ds-space-chips) + var(--ds-safe-top)) minmax(0, 1fr) var(--ds-space-heading) var(--ds-control-target-touch) auto auto;
+  --ds-player-grid-template-areas-landscape: 'top' 'stage' 'ov' 'info' 'tr' 'key';
   --ds-before-after-animation-duration: 0.01ms;
   --ds-before-after-animation-iteration-count: 1;
   --ds-before-after-transition-duration: 0.01ms;
   --ds-following-overview-opacity: 0.4;
-  --ds-app-sing-along-player-grid-template-rows: 60px minmax(0, 1fr);
+  --ds-app-sing-along-player-grid-template-rows: 60px minmax(0, 1fr) auto;
   --ds-app-sing-along-player-grid-template-areas: 'top top'
-      'side stage';
-  --ds-sing-along-player-rows-phone: calc(54px + var(--ds-safe-top)) minmax(0, 1fr) auto;
-  --ds-sing-along-player-areas-phone: 'top' 'stage' 'chips';
-  --ds-sing-along-player-rows-landscape: calc(var(--ds-space-chips) + var(--ds-safe-top)) minmax(0, 1fr);
-  --ds-sing-along-player-areas-landscape: 'top' 'stage';
+      'side stage' 'key key';
+  --ds-sing-along-player-rows-phone: calc(54px + var(--ds-safe-top)) minmax(0, 1fr) auto auto;
+  --ds-sing-along-player-areas-phone: 'top' 'stage' 'chips' 'key';
+  --ds-sing-along-player-rows-landscape: calc(var(--ds-space-chips) + var(--ds-safe-top)) minmax(0, 1fr) auto;
+  --ds-sing-along-player-areas-landscape: 'top' 'stage' 'key';
   --ds-body-after-content: '';
   --ds-app-z-index: 1;
   --ds-landing-name-ink-animation: ink-float 7s ease-in-out 1.6s infinite;
