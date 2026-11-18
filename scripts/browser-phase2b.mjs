@@ -276,7 +276,7 @@ try {
   const rejected = p.waitForResponse(r => r.url().endsWith('/api/account') && r.request().method() === 'DELETE');
   await p.getByRole("button", { name: "Permanently delete account", exact: true }).click();
   assert.equal((await rejected).status(), 401, 'fresh sign-in still verifies the confirmation password');
-  await p.getByLabel("Password", { exact: true }).filter({visible:true}).waitFor();
+  await p.waitForFunction(() => document.querySelector('input[autocomplete="current-password"]')?.getAttribute('aria-invalid') === 'true');
   assert.equal(await p.getByLabel("Password", { exact: true }).getAttribute('aria-invalid'), 'true');
   assert.equal(await p.getByLabel("Password", { exact: true }).evaluate(el => el === document.activeElement), true);
   await shot(p, "account-password-rejected");

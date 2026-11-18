@@ -217,7 +217,7 @@ test('sysadmin stop and metrics APIs enforce platform role, and sole-member clos
  await ok('admin/transcription/control','PUT',{paused:false,reason:'Integration resume'},lead.cookie);env.TRANSCRIPTION_EMERGENCY_STOP='1';try{assert.equal(await new TranscriptionWorker().tick(),false);}finally{env.TRANSCRIPTION_EMERGENCY_STOP='0';}await new TranscriptionWorker().tick();assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
  const range='admin/transcription/metrics?from=2000-01-01T00:00:00Z&to=2100-01-01T00:00:00Z';const metrics=await ok(range,'GET',undefined,lead.cookie);assert.ok(metrics.some((r:any)=>r.model==='fake-transcription-v1'));
  const key=(await pool.query('select object_key from stored_objects where id=$1',[source.id])).rows[0].object_key;
- await ok('account','DELETE',{deleteEnsembleIds:[e.id]},lead.cookie);assert.equal((await pool.query('select 1 from stored_objects where id=$1',[source.id])).rowCount,0);assert.equal((await pool.query('select 1 from object_deletions where object_key=$1',[key])).rowCount,1);
+ await ok('account','DELETE',{deleteEnsembleIds:[e.id],password:'domain-fixture-password-42'},lead.cookie);assert.equal((await pool.query('select 1 from stored_objects where id=$1',[source.id])).rowCount,0);assert.equal((await pool.query('select 1 from object_deletions where object_key=$1',[key])).rowCount,1);
  await pool.query('update object_deletions set created_at=$2 where object_key=$1',[key,new Date(0)]);await cleanupObjects();
  const {storage}=await import('../server/storage.server');await assert.rejects(()=>storage().head(key));
 });
