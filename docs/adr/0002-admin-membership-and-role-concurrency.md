@@ -35,3 +35,10 @@ whole of LightScore and may grant rights in any ensemble, as a member or not.
 When an ordinary member manager resends an existing invitation, both its issuer
 and its admin/ensemble authority source are preserved alongside the original
 grants. A manager cannot convert the invitation's source or elevate its grants.
+
+
+[ADR 0007 (Proposed)](0007-admin-audit-scope-and-read-limits.md) narrows the
+in-app audit to mutations. List/detail/content/download/preview reads no longer
+write audit rows. This leaves the atomic success commit, failure savepoint and
+independent mutation rate counter described above unchanged; authenticated
+rejected mutation outcomes and CLI role writes remain audited.

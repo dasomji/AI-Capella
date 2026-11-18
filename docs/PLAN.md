@@ -1359,7 +1359,7 @@ Phase 4a implementation details:
 - API: POST `/api/ensembles/:ensemble/originals` accepts a raw streamed body and
   `X-Original-Filename`; response returns an object ID. GET `originals/:object`
   streams an attachment, or `?signed=1` redirects to a signed GET valid at most
-  60 seconds. Each authorized access is audited without content. Current
+  60 seconds. Reads add no in-app audit rows (see proposed ADR 0007). Current
   transcribe/lead is required. Signed links are bearer grants for their short
   lifetime and cannot enforce a revocation that occurs after issuance.
 - POST `transcriptions`, with `Idempotency-Key`, `{sourceObjects:[ids], options}`
@@ -2352,19 +2352,18 @@ immediate on the next request. There are no admin socket subscriptions.
 
 Safe projections expose account/session aggregates, coarse device groups,
 memberships/capabilities/leads, invitation states, piece/version/original
-metadata and job summaries. Private detail reads are audited; credentials,
+metadata and job summaries. Private detail reads add no in-app audit rows; credentials,
 session identifiers/tokens, invitation hashes, object keys, provider prompts and
 score bodies are absent from oversight lists. Content/original actions require
-an explicit audit confirmation with optional reason. Downloads use the existing
+an explicit confirmation with a required reason in structured server logs. Downloads use the existing
 private-storage signing mechanism with a 60-second lifetime. There is no
 impersonation, global deletion, UI role editing or unrestricted export.
 
 The Phase 4 usage/metrics and emergency-stop APIs are now behind the unified
 boundary. Ops includes usage/cost/unknown-cost cards, per-group p50/p95 latency,
 failure counts, jobs, and stop status with actor/instant/reason. Stop changes
-require a nonempty reason and write an audit event. All admin APIs share a
-persistent 120-request/minute actor limit; content/download actions additionally
-share 10/minute. Lists default to 30 and cap at 100, with indexed search/order
+require a nonempty reason and write an audit event. Admin list/detail reads have no per-actor read limits; content/download actions
+share 10/minute, 30/hour and 200/day caps. Lists default to 30 and cap at 100, with indexed search/order
 and bounded detail sub-lists. Migration 0013 adds ordering/audit and pg_trgm
 substring indexes. Timestamp cursors preserve PostgreSQL microseconds.
 
@@ -2391,7 +2390,7 @@ Verification:
   passed, with no public source maps.
 - `npm run db:generate`: no schema changes after committed migration 0013.
 - `BROWSER_SCRIPT=scripts/browser-admin.mjs npm run test:browser`: passed all
-  tabs, search/detail, stop/resume with reasons, audited content confirmation,
+  tabs, search/detail, stop/resume with reasons, reasoned content confirmation,
   non-sysadmin 404, DE/EN, three themes at 1440/390, and AA text contrast >=4.5.
   Contact sheet: `/tmp/aicap-p5b/shots/index.html` (23 screenshots).
 - `npm run test:browser`: final isolated run passed the complete account/design,
@@ -2514,12 +2513,16 @@ registered admin APIs and page tabs for anonymous/member/lead/manager callers,
 including HEAD/OPTIONS, case and encoded variants. A router-ownership assertion
 fails when an admin endpoint is registered outside the guarded router.
 
-Every collection read now audits endpoint, filter keys, ID filters only and row
-count; memberships have their own action. Primary/version/original lists have
-30/min actor limits; content/downloads share 10/min, 30/hour and 200/day persistent
-caps, clear 429 messages and structured `admin.cap_hit` warnings. The runbook
-records the log-alerting hook. Content/download reasons are mandatory. Piece and
-ensemble-targeted audits carry ensemble scope; the audit UI shows reason excerpts.
+Admin list/detail/statistics reads use bounded server pagination/search with no
+per-actor read limits. Reads (including score content, original downloads and
+page previews) add no audit rows. Existing historical rows are preserved. Mutation
+and CLI auditing retain atomic commit/savepoint behavior (ADR 0002). Content and
+download actions still require reasons and share 10/min, 30/hour and 200/day
+persistent caps, with clear 429 messages. The existing server logger emits
+`admin.content_access` (reason and target) and `admin.cap_hit` (cap metadata) as
+structured UTC stdout for Grafana; no infrastructure is provisioned. See
+[ADR 0007 (Proposed)](adr/0007-admin-audit-scope-and-read-limits.md) and SYSADMIN.md.
+The audit UI retains ensemble scope and safe mutation-reason excerpts.
 Cursor types are validated; NUL/unpaired-surrogate input is rejected; PostgreSQL
 class 22 maps to 422. Versions paginate by `(version_no DESC,id ASC)`. JSON numeric
 fields remain numbers; piece created/updated sorts are independent. CLI audits

@@ -7,7 +7,7 @@ exposure, forged proxy headers and anonymous/self-created-account billing abuse.
 
 Every server action checks a current verified account, membership and the required
 capability. Sysadmin is a separate database role, checked on every request, with
-minimal projections, audited content access and no impersonation. Ensemble writes
+minimal projections, reasoned content access with operational logging and no impersonation. Ensemble writes
 serialize last-lead rules; expected revisions/idempotency fence concurrent writes.
 Socket joins and commands reauthorize, and session/membership revocation disconnects
 access. See SYSADMIN.md for audit/access limits and provisioning.

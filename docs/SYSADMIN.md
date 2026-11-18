@@ -36,8 +36,8 @@ All paths below start with `/api/admin`.
 | GET | `/memberships`, `/invitations` | Paginated relationships / invitation states |
 | GET | `/pieces`, `/pieces/:id` | Piece metadata and transcription job link |
 | GET | `/pieces/:id/versions`, `/pieces/:id/originals` | Versions / original metadata |
-| POST | `/pieces/:id/content` | Audited current score body access |
-| POST | `/pieces/:id/originals/:object/download` | Audited 60-second signed original URL |
+| POST | `/pieces/:id/content` | Reasoned current score body access; operational stdout log |
+| POST | `/pieces/:id/originals/:object/download` | Reasoned 60-second signed original URL; operational stdout log |
 | GET | `/audit` | Audit browser without arbitrary event metadata |
 | GET | `/transcription/jobs` | Cross-ensemble job summaries, no results |
 | GET | `/transcription/usage` | Existing usage/cost and latency groups |
@@ -123,8 +123,8 @@ Development/test mail uses capture or Mailpit; tests never use real mail.
 Management actions share an additional database-backed 20 requests/minute/actor
 limit (including invalid attempts), alongside the existing limits below.
 
-All authorized admin APIs share a PostgreSQL-backed limit of 120 requests per
-minute per actor. Each primary list and version/original list additionally allows 30 requests/minute. Content/download actions additionally share 10 per minute, 30 per hour and 200 per day per actor, persisted in PostgreSQL. A rejected request returns 429 with the specific cap and waiting instruction.
+Admin list/detail/statistics reads have no per-actor read limits; lists and member
+tables use bounded server pagination/search. Content/download actions share 10 per minute, 30 per hour and 200 per day per actor, persisted in PostgreSQL. A rejected request returns 429 with the specific cap and waiting instruction.
 No credentials, session identifiers/tokens, raw user agents/IPs, invitation
 hashes, object keys or provider prompts appear in oversight projections. Content
 hashes are deliberately visible in version/original metadata. Download URLs are
@@ -161,18 +161,21 @@ router, exercises case/encoded variants and HEAD/OPTIONS as anonymous, member,
 lead and manager, and asserts all registered admin APIs belong to the guarded
 router. Keep that assertion when adding endpoints.
 
-Every successful admin collection request writes exactly one list audit event,
-including endpoint, filter **keys**, ID filters only, and returned result count.
-Membership reads use `admin.memberships.list`. Arbitrary searches/filter values
-are excluded. Piece/ensemble-targeted events carry ensemble scope; audit views
-expose only a 160-character reason excerpt for admin events. Detail bundles
-retain one detail audit event and bounded sections, without per-section HTTP calls.
+The in-app audit records mutations and their outcomes: membership changes, role
+changes, invitations, CLI writes and transcription control. Collection, detail,
+statistics, score content, original downloads and original page previews add no
+audit rows. Existing historical rows are preserved. Mutation audit rows still
+commit atomically with the change or record a rejected outcome after savepoint
+rollback (ADR 0002). Audit views expose safe reason excerpts and ensemble scope.
 
-Cap hits emit structured UTC warning events with `event=admin.cap_hit`, actor,
-cap kind, maximum and window milliseconds. Alerting hook: match that event in the
-log collector and notify the operator on repeated content-hour/content-day hits.
-No existing failure notifications are muted; infrastructure alert configuration
-remains deployment/operator work.
+Required content/download reasons are emitted by the existing server logger to
+structured stdout (`event=admin.content_access`, UTC timestamp, request ID, actor,
+target type/ID, reason). Content/download cap hits emit `event=admin.cap_hit` with
+UTC timestamp, request ID, actor, cap kind, maximum and window milliseconds.
+Grafana receives operational logs through the deployment log collector; no app
+read audit replaces it. Alerting hook: match repeated content-hour/content-day
+cap hits. Log collection, retention/access controls and alerts remain operator
+work; this change provisions nothing. See [ADR 0007 (Proposed)](adr/0007-admin-audit-scope-and-read-limits.md).
 
 Search, ID, cursor and reason strings reject NUL and unpaired surrogates. Typed
 cursor validation rejects malformed timestamps, and PostgreSQL class 22 data
