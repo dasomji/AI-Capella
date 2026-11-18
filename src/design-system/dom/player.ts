@@ -156,7 +156,7 @@ export function createVoiceKey(label: string, voices: {id:string;name:string;voi
   const key = playerElement("div", voiceKeyRecipe, {attrs:{role:"group","aria-label":label,"data-voice-key":true}});
   for (const voice of voices) {
     const chip = createVoiceChip({partId:voice.id,name:voice.name,voiceNumber:voice.voiceNumber,color:voice.color,title:voice.name});
-    chip.addEventListener('click',()=>inspect(voice.id));
+    chip.addEventListener('click',event=>{event.stopPropagation();inspect(voice.id);});
     key.append(chip);
   }
   return key;
