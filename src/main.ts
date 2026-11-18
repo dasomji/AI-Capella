@@ -844,7 +844,7 @@ function openExportSheet(opener: HTMLElement | null) {
   const sources: { id: string; name: string; color: string; staves: boolean }[] = [];
   score.parts.forEach((part, i) => {
     const id = part.sourceId ?? part.id;
-    if (!sources.some((s) => s.id === id)) sources.push({ id, name: part.sourceName ?? part.name, color: colorForPart(i, score.parts.length), staves: !!part.sourceId || !!part.staves });
+    if (!sources.some((s) => s.id === id)) sources.push({ id, name: part.sourceName ?? part.name, color: voiceColor(part, score), staves: !!part.sourceId || !!part.staves });
   });
   const rows = sources.map((source) => {
     const li = createPanelPart('li','export-row');
@@ -1983,7 +1983,9 @@ function toggleHearing(partId: string) {
 function renderChipTitles() {
   const singAlong = app.classList.contains('sing-along');
   document.querySelectorAll<HTMLElement>('.chip[data-part]').forEach((chip) => {
-    const name = chip.textContent ?? '';
+    const part = currentScore?.parts.find(part => part.id === chip.dataset.part);
+    if (!part) return;
+    const name = `${part.voiceNumber} · ${part.name}`;
     chip.title = singAlong ? t('voiceOnOff', { name }) : t('onlyVoice', { name });
   });
 }
@@ -2858,7 +2860,10 @@ songTitleEl.addEventListener('dblclick', () => currentSong?.imported && editable
 window.addEventListener('keydown', (e) => {
   if (!app.classList.contains('mode-player') || document.querySelector('dialog[open], .overlay')) return;
   const tag = (e.target as HTMLElement | null)?.tagName;
-  if ((e.target as HTMLElement | null)?.closest('button, a[href], [role=button]') || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const target = e.target as HTMLElement | null;
+  if (e.defaultPrevented || target?.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
+  // Preserve native activation while leaving rehearsal shortcuts available after clicks.
+  if (target?.closest('button, a[href], [role=button], summary') && (e.code === 'Space' || e.key === 'Enter')) return;
   if (e.code === 'Space') {
     e.preventDefault();
     togglePlay();
