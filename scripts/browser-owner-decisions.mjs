@@ -13,7 +13,7 @@ try {
   const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:2,reducedMotion:'reduce'});
   page.on('pageerror',e=>errors.push(e.message));await page.routeWebSocket('**',ws=>ws.close());
   await page.goto(base+'owner.html?design='+(theme==='parchment'?'pergament':'papier'));await page.waitForFunction(()=>window.ownerReady);
-  await page.evaluate(()=>document.fonts.ready);await page.waitForFunction(()=>[...document.querySelectorAll('.song-meta')].every(e=>e.textContent.trim()));
+  await page.evaluate(()=>document.fonts.ready);await page.waitForFunction(()=>[...document.querySelectorAll('.song-card .song-meta')].every(e=>e.textContent.trim()));
   await page.mouse.move(0,0);
   const prefix=`${theme}-${width}x${height}-${baseline?'before':'after'}`;
   const shot=async name=>{await page.screenshot({path:path.join(out,`${prefix}-${name}.webp`),type:'webp'});};

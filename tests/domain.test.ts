@@ -1913,7 +1913,7 @@ test('account deletion verifies fresh and aged session passwords before confirma
     for (const password of [undefined, '', 'wrong-password']) {
       const response = await request('account', 'DELETE', {password}, singer.cookie);
       assert.equal(response.status, 401);
-      assert.equal((await response.json()).error, 'recent_auth_required');
+      assert.equal((await response.json()).code, 'recent_auth_required');
       assert.equal((await pool.query('select id from "user" where id=$1', [singer.id])).rowCount, 1);
     }
     const e = await ok('ensembles', 'POST', {name:'Deletion confirmation'}, singer.cookie);

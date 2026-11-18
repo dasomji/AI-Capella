@@ -282,7 +282,12 @@ The guard is local AST analysis with the limitations above, not an interprocedur
 | D24 | An open menu retains its chosen presentation and DOM identity through rotation. Shared viewport handling re-bounds and scrolls its contents; presentation is chosen again only for a later opening. |
 | D25 | At narrow panel widths, score review switches between score and original with one toggle above the panes. Wide layouts retain the side-by-side comparison switch; narrow layouts show only the selected pane and keep the return control reachable. |
 | D26 interim | Until room permissions are designed separately, the EN/DE introduction describes the current Together behavior: everyone controls shared playback on every device; volume, mute and solo remain personal. It promises no missing “take the lead” command and introduces no new session permissions. |
-| D21 pending owner approval | An extended voice palette requires owner approval against the current colors before implementation. Existing voice colors, labels and renderer identification cues remain; this round makes no palette change. |
+| D42 A (D21 approved) | Add the selected theme-specific colors 9–16. Keep the eight-role spectrum and ≤8 spacing; expose sixteen roles separately. Stable numbers stored by part ID in `formatDefaults.voiceNumbers` appear with names in rows/chips, staff labels, wide roll notes and a keyboard-accessible score key. Overview callouts avoid collisions; unison/short-note identities remain in the key. Existing imported pieces persist their initial import-order mapping on the next editable online opening. Renderers re-theme through the existing revision boundary. |
+| D43 A, pending comparison approval | Preserve Parchment voice 4 `#5A8A2A` until the owner reviews current/proposed `#527E26` 8-voice roll/staff/mixer images and all three Machado CVD simulations at 1440×900 and 390×844. PDF is dark-on-white. Evidence: `/tmp/aicap-design/impl/d42-d47/d43-comparison/`. |
+| D44 A | Always verify the account-deletion password, including recent sign-in. Preserve wrong-password errors, the failure budget and ensemble confirmation. |
+| D45 B | Retain complete wrapping library titles. Equal-height cards stretch their bodies and align details at the bottom of each row. Retain D23's 280px tablet cards and phone records. |
+| D46 A | Retain the existing 2× canvas resolution cap for smooth playback; no resolution change. |
+| D47 B | Library menu title: Settings / Einstellungen. Language stays an option inside it; the introduction points to Settings. |
 
 Retained compatibility role names preserve consumer APIs, not independently authored palettes.
 Voice colors and category feedback colors remain pending their separate owner review. Material
