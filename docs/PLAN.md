@@ -2177,8 +2177,7 @@ pitch. Sequence alignment retains duplicate measures; parts retain multiplicity.
 - S1: page rendering uses its own two-global/two-user admission, four queued
   requests and a two-second queue deadline. Request abort and 20-second timeout
   combine. Authorized PNGs use a 32 MiB memory LRU keyed by object/page/250 dpi;
-  no derived object can remove an original. Access audits coalesce per user/object
-  for ten minutes, with bounded bookkeeping. Responses include sandbox/no-store.
+  no derived object can remove an original. Preview reads add no in-app audit rows (proposed ADR 0007). Responses include sandbox/no-store.
   Review caches page blob URLs and aborts superseded requests, revoking on close.
 - S2: landing ensemble changes immediately reconcile the transcription scope and
   jobs. Start rechecks current scope after loading server limits; its heading names

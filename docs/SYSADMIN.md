@@ -83,11 +83,11 @@ revoking sysadmin and stopping transcription are destructive confirmations with 
 consequence stated and a required reason. A 409 `stale_permissions` keeps the edit
 dialog open, reloads the row and resets the draft for review. The platform-role panel is
 on the user page: the target must have a verified email; you cannot revoke your own role
-or remove the final sysadmin. Content view and original download are reasoned, audited
-confirmations on the piece page.
+or remove the final sysadmin. Content view and original download use reasoned
+confirmations on the piece page; reasons go to structured server stdout.
 
 There are no global delete, impersonation or export controls. Private
-detail access is audited. Content and originals require an explicit confirmation;
+detail reads add no in-app audit rows. Content and originals require an explicit confirmation;
 POST bodies require a nonempty `reason` (maximum 1000 characters). Stop toggles
 require `{ paused: boolean, reason: string }` with a nonempty reason. The server emergency-stop environment flag also applies;
 the UI cannot override that flag. Audit events
