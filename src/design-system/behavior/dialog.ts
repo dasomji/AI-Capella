@@ -76,6 +76,12 @@ export function openDialog(
   const previousFocus =
     options.opener ??
     (pointerOpener?.isConnected ? pointerOpener : doc.activeElement);
+  // Save the containing regions before a refresh can detach the opener's subtree.
+  const anchorRegions: HTMLElement[] = [];
+  if (options.anchor) {
+    for (let region = options.anchor.parentElement; region; region = region.parentElement)
+      anchorRegions.push(region);
+  }
   pointerOpener = null;
   let closed = false,
     closing = false,
@@ -108,10 +114,19 @@ export function openDialog(
     if (
       previousFocus instanceof HTMLElement &&
       previousFocus.isConnected &&
+      previousFocus.getClientRects().length > 0 &&
       (!stack.length || stack.at(-1)!.dialog.contains(previousFocus)) &&
       !previousFocus.closest("[inert]")
     )
       previousFocus.focus({ preventScroll: true });
+    else if (options.anchor) {
+      // Prefer the refreshed row/grid's first control; never leave focus on body after removal.
+      const scope = stack.at(-1)?.dialog;
+      const fallback = anchorRegions.filter(region => region.isConnected)
+        .flatMap(region => targets(region))
+        .find(target => !dialog.contains(target) && (!scope || scope.contains(target)));
+      fallback?.focus({ preventScroll: true });
+    }
     if (notify) options.onClose?.();
   };
   const controller: DialogController = {
