@@ -89,15 +89,19 @@ retained parity variants, guard exceptions and verification limitations.
 
 ## Additional applied owner decisions
 
-**D06.** Administration uses the same LightScore paper, accent, typography and shared controls in a deliberately compact work layout. Its former independent palette is retired; admin detail-page presentation remains pending owner confirmation.
+**D06.** Administration uses the same LightScore paper, accent, typography and shared controls in a deliberately compact work layout. Its former independent palette is retired; D49 confirms routed user, ensemble and piece detail pages.
 
-**D12 B.** Settings, prompts and main menus use centered native dialogs with safe viewport margins and a shared fade; transcription score review alone remains full-screen. Historical Sheet names are centered compatibility aliases; drag handles and swipe/slide behavior are retired. The desktop main-menu placement question remains pending owner approval.
+**D12 B.** Settings, prompts and small-screen main menus use centered native dialogs with safe viewport margins and a shared fade; transcription score review alone remains full-screen. Historical Sheet names are centered compatibility aliases; drag handles and swipe/slide behavior are retired. D48 makes small desktop main menus the explicit anchored exception.
 
-**D13 B.** Compact member and transcription-job row menus remain anchored popovers at every width, including phones. Shared placement bounds their geometry and keeps long menus internally scrollable; main menus retain the D12 dialog transport.
+**D13 B.** Compact member and transcription-job row menus remain anchored popovers at every width, including phones. Shared placement bounds their geometry and keeps long menus internally scrollable; small main menus follow D48; forms and panels retain D12 centering.
 
-**D16.** People and membership tables use labeled records below the account breakpoint. Comparison and metric tables retain contained horizontal scrolling, while administration navigation scrolls horizontally. These table/navigation choices do not settle the pending admin detail-page presentation.
+**D16.** People and membership tables use labeled records below the account breakpoint. Comparison and metric tables retain contained horizontal scrolling, while administration navigation scrolls horizontally. D49 confirms routed detail pages with member search.
 
 **D23.** The tablet library uses fixed 280px comfortable card columns between the compact and transport breakpoints, showing fewer, wider covers instead of squeezing extra columns. Below the compact breakpoint the existing single-column phone records remain.
+
+**D48 B.** Small library/player main menus are the explicit D12 exception on desktops: at the existing `transport` breakpoint (1200px) or above, with fine primary pointer and hover, the shared overlay policy chooses a compact anchored popup with transparent backdrop. Phones/tablets keep a centered dialog with backdrop, including wide coarse-pointer tablets. Presentation is fixed at opening (D24); shared measured placement flips/clamps and re-bounds on resize. Existing native dialog/menu roles, Escape/outside dismissal and focus restoration remain. Tempo/bar forms and other real panels remain centered; row menus retain D13 behavior.
+
+**D49 B.** User, ensemble and piece details stay routed pages with direct links and Back navigation. Member tables regain the shared admin toolbar search and translated filtered-empty/Clear filters state. They cache cursor pages and filter name/email locally before pagination (also ensemble name in user memberships); list-page search is unchanged. This trades fetching all members of one detail for immediate complete local search, rather than silently searching only its visible page.
 
 **D24.** An open menu retains its chosen presentation and DOM identity through rotation. Shared viewport handling re-bounds and scrolls its contents; presentation is chosen again only for a later opening.
 
