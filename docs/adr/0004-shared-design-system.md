@@ -109,4 +109,14 @@ retained parity variants, guard exceptions and verification limitations.
 
 **D26 interim.** Until room permissions are designed separately, the EN/DE introduction describes the current Together behavior: everyone controls shared playback on every device; volume, mute and solo remain personal. It promises no missing “take the lead” command and introduces no new session permissions.
 
-**D21 pending owner approval.** An extended voice palette requires owner approval against the current colors before implementation. Existing voice colors, labels and renderer identification cues remain; this round makes no palette change.
+**D42 A (D21 approved).** Voices 9–16 use the approved theme-specific extension in `tokens.css`; `spectrum` retains eight entries for unchanged ≤8 spacing and `extendedSpectrum` exposes sixteen. Larger counts keep the existing fallback. Neutral number badges retain complete names in rows/chips and the always-available score key; pinned staff names and sufficiently wide roll notes carry the same number. Overview first-event callouts avoid collisions, deferring crowded/unison identities to the keyboard-accessible key with solo/inspect. Piece defaults store the mapping by part ID (`formatDefaults.voiceNumbers`), allocated from import order before display filtering; rename, reorder, removal/restoration and split allocation preserve identity. Existing imported pieces initialize their mapping on the next editable online opening; read-only/offline openings derive the same initial import order until persisted. Renderers and DOM pigments still follow live snapshot revisions (appearance requests remain held through rehearsal under D05).
+
+**D43 A, pending comparison approval.** Keep Parchment voice 4 at `#5A8A2A`. The proposed `#527E26` may only be applied after the owner reviews real 8-voice roll/staff/mixer comparisons at 1440×900 and 390×844 plus linear-light Machado protanopia/deuteranopia/tritanopia simulations. Evidence is external under `/tmp/aicap-design/impl/d42-d47/d43-comparison/`. PDFs remain dark-on-white and do not consume voice pigments.
+
+**D44 A.** Every account-deletion request verifies the confirmation password, including fresh sessions. Existing inline wrong-password handling, confirmation checks and password failure budget remain.
+
+**D45 B.** Library cards retain complete wrapping titles. Cards stretch to their row height and their flex bodies place metadata at the bottom. D23's fixed 280px tablet width and phone records remain.
+
+**D46 A.** Keep the existing 2× canvas backing resolution cap for playback performance; no renderer resolution change.
+
+**D47 B.** The library menu title is “Settings” / “Einstellungen”; language remains one setting within it. The library introduction points to Settings.

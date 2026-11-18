@@ -1,0 +1,219 @@
+{
+  "themes": {
+    "night-paper": {
+      "tokens": {
+        "--ds-voice-1": "#F4879B",
+        "--ds-voice-2": "#F6A77A",
+        "--ds-voice-3": "#EDC96B",
+        "--ds-voice-4": "#A9D38A",
+        "--ds-voice-5": "#6FD3BE",
+        "--ds-voice-6": "#72B7F2",
+        "--ds-voice-7": "#9A9CF5",
+        "--ds-voice-8": "#C891EE",
+        "--ds-voice-9": "#71781F",
+        "--ds-voice-10": "#FFC7FE",
+        "--ds-voice-11": "#0479B2",
+        "--ds-voice-12": "#C66A4C",
+        "--ds-voice-13": "#049886",
+        "--ds-voice-14": "#A6558A",
+        "--ds-voice-15": "#D1FCA1",
+        "--ds-voice-16": "#9B9D7A"
+      },
+      "cvd": {
+        "normal": {
+          "min_deltaE": 7.027,
+          "closest_pair": [
+            7,
+            8
+          ],
+          "adjacent_min_deltaE": 7.027
+        },
+        "protanopia": {
+          "min_deltaE": 1.169,
+          "closest_pair": [
+            7,
+            8
+          ],
+          "adjacent_min_deltaE": 1.169
+        },
+        "deuteranopia": {
+          "min_deltaE": 1.012,
+          "closest_pair": [
+            6,
+            8
+          ],
+          "adjacent_min_deltaE": 3.264
+        },
+        "tritanopia": {
+          "min_deltaE": 5.137,
+          "closest_pair": [
+            5,
+            6
+          ],
+          "adjacent_min_deltaE": 5.137
+        }
+      }
+    },
+    "parchment": {
+      "tokens": {
+        "--ds-voice-1": "#B8384F",
+        "--ds-voice-2": "#BF5A26",
+        "--ds-voice-3": "#9C7414",
+        "--ds-voice-4": "#5A8A2A",
+        "--ds-voice-5": "#1E7F70",
+        "--ds-voice-6": "#2D69AE",
+        "--ds-voice-7": "#4E4EB4",
+        "--ds-voice-8": "#8445A6",
+        "--ds-voice-9": "#734008",
+        "--ds-voice-10": "#062D71",
+        "--ds-voice-11": "#822948",
+        "--ds-voice-12": "#365E28",
+        "--ds-voice-13": "#5C083E",
+        "--ds-voice-14": "#886A80",
+        "--ds-voice-15": "#163D03",
+        "--ds-voice-16": "#4E4462"
+      },
+      "cvd": {
+        "normal": {
+          "min_deltaE": 7.659,
+          "closest_pair": [
+            6,
+            7
+          ],
+          "adjacent_min_deltaE": 7.659
+        },
+        "protanopia": {
+          "min_deltaE": 2.631,
+          "closest_pair": [
+            7,
+            8
+          ],
+          "adjacent_min_deltaE": 2.631
+        },
+        "deuteranopia": {
+          "min_deltaE": 0.614,
+          "closest_pair": [
+            2,
+            3
+          ],
+          "adjacent_min_deltaE": 0.614
+        },
+        "tritanopia": {
+          "min_deltaE": 3.219,
+          "closest_pair": [
+            5,
+            6
+          ],
+          "adjacent_min_deltaE": 3.219
+        }
+      }
+    },
+    "velvet": {
+      "tokens": {
+        "--ds-voice-1": "#F4879B",
+        "--ds-voice-2": "#F6A77A",
+        "--ds-voice-3": "#EDC96B",
+        "--ds-voice-4": "#A9D38A",
+        "--ds-voice-5": "#6FD3BE",
+        "--ds-voice-6": "#72B7F2",
+        "--ds-voice-7": "#9A9CF5",
+        "--ds-voice-8": "#C891EE",
+        "--ds-voice-9": "#71781F",
+        "--ds-voice-10": "#FFC7FE",
+        "--ds-voice-11": "#0479B2",
+        "--ds-voice-12": "#C66A4C",
+        "--ds-voice-13": "#049886",
+        "--ds-voice-14": "#A6558A",
+        "--ds-voice-15": "#D1FCA1",
+        "--ds-voice-16": "#9B9D7A"
+      },
+      "cvd": {
+        "normal": {
+          "min_deltaE": 7.027,
+          "closest_pair": [
+            7,
+            8
+          ],
+          "adjacent_min_deltaE": 7.027
+        },
+        "protanopia": {
+          "min_deltaE": 1.169,
+          "closest_pair": [
+            7,
+            8
+          ],
+          "adjacent_min_deltaE": 1.169
+        },
+        "deuteranopia": {
+          "min_deltaE": 1.012,
+          "closest_pair": [
+            6,
+            8
+          ],
+          "adjacent_min_deltaE": 3.264
+        },
+        "tritanopia": {
+          "min_deltaE": 5.137,
+          "closest_pair": [
+            5,
+            6
+          ],
+          "adjacent_min_deltaE": 5.137
+        }
+      }
+    }
+  },
+  "matrices": {
+    "protanopia": [
+      [
+        0.152286,
+        1.052583,
+        -0.204868
+      ],
+      [
+        0.114503,
+        0.786281,
+        0.099216
+      ],
+      [
+        -0.003882,
+        -0.048116,
+        1.051998
+      ]
+    ],
+    "deuteranopia": [
+      [
+        0.367322,
+        0.860646,
+        -0.227968
+      ],
+      [
+        0.280085,
+        0.672501,
+        0.047413
+      ],
+      [
+        -0.01182,
+        0.04294,
+        0.968881
+      ]
+    ],
+    "tritanopia": [
+      [
+        1.255528,
+        -0.076749,
+        -0.178779
+      ],
+      [
+        -0.078411,
+        0.930809,
+        0.147602
+      ],
+      [
+        0.004733,
+        0.691367,
+        0.3039
+      ]
+    ]
+  }
+}

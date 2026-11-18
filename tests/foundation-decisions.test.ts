@@ -160,3 +160,41 @@ it('restores song order after a failed save without showing a persistent toast i
   expect(save).toHaveBeenCalledWith([{id:'piece',sortKey:0}]);
   expect(reload).toHaveBeenCalledOnce();expect(notify).not.toHaveBeenCalled();
 });
+
+// Diagnostic OKLab/CVD contract from the approved D21/D42 proposal. This intentionally
+// preserves close pairs in the first eight; numbered names supply the second identity cue.
+describe('D42 approved extended voice palette', () => {
+  const proposal = JSON.parse(readFileSync('tests/fixtures/voice-palette.json','utf8'));
+  const decode = (v:number) => v <= .04045 ? v/12.92 : ((v+.055)/1.055)**2.4;
+  const encode = (v:number) => v <= .0031308 ? v*12.92 : 1.055*v**(1/2.4)-.055;
+  const multiply = (m:number[][],v:number[]) => m.map(row => row.reduce((sum,n,i)=>sum+n*v[i],0));
+  const rgb = (v:string) => {const c=normalizeColor(v);return [c.r,c.g,c.b].map(n=>n/255);};
+  const lab = (v:number[]) => multiply([[.2104542553,.7936177850,-.0040720468],[1.9779984951,-2.4285922050,.4505937099],[.0259040371,.7827717662,-.8086757660]],multiply([[.4122214708,.5363325363,.0514459929],[.2119034982,.6806995451,.1073969566],[.0883024619,.2817188376,.6299787005]],v.map(decode)).map(Math.cbrt));
+  const distance = (a:number[],b:number[]) => Math.hypot(...a.map((n,i)=>n-b[i]))*100;
+  it.each(['night-paper','parchment','velvet'])('%s retains the first eight and meets the approved contrast/CVD bounds', theme => {
+    const value=tokens(theme),expected=proposal.themes[theme];
+    const colors=Array.from({length:16},(_,i)=>value(`voice-${i+1}`));
+    colors.forEach((c,i)=>expect(normalizeColor(c).css).toBe(normalizeColor(expected.tokens[`--ds-voice-${i+1}`]).css));
+    for (const c of colors.slice(8)) for (const bg of ['page-background','surface-sunken','surface-raised','surface-overlay','material-paper-ground','canvas-surface','score-stage-top','score-stage-middle','score-stage-bottom']) expect(contrast(c,value(bg)),`${theme} ${c} against ${bg}`).toBeGreaterThanOrEqual(3);
+    for (const c of colors.slice(8)) expect(distance(lab(rgb(c)),lab(rgb(value('score-paper'))))).toBeGreaterThanOrEqual(10.5);
+    for (const mode of ['normal','protanopia','deuteranopia','tritanopia']) {
+      const simulated=colors.map(c=>lab(mode==='normal'?rgb(c):multiply(proposal.matrices[mode],rgb(c).map(decode)).map(v=>encode(Math.max(0,Math.min(1,v))))));
+      let minimum=Infinity,added=Infinity;
+      for(let i=0;i<16;i++)for(let j=i+1;j<16;j++){const d=distance(simulated[i],simulated[j]);minimum=Math.min(minimum,d);if(j>=8)added=Math.min(added,d);}
+      expect(minimum).toBeCloseTo(expected.cvd[mode].min_deltaE,2);
+      expect(added).toBeGreaterThan(mode==='normal'?10.8:theme==='parchment'?2.65:4.4);
+    }
+    // D43 explicitly stays pending comparison approval.
+    if(theme==='parchment')expect(normalizeColor(value('voice-4')).css).toBe(normalizeColor('#5A8A2A').css);
+  });
+  it('preserves identity through rename, reorder, removal, restoration and newly split parts', async () => {
+    const {assignVoiceNumbers,voiceLabel}=await import('../src/voiceIdentity');
+    const parts=[{id:'s',name:'Soprano'},{id:'b',name:'Bass'}];
+    const stored=assignVoiceNumbers(parts);const renamed=[{id:'b',name:'Basso'},{id:'s',name:'Sopran'}];
+    expect(assignVoiceNumbers(renamed,stored)).toEqual(stored);
+    expect(voiceLabel(renamed[0])).toBe('2 · Basso');
+    const next=assignVoiceNumbers([{id:'s',name:'Sopran'},{id:'s-staff1',name:'Left hand'}],stored);
+    expect(next).toEqual({s:1,b:2,'s-staff1':3});
+    expect(assignVoiceNumbers([{id:'b',name:'Bass'}],next)).toEqual(next);
+  });
+});
