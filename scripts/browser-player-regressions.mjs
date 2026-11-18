@@ -16,6 +16,7 @@ window.playerRegression = {
   },
   state: () => ({id:loadedSongId,mode:sessionMode,voices:currentScore?.parts.length,beat:engineBeat(),loop:loopEnabled,metronome:metronomeOn,follow:followPref,playing:audioEngine?.isPlaying()}),
   titles: () => renderChipTitles(),
+  textDialog: () => createEnsembleSheet(() => {}),
   export: () => openExportSheet(document.querySelector('[data-action=play]')),
   removeVoice: () => { currentScore.parts.splice(0,1); buildVoiceControls(currentScore); },
 };`;
@@ -37,6 +38,39 @@ async function pageFor(language='en') {
   return page;
 }
 try {
+  // Finish the outgoing menu's real fade between Space down/up. This used to
+  // restore focus to the Account close button and cancel native switch activation.
+  for (const source of ['library','player']) {
+    const page = await pageFor();
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    await page.evaluate(async source => {await owner.player(8);if(source==='library')owner.library();},source);
+    const before = await page.evaluate(() => playerRegression.state());
+    await page.locator(source==='library'?'#lib-menu-btn':'#player-menu-btn').click();
+    const outgoing = page.locator('dialog[open]').first();
+    await outgoing.evaluate(node => node.style.transitionDuration='60s');
+    await page.getByText('Account and devices',{exact:true}).click();
+    const shared = page.getByRole('switch',{name:'This device is shared (24 h offline)',exact:true});
+    assert.equal(await shared.isChecked(),false);
+    await shared.focus();await page.keyboard.down('Space');
+    await outgoing.evaluate(node => node.dispatchEvent(new TransitionEvent('transitionend',{propertyName:'opacity'})));
+    assert.ok(await shared.evaluate(node => node===document.activeElement),'outgoing menu must retain focus in the Account switch');
+    await page.keyboard.up('Space');
+    assert.equal(await shared.isChecked(),true,'Space activates the Account switch with a piece loaded');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('lightscore-shared-device')),'1');
+    await shared.press('Space');assert.equal(await shared.isChecked(),false);
+    assert.equal(await page.evaluate(()=>localStorage.getItem('lightscore-shared-device')),'0');
+    // Even a key targeted outside the modal must not reach player shortcuts.
+    await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown',{key:'l',code:'KeyL',bubbles:true})));
+    assert.deepEqual(await page.evaluate(()=>playerRegression.state()),before);
+    await page.keyboard.press('Escape');await page.locator('dialog[open]').waitFor({state:'detached'});
+    await page.evaluate(()=>playerRegression.textDialog());
+    const text = page.getByRole('textbox');
+    await text.pressSequentially('l m f Loop Name');
+    assert.equal(await text.inputValue(),'l m f Loop Name','dialog text keeps spaces and player shortcut letters');
+    assert.deepEqual(await page.evaluate(()=>playerRegression.state()),before);
+    await page.keyboard.press('Escape');await page.close();
+    results.push(`${source} Account switch survives menu exit during Space; modal typing leaves player unchanged`);
+  }
   // Both editors traverse the shared local-open path in Together mode. Hold the
   // requests until both songs are open, proving persistence adds no round trip.
   for (const concurrentStatus of [200,409]) {

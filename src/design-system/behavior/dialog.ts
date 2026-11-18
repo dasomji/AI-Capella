@@ -107,11 +107,15 @@ export function openDialog(
     dialog.removeEventListener("close", onNativeClose);
     dialog.removeEventListener("pointerdown", onPointer);
     dialog.removeEventListener("keydown", onKey);
+    // A replacement dialog can open during this layer's exit animation. Its
+    // focused control must keep ownership through keyup (notably native Space).
+    const restoreFocus = stack.at(-1)?.dialog === dialog;
     if (dialog.open) dialog.close();
     if (index >= 0) stack.splice(index, 1);
     stackListeners.forEach(listener => listener());
     if (!stack.length) doc.body.style.overflow = previousOverflow;
     if (
+      restoreFocus &&
       previousFocus instanceof HTMLElement &&
       previousFocus.isConnected &&
       (!options.anchor || previousFocus.getClientRects().length > 0) &&
@@ -119,7 +123,7 @@ export function openDialog(
       !previousFocus.closest("[inert]")
     )
       previousFocus.focus({ preventScroll: true });
-    else if (options.anchor) {
+    else if (restoreFocus && options.anchor) {
       // Prefer the refreshed row/grid's first control; never leave focus on body after removal.
       const scope = stack.at(-1)?.dialog;
       const fallback = anchorRegions.filter(region => region.isConnected)

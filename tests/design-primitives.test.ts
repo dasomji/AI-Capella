@@ -1062,3 +1062,24 @@ describe("D49 table render and request regressions", () => {
     }
   });
 });
+
+
+it('does not restore outgoing anchored menu focus over a replacement dialog', () => {
+  vi.stubGlobal('ResizeObserver', class {observe() {} disconnect() {}});
+  vi.spyOn(HTMLElement.prototype, 'getClientRects').mockImplementation(() =>
+    [new DOMRect(0, 0, 10, 10)] as unknown as DOMRectList);
+  const anchor = document.createElement('button');
+  document.body.append(anchor);
+  let finishExit: (() => void) | undefined;
+  const onClose = vi.fn();
+  const menu = modal({anchor, onClose, exit: finish => {finishExit = finish;}});
+  menu.api.close();
+  const account = modal();
+  const input = document.createElement('input');input.type = 'checkbox';
+  account.dialog.append(input);input.focus();
+  finishExit!();
+  expect(document.activeElement).toBe(input);
+  expect(account.dialog.open).toBe(true);
+  expect(onClose).toHaveBeenCalledOnce();
+  account.api.dispose();menu.api.dispose();vi.unstubAllGlobals();
+});

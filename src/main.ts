@@ -1,3 +1,4 @@
+import { shouldHandlePlayerShortcut } from './player-shortcuts';
 import { createVoiceKey } from './design-system/dom/player';
 import { assignVoiceNumbers, voiceColor, voiceLabel } from './voiceIdentity';
 import { themeRegistry } from './design-system/theme';
@@ -2857,13 +2858,8 @@ voiceListEl.addEventListener('dblclick', (e) => {
 songTitleEl.addEventListener('dblclick', () => currentSong?.imported && editable() && void renameSong(currentSong));
 
 window.addEventListener('keydown', (e) => {
-  if (!app.classList.contains('mode-player') || document.querySelector('dialog[open], .overlay')) return;
-  const tag = (e.target as HTMLElement | null)?.tagName;
-  const target = e.target as HTMLElement | null;
-  if (e.defaultPrevented || target?.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
-  // Preserve native activation while leaving rehearsal shortcuts available after clicks.
-  if (target?.closest('button, a[href], [role=button], summary') && (e.code === 'Space' || e.key === 'Enter')) return;
-  if (e.code === 'Space') {
+  if (!app.classList.contains('mode-player') || !shouldHandlePlayerShortcut(e)) return;
+  if (e.code === 'Space' || e.key === ' ') {
     e.preventDefault();
     togglePlay();
   } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
