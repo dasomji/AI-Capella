@@ -1,6 +1,6 @@
 import { themeRegistry } from './design-system/theme';
 import { appShellRecipe, landingRecipe } from "./design-system/recipes/shell";
-import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, updateField, createLoading, createEmptyState, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, toast } from './design-system/dom';
+import { createMainScreen, createPanelPart, createSectionMark, createOffsetControl, createCheckbox, createPlayerPart, createVoiceRow, createVoiceChip, createMixerVolume, createPlayerGlyph, createButton, updateButton, updateField, createLoading, createEmptyState, createSwitch, updateSwitch, createStatus, createAccountPart, createIconButton, createInput, createField, createCard, createBadge, createLibraryPart, updateLibraryBanner, createDialog, createSheet, createMenu, createMenuOverlay, toast } from './design-system/dom';
 import { matchBreakpoint, hasExperimentalAppearance, setAppearanceRehearsing } from './design-system/theme';
 import { localLibrary } from './local-library';
 import { appendAdminAccountLink } from './admin-account';
@@ -114,10 +114,17 @@ function openLibraryMenu(
     items: convert(items),
     onEscape: () => overlay.requestClose(),
   });
-  // D12/D24: choose presentation once; the same centered dialog survives rotation.
-  overlay = openLibrarySheet(label, menu.element, anchor, () => menu.dispose());
+  // D48/D24: shared policy chooses once; resize only re-bounds this opening.
+  overlay = createMenuOverlay({ variant: "library-popover", title: label,
+    content: menu.element, anchor, behavior: { onClose: () => menu.dispose() },
+  });
+  overlay.element.querySelector("header")!.append(createIconButton({
+    label: t("close"), icon: libraryIcon("close"), onClick: () => overlay.requestClose(),
+  }));
+  overlay.open();
   menu.element.querySelector<HTMLElement>('[role^="menuitem"]')?.focus({ preventScroll: true });
 }
+// Tempo and bar navigation contain forms: retain centered D12 dialogs at every width.
 function openPlayerPopover(anchor:HTMLElement,content:HTMLElement,_align:'start'|'center', label:string) {
   return openLibrarySheet(label, content, anchor, undefined, "player");
 }
