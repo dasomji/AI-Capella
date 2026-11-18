@@ -3,6 +3,7 @@
  * Does not seed, stop the preview, or change product data.
  */
 import assert from "node:assert/strict";
+import { verifyMainMenuPolicy } from "./browser-main-menu-policy.mjs";
 import fs from "node:fs";
 import { chromium } from "playwright";
 import {
@@ -46,6 +47,7 @@ try {
             '[data-specimen="table/pagination"] [data-renderer="dom"] div',
           )
           .waitFor();
+        await verifyMainMenuPolicy(page, viewport);
         const comparison = await page.evaluate(verifyDesignSystemPage),
           contexts = await page.evaluate(verifyDesignSystemContexts);
         assert.deepEqual(comparison.mismatches, []);
