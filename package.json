@@ -22,6 +22,7 @@
     "test:browser": "node scripts/browser-isolated.mjs",
     "test:browser:transcription": "node scripts/browser-transcription-isolated.mjs",
     "test:browser:foundation": "node scripts/browser-smoke.mjs",
+    "test:browser:responsive": "node scripts/browser-responsive.mjs",
     "test:browser:theme-extension": "node scripts/browser-theme-extension.mjs",
     "test:browser:renderer-themes": "node scripts/browser-renderer-themes.mjs",
     "test:browser:sync": "BROWSER_SCRIPT=scripts/browser-sync-acceptance.mjs node scripts/browser-isolated.mjs",
