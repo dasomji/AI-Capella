@@ -377,8 +377,29 @@ async function update(id: string, op: string, value: unknown, key?: string) {
   }
 }
 export async function saveVoiceNumbers(id: string, numbers: Record<string, number>) {
-  if (activeEnsemble() === PUBLIC_ID || !account) return;
-  await update(id, "defaults", numbers, "voiceNumbers");
+  if (isOffline() || activeEnsemble() === PUBLIC_ID || !account || !canEditPieces(activeEnsemble() ?? PUBLIC_ID)) return false;
+  const epoch = generation;
+  try {
+    // Deterministic initialization is best-effort: concurrent editors may write the
+    // same mapping. Do not use optimistic revision checks or interactive error events.
+    const response = await fetch(`/api${base()}/${id}`, {
+      method: "PATCH",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ op: "defaults", key: "voiceNumbers", value: numbers }),
+    });
+    if (response.status === 409) return true;
+    if (!response.ok) return false;
+    const m = await response.json() as PieceMetadata;
+    if (epoch === generation && m.revision >= (metadata.get(id)?.revision ?? 0)) {
+      metadata.set(id, m);
+      notify?.();
+    }
+    return true;
+  } catch {
+    // Keep the local numbers; missing stored defaults retry on a later opening.
+    return false;
+  }
 }
 export async function updateSongMetadata(
   id: string,

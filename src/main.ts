@@ -1523,8 +1523,9 @@ async function loadSongLocally(song: SongEntry, replaceAt?:number) {
   if (song.splitParts?.length) splitStaves(score, song.splitParts);
   const numbers = assignVoiceNumbers(score.parts, baseNumbers);
   if (JSON.stringify(numbers) !== JSON.stringify(song.voiceNumbers) && song.imported && !song.localOnly && editable() && !isOffline()) {
-    await saveVoiceNumbers(song.id, numbers);
-    song.voiceNumbers = numbers;
+    void saveVoiceNumbers(song.id, numbers).then(saved => {
+      if (saved) song.voiceNumbers = numbers;
+    }).catch(() => { /* Optional persistence must never interrupt rehearsal. */ });
   }
   await fontsReady;
   if (song.partNameOverrides) {
