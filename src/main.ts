@@ -1942,6 +1942,8 @@ function applyMixToViews() {
     chip.classList.toggle('is-muted', state === 'muted');
     chip.classList.toggle('is-solo', state === 'solo');
     chip.classList.toggle('is-dimmed', dimmed.has(chip.dataset.part!));
+    const isolated = state !== 'muted' && currentScore!.parts.every(p => p.id === chip.dataset.part || partMix.get(p.id) === 'muted');
+    updateButton(chip as HTMLButtonElement, {pressed: isolated});
   });
   document.querySelectorAll<HTMLInputElement>('.duck-range').forEach((r) => (r.value = String(duckVolume)));
   document.querySelectorAll('.duck-value').forEach((o) => (o.textContent = `${Math.round(duckVolume * 100)}%`));
