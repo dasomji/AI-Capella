@@ -9,6 +9,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
+import { adminTableParams, clampedPageIndex } from "./admin-table-query";
 import { adminRequest, managementError } from "./admin-request";
 import { adminManagementMessages } from "./i18n";
 import { fill, ui, useAdmin, type AdminRow } from "./admin-format";
@@ -29,7 +30,7 @@ const features = tableFeatures({
 });
 const interactive = "a,button,input,select,textarea,label,summary,[role=button]";
 /**
- * Lists fetch one server page at a time; detail members may opt into cached client filtering.
+ * Lists and detail members fetch one debounced server page at a time.
  * Cursors remain scoped to the complete filter/sort/limit query.
  * Pieces, audit, jobs, users, ensembles, memberships and pickers all share this table.
  */
@@ -38,7 +39,6 @@ export function AdminDataTable({
   columns,
   filters = {},
   search = "",
-  clientSearch,
   onOpen,
   revision = 0,
   caption,
@@ -55,8 +55,6 @@ export function AdminDataTable({
   columns: AdminColumn[];
   filters?: Record<string, string>;
   search?: string;
-  /** Load cursor pages once, then filter these fields locally before pagination. */
-  clientSearch?: readonly string[];
   /** Opens the row's detail; rows keep a real link in their first cell for keyboard users. */
   onOpen?: (row: AdminRow) => void;
   revision?: number;
@@ -95,20 +93,29 @@ export function AdminDataTable({
       })),
     [columns],
   );
-  const needle = search.trim().toLocaleLowerCase();
-  const matching = clientSearch && needle
-    ? rows.filter(row => clientSearch.some(key => String(row[key] ?? "").toLocaleLowerCase().includes(needle)))
-    : rows;
-  const visibleRows = clientSearch
-    ? matching.slice(pagination.pageIndex * pagination.pageSize, (pagination.pageIndex + 1) * pagination.pageSize)
-    : rows;
-  const hasNext = clientSearch ? (pagination.pageIndex + 1) * pagination.pageSize < matching.length : !!next;
-  useEffect(() => {
-    if (clientSearch) setPagination(p => ({ ...p, pageIndex: 0 }));
-  }, [search, filterKey, sorting[0]?.id, sorting[0]?.desc, pagination.pageSize]);
+  const sort = sorting[0],
+    sortKey = sort ? columns.find((c) => c.id === sort.id)?.sort : undefined;
+  const signature = JSON.stringify([path, filterKey, search, sortKey, sort?.desc, pagination.pageSize]);
+  const [queryScope, setQueryScope] = useState(signature);
+  const changed = queryScope !== signature;
+  const pageIndex = clampedPageIndex(changed ? 0 : pagination.pageIndex, changed ? 1 : cursors.length);
+  // Reset before React commits: no old cursor, page label or empty-state frame for a new query.
+  if (changed) {
+    setQueryScope(signature);
+    setPagination(p => ({ ...p, pageIndex: 0 }));
+    setCursors([undefined]);
+    setNext(null);
+    setRows([]);
+    setBusy(true);
+    setError("");
+  }
+  const pageKey = JSON.stringify([signature, pageIndex]);
+  const loadedPage = useRef<string | null>(null);
+  const loading = busy || (!error && loadedPage.current !== pageKey);
+  const hasNext = !!next;
   const table = useTable({
     features,
-    data: visibleRows,
+    data: rows,
     columns: defs,
     getRowId: (r) => r.id,
     manualSorting: true,
@@ -116,66 +123,30 @@ export function AdminDataTable({
     pageCount: -1,
     enableSortingRemoval: false,
     enableMultiSort: false,
-    state: { sorting, pagination },
+    state: { sorting, pagination: { ...pagination, pageIndex } },
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
   });
-  const sort = sorting[0],
-    sortKey = sort ? columns.find((c) => c.id === sort.id)?.sort : undefined;
-  const signature = JSON.stringify([
-    path,
-    filterKey,
-    clientSearch ? "" : search,
-    !!clientSearch,
-    sortKey,
-    sort?.desc,
-    clientSearch ? null : pagination.pageSize,
-  ]);
-  const signatureRef = useRef(signature),
-    loadedPage = useRef<string | null>(null);
   useEffect(() => {
     setBusy(true);
     setError("");
-    const changed = signatureRef.current !== signature;
-    signatureRef.current = signature;
-    if (changed) {
-      loadedPage.current = null;
-      setCursors([undefined]);
-      setNext(null);
-      setRows([]);
-      if (!clientSearch && pagination.pageIndex) {
-        setPagination((p) => ({ ...p, pageIndex: 0 }));
-        return;
-      }
-    }
-    const pageKey = JSON.stringify([signature, clientSearch ? 0 : pagination.pageIndex]);
-    // Only retain data and its cursor when refreshing the page currently displayed.
+    // Retain current rows while refreshing; a different query/page is marked loading in render.
     const refresh = loadedPage.current === pageKey;
     const current = ++generation.current;
     const timer = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({
-          ...filters,
-          search: clientSearch ? "" : search,
-          limit: String(clientSearch ? 100 : pagination.pageSize),
-          ...(sortKey ? { sort: sortKey } : {}),
-          ...(sort ? { direction: sort.desc ? "desc" : "asc" } : {}),
-          ...(!clientSearch && !changed && cursors[pagination.pageIndex]
-            ? { cursor: cursors[pagination.pageIndex] }
-            : {}),
+        const params = adminTableParams({
+          filters, search, pageSize: pagination.pageSize, sort: sortKey,
+          descending: sort?.desc, cursor: cursors[pageIndex],
         });
-        for (const [key, value] of [...params]) if (value === "") params.delete(key);
-        const requestPage = () => adminRequest(path + (path.includes("?") ? "&" : "?") + params);
-        const r = await requestPage();
-        if (clientSearch) {
-          while (r.nextCursor && current === generation.current) {
-            params.set("cursor", r.nextCursor);
-            const page = await requestPage();
-            r.items.push(...page.items);
-            r.nextCursor = page.nextCursor;
-          }
-        }
+        const r = await adminRequest(path + (path.includes("?") ? "&" : "?") + params);
         if (current !== generation.current) return;
+        // A deletion can exhaust the final cursor page. Retreat before showing an empty state.
+        if (!r.items.length && pageIndex > 0) {
+          setCursors(old => old.slice(0, pageIndex));
+          setPagination(p => ({ ...p, pageIndex: clampedPageIndex(pageIndex, pageIndex) }));
+          return;
+        }
         loadedPage.current = pageKey;
         setRows(r.items);
         onRows?.(r.items);
@@ -198,10 +169,10 @@ export function AdminDataTable({
       clearTimeout(timer);
       generation.current++;
     };
-  }, [signature, clientSearch ? 0 : pagination.pageIndex, revision, retry]);
+  }, [signature, pageIndex, revision, retry]);
   const label = (id: string) => columns.find((c) => c.id === id)?.label ?? "";
   return (
-    <section data-admin={dataAdmin} aria-label={caption} aria-busy={busy}>
+    <section data-admin={dataAdmin} aria-label={caption} aria-busy={loading}>
       {error && (
         <div className={ui.actions}>
           <Status variant="admin" intent="error" role="alert">{error}</Status>
@@ -237,9 +208,9 @@ export function AdminDataTable({
                         <button
                           type="button"
                           className={ui.sort}
-                          aria-disabled={busy}
+                          aria-disabled={loading}
                           onClick={() => {
-                            if (!busy) header.column.toggleSorting();
+                            if (!loading) header.column.toggleSorting();
                           }}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
@@ -285,8 +256,8 @@ export function AdminDataTable({
           </tbody>
         </Table>
       </TableWrap>
-      {busy && <Loading layout="tw:sr-only">{m.loading}</Loading>}
-      {!busy && !error && !visibleRows.length && (
+      {loading && <Loading layout="tw:sr-only">{m.loading}</Loading>}
+      {!loading && !error && !rows.length && (
         <EmptyState
           variant="compact"
           title={filtered ? t.emptyFiltered : (emptyTitle ?? t.emptyTitle)}
@@ -294,29 +265,29 @@ export function AdminDataTable({
           action={filtered && onClear ? <Button size="compact" type="button" onClick={onClear}>{t.clear}</Button> : undefined}
         />
       )}
-      {(pagination.pageIndex > 0 || hasNext || visibleRows.length > 0) && (
+      {(pageIndex > 0 || hasNext || rows.length > 0) && (
         <TablePagination data-admin="pagination">
           <Button
             size="compact"
             type="button"
-            aria-disabled={busy || !pagination.pageIndex}
+            aria-disabled={loading || !pageIndex}
             onClick={() => {
-              if (!busy && pagination.pageIndex) table.previousPage();
+              if (!loading && pageIndex) table.previousPage();
             }}
           >
             {m.previous}
           </Button>
           <span aria-live="polite">
-            {fill(t.page, { n: pagination.pageIndex + 1 })}
-            {busy ? " · " + m.loading : ""}
+            {fill(t.page, { n: pageIndex + 1 })}
+            {loading ? " · " + m.loading : ""}
           </span>
           <Button
             size="compact"
             type="button"
-            aria-disabled={busy || !hasNext}
+            aria-disabled={loading || !hasNext}
             onClick={() => {
-              if (busy || !hasNext) return;
-              if (!clientSearch) setCursors((old) => [...old.slice(0, pagination.pageIndex + 1), next!]);
+              if (loading || !hasNext) return;
+              setCursors((old) => [...old.slice(0, pageIndex + 1), next!]);
               table.nextPage();
             }}
           >
