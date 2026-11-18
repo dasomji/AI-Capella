@@ -1359,7 +1359,7 @@ Phase 4a implementation details:
 - API: POST `/api/ensembles/:ensemble/originals` accepts a raw streamed body and
   `X-Original-Filename`; response returns an object ID. GET `originals/:object`
   streams an attachment, or `?signed=1` redirects to a signed GET valid at most
-  60 seconds. Reads add no in-app audit rows (see proposed ADR 0007). Current
+  60 seconds. Reads add no in-app audit rows (see ADR 0007). Current
   transcribe/lead is required. Signed links are bearer grants for their short
   lifetime and cannot enforce a revocation that occurs after issuance.
 - POST `transcriptions`, with `Idempotency-Key`, `{sourceObjects:[ids], options}`
@@ -2177,7 +2177,7 @@ pitch. Sequence alignment retains duplicate measures; parts retain multiplicity.
 - S1: page rendering uses its own two-global/two-user admission, four queued
   requests and a two-second queue deadline. Request abort and 20-second timeout
   combine. Authorized PNGs use a 32 MiB memory LRU keyed by object/page/250 dpi;
-  no derived object can remove an original. Preview reads add no in-app audit rows (proposed ADR 0007). Responses include sandbox/no-store.
+  no derived object can remove an original. Preview reads add no in-app audit rows (ADR 0007). Responses include sandbox/no-store.
   Review caches page blob URLs and aborts superseded requests, revoking on close.
 - S2: landing ensemble changes immediately reconcile the transcription scope and
   jobs. Start rechecks current scope after loading server limits; its heading names
@@ -2520,7 +2520,7 @@ download actions still require reasons and share 10/min, 30/hour and 200/day
 persistent caps, with clear 429 messages. The existing server logger emits
 `admin.content_access` (reason and target) and `admin.cap_hit` (cap metadata) as
 structured UTC stdout for Grafana; no infrastructure is provisioned. See
-[ADR 0007 (Proposed)](adr/0007-admin-audit-scope-and-read-limits.md) and SYSADMIN.md.
+[ADR 0007](adr/0007-admin-audit-scope-and-read-limits.md) and SYSADMIN.md.
 The audit UI retains ensemble scope and safe mutation-reason excerpts.
 Cursor types are validated; NUL/unpaired-surrogate input is rejected; PostgreSQL
 class 22 maps to 422. Versions paginate by `(version_no DESC,id ASC)`. JSON numeric

@@ -13,5 +13,5 @@ removing existing historical audit rows. Content/download reasons and caps remai
 structured operational stdout records access reasons and cap hits. Non-admin
 limits and atomic mutation auditing remain unchanged.
 
-See [ADR 0007 (Proposed)](../adr/0007-admin-audit-scope-and-read-limits.md) and
+See [ADR 0007](../adr/0007-admin-audit-scope-and-read-limits.md) and
 [ADR 0002](../adr/0002-admin-membership-and-role-concurrency.md).

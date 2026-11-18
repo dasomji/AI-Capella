@@ -175,7 +175,7 @@ UTC timestamp, request ID, actor, cap kind, maximum and window milliseconds.
 Grafana receives operational logs through the deployment log collector; no app
 read audit replaces it. Alerting hook: match repeated content-hour/content-day
 cap hits. Log collection, retention/access controls and alerts remain operator
-work; this change provisions nothing. See [ADR 0007 (Proposed)](adr/0007-admin-audit-scope-and-read-limits.md).
+work; this change provisions nothing. See [ADR 0007](adr/0007-admin-audit-scope-and-read-limits.md).
 
 Search, ID, cursor and reason strings reject NUL and unpaired surrogates. Typed
 cursor validation rejects malformed timestamps, and PostgreSQL class 22 data

@@ -133,7 +133,7 @@ sustained 5xx, /readyz DB/migration failure, missing rehearsal ownership after d
 grace (~30s), sandbox.unavailable, worker crashes, growing queue/expired leases,
 provider account errors, mail failure, backup age/hash/restore failure, disk pressure,
 and repeated content/download `admin.cap_hit` events on structured stdout (SYSADMIN.md;
-proposed ADR 0007). Admin list/detail reads have no rate caps or audit writes. Logs/audit must exclude passwords, keys,
+ADR 0007). Admin list/detail reads have no rate caps or audit writes. Logs/audit must exclude passwords, keys,
 session/invitation tokens and score bodies. Keep real failure notifications enabled.
 Schedule accounts:cleanup daily in the trusted environment; worker owns temporary-file
 and object-deletion outbox cleanup. Confirm terminal failures and retain evidence.

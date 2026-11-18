@@ -1,6 +1,7 @@
-Status: Proposed — awaiting product-owner approval
-
 # Admin Audit Scope And Read Limits
+
+The product owner, Daniel, decided in chat on 2026-11-18: no read limits except
+the content/download caps, and the in-app audit covers mutations only.
 
 ## Context
 
@@ -10,7 +11,7 @@ explaining a change. Per-actor list limits also interfere with ordinary paginate
 browsing and detail-table search. Operational troubleshooting belongs in Grafana,
 using structured server stdout, rather than in the product's audit history.
 
-## Proposal
+## Decision
 
 - Record create/update/delete operations, including platform roles, membership
   permissions/removal, invitations, CLI role writes and transcription stop/resume.
@@ -50,5 +51,5 @@ upload mutations still audit. `tests/unit.test.ts` checks the logger's explicit
 fields, request correlation, UTC time and single-line JSON. The browser admin
 suite verifies required reasons, cap errors and the mutation-only write behavior.
 
-This document remains proposed pending product-owner review. See the rejected
+See the rejected
 [read-auditing approach](../out-of-scope/admin-read-auditing.md).
