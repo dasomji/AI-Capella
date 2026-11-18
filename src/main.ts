@@ -841,9 +841,10 @@ function openExportSheet(opener: HTMLElement | null) {
     li.style.setProperty('--c', source.color);
     li.dataset.themeVoice = String(score.parts.findIndex(part => (part.sourceId ?? part.id) === source.id));
     li.dataset.themeVoiceCount = String(score.parts.length);
-    const check = createCheckbox({variant:'export-voice',checked:true,label:source.name,attrs:{'aria-label':source.name}}).querySelector('input')!;
+    const checkbox = createCheckbox({variant:'export-voice',checked:true,label:'',attrs:{'aria-label':source.name}});
+    const check = checkbox.querySelector('input')!;
     const name = createInput({variant:'panel-export',value:source.name,attrs:{'aria-label':t('renameVoice')}});
-    li.append(check, name);
+    li.append(checkbox, name);
     list.appendChild(li);
     check.addEventListener('change', () => {
       li.classList.toggle('off', !check.checked);
