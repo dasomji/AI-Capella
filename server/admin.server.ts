@@ -28,7 +28,7 @@ export const admin = new Hono<{
 admin.onError((e, c) => { if (e instanceof DomainError)
     return adminJSON(c, { code: e.code, message: e.code==='rate_limited' ? e.message : undefined, ...(e.code==='rate_limited' ? (e as any).limit : {}) }, e.status as 400); if (e instanceof z.ZodError || e instanceof SyntaxError || (typeof (e as any)?.code==='string' && (e as any).code.startsWith('22')))
     return adminJSON(c, { code: 'invalid_input', message: 'Use bounded filters and ISO instants with offset or Z.' }, 422); logError('admin.http', e); return adminJSON(c, { code: 'service_unavailable' }, 500); });
-export async function adminLimit(actor: string, kind = 'read', max = 120, windowMs = 60000) {
+export async function adminLimit(actor: string, kind: string, max: number, windowMs = 60000) {
     const r = await pool.query(`insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request<=$2-$3 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request<=$2-$3 then $2 else rate_limit.last_request end returning count`, ['admin:' + kind + ':' + actor, Date.now(),windowMs]);
     if (r.rows[0].count > max) {
         console.warn(JSON.stringify({timestamp:new Date().toISOString(),level:'warn',event:'admin.cap_hit',actor,kind,max,windowMs}));
@@ -36,7 +36,7 @@ export async function adminLimit(actor: string, kind = 'read', max = 120, window
     }
 }
 admin.use('*', async (c, next) => { c.header('Cache-Control', 'no-store'); const s = await adminSession(c.req.raw.headers); if (!s)
-    return adminJSON(c, { code: 'not_found' }, 404); for(const v of Object.values(c.req.param()))safeAdminText.max(200).parse(v); c.set('actor', s.user.id); await adminLimit(s.user.id); await adminQueries(next); if(['GET','HEAD'].includes(c.req.method) && c.res.status===200 && /\/transcription\/(control|metrics|failures)$/.test(c.req.path)){const data=await c.res.clone().json();await listAudit(c,c.req.path.split('/').at(-1)!,Array.isArray(data)?data.length:data.items?.length??1);} });
+    return adminJSON(c, { code: 'not_found' }, 404); for(const v of Object.values(c.req.param()))safeAdminText.max(200).parse(v); c.set('actor', s.user.id); await adminQueries(next); if(['GET','HEAD'].includes(c.req.method) && c.res.status===200 && /\/transcription\/(control|metrics|failures)$/.test(c.req.path)){const data=await c.res.clone().json();await listAudit(c,c.req.path.split('/').at(-1)!,Array.isArray(data)?data.length:data.items?.length??1);} });
 export async function adminAudit(actor: string, type: string, target: string, action = 'detail', reason = '') {
     await pool.query("insert into audit_events(actor_id,action,target_id,ensemble_id,outcome,metadata) values($1,$2,$3,case when $5='ensemble' then (select id from ensembles where id=$3) when $5='piece' then (select ensemble_id from music_pieces where id=$3) when $5='original' then (select ensemble_id from stored_objects where id=$3) end,'ok',$4)", [actor, 'admin.' + type + '.' + action, target, { targetType: type, reason },type]);
 }
@@ -58,7 +58,6 @@ const sources = {
 } as const;
 for (const kind of Object.keys(sources) as (keyof typeof sources)[])
     admin.get('/' + (kind === 'jobs' ? 'transcription/jobs' : kind), async (c) => {
-        await adminLimit(c.get('actor'),'list:'+kind,30);
         const q = adminQuery.parse(c.req.query()), s = sources[kind], alias = kind === 'memberships' ? 'm' : 't', values: unknown[] = [], where: string[] = [];
         const bind = (v: unknown) => { values.push(v); return '$' + values.length; };
         if (q.search)
@@ -148,14 +147,13 @@ admin.get('/pieces/:id', async (c) => {
     return adminJSON(c, { profile: row, sections:await detailSections(c.req.path.includes('/ensembles/')?'ensembles':'pieces',id), timeZone: env.APP_TIME_ZONE });
 });
 admin.get('/pieces/:id/versions', async c=>{
- await adminLimit(c.get('actor'),'list:versions',30);
  const q=adminQuery.parse(c.req.query());let cursor:[number,string]|null=null;
  if(q.cursor){try{cursor=z.tuple([z.number().int().positive(),safeAdminText.min(1).max(200)]).parse(JSON.parse(Buffer.from(q.cursor,'base64url').toString()));}catch{throw new DomainError('invalid_cursor',422);}}
  const rows=(await pool.query('select id,version_no,created_by,format,content_hash,size::float8 as size,created_at from score_versions where piece_id=$1 and ($2::int is null or version_no<$2 or (version_no=$2 and id>$3)) order by version_no desc,id asc limit $4',[c.req.param('id'),cursor?.[0]??null,cursor?.[1]??null,q.limit+1])).rows;
  const items=rows.slice(0,q.limit),last=items.at(-1);await listAudit(c,'versions',items.length);
  return adminJSON(c,{items,nextCursor:rows.length>q.limit?Buffer.from(JSON.stringify([last.version_no,last.id])).toString('base64url'):null});
 });
-admin.get('/pieces/:id/originals', async (c) => { await adminLimit(c.get('actor'),'list:originals',30); const q = adminQuery.parse(c.req.query()); const rows = (await pool.query(`select distinct o.id,o.original_filename,o.size::float8 as size,o.content_type,o.sha256,o.created_at from music_pieces p join transcription_jobs j on j.id=p.provenance->>'jobId' and j.ensemble_id=p.ensemble_id join job_pages pg on pg.job_id=j.id join stored_objects o on o.id=pg.object_id and o.kind='original' and o.state='ready' where p.id=$1 and ($2::text is null or o.id>$2) order by o.id limit $3`, [c.req.param('id'), q.cursor ?? null, q.limit + 1])).rows; await listAudit(c,'originals',Math.min(rows.length,q.limit)); return adminJSON(c, { items: rows.slice(0, q.limit), nextCursor: rows.length > q.limit ? rows[q.limit - 1].id : null }); });
+admin.get('/pieces/:id/originals', async (c) => { const q = adminQuery.parse(c.req.query()); const rows = (await pool.query(`select distinct o.id,o.original_filename,o.size::float8 as size,o.content_type,o.sha256,o.created_at from music_pieces p join transcription_jobs j on j.id=p.provenance->>'jobId' and j.ensemble_id=p.ensemble_id join job_pages pg on pg.job_id=j.id join stored_objects o on o.id=pg.object_id and o.kind='original' and o.state='ready' where p.id=$1 and ($2::text is null or o.id>$2) order by o.id limit $3`, [c.req.param('id'), q.cursor ?? null, q.limit + 1])).rows; await listAudit(c,'originals',Math.min(rows.length,q.limit)); return adminJSON(c, { items: rows.slice(0, q.limit), nextCursor: rows.length > q.limit ? rows[q.limit - 1].id : null }); });
 admin.post('/pieces/:id/content', async (c) => { const input = adminAccess.parse(await c.req.json()); await contentLimit(c.get('actor')); const row = (await pool.query('select v.format,v.musicxml,v.native_score from music_pieces p join score_versions v on v.id=p.current_version_id and v.piece_id=p.id where p.id=$1', [c.req.param('id')])).rows[0]; if (!row)
     throw new DomainError('not_found', 404); await adminAudit(c.get('actor'), 'piece', c.req.param('id'), 'content', input.reason); return adminJSON(c, { format: row.format, body: row.musicxml ?? row.native_score }); });
 admin.post('/pieces/:id/originals/:object/download', async (c) => { const input = adminAccess.parse(await c.req.json()); await contentLimit(c.get('actor')); const row = (await pool.query(`select o.id,o.object_key,o.original_filename from music_pieces p join transcription_jobs j on j.id=p.provenance->>'jobId' and j.ensemble_id=p.ensemble_id join job_pages pg on pg.job_id=j.id join stored_objects o on o.id=pg.object_id where p.id=$1 and o.id=$2 and o.kind='original' and o.state='ready' limit 1`, [c.req.param('id'), c.req.param('object')])).rows[0]; if (!row)
