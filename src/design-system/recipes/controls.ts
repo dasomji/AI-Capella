@@ -136,7 +136,7 @@ function actionRecipe(intent: ButtonIntent, pressed: boolean, variant: "standard
   const landing = variant === "landing";
   const colors: Record<ButtonIntent,string> = variant === "scan-ok" ? {
     secondary:"tw:bg-transparent tw:text-ink-secondary tw:border-transparent tw:hover:border-ink-secondary",
-    primary:"tw:bg-ink tw:text-surface-sunken tw:border-transparent tw:hover:bg-action-hover",
+    primary:"tw:bg-ink tw:text-surface-sunken tw:border-transparent tw:hover:bg-component-action-hover",
     danger:"tw:bg-danger tw:text-on-danger tw:border-transparent",
     quiet:"tw:bg-transparent tw:text-ink-secondary tw:border-transparent tw:hover:text-ink",
   } : variant === "library" ? {...buttonIntents,danger:"tw:bg-danger tw:text-surface-sunken tw:border-danger"} : buttonIntents;
