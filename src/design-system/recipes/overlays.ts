@@ -91,13 +91,13 @@ function toastPlacementRecipe() {
 }
 
 /** D48: retain dialog semantics/focus while presenting a compact desktop popup. */
-const anchoredPanel = "tw:fixed tw:inset-auto! tw:m-flush! tw:w-panel-popover-width! tw:max-w-none tw:max-h-none tw:p-small! tw:rounded-menu! tw:backdrop:bg-transparent!";
+const anchoredPanel = "tw:fixed tw:inset-auto tw:m-flush tw:w-panel-popover-width tw:max-w-none tw:max-h-none tw:p-small tw:rounded-menu tw:backdrop:bg-transparent";
 function dialogRecipe(
   ...args: Parameters<typeof dialogRecipeStyles>
 ): ReturnType<typeof dialogRecipeStyles> {
   const slots = dialogRecipeStyles(...args);
   return normalizeRecipe(args[0]?.presentation === "anchored"
-    ? { ...slots, panel: slots.panel + " " + anchoredPanel } : slots);
+    ? { ...slots, panel: slots.panel.split(" ").filter(token => !["tw:inset-flush", "tw:m-auto", "tw:w-width-sheet", "tw:w-width-dialog", "tw:max-w-max-width-dialog", "tw:max-h-max-height-dialog", "tw:p-section", "tw:rounded-dialog", "tw:backdrop:bg-backdrop"].includes(token)).join(" ") + " " + anchoredPanel } : slots);
 }
 function menuRecipe(
   ...args: Parameters<typeof menuRecipeStyles>
