@@ -21,7 +21,7 @@ function canvas(h = 200) {
   document.body.append(c); return c;
 }
 function voices() {
-  const parts = p2.modules[13].parseMusicXML(p2.fixtures[12]).parts;
+  const parts = p2.modules[13].parseMusicXML(p2.fixtures[16]).parts;
   for (const part of parts) {
     const el = document.createElement('div'); el.dataset.part = part.id; document.body.append(el);
   }
@@ -54,7 +54,7 @@ export async function draw(next) {
     repaint = () => { ctx.fillStyle = theme.stageFill(ctx, 200); ctx.fillRect(0, 0, 1200, 200); };
   } else if (mode === 'ribbons') {
     const c = canvas(400);
-    const dispose = art.animateRibbons(c, (w, h) => ({ voices: 12, x0: 20, x1: w - 20, cy: h / 2, gap: 20, amp: 30 }));
+    const dispose = art.animateRibbons(c, (w, h) => ({ voices: 16, x0: 20, x1: w - 20, cy: h / 2, gap: 20, amp: 30 }));
     stopAnimation = dispose;
     repaint = () => {};
   } else if (mode === 'backdrop') {
@@ -67,7 +67,7 @@ export async function draw(next) {
     // Covers and the light sample are stateless draw functions; repaint existing canvas data.
     repaint = async () => {
       const markers = [...document.querySelectorAll('[data-part], [data-theme-voice]')];
-      seed(); await p2.draw(mode, 12); document.body.append(...markers);
+      seed(); await p2.draw(mode, 16); document.body.append(...markers);
     };
   }
   await settle(); await repaint(); await repaint(); voices();
@@ -84,9 +84,9 @@ export function images() { return [...document.querySelectorAll('canvas')].map(c
 export function verifyVoices() {
   const theme = api.readTheme(), palette = p2.modules[1];
   const nodes = [...document.querySelectorAll('[data-part], [data-theme-voice]')];
-  return nodes.length === 28 && nodes.every(el => {
+  return nodes.length === 32 && nodes.every(el => {
     const index = el.dataset.part ? Number(el.dataset.part.slice(1)) : Number(el.dataset.themeVoice);
-    return el.style.getPropertyValue('--c') === palette.colorForPart(index, el.dataset.part ? 12 : 16, theme);
+    return el.style.getPropertyValue('--c') === palette.colorForPart(index, 16, theme);
   });
 }
 export async function verifyLifecycle() {

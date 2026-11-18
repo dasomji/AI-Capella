@@ -21,20 +21,25 @@ try {
   for(const card of cards)assert.equal(card.clamp,'none','full title is retained');
   let mismatch=false;
   for(const row of cards){const peers=cards.filter(c=>Math.abs(c.top-row.top)<1);if(peers.length>1){const aligned=peers.every(c=>Math.abs(c.baseline-row.baseline)<1&&Math.abs(c.height-row.height)<1);mismatch ||= !aligned;if(!baseline)assert.ok(aligned,JSON.stringify(peers));}}
-  if(width===768)assert.ok(await page.locator('.song-card').first().evaluate(e=>Math.abs(e.getBoundingClientRect().width-280)<1),'D23 keeps the tablet card width');
+  if(width===768&&!baseline)assert.ok(await page.locator('.song-card').first().evaluate(e=>Math.abs(e.getBoundingClientRect().width-280)<1),'D23 keeps the tablet card width');
   results.push({theme,width,height,cards,mismatch});await shot('library');
-  await page.locator('#lib-menu-btn').click();await page.getByRole('dialog',{name:'Settings',exact:true}).waitFor();await shot('settings');await page.keyboard.press('Escape');
+  await page.locator('#lib-menu-btn').click();await page.getByRole('dialog',{name:baseline?'Language':'Settings',exact:true}).waitFor();await shot('settings');await page.keyboard.press('Escape');
   // Live re-theme is checked in renderer-themes, where the rehearsal appearance hold is bypassed explicitly.
-  await page.evaluate(()=>window.owner.player(16));await page.locator('[data-voice-key] button').last().waitFor();
-  assert.equal(await page.locator('[data-voice-key] button').count(),16);
-  assert.equal(await page.locator('#voice-list [data-voice-number]').count(),16);
-  assert.match(await page.locator('[data-voice-key]').innerText(),/16/);
+  await page.evaluate(()=>window.owner.player(16));if(!baseline)await page.locator('[data-voice-key] button').last().waitFor();
+  if(!baseline)assert.equal(await page.locator('[data-voice-key] button').count(),16);
+  if(!baseline)assert.equal(await page.locator('#voice-list [data-voice-number]').count(),16);
+  if(!baseline)assert.match(await page.locator('[data-voice-key]').innerText(),/16/);
   await shot('16-roll');await page.evaluate(()=>window.owner.staff());await shot('16-staff');
   await page.evaluate(()=>window.owner.mixer());await page.locator('dialog[open]').waitFor();
-  assert.equal(await page.locator('dialog [data-voice-number]').count(),16);await shot('16-mixer');await page.keyboard.press('Escape');
+  if(!baseline)assert.equal(await page.locator('dialog [data-voice-number]').count(),16);await shot('16-mixer');await page.keyboard.press('Escape');
   // Deliberate unison/short-note case: every ID stays keyboard-inspectable in the separate key.
+  await page.evaluate(async()=>{const doc=new DOMParser().parseFromString(window.ownerXML[16],'text/xml');for(const p of doc.querySelectorAll('pitch'))p.innerHTML='<step>C</step><octave>4</octave>';for(const d of doc.querySelectorAll('note > duration'))d.textContent=String(Number(d.textContent)/16);window.ownerXML[16]=new XMLSerializer().serializeToString(doc);await window.owner.player(16);});
+  if(!baseline)assert.equal(await page.locator('[data-voice-key] button').count(),16);
+  await shot('16-unison-short');
+  if(!baseline){
   const button=page.locator('[data-voice-key] button').last();await button.focus();await page.keyboard.press('Space');
   assert.equal(await button.getAttribute('aria-pressed'),'true');await page.keyboard.press('Space');
+  }
   if(theme==='parchment'&&width!==768&&!baseline){
    for(const variant of ['current','proposed']){
     await page.evaluate(async variant=>{const api=await import('/src/design-system/theme/index.ts');api.setAppearanceRehearsing(false);document.documentElement.style.setProperty('--ds-voice-4',variant==='current'?'#5A8A2A':'#527E26');api.notifyThemeMaterialChange();await window.owner.player(8);window.owner.roll();},variant);
