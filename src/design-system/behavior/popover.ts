@@ -1,3 +1,12 @@
+import { matchBreakpoint } from "../theme";
+
+/** D48: wide fine-pointer desktops anchor small menus; choose only at open time. */
+export function menuPresentation(): "anchored" | "centered" {
+  return matchBreakpoint("transport", "min").matches &&
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches
+    ? "anchored" : "centered";
+}
+
 /** Collision-aware measured placement; presentation never switches while open (D24). */
 export function anchorPopover(
   panel: HTMLElement,
