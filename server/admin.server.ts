@@ -12,7 +12,7 @@ import { transcriptionUsage, usageSQL } from './usage.server';
 import { processingPaused } from './transcription.server';
 import { storage } from './storage.server';
 import { env } from './env.server';
-import { logError } from './logger.server';
+import { logError, logAdminContentAccess, logAdminCapHit } from './logger.server';
 function numericRow(row:Record<string,any>){return Object.fromEntries(Object.entries(row).map(([k,v])=>[k,v!==null&&['calls','pages','jobs','attempts','latency','estimated_cost','input_tokens','output_tokens','known_cost_usd','estimated_cost_usd','estimated_cost_per_page_usd','estimated_cost_per_job_usd'].includes(k)?Number(v):v]));}
 /** Only actual database Date values are formatted; score bodies remain opaque. */
 function adminJSON(c:Context,data:any,status:ContentfulStatusCode=200){
@@ -31,19 +31,12 @@ admin.onError((e, c) => { if (e instanceof DomainError)
 export async function adminLimit(actor: string, kind: string, max: number, windowMs = 60000) {
     const r = await pool.query(`insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request<=$2-$3 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request<=$2-$3 then $2 else rate_limit.last_request end returning count`, ['admin:' + kind + ':' + actor, Date.now(),windowMs]);
     if (r.rows[0].count > max) {
-        console.warn(JSON.stringify({timestamp:new Date().toISOString(),level:'warn',event:'admin.cap_hit',actor,kind,max,windowMs}));
+        logAdminCapHit(actor,kind,max,windowMs);
         const error=new DomainError('rate_limited',429);const unit=windowMs===86400000?'day':windowMs===3600000?'hour':'minute';error.message=`Admin limit reached (${max} per ${unit}). Please wait before trying again.`;(error as any).limit={max,unit};throw error;
     }
 }
 admin.use('*', async (c, next) => { c.header('Cache-Control', 'no-store'); const s = await adminSession(c.req.raw.headers); if (!s)
-    return adminJSON(c, { code: 'not_found' }, 404); for(const v of Object.values(c.req.param()))safeAdminText.max(200).parse(v); c.set('actor', s.user.id); await adminQueries(next); if(['GET','HEAD'].includes(c.req.method) && c.res.status===200 && /\/transcription\/(control|metrics|failures)$/.test(c.req.path)){const data=await c.res.clone().json();await listAudit(c,c.req.path.split('/').at(-1)!,Array.isArray(data)?data.length:data.items?.length??1);} });
-export async function adminAudit(actor: string, type: string, target: string, action = 'detail', reason = '') {
-    await pool.query("insert into audit_events(actor_id,action,target_id,ensemble_id,outcome,metadata) values($1,$2,$3,case when $5='ensemble' then (select id from ensembles where id=$3) when $5='piece' then (select ensemble_id from music_pieces where id=$3) when $5='original' then (select ensemble_id from stored_objects where id=$3) end,'ok',$4)", [actor, 'admin.' + type + '.' + action, target, { targetType: type, reason },type]);
-}
-async function listAudit(c:Context,kind:string,count:number){
- const query=adminQuery.parse(c.req.query());const raw=c.req.query();const ids=Object.fromEntries(Object.entries(raw).filter(([k])=>['ensemble','user','actor','target'].includes(k)));
- await pool.query("insert into audit_events(actor_id,ensemble_id,action,outcome,metadata) values($1,coalesce((select id from ensembles where id=$2),(select ensemble_id from music_pieces where id=$5)),$3,'ok',$4)",[c.get('actor'),query.ensemble??null,'admin.'+kind+'.list',{endpoint:c.req.path,filterKeys:Object.keys(raw).sort(),ids,resultCount:count},c.req.param('id')??null]);
-}
+    return adminJSON(c, { code: 'not_found' }, 404); for(const v of Object.values(c.req.param()))safeAdminText.max(200).parse(v); c.set('actor', s.user.id); await adminQueries(next); });
 async function statsRange(c:Context){const q=adminQuery.parse(c.req.query()),days=calendarRange(env.APP_TIME_ZONE);return {...q,from:q.from??(q.all==='true'?'1970-01-01T00:00:00Z':calendarInstant(days.from,env.APP_TIME_ZONE)),to:q.to??calendarInstant(days.to,env.APP_TIME_ZONE)};}
 async function contentLimit(actor:string){await adminLimit(actor,'content',10);await adminLimit(actor,'content-hour',30,3600000);await adminLimit(actor,'content-day',200,86400000);}
 const memberFields = 'm.id,m.user_id,m.ensemble_id,e.name as ensemble_name,u.name,u.email,m.is_lead,m.manage_members,m.edit_music_pieces,m.ai_transcription,m.created_at';
@@ -106,7 +99,6 @@ for (const kind of Object.keys(sources) as (keyof typeof sources)[])
         const cursor = more && last ? Buffer.from(JSON.stringify([last._cursor instanceof Date ? last._cursor.toISOString() : String(last._cursor), last.id])).toString('base64url') : null;
         for (const row of items)
             delete row._cursor;
-        await listAudit(c,kind,items.length);
         return adminJSON(c, { items, nextCursor: cursor, timeZone: env.APP_TIME_ZONE });
     });
 /** Initial detail sections share one HTTP request; every collection remains bounded. */
@@ -134,34 +126,32 @@ admin.get('/users/:id', async (c) => {
     const sessions = (await pool.query(`select count(*)::int as count,max(updated_at) as last_active,max(created_at) as last_sign_in from session where user_id=$1 and expires_at>now()`, [id])).rows[0];
     const devices = (await pool.query(`select case when user_agent ~* 'mobile|android|iphone|ipad' then 'Mobile' else 'Desktop / other' end as device,count(*)::int as count,max(updated_at) as last_active from session where user_id=$1 and expires_at>now() group by 1`, [id])).rows;
     const roles = (await pool.query('select role,created_at from platform_roles where user_id=$1', [id])).rows;
-    await adminAudit(c.get('actor'), 'user', id);
     return adminJSON(c, { profile: u, sessions, devices, roles, sections:await detailSections('users',id), timeZone: env.APP_TIME_ZONE });
 });
 admin.get('/ensembles/:id', async (c) => { const id = c.req.param('id'); const row = (await pool.query('select id,name,kind,created_at from ensembles where id=$1', [id])).rows[0]; if (!row)
-    throw new DomainError('not_found', 404); await adminAudit(c.get('actor'), 'ensemble', id); return adminJSON(c, { profile: row, sections:await detailSections(c.req.path.includes('/ensembles/')?'ensembles':'pieces',id), timeZone: env.APP_TIME_ZONE }); });
+    throw new DomainError('not_found', 404); return adminJSON(c, { profile: row, sections:await detailSections(c.req.path.includes('/ensembles/')?'ensembles':'pieces',id), timeZone: env.APP_TIME_ZONE }); });
 admin.get('/pieces/:id', async (c) => {
     const id = c.req.param('id'), row = (await pool.query("select id,title,ensemble_id,format,current_version_id,created_at,updated_at,provenance->>'jobId' as transcription_job_id from music_pieces where id=$1", [id])).rows[0];
     if (!row)
         throw new DomainError('not_found', 404);
-    await adminAudit(c.get('actor'), 'piece', id);
     return adminJSON(c, { profile: row, sections:await detailSections(c.req.path.includes('/ensembles/')?'ensembles':'pieces',id), timeZone: env.APP_TIME_ZONE });
 });
 admin.get('/pieces/:id/versions', async c=>{
  const q=adminQuery.parse(c.req.query());let cursor:[number,string]|null=null;
  if(q.cursor){try{cursor=z.tuple([z.number().int().positive(),safeAdminText.min(1).max(200)]).parse(JSON.parse(Buffer.from(q.cursor,'base64url').toString()));}catch{throw new DomainError('invalid_cursor',422);}}
  const rows=(await pool.query('select id,version_no,created_by,format,content_hash,size::float8 as size,created_at from score_versions where piece_id=$1 and ($2::int is null or version_no<$2 or (version_no=$2 and id>$3)) order by version_no desc,id asc limit $4',[c.req.param('id'),cursor?.[0]??null,cursor?.[1]??null,q.limit+1])).rows;
- const items=rows.slice(0,q.limit),last=items.at(-1);await listAudit(c,'versions',items.length);
+ const items=rows.slice(0,q.limit),last=items.at(-1);
  return adminJSON(c,{items,nextCursor:rows.length>q.limit?Buffer.from(JSON.stringify([last.version_no,last.id])).toString('base64url'):null});
 });
-admin.get('/pieces/:id/originals', async (c) => { const q = adminQuery.parse(c.req.query()); const rows = (await pool.query(`select distinct o.id,o.original_filename,o.size::float8 as size,o.content_type,o.sha256,o.created_at from music_pieces p join transcription_jobs j on j.id=p.provenance->>'jobId' and j.ensemble_id=p.ensemble_id join job_pages pg on pg.job_id=j.id join stored_objects o on o.id=pg.object_id and o.kind='original' and o.state='ready' where p.id=$1 and ($2::text is null or o.id>$2) order by o.id limit $3`, [c.req.param('id'), q.cursor ?? null, q.limit + 1])).rows; await listAudit(c,'originals',Math.min(rows.length,q.limit)); return adminJSON(c, { items: rows.slice(0, q.limit), nextCursor: rows.length > q.limit ? rows[q.limit - 1].id : null }); });
+admin.get('/pieces/:id/originals', async (c) => { const q = adminQuery.parse(c.req.query()); const rows = (await pool.query(`select distinct o.id,o.original_filename,o.size::float8 as size,o.content_type,o.sha256,o.created_at from music_pieces p join transcription_jobs j on j.id=p.provenance->>'jobId' and j.ensemble_id=p.ensemble_id join job_pages pg on pg.job_id=j.id join stored_objects o on o.id=pg.object_id and o.kind='original' and o.state='ready' where p.id=$1 and ($2::text is null or o.id>$2) order by o.id limit $3`, [c.req.param('id'), q.cursor ?? null, q.limit + 1])).rows; return adminJSON(c, { items: rows.slice(0, q.limit), nextCursor: rows.length > q.limit ? rows[q.limit - 1].id : null }); });
 admin.post('/pieces/:id/content', async (c) => { const input = adminAccess.parse(await c.req.json()); await contentLimit(c.get('actor')); const row = (await pool.query('select v.format,v.musicxml,v.native_score from music_pieces p join score_versions v on v.id=p.current_version_id and v.piece_id=p.id where p.id=$1', [c.req.param('id')])).rows[0]; if (!row)
-    throw new DomainError('not_found', 404); await adminAudit(c.get('actor'), 'piece', c.req.param('id'), 'content', input.reason); return adminJSON(c, { format: row.format, body: row.musicxml ?? row.native_score }); });
+    throw new DomainError('not_found', 404); logAdminContentAccess(c.get('actor'), 'piece', c.req.param('id'), input.reason); return adminJSON(c, { format: row.format, body: row.musicxml ?? row.native_score }); });
 admin.post('/pieces/:id/originals/:object/download', async (c) => { const input = adminAccess.parse(await c.req.json()); await contentLimit(c.get('actor')); const row = (await pool.query(`select o.id,o.object_key,o.original_filename from music_pieces p join transcription_jobs j on j.id=p.provenance->>'jobId' and j.ensemble_id=p.ensemble_id join job_pages pg on pg.job_id=j.id join stored_objects o on o.id=pg.object_id where p.id=$1 and o.id=$2 and o.kind='original' and o.state='ready' limit 1`, [c.req.param('id'), c.req.param('object')])).rows[0]; if (!row)
-    throw new DomainError('not_found', 404); await adminAudit(c.get('actor'), 'original', row.id, 'download', input.reason); return adminJSON(c, { url: await storage().signedGet(row.object_key, 60, row.original_filename ?? 'original'), expiresIn: 60 }); });
+    throw new DomainError('not_found', 404); const url = await storage().signedGet(row.object_key, 60, row.original_filename ?? 'original'); logAdminContentAccess(c.get('actor'), 'original', row.id, input.reason); return adminJSON(c, { url, expiresIn: 60 }); });
 admin.get('/transcription/control', async (c) => { const last = (await pool.query("select actor_id,(select name from \"user\" where id=actor_id) as actor_name,created_at,metadata->>'reason' as reason from audit_events where action='transcription.control' order by created_at desc,id desc limit 1")).rows[0] ?? null; return adminJSON(c, { paused: await processingPaused(), last, timeZone: env.APP_TIME_ZONE }); });
 admin.put('/transcription/control', async (c) => { const input = adminControl.parse(await c.req.json()); await transaction(async (db) => { await db.query('insert into transcription_control(id,paused) values(1,$1) on conflict(id) do update set paused=$1,updated_at=now()', [input.paused]); await db.query("insert into audit_events(actor_id,action,outcome,metadata) values($1,'transcription.control','ok',$2)", [c.get('actor'), input]); }); return adminJSON(c, { paused: await processingPaused() }); });
 admin.get('/transcription/usage', async (c) => { try {
-    const q=await statsRange(c);const data=q.all==='true'?{groups:(await pool.query(usageSQL,[q.from,q.to,env.APP_TIME_ZONE])).rows.map(numericRow)}:await transcriptionUsage(q.from,q.to);if(q.ensemble)data.groups=data.groups.filter(r=>r.ensemble_id===q.ensemble);await listAudit(c,'usage',data.groups.length);return adminJSON(c,data);
+    const q=await statsRange(c);const data=q.all==='true'?{groups:(await pool.query(usageSQL,[q.from,q.to,env.APP_TIME_ZONE])).rows.map(numericRow)}:await transcriptionUsage(q.from,q.to);if(q.ensemble)data.groups=data.groups.filter(r=>r.ensemble_id===q.ensemble);return adminJSON(c,data);
 }
 catch (e) {
     if (e instanceof Error && e.message.startsWith('Expected'))

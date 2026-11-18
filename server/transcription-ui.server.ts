@@ -1,8 +1,8 @@
-import { previewAdmission,previewCache,needsPreviewAudit } from './page-preview.server';
+import { previewAdmission,previewCache } from './page-preview.server';
 import { ProviderError } from './transcription-provider.server';
 import type { Hono } from 'hono';
 import { pool } from './db/index.server';
-import { authorize, DomainError, audit } from './domain.server';
+import { authorize, DomainError } from './domain.server';
 import { processingPaused } from './transcription.server';
 import { BoundedPageRenderer } from './page-renderer.server';
 /** Read models for the transcription UI. All sources remain capability gated. */
@@ -17,7 +17,6 @@ export function registerTranscriptionUi(app:Hono<{Variables:{user:{id:string;ema
   const e=c.req.param('ensemble'),u=c.get('user').id;await authorize(pool,u,e,'transcribe');
   const s=(await pool.query("select * from stored_objects where id=$1 and ensemble_id=$2 and kind='original' and state='ready'",[c.req.param('object'),e])).rows[0];
   const page=Number(c.req.param('page'));if(!s||!Number.isInteger(page)||page<1||page>s.provenance.pages)throw new DomainError('not_found',404);
-  if(needsPreviewAudit(u,s.id))await audit(pool,e,u,'original.access',s.id,{delivery:'page',page});
   const signal=AbortSignal.any([c.req.raw.signal,AbortSignal.timeout(20000)]),key=JSON.stringify([s.id,page,250]);
   let raster=previewCache.get(key);
   if(!raster){let slot;try{slot=await previewAdmission.take(u,signal);}catch{throw new DomainError('render_busy',503);}

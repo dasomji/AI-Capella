@@ -19,3 +19,13 @@ export function logProviderError(reason:string,status?:number,code?:string|null,
 export function logChildError(event:string,stderr:string,code?:number|null){
  console.error(JSON.stringify({timestamp:new Date().toISOString(),level:'error',event,code,stderr:stderr.replace(/[\x00-\x08\x0b-\x1f\x7f]/g,'').replace(/\.transcription-tmp\/[a-zA-Z0-9_-]+/g,'[staging]').slice(-2048)}));
 }
+
+/** Explicit admin operational fields, sent to stdout for the log collector (ADR 0007). */
+export function logAdminContentAccess(actor: string, targetType: 'piece' | 'original', targetId: string, reason: string) {
+  console.log(JSON.stringify({ timestamp: new Date().toISOString(), level: 'info', event: 'admin.content_access',
+    requestId: requests.getStore(), actor, targetType, targetId, reason }));
+}
+export function logAdminCapHit(actor: string, kind: string, max: number, windowMs: number) {
+  console.log(JSON.stringify({ timestamp: new Date().toISOString(), level: 'warn', event: 'admin.cap_hit',
+    requestId: requests.getStore(), actor, kind, max, windowMs }));
+}

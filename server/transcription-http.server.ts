@@ -4,7 +4,7 @@ import type { Hono } from 'hono';
 import { Readable } from 'node:stream';
 import { z } from 'zod';
 import { pool } from './db/index.server';
-import { authorize, audit, DomainError } from './domain.server';
+import { authorize, DomainError } from './domain.server';
 import { sourceLimits,uploadOriginal } from './originals.server';
 import { storage } from './storage.server';
 import { uploadAdmission as slots } from './upload-admission.server';
@@ -22,7 +22,6 @@ export function registerTranscriptionRoutes(app:Hono<{Variables:{user:{id:string
  const e=c.req.param('ensemble'),u=c.get('user').id;
  try{await authorize(pool,u,e,'transcribe');}catch{throw new DomainError('not_found',404);}
  const s=(await pool.query("select * from stored_objects where id=$1 and ensemble_id=$2 and kind='original' and state='ready'",[c.req.param('object'),e])).rows[0];if(!s)throw new DomainError('not_found',404);
- await audit(pool,e,u,'original.access',s.id,{delivery:c.req.query('signed')==='1'?'signed':'stream'});
  if(c.req.query('signed')==='1')return c.redirect(await storage().signedGet(s.object_key,60,s.original_filename??'original'));
  const stream=await storage().get(s.object_key);return new Response(Readable.toWeb(stream) as ReadableStream,{headers:{'Content-Type':'application/octet-stream','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(s.original_filename??'original')}`,'X-Content-Type-Options':'nosniff','Content-Length':String(s.size),'Cache-Control':'no-store','Content-Security-Policy':"sandbox; default-src 'none'"}});
  });
