@@ -76,6 +76,16 @@ try{
   for(const [kind,id] of [['users',u.id],['ensembles',e.id],['pieces',piece.id]]){
    await goto(kind+'/'+id);await page.locator(kind==='pieces'?'[data-admin=versions] tbody tr':'[data-admin=management] tbody tr').first().waitFor();await ready();await contained(kind+'-detail');
    if([390,768,1440].includes(width))await shot(kind+'-detail');
+   if(kind!=='pieces'){
+    const management=page.locator('[data-admin=management]'), search=management.getByRole('searchbox');
+    await search.fill(kind==='users'?'Testchor':'SINGER110@TEST.COM');
+    const expected=kind==='users'?30:1;
+    await page.waitForFunction(expected=>document.querySelectorAll('[data-admin=memberships] tbody tr').length===expected,expected);
+    await search.fill('no-such-member');
+    await management.getByText(lang==='en'?'Nothing matches these filters.':'Keine Treffer für diese Filter.',{exact:true}).waitFor();
+    assert.equal(await management.locator('tbody tr').count(),0);
+    await search.fill('');
+   }
    if(kind==='ensembles'){const add=page.locator('[data-admin=management]').getByRole('button',{name:lang==='en'?'Add member…':'Mitglied hinzufügen …',exact:true});await add.scrollIntoViewIfNeeded();const r=await add.boundingBox();assert.ok(r.x>=0&&r.x+r.width<=width+1,'Add member is reachable');}
    // A contained scroller must make the final actions reachable by ordinary scrolling.
    for(const wrap of await page.locator('[data-admin=table-wrap]').all()){

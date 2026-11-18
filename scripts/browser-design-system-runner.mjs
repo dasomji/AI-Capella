@@ -26,6 +26,14 @@ const browser = await chromium.launch({
 });
 const records = [];
 try {
+  const touch = await browser.newContext({ viewport: {width:1440,height:900}, hasTouch:true });
+  try {
+    const page = await touch.newPage();
+    await page.goto(`${base}/dev/design-system?design=papier`);
+    await page.locator('.ds-specimens').waitFor();
+    await verifyMainMenuPolicy(page, {width:1440,height:900});
+    console.log("Wide coarse-pointer tablet keeps centered main menus PASS");
+  } finally { await touch.close(); }
   for (const theme of ["papier", "pergament", "samt"])
     for (const viewport of [
       { width: 1440, height: 900 },

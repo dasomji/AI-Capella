@@ -9,19 +9,23 @@ export async function verifyMainMenuPolicy(page, viewport) {
     // Put the anchor at the lower right to require both vertical flip and horizontal clamp.
     Object.assign(button.style, { position: 'fixed', right: '0px', bottom: '0px' });
     document.body.append(button);
-    window.openPolicyMenu = () => {
+    window.preparePolicyMenu = () => {
       button.focus();
       const menu = D.createMenu({ label: 'Policy menu', items: [
         { label: 'Account', onSelect() {} }, { label: 'Settings', onSelect() {} },
       ], onEscape: () => window.policyMenu.requestClose() });
       window.policyMenu = D.createMenuOverlay({ variant: 'library-popover', anchor: button,
         title: 'Main menu', content: menu.element, attrs: { id: "menu-policy-dialog" }, behavior: { onClose: () => menu.dispose() } });
+    };
+    window.openPolicyMenu = () => {
+      window.preparePolicyMenu();
       window.policyMenu.open();
     };
     window.openPolicyMenu();
   });
   const menu = page.locator('#menu-policy-dialog');
-  const expected = viewport.width >= 1200 ? 'anchored' : 'centered';
+  const fine = await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches);
+  const expected = fine && viewport.width >= 1200 ? 'anchored' : 'centered';
   assert.equal(await menu.getAttribute('data-dialog-layout'), expected);
   const geometry = async () => menu.evaluate(el => {
     const r = el.getBoundingClientRect(), a = document.querySelector('#menu-policy-opener').getBoundingClientRect();
@@ -53,10 +57,20 @@ export async function verifyMainMenuPolicy(page, viewport) {
   assert.equal(await page.locator('#menu-policy-opener').evaluate(el=>el===document.activeElement),true);
   await page.evaluate(() => window.openPolicyMenu());
   const reopened = page.locator('#menu-policy-dialog');
-  assert.equal(await reopened.getAttribute('data-dialog-layout'), expected === 'anchored' ? 'centered' : 'anchored', 'Next open adapts');
+  assert.equal(await reopened.getAttribute('data-dialog-layout'), fine && resized.width >= 1200 ? 'anchored' : 'centered', 'Next open adapts');
   await page.mouse.click(4,4);
   await reopened.waitFor({state:'detached'});
   assert.equal(await page.locator('#menu-policy-opener').evaluate(el=>el===document.activeElement),true,'Outside dismissal restores opener focus');
+  // Construct at one width, then open at another: policy is resolved by open(), not construction.
+  for (const width of [1199, 1200]) {
+    await page.setViewportSize({width:width === 1199 ? 1440 : 768,height:900});
+    await page.evaluate(() => window.preparePolicyMenu());
+    await page.setViewportSize({width,height:900});
+    await page.evaluate(() => window.policyMenu.open());
+    assert.equal(await menu.getAttribute('data-dialog-layout'), fine && width >= 1200 ? 'anchored' : 'centered', 'Transport breakpoint and input are read at open time');
+    await page.keyboard.press('Escape');
+    await menu.waitFor({state:'detached'});
+  }
   await page.locator('#menu-policy-opener').evaluate(el=>el.remove());
   await page.setViewportSize(viewport);
 }
