@@ -15,11 +15,11 @@ export function adminRecipe() {
     frame: "tw:block tw:mx-auto tw:min-w-flush tw:max-w-(--ds-admin-page-width)",
     bar: "tw:flex tw:flex-wrap tw:items-center tw:gap-x-control tw:gap-y-compact tw:pb-small",
     brand:
-      "tw:inline-flex tw:items-baseline tw:gap-small tw:min-w-flush tw:rounded-field tw:no-underline tw:text-ink " + focus,
+      "tw:inline-flex tw:items-center tw:gap-small tw:min-w-flush tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:rounded-field tw:no-underline tw:text-ink " + focus,
     area: "tw:font-control tw:text-body-small tw:text-ink-secondary",
     barEnd: "tw:ml-auto tw:flex tw:items-center tw:gap-control",
     back:
-      "tw:inline-flex tw:items-center tw:min-h-control-height-compact tw:touch:min-h-control-target-touch tw:rounded-field tw:font-control tw:text-body-small tw:text-ink-secondary tw:no-underline tw:hover:text-ink " + focus,
+      "tw:inline-flex tw:items-center tw:min-h-control-height-compact tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:rounded-field tw:font-control tw:text-body-small tw:text-ink-secondary tw:no-underline tw:hover:text-ink " + focus,
     nav:
       "tw:flex tw:gap-micro tw:min-w-flush tw:max-w-full tw:overflow-x-auto tw:overscroll-x-contain tw:mb-section " + line,
     navItem: (current = false) =>
@@ -28,7 +28,7 @@ export function adminRecipe() {
     pageHead: "tw:flex tw:flex-wrap tw:items-end tw:justify-between tw:gap-control tw:mb-content",
     titleBlock: "tw:grid tw:gap-compact tw:min-w-flush",
     crumb:
-      "tw:inline-flex tw:items-center tw:justify-self-start tw:min-h-control-height-compact tw:touch:min-h-control-target-touch tw:rounded-field tw:font-control tw:text-body-small tw:text-ink-secondary tw:no-underline tw:hover:text-ink " + focus,
+      "tw:inline-flex tw:items-center tw:justify-self-start tw:min-h-control-height-compact tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:rounded-field tw:font-control tw:text-body-small tw:text-ink-secondary tw:no-underline tw:hover:text-ink " + focus,
     title: "tw:m-flush tw:focus:outline-none tw:font-display tw:text-workspace-heading tw:font-weight-medium tw:leading-leading-body tw:text-ink tw:wrap-anywhere",
     lede: "tw:m-flush tw:font-control tw:text-body-small tw:leading-leading-body tw:text-ink-secondary",
     meta: "tw:flex tw:flex-wrap tw:items-center tw:gap-small tw:font-control tw:text-body-small tw:text-ink-secondary tw:wrap-anywhere",
@@ -37,7 +37,7 @@ export function adminRecipe() {
     filter: "tw:grow tw:basis-(--ds-admin-filter-width) tw:min-w-flush tw:max-w-full tw:panel:grow-0",
     range: "tw:flex tw:flex-wrap tw:items-end tw:gap-x-control tw:gap-y-small tw:min-w-flush",
     note: "tw:font-control tw:text-small tw:leading-leading-body tw:text-ink-secondary",
-    stack: "tw:grid tw:gap-content tw:min-w-flush",
+    stack: "tw:grid tw:grid-cols-1 tw:gap-content tw:min-w-flush",
     columns: "tw:grid tw:items-start tw:gap-content tw:min-w-flush tw:grid-cols-(--ds-admin-section-columns)",
     section: "tw:block tw:box-border tw:min-w-flush tw:m-flush tw:p-content tw:max-account:p-control " + panel,
     sectionHead: "tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-small tw:mb-small",
@@ -50,7 +50,7 @@ export function adminRecipe() {
     badges: "tw:inline-flex tw:flex-wrap tw:items-center tw:gap-compact",
     identifier: "tw:inline-flex tw:items-center tw:gap-micro tw:min-w-flush tw:font-mono tw:text-small tw:text-ink-secondary",
     rowLink:
-      "tw:rounded-field tw:font-weight-label tw:text-ink tw:underline tw:decoration-rule-strong tw:underline-offset-(--ds-space-micro) tw:hover:decoration-ink " + focus,
+      "tw:touch:inline-flex tw:touch:items-center tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:rounded-field tw:font-weight-label tw:text-ink tw:underline tw:decoration-rule-strong tw:underline-offset-(--ds-space-micro) tw:hover:decoration-ink " + focus,
     metrics: "tw:grid tw:gap-small tw:min-w-flush tw:grid-cols-(--ds-admin-metric-columns)",
     metric: "tw:grid tw:gap-micro tw:min-w-flush tw:p-control " + panel,
     metricLabel: "tw:font-control tw:text-small tw:leading-leading-body tw:text-ink-secondary",
