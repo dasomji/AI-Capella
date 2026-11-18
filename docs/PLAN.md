@@ -1974,7 +1974,7 @@ verification. No paid requests, deployment, push or production access.
   unsaved Solo score with persistence controls disabled. Import is pending-guarded
   and server-idempotent, preserves the optional title and opens the library piece.
 - Minimal server additions: capability-gated ensemble job read model (most recent
-  100 jobs), bounded/audited private source-page PNG endpoint using the existing
+  100 jobs), bounded private source-page PNG endpoint (read audits retired by ADR 0007) using the existing
   sandbox renderer and upload admission, optional title and la/other language
   values on job creation, and import title from captured job options. The API
   Dockerfile now installs Poppler for on-demand PDF comparison. No schema changes.

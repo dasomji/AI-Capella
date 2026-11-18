@@ -143,6 +143,8 @@ to avoid clipping, and disposes placement/listeners with the owning screen. `anc
 resize, captured scrolling, visual viewport and element resizing; collision handling bounds the
 panel and provides inner scrolling.
 
+### Small menu presentation
+
 All small menus opened through `openLibraryMenu` follow D48: library/player main menus, mode badge, ensemble picker, song-card and voice-row ⋯ menus, sections, and settings submenus. At the `transport` breakpoint (1200px) or above, with a fine primary pointer and hover, `menuPresentation()` chooses the typed `anchored` dialog recipe through `createMenuOverlay()`. Other widths/input use the centered dialog with backdrop; anchored backdrops are transparent. Native dialog/menu roles, Escape/outside dismissal and focus trapping remain. D24 fixes presentation and DOM identity for each opening; rotation only re-bounds it, and the next open adapts. If refresh removes or hides the anchor, placement retains its last valid rectangle and focus stays in the menu; dismissal restores the opener or the first available control in its nearest surviving containing region. Forms, tempo/bar controls and real panels stay centered (D12). Member/transcription-job disclosure menus retain D13 popovers at every width.
 `src/ui.ts` retains only `closeOverlay`, `isNarrow` and the domain `MenuItem` type.
 `dom/legacy.ts` documents these signatures; no legacy visual constructors remain. Stable
@@ -327,7 +329,7 @@ Add a theme through one complete token block and one registry entry. Run
 
 **D23.** The tablet library uses fixed 280px comfortable card columns between the compact and transport breakpoints, showing fewer, wider covers instead of squeezing extra columns. Below the compact breakpoint the existing single-column phone records remain.
 
-**D48 B.** All small menus opened through `openLibraryMenu` follow D48: library/player main menus, mode badge, ensemble picker, song-card and voice-row ⋯ menus, sections, and settings submenus. At the `transport` breakpoint (1200px) or above, with a fine primary pointer and hover, `menuPresentation()` chooses the typed `anchored` dialog recipe through `createMenuOverlay()`. Other widths/input use the centered dialog with backdrop; anchored backdrops are transparent. Native dialog/menu roles, Escape/outside dismissal and focus trapping remain. D24 fixes presentation and DOM identity for each opening; rotation only re-bounds it, and the next open adapts. If refresh removes or hides the anchor, placement retains its last valid rectangle and focus stays in the menu; dismissal restores the opener or the first available control in its nearest surviving containing region. Forms, tempo/bar controls and real panels stay centered (D12). Member/transcription-job disclosure menus retain D13 popovers at every width.
+**D48 B.** See [Small menu presentation](#small-menu-presentation) for the policy and lifecycle contract.
 
 **D49 B.** User, ensemble and piece details remain routed pages with direct links and Back navigation. Detail member tables reuse the shared admin toolbar, EN/DE search labels, filtered-empty state and Clear filters. Search uses the same 250ms-debounced, server-paginated memberships endpoint and combined email/name/ensemble matching as lists; no full cursor crawl or client cache. Search, sort, filters and page-size changes reset page/cursor before the new render commits. Page indices clamp to available cursors; deleting the final row of the final page retreats before displaying an empty state.
 

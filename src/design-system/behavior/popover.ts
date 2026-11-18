@@ -28,7 +28,7 @@ export function anchorPopover(
     const measured = anchor.getBoundingClientRect();
     if (anchor.isConnected && measured.width > 0 && measured.height > 0) lastAnchor = measured;
     // Grid refreshes can replace the opener. Keep focus in the menu and its last good position.
-    if (!lastAnchor) return;
+    if (!lastAnchor) return; // Wait for a measurable anchor before the first placement.
     const a = lastAnchor, p = panel.getBoundingClientRect();
     const x = align === "start" ? a.left : align === "center" ? a.left + (a.width - p.width) / 2 : a.right - p.width;
     const y = a.bottom + gap + p.height <= bottom ? a.bottom + gap : a.top - gap - p.height;

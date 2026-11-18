@@ -287,10 +287,10 @@ The guard is local AST analysis with the limitations above, not an interprocedur
 | D44 A | Always verify the account-deletion password, including recent sign-in. Preserve wrong-password errors, the failure budget and ensemble confirmation. |
 | D45 B | Retain complete wrapping library titles. Equal-height cards stretch their bodies and align details at the bottom of each row. Retain D23's 280px tablet cards and phone records. |
 | D46 A | Retain the existing 2× canvas resolution cap for smooth playback; no resolution change. |
-| D47 B | Library menu title: Settings / Einstellungen. Language stays an option inside it; the introduction points to Settings. |
+| D47 B | Library menu title: Settings / Einstellungen. Language stays an option inside it. |
 
 Retained compatibility role names preserve consumer APIs, not independently authored palettes.
-Voice colors and category feedback colors remain pending their separate owner review. Material
+Category feedback colors remain pending their separate owner review. Material
 strategies (`light`/`ink`, lantern/gel) retain their renderer algorithms. `paper.ts` writes the
 procedural output to `--ds-material-fibre-live`; output completion is not a new preference.
 Other component decisions are owned by their recipes; see [design-primitives.md](design-primitives.md).

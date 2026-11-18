@@ -100,7 +100,7 @@ function AuditSection({ initial, params, id }: { initial?: { items: AdminRow[]; 
   );
 }
 
-/** Loads one detail bundle (a single audited request) and reloads it after management changes. */
+/** Loads one detail bundle (a single read request) and reloads it after management changes. */
 function useDetail(kind: string, id: string) {
   const { setZone } = useAdmin();
   const [detail, setDetail] = useState<AdminRow | null>(null),

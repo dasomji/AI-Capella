@@ -22,8 +22,9 @@ using structured server stdout, rather than in the product's audit history.
   this change does not delete or rewrite them.
 - Use server pagination and server search for admin lists and detail member tables.
   Remove the aggregate admin read cap and every `list:*` read cap. Authentication,
-  invitations, ensemble creation, mutation limits and preview resource admission
-  retain their existing protections.
+  invitations, ensemble creation, owner-approved mutation limits and preview resource admission
+  retain their existing protections. Removing the aggregate limit also leaves
+  `PUT /transcription/control` without a blanket limit, as intended by the owner.
 - Keep the required reason and PostgreSQL-backed shared content/download limits:
   10 per minute, 30 per hour and 200 per day per actor. Cap rejection remains 429
   with the cap and waiting instruction; signed original URLs expire in 60 seconds.
@@ -41,7 +42,8 @@ using structured server stdout, rather than in the product's audit history.
 
 The audit UI and audit projections continue to work. New events explain changes;
 legacy read rows remain historical data. Read failures no longer depend on audit
-insertion or a read-rate counter. Operational logs have their own retention and
+insertion or a read-rate counter. Reasons are free text: names or email addresses entered there reach the operational logs.
+Operational logs have their own retention and
 access controls, owned by the deployment operator.
 
 `tests/admin.test.ts` verifies zero read audits, one audit per mutation, reads above

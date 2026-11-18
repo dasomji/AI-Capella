@@ -119,4 +119,4 @@ retained parity variants, guard exceptions and verification limitations.
 
 **D46 A.** Keep the existing 2× canvas backing resolution cap for playback performance; no renderer resolution change.
 
-**D47 B.** The library menu title is “Settings” / “Einstellungen”; language remains one setting within it. The library introduction points to Settings.
+**D47 B.** The library menu title is “Settings” / “Einstellungen”; language remains one setting within it.

@@ -75,10 +75,9 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     }
     assert.equal(await auditCount(), beforeReads, 'List, detail and statistics reads write no audit rows');
     for(const kind of ['users','ensembles','pieces','memberships','invitations','audit','transcription/jobs']){
-      const before=Number((await pool.query("select count(*) from audit_events where actor_id=$1 and metadata->>'endpoint'=$2",[sys.id,'/api/admin/'+kind])).rows[0].count);
+      const before = await auditCount();
       await json(kind+'?search=DO_NOT_LOG_SEARCH',sys.cookie);
-      const events=(await pool.query("select metadata from audit_events where actor_id=$1 and metadata->>'endpoint'=$2",[sys.id,'/api/admin/'+kind])).rows;
-      assert.equal(events.length,before,'Search reads write no audit rows');assert.doesNotMatch(JSON.stringify(events),/DO_NOT_LOG_SEARCH/);
+      assert.equal(await auditCount(), before, 'Search reads write no audit rows');
     }
     for(const query of ['sort=created&cursor='+Buffer.from(JSON.stringify(['2026-02-30 00:00:00+00',sys.id])).toString('base64url'),'search=%00','ensemble=%00','user=%00','sort=created&cursor='+Buffer.from(JSON.stringify(['oops',sys.id])).toString('base64url'),'sort=created&cursor='+Buffer.from(JSON.stringify(['2026-99-99 00:00:00+00',sys.id])).toString('base64url')])assert.equal((await req('/api/admin/users?'+query,sys.cookie)).status,422,query);
     for(const reason of ['', '\0','\ud800'])assert.equal((await req('/api/admin/pieces/'+p+'/content',sys.cookie,'POST',{reason})).status,422);
