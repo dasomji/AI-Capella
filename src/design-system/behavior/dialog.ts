@@ -114,7 +114,7 @@ export function openDialog(
     if (
       previousFocus instanceof HTMLElement &&
       previousFocus.isConnected &&
-      previousFocus.getClientRects().length > 0 &&
+      (!options.anchor || previousFocus.getClientRects().length > 0) &&
       (!stack.length || stack.at(-1)!.dialog.contains(previousFocus)) &&
       !previousFocus.closest("[inert]")
     )
