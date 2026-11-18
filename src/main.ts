@@ -965,7 +965,7 @@ function languageItems() {
 }
 document.querySelector<HTMLButtonElement>('#lib-menu-btn')!.addEventListener('click', (e) => {
   const anchor = e.currentTarget as HTMLElement;
-  openLibraryMenu(anchor, [...appearanceItems(), ...paperItems(anchor), ...languageItems(), ...introItems('library'), {label:t('accountArea'),icon:'users',onSelect:()=>{void openAccountArea(anchor);}}], t('language'));
+  openLibraryMenu(anchor, [...appearanceItems(), ...paperItems(anchor), ...languageItems(), ...introItems('library'), {label:t('accountArea'),icon:'users',onSelect:()=>{void openAccountArea(anchor);}}], t('settings'));
 });
 
 /** The paper design's paper, to choose on this device (paper.ts). */
