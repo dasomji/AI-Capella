@@ -544,6 +544,8 @@ try {
     .click();
   // Audit records share the phone card rule; their labels and data remain readable.
   await page.getByRole("link", { name: "Audit log", exact: true }).click();
+  await page.getByRole("heading", { level: 1, name: "Audit log", exact: true }).waitFor();
+  await loaded();
   await page.locator("[data-admin=table-wrap] tbody tr").first().waitFor();
   assert.equal(
     await page

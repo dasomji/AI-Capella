@@ -13,7 +13,7 @@ assert.equal(spawnSync(process.execPath,['--import','tsx','scripts/seed-dev.ts']
 const root=process.env.BROWSER_EVIDENCE;await fs.mkdir(root,{recursive:true});await fs.writeFile(root+'/metadata.json',JSON.stringify({revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),time:new Date().toISOString()},null,2));
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox']});
 const context=await browser.newContext({reducedMotion:'reduce',hasTouch:true});
-await context.addInitScript(()=>{localStorage.setItem('ai-capella-lang','en');localStorage.setItem('ai-capella-intro-off','1');});
+await context.addInitScript(()=>{if(!localStorage.getItem('ai-capella-lang'))localStorage.setItem('ai-capella-lang','en');localStorage.setItem('ai-capella-intro-off','1');});
 assert.equal((await context.request.post(base+'/api/auth/sign-in/email',{headers:{origin:base},data:{email:'admin@test.com',password:'password'}})).status(),200);
 const page=await context.newPage();
 const instant='2026-11-01T12:00:00.000Z',u={id:'00000000-0000-4000-8000-000000000001',name:'Test Admin',email:'admin@test.com',email_verified:true,sysadmin:true,ensemble_count:1,created_at:instant,last_active:instant}, e={id:'00000000-0000-4000-8000-000000000002',name:'Testchor',kind:'choir',members:2,pieces:1,created_at:instant};
@@ -39,7 +39,7 @@ await page.route('**/api/admin/**',async route=>{
 async function ready(){await page.waitForTimeout(650);await page.evaluate(()=>document.fonts.ready);}
 const measurements={};let prefix;
 async function contained(name){
- const result=await page.evaluate(()=>({width:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,wrappers:[...document.querySelectorAll('div:has(>table)')].map(el=>{const r=el.getBoundingClientRect();return {x:r.x,width:r.width,right:r.right,scroll:el.scrollWidth};})}));
+ const result=await page.evaluate(()=>({language:document.documentElement.lang,width:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,wrappers:[...document.querySelectorAll('div:has(>table)')].map(el=>{const r=el.getBoundingClientRect();return {x:r.x,width:r.width,right:r.right,scroll:el.scrollWidth};})}));
  measurements[prefix+'-'+name+'-overflow']=result;
  await fs.writeFile(root+'/measurements.json',JSON.stringify(measurements,null,2));
  if(process.env.RESPONSIVE_BASELINE!=='1'){assert.ok(result.scroll<=result.width+1,JSON.stringify({name,prefix,result}));for(const w of result.wrappers)assert.ok(w.x>=-1&&w.right<=result.width+1,JSON.stringify(w));}
@@ -50,7 +50,7 @@ async function contained(name){
 }
 
 async function shot(name){await ready();await page.mouse.move(0,0);if(process.env.ADMIN_PARITY_STYLES)await fs.writeFile(`${root}/${prefix}-${name}-styles.json`,JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('button,input,th,td,h2,h3,[role=group],select')].slice(0,250).map(el=>{const c=getComputedStyle(el),b=el.getBoundingClientRect();return {tag:el.tagName,text:el.textContent?.slice(0,100),x:b.x,y:b.y,width:b.width,height:b.height,style:Object.fromEntries(['font-family','font-size','font-weight','font-variant-numeric','font-kerning','font-feature-settings','font-variation-settings','font-optical-sizing','text-rendering','line-height','letter-spacing','display','vertical-align','padding','margin','min-height','border-width','box-sizing','text-align','flex-shrink'].map(p=>[p,c.getPropertyValue(p)]))};})),null,2));await page.screenshot({path:`${root}/${prefix}-${name}.png`});measurements[`${prefix}-${name}`]=await page.evaluate(()=>Object.fromEntries(['[data-admin=shell],.admin-shell','[data-admin=shell] header,.admin-shell header','h1','[data-admin=filters],.admin-filters','[data-admin=data-table],.admin-data-table','th','td','input','[data-admin=detail]','[data-admin=confirm]'].map(s=>{const el=document.querySelector(s);if(!el)return [s,null];const cs=getComputedStyle(el),b=el.getBoundingClientRect();return [s,{x:b.x,y:b.y,width:b.width,height:b.height,font:cs.font,color:cs.color,background:cs.backgroundColor,padding:cs.padding,lineHeight:cs.lineHeight}];})));}
-async function goto(tab){await page.goto(`${base}/admin/${tab}?design=${prefix.startsWith('night')?'papier':'pergament'}`);await ready();}
+async function goto(tab){await page.goto(`${base}/admin/${tab}?design=${prefix.startsWith('night')?'papier':'pergament'}`);await ready();const locale=await page.evaluate(()=>({actual:document.documentElement.lang,requested:localStorage.getItem('ai-capella-lang')}));assert.equal(locale.actual,locale.requested,'Admin capture uses the requested language');}
 async function close(){const confirm=page.locator('dialog[open][data-admin=confirm]');if(await confirm.count())await confirm.getByRole('button',{name:'Cancel',exact:true}).click();await ready();}
 try{
  await page.goto(base+'/admin/users');
@@ -74,7 +74,7 @@ try{
    // A contained scroller must make the final actions reachable by ordinary scrolling.
    for(const wrap of await page.locator('[data-admin=table-wrap]').all()){
     await wrap.evaluate(el=>{el.scrollLeft=el.scrollWidth;});
-    const action=wrap.getByRole('button',{name:/^(Remove|Entfernen)/}).last();
+    const action=wrap.getByRole('button',{name:/^Remove | entfernen$/}).last();
     if(await action.count()){await action.scrollIntoViewIfNeeded();const r=await action.boundingBox();assert.ok(r.x>=0&&r.x+r.width<=width+1,'Member action reachable');}
    }
   }
