@@ -823,7 +823,7 @@ const adminUiEn = {
   removeConfirm:'Remove member', addUserTitle:'Add {name} to an ensemble', addEnsembleTitle:'Add a member to {name}',
   pickEnsemble:'Choose an ensemble', pickUser:'Choose an existing person', choose:'Choose', chosen:'Chosen', change:'Change', addConfirm:'Add member',
   inviteTitle:'Invite someone to {name}', inviteLanguage:'The invitation email is written in {language}.', inviteConfirm:'Create invitation',
-  reasonHint:'Required. Stored in the audit log with this change (up to 1000 characters).', accessHint:'Required. Stored in the audit log with this access (up to 1000 characters).',
+  reasonHint:'Required. Stored in the audit log with this change (up to 1000 characters).', accessHint:'Required. Stored in server logs with this access (up to 1000 characters).',
   contentTitle:'Current content', contentNote:'Opening the score body is recorded in server logs with your reason.', viewContent:'View content…',
   contentDialogTitle:'View the current content of “{title}”?', contentConfirm:'View content', hideContent:'Hide content',
   download:'Download…', downloadTitle:'Download the original “{file}”?', downloadBody:'A signed link valid for 60 seconds is created for this file only. The download and your reason are recorded in server logs.',
