@@ -539,10 +539,15 @@ export function createDialog(options: DialogOptions) {
 /** Small main menus share D48 policy; forms and sheets retain D12 centering. */
 export function createMenuOverlay(options: DialogOptions & { anchor: HTMLElement }) {
   const { anchor, ...dialog } = options;
-  const presentation = menuPresentation();
-  return createDialog({ ...dialog, presentation, behavior: { ...dialog.behavior,
-    opener: anchor, ...(presentation === "anchored" ? { anchor } : {}),
-  } });
+  const config: DialogOptions = { ...dialog, behavior: { ...dialog.behavior, opener: anchor } };
+  const overlay = createDialog(config);
+  return { ...overlay, open: () => {
+    const presentation = menuPresentation();
+    overlay.element.className = r.withLayout(r.dialogRecipe({ ...config, presentation }).panel, config.layout);
+    overlay.element.dataset.dialogLayout = presentation;
+    config.behavior!.anchor = presentation === "anchored" ? anchor : undefined;
+    return overlay.open();
+  } };
 }
 export const createSheet = ({
   variant = "sheet",
