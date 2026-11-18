@@ -37,7 +37,7 @@ export async function draw(next) {
   mode = next; seed();
   const [theme, , , , , art, , , , , , , paper] = p2.modules;
   const custom = ['paper', 'gel', 'stage-fill', 'ribbons', 'backdrop'].includes(mode);
-  await p2.draw(custom ? 'overview' : mode, 12);
+  await p2.draw(custom ? 'overview' : mode, 16);
   if (custom) document.body.replaceChildren();
   if (mode === 'paper') {
     const c = canvas();

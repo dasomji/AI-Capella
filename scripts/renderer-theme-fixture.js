@@ -7,7 +7,7 @@
     const modules = await Promise.all(['theme', 'palette', 'pianoRoll', 'staffView', 'overview', 'artwork', 'lantern', 'goldInk', 'lightRibbons', 'lightName', 'titleStage', 'titleStaff', 'paper', 'musicxml', 'exportPdf'].map(n => import('/src/' + n + '.ts')));
     const [theme, palette, roll, staff, overview, art, lantern, gold, ribbons, name, stage, titleStaff, paper, xml, pdf] = modules;
     const generated = count => `<?xml version="1.0"?><score-partwise version="4.0"><work><work-title>Theme fixture ${count}</work-title></work><part-list>${Array.from({ length: count }, (_, i) => `<score-part id="P${i}"><part-name>Voice ${i + 1}</part-name></score-part>`).join('')}</part-list>${Array.from({ length: count }, (_, i) => `<part id="P${i}">${Array.from({ length: 4 }, (_, m) => `<measure number="${m + 1}">${m === 0 ? '<attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes><direction><direction-type><dynamics><mf/></dynamics></direction-type></direction><direction><direction-type><words>dolce</words></direction-type></direction>' : ''}${Array.from({ length: 4 }, (_, j) => `<note><pitch><step>${['C', 'D', 'E', 'G'][(i + j + m) % 4]}</step><octave>${i % 3 === 0 ? 3 : 4}</octave></pitch><duration>1</duration><type>quarter</type><lyric><syllabic>single</syllabic><text>${['Light', 'Score', 'sing', 'on'][j]}</text></lyric></note>`).join('')}</measure>`).join('')}</part>`).join('')}</score-partwise>`;
-    const fixtures = Object.fromEntries([1, 4, 8, 12].map(n => [n, generated(n)]));
+    const fixtures = Object.fromEntries([1, 4, 8, 12, 16].map(n => [n, generated(n)]));
     let dispose = () => { };
     let views;
     const canvas = (h = 600, w = 1200) => { const c = document.createElement('canvas'); c.style.cssText = `display:block;width:${w}px;height:${h}px`; c.width = w; c.height = h; document.body.append(c); return c; };
@@ -17,6 +17,7 @@
     window.p2 = { fixtures, modules, tick, async draw(mode, n = 4) {
             clear();
             const score = xml.parseMusicXML(fixtures[n]);
+            (await import('/src/voiceIdentity.ts')).assignVoiceNumbers(score.parts);
             const color = id => palette.colorForPart(score.parts.findIndex(p => p.id === id), score.parts.length);
             const label = document.createElement('div');
             label.textContent = `${mode} / ${n} voices`;
@@ -37,7 +38,7 @@
                 views = { view, mode, score, c };
             }
             else if (mode === 'cover') {
-                for (const count of [1, 4, 8, 12]) {
+                for (const count of [1, 4, 8, 12, 16]) {
                     const c = canvas(300, 300);
                     c.style.display = 'inline-block';
                     art.drawCover(c.getContext('2d'), 300, 300, art.coverDataFromScore(xml.parseMusicXML(fixtures[count])));
@@ -78,7 +79,8 @@
                 tick(20016);
             }
             return { mode, n, theme: document.documentElement.dataset.theme, canvases: document.querySelectorAll('canvas').length };
-        }, async pdf(n = 4) { const score = xml.parseMusicXML(fixtures[n]); const blob = await pdf.makePdf({ xml: fixtures[n], title: score.title, semitones: 0, voices: score.parts.map(p => ({ ...p, include: true })) }); const data = await new Promise(resolve => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(blob); }); window.p2.pdfData = data.split(',')[1]; return { bytes: blob.size, length: window.p2.pdfData.length }; }, repaint() { if (views) {
+        }, async pdf(n = 4) { const score = xml.parseMusicXML(fixtures[n]);
+            (await import('/src/voiceIdentity.ts')).assignVoiceNumbers(score.parts); const blob = await pdf.makePdf({ xml: fixtures[n], title: score.title, semitones: 0, voices: score.parts.map(p => ({ ...p, include: true })) }); const data = await new Promise(resolve => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(blob); }); window.p2.pdfData = data.split(',')[1]; return { bytes: blob.size, length: window.p2.pdfData.length }; }, repaint() { if (views) {
             const { view, mode } = views;
             view.render(...(mode === 'overview' ? [2.5] : [2.5, 2.5]));
         } } };

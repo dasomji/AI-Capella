@@ -19,7 +19,7 @@ const numberedName = /-\d+(?:px|rem|em|ms)?(?:$|[^\w-])/;
 export const enforceSemanticNames = true;
 export function checkSemanticName(name) {
   // Voice/spectrum positions and backdrop wave families are actual indexed data.
-  if (/^--(?:ds-(?:icon-)?|pigment-)?(?:voice-[1-8]|backdrop-wave-[1-6])(?:-parchment)?$/.test(name)) return false;
+  if (/^--(?:ds-(?:icon-)?|pigment-)?(?:voice-(?:[1-9]|1[0-6])|backdrop-wave-[1-6])(?:-parchment)?$/.test(name)) return false;
   if (/^tw:(?:[\w-]+:)*(?:-?translate-[xy]|border-[trblxy]|grid-cols|grid-rows|col-span|row-span|col-start|col-end|row-start|row-end|flex|shrink|grow|order|line-clamp|border|outline|inset|top|bottom|left|right|translate-[xy])-(?:0|[1-9]\d*|1\/2)$/.test(name)) return false;
   return numberedName.test(name);
 }

@@ -462,7 +462,7 @@ test(
         await request(
           "account",
           "DELETE",
-          { deleteEnsembleIds: [] },
+          { deleteEnsembleIds: [], password:"domain-fixture-password-42" },
           lead.cookie,
         )
       ).status,
@@ -743,7 +743,7 @@ test(
           await request(
             "account",
             "DELETE",
-            { deleteEnsembleIds: [] },
+            { deleteEnsembleIds: [], password:"domain-fixture-password-42" },
             member.cookie,
           )
         ).status,
