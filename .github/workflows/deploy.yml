@@ -270,6 +270,12 @@ jobs:
         run: npx playwright install --with-deps chromium
       - *wait-s3
       - *ready
+      - name: Route recovery — localized 404 and Together tour copy (browser-review-routes)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        env:
+          BROWSER_SCRIPT: scripts/browser-review-routes.mjs
+          NODE_OPTIONS: --import=./scripts/ops-playwright-evidence.mjs
+        run: node scripts/ci/run-suite.mjs --id review-routes --title 'Localized route recovery and tour copy' --repro 'BROWSER_SCRIPT=scripts/browser-review-routes.mjs npm run test:browser' -- npm run test:browser
       - name: Power hint — overlays, sign-out clicks and dismissals (browser-power-hint)
         if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
         env:
@@ -393,6 +399,9 @@ jobs:
       - name: Theme extension — a loud test theme repaints every screen (test:browser:theme-extension)
         if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
         run: node scripts/ci/run-suite.mjs --id theme-extension --title 'Theme extension' -- npm run test:browser:theme-extension
+      - name: Responsive QA — button state contrast and effective touch targets (test:browser:responsive)
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: node scripts/ci/run-suite.mjs --id responsive --title 'Responsive contrast and touch targets' -- npm run test:browser:responsive
       - name: Design-system showcase and screen fixtures (test:browser:design-system)
         if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
         run: node scripts/ci/run-suite.mjs --id design-system --title 'Design-system showcase' -- npm run test:browser:design-system

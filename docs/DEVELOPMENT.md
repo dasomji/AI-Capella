@@ -126,16 +126,16 @@ together. Superseded runs of the same PR are cancelled.
 |---|---|---|
 | `checks (typecheck)` … `checks (design-tokens)` (9) | typecheck; unit (runner UTC + `TZ=America/New_York`); build; check:secrets; eval dry run; build + test:migration (Java 21, Firestore emulator); test:backup; docker (web + worker images, ops:canary in each); design token + utility guards | own containers where needed |
 | `integration (…)` | db:migrate on a fresh database, schema drift, build (hosting tests serve `dist/`), test:integration | Postgres + Mailpit services, SeaweedFS |
-| `browser (power hint; accounts …)` | power hint, Phase 2b | harness-owned Postgres/Mailpit/build per script, SeaweedFS |
+| `browser (power hint; accounts …)` | localized route recovery and tour copy, power hint, Phase 2b | harness-owned Postgres/Mailpit/build per script, SeaweedFS |
 | `browser (offline …; Together sync …)` | Phase 5a, Together sync, sync acceptance, then build + test:ops | same; **timing-sensitive sync runs alone on this runner, sequentially** |
 | `browser (admin parity; auth flows; transcription …)` | admin parity, auth flows, transcription | same |
-| `design (design-system showcase; theme extension)` | theme extension, design-system showcase, component forms | Vite dev server only |
+| `design (design-system showcase; theme extension)` | theme extension, responsive contrast and touch targets, design-system showcase, component forms | Vite dev server only |
 | `design (keyboard parity; renderer themes)` | keyboard parity, renderer themes | Vite dev server only |
 | `integration-browser` | gate + run overview + coverage guard | none |
 
 Required checks are the nine `checks (…)` and `integration-browser`. The gate fails when any
 integration/browser/design job fails or is cancelled or skipped, so those jobs need not be required
-individually. Without `BROWSER_SCRIPT`, `npm run test:browser` runs five scripts in one fixture.
+individually. Without `BROWSER_SCRIPT`, `npm run test:browser` runs six scripts in one fixture.
 CI runs each one as `BROWSER_SCRIPT=<script> npm run test:browser` with its own fresh fixture;
 every script creates its own accounts. `scripts/ci/check-coverage.mjs` (run by the gate) fails if a
 script is added to that default sequence, or any `test*`/`check:*` npm script exists, that CI
