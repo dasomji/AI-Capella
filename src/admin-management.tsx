@@ -427,7 +427,6 @@ export function AdminMemberships({ entity, profile, onChanged, searchLabel }: {
         <AdminDataTable
           data-admin="memberships"
           search={search}
-          clientSearch={entity === "users" ? ["name", "email", "ensemble_name"] : ["name", "email"]}
           filtered={!!search.trim()}
           onClear={() => setSearch("")}
           path="memberships"
