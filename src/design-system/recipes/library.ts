@@ -1,3 +1,4 @@
+import { dialogPresentationRecipe, type DialogOptions } from "./overlays";
 import { emptyStateRecipe } from "./display";
 import { normalizeRecipe } from "./normalize";
 import { accountStyles } from "./account";
@@ -75,10 +76,10 @@ export function libraryBadgeRecipe(variant:"tag"|"prepared") { return variant===
 export function offlineUpdateRecipe() { return "ds-library-offline-update" + " " + libraryStyles.offlineUpdate; }
 export function librarySearchRecipe() { return {root:"ds-library-search" + " " + libraryStyles.search,label:"tw:sr-only",control:"ds-library-search-input" + " " + libraryStyles.searchInput + " tw:rounded-field",hint:"tw:sr-only",error:"tw:sr-only"}; }
 export function libraryMenuRecipe() { return {option:"ds-library-menu-option " + libraryStyles.menuOption,value:"ds-library-menu-value " + libraryStyles.menuValue,chevron:"ds-library-menu-chevron",sub:"ds-library-menu-sub " + libraryStyles.menuSub,root:"ds-library-menu" + " " + libraryStyles.menu,item:"ds-library-menu-item ds-menu-item" + " " + libraryStyles.menuItem,danger:"ds-library-menu-danger" + " " + libraryStyles.menuDanger,check:"ds-library-menu-check" + " " + libraryStyles.menuCheck}; }
-/** D12: historical transport names share one centered dialog presentation. */
-export function libraryDialogRecipe(variant:"library-prompt"|"library-sheet"|"library-popover", destructive = false) {
+/** D12 forms/panels stay centered; D48 small menus can use anchored geometry. */
+export function libraryDialogRecipe(variant:"library-prompt"|"library-sheet"|"library-popover", destructive = false, presentation: DialogOptions["presentation"] = "centered") {
  return {
-  panel: "ds-library-overlay " + (variant === "library-sheet" ? "ds-library-sheet " : variant === "library-popover" ? "ds-library-popover " : "ds-library-prompt ") + "tw:fixed tw:inset-flush tw:m-auto tw:h-fit tw:box-border tw:w-width-sheet tw:max-w-max-width-dialog tw:max-h-max-height-dialog tw:overflow-auto tw:overscroll-contain tw:p-section tw:rounded-dialog tw:outline-none tw:font-body tw:text-body tw:leading-leading-body tw:text-ink tw:bg-surface-raised tw:border-(length:--ds-stroke-thin) tw:border-solid " + (destructive ? "tw:border-danger" : "tw:border-rule-strong") + " tw:shadow-component-overlay-shadow tw:backdrop:bg-backdrop tw:motion-library-prompt-transition tw:data-[panel-state=entering]:opacity-opacity-hidden tw:data-[panel-state=closing]:opacity-opacity-hidden tw:motion-reduce:transition-none tw:[&_form:empty]:hidden",
+  panel: "ds-library-overlay " + (variant === "library-sheet" ? "ds-library-sheet " : variant === "library-popover" ? "ds-library-popover " : "ds-library-prompt ") + dialogPresentationRecipe(presentation) + (presentation === "centered" ? " tw:w-width-sheet " : " ") + "tw:fixed tw:h-fit tw:box-border tw:overflow-auto tw:overscroll-contain tw:outline-none tw:font-body tw:text-body tw:leading-leading-body tw:text-ink tw:bg-surface-raised tw:border-(length:--ds-stroke-thin) tw:border-solid " + (destructive ? "tw:border-danger" : "tw:border-rule-strong") + " tw:shadow-component-overlay-shadow tw:motion-library-prompt-transition tw:data-[panel-state=entering]:opacity-opacity-hidden tw:data-[panel-state=closing]:opacity-opacity-hidden tw:motion-reduce:transition-none tw:[&_form:empty]:hidden",
   content:"ds-library-overlay-content tw:grid tw:gap-row tw:min-w-flush",
   header:"ds-library-sheet-head tw:flex tw:items-center tw:justify-between tw:gap-group",
   title:"ds-library-sheet-title tw:m-flush tw:font-body tw:text-dialog tw:font-weight-strong tw:leading-leading-label tw:wrap-anywhere",
