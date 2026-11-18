@@ -185,6 +185,8 @@ pointer-events, accent-color and print-color-adjust despite the opt-in reset.
 Standard actions are at least 44×44. Compact actions use the authored desktop roles and expand
 at `tw:touch:` (phones/tablets up to the panel breakpoint and any device with a coarse pointer).
 Specialized music controls retain their shape; their composition owns the surrounding hit area.
+Player preference switches extend their clickable area with a transparent pseudo-element at the
+touch breakpoint, preserving the visual track and score geometry.
 Informational badges are passive labels, with shared intent colors and readable text.
 
 Retired ordinary Button variants: `cta` → `size="full-width"`; `pill`, `tour`, `job-action` →
@@ -330,3 +332,21 @@ Add a theme through one complete token block and one registry entry. Run
 **D26 interim.** Until room permissions are designed separately, the EN/DE introduction describes the current Together behavior: everyone controls shared playback on every device; volume, mute and solo remain personal. It promises no missing “take the lead” command and introduces no new session permissions.
 
 **D21 pending owner approval.** An extended voice palette requires owner approval against the current colors before implementation. Existing voice colors, labels and renderer identification cues remain; this round makes no palette change.
+
+### Responsive regression checks
+
+`npm run test:browser:responsive` computes text contrast for all four button intents, seven
+forced interaction states and three themes across the ordinary, landing, library and scan action
+recipes. Chromium CDP forces hover/active/focus, including combined hover states.
+The same suite enumerates enabled interactive elements on title, library, job menus, member
+forms, player, tempo, mixer, rehearsal settings, export, main menu, upload, account and sign-in
+screens in EN/DE. It covers the inclusive 900px touch boundary, phone/tablet/landscape and a
+coarse-pointer desktop. Native inputs use their associated clickable labels; scroll-only regions
+and disabled controls are excluded. There are no screen-action size exemptions. Pseudo hit areas
+are measured with their transforms and edge hit tests; removing the switch extension is a negative
+control, and actual clicks outside the visible track must toggle the preference.
+
+`npm run test:browser:admin-parity` also checks document/scroller containment, member action
+reachability and touch targets on user, ensemble and piece details with long identities in EN/DE
+at 360, 390, 599/600/601, 768, 900/901, 1024 and 1440px. Records adapt on phones; wider tables
+scroll within their section. Evidence belongs outside git (`BROWSER_EVIDENCE`).
