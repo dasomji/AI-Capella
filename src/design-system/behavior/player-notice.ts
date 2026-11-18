@@ -5,7 +5,7 @@
 export function placePlayerNotice(notice: HTMLElement, player: HTMLElement) {
   const view = notice.ownerDocument.defaultView!;
   const viewport = view.visualViewport;
-  const footer = [...player.querySelectorAll<HTMLElement>(".info-row,.transport,[data-voice-key]")];
+  let footer: HTMLElement[] = [];
   const header = [...player.querySelectorAll<HTMLElement>(".p-top,.chips")];
   let frame = 0;
   const visibleRects = (elements: HTMLElement[]) => elements
@@ -31,7 +31,16 @@ export function placePlayerNotice(notice: HTMLElement, player: HTMLElement) {
     frame = view.requestAnimationFrame(place);
   };
   const observer = new ResizeObserver(schedule);
-  for (const element of [player, ...footer, ...header]) observer.observe(element);
+  const observeLayout = () => {
+    footer = [...player.querySelectorAll<HTMLElement>(".info-row,.transport,[data-voice-key]")];
+    observer.disconnect();
+    for (const element of [player, ...footer, ...header]) observer.observe(element);
+  };
+  // Opening another piece replaces the direct-child voice key. Avoid observing the
+  // playing position's text updates: only structural player children matter here.
+  const children = new MutationObserver(() => { observeLayout(); schedule(); });
+  children.observe(player, { childList: true });
+  observeLayout();
   view.addEventListener("resize", schedule);
   viewport?.addEventListener("resize", schedule);
   viewport?.addEventListener("scroll", schedule);
@@ -39,6 +48,7 @@ export function placePlayerNotice(notice: HTMLElement, player: HTMLElement) {
   return () => {
     view.cancelAnimationFrame(frame);
     observer.disconnect();
+    children.disconnect();
     view.removeEventListener("resize", schedule);
     viewport?.removeEventListener("resize", schedule);
     viewport?.removeEventListener("scroll", schedule);

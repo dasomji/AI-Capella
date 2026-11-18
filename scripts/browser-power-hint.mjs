@@ -52,11 +52,14 @@ try {
     await page.evaluate(async theme => {
       const { setThemePreference } = await import('/src/design-system/theme/index.ts');
       setThemePreference(theme);
-      await owner.player(16);
+      await owner.player(8);
       const { createPowerHint } = await import('/src/powerHint.ts');
       const frame = createPowerHint();
       for (let stamp = 0; stamp <= 6000; stamp += 1000/30) frame(stamp, 2);
       if (sessionStorage.getItem('ai-capella-power-hint-shown') !== '1') throw Error('Capped frames must show the hint');
+      // Changing pieces while the persistent hint is open replaces the voice-key
+      // node and changes footer height. Placement must observe the new key too.
+      await owner.player(16);
     }, theme);
     for (const [width,height] of [[1440,1000],[650,1000],[1440,900],[768,1024],[390,844],[844,390]]) {
       await page.setViewportSize({ width, height });
