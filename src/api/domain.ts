@@ -178,7 +178,9 @@ export const settingsInput = z
         break;
       case "defaults":
         schema =
-          v.key === "percussion"
+          v.key === "voiceNumbers"
+            ? z.record(partKey, z.number().int().min(1).max(256)).refine(v => Object.keys(v).length <= 256 && new Set(Object.values(v)).size === Object.keys(v).length)
+            : v.key === "percussion"
             ? z
                 .record(partKey, z.boolean())
                 .refine((v) => Object.keys(v).length <= 256)

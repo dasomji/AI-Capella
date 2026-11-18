@@ -1,4 +1,6 @@
 export interface PartInfo {
+  /** Stable identity allocated from import order and stored with the piece. */
+  voiceNumber?: number;
   id: string;
   name: string;
   // MIDI imports: the channel its notes were on (1-16; 10 is percussion in General MIDI).

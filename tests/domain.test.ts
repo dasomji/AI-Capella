@@ -733,7 +733,7 @@ test(
         403,
       );
       await ok(path, "PATCH", { name: "New lead" }, member.cookie);
-      await ok("account", "DELETE", { deleteEnsembleIds: [] }, lead.cookie);
+      await ok("account", "DELETE", { deleteEnsembleIds: [], password:"domain-fixture-password-42" }, lead.cookie);
       assert.equal(
         (await request("me", "GET", undefined, lead.cookie)).status,
         401,

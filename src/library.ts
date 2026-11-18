@@ -30,6 +30,7 @@ export interface StoredSong {
   // mutate a JSON Score just to change a label). Applied client-side after parsing, before the
   // part name is shown anywhere. Absent/undefined for a song with no renamed voices.
   partNameOverrides?: Record<string, string>;
+  voiceNumbers?: Record<string, number>;
   // A deliberately-saved default for this song (the "Save" action in main.ts), applied when the
   // song is freshly selected -- not written automatically on every transpose/BPM/marker change,
   // only when the user explicitly asks to remember the current setup. sections is only ever
@@ -87,6 +88,7 @@ function stored(m: PieceMetadata): StoredSong {
     importedAt: Date.parse(m.updatedAt),
     sortKey: Number(m.sortKey),
     partNameOverrides: s.partNames,
+    voiceNumbers: s.formatDefaults?.voiceNumbers,
     clefOverrides: s.clefOverrides,
     removedParts: Object.keys(s.removedParts ?? {}).filter(
       (k) => s.removedParts[k],
@@ -373,6 +375,10 @@ async function update(id: string, op: string, value: unknown, key?: string) {
     }
     throw e;
   }
+}
+export async function saveVoiceNumbers(id: string, numbers: Record<string, number>) {
+  if (activeEnsemble() === PUBLIC_ID || !account) return;
+  await update(id, "defaults", numbers, "voiceNumbers");
 }
 export async function updateSongMetadata(
   id: string,
