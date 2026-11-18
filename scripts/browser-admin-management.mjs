@@ -273,7 +273,8 @@ try {
   const detail = page.locator("[data-admin=detail]"),
     management = detail.locator("[data-admin=management]");
   const memberSearch = management.getByRole("searchbox");
-  await loaded();
+  await management.locator("tbody tr").first().waitFor();
+  await loaded(management);
   const memberRows = await management.locator("tbody tr").count();
   assert.ok(memberRows > 0);
   const whitespaceRequests = [];
