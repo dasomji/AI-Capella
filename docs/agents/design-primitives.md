@@ -137,6 +137,14 @@ the host uses the token maximum width and viewport gutters, with wrapping messag
 stay within the active panel; field errors use Field's adjacent error slot. Static `Toast` /
 `createToast` consume the same appearance recipe; host geometry uses `toastPlacementRecipe`.
 
+The power hint is an actionable persistent notice (D15), with Got it and Don't show again
+choices. Its design-system `placePlayerNotice` behavior measures the visible info row,
+transport and numbered voice key, keeping the note above them as the footer wraps or the
+viewport rotates. On short screens its content scrolls between the header and footer.
+`scripts/browser-power-hint.mjs` checks actual populated-player geometry and pointer opening
+of controls at the sync-suite sizes plus desktop, tablet, phone and short landscape sizes
+in EN/DE and both supported themes; it also retains native-modal and dismissal checks.
+
 Compact member/scan-job menus stay anchored popovers at every width (D13). `bindRowMenu(details,
 menu.element)` preserves the native disclosure and keyboard contract, uses the popover top layer
 to avoid clipping, and disposes placement/listeners with the owning screen. `anchorPopover` tracks

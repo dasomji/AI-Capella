@@ -11,6 +11,7 @@ import { powerHintRecipe } from "./design-system/recipes/shell";
 
 import { t } from "./i18n";
 import { createCard, createButton } from "./design-system/dom";
+import { placePlayerNotice } from "./design-system/behavior";
 
 const OFF_KEY = "ai-capella-power-hint-off";
 const SHOWN_KEY = "ai-capella-power-hint-shown";
@@ -50,9 +51,10 @@ export function showPowerHint() {
   body.textContent = t(isIos() ? "powerHintIos" : "powerHintOther");
   const actions = document.createElement("div");
   actions.className = powerHintRecipe().actions;
+  let unplace: (() => void) | undefined;
   const close = () => {
     el.classList.remove("show");
-    window.setTimeout(() => el.remove(), 400);
+    window.setTimeout(() => { unplace?.(); el.remove(); }, 400);
   };
   const never = createButton({
     text: t("powerHintNever"),
@@ -70,6 +72,8 @@ export function showPowerHint() {
   actions.append(never, ok);
   el.append(title, body, actions);
   document.body.appendChild(el);
+  const player = document.querySelector<HTMLElement>("#player");
+  if (player) unplace = placePlayerNotice(el, player);
   requestAnimationFrame(() => el.classList.add("show"));
 }
 

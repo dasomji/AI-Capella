@@ -47,7 +47,7 @@ export function titleArtworkRecipe() {
 
 export function powerHintRecipe() {
   return {
-    root: "power-hint tw:[&_b]:block tw:[&_b]:text-button tw:[&_p]:m-power-hint-p-margin tw:[&_p]:text-body-small tw:[&_p]:leading-power-hint-p-line-height",
+    root: "power-hint tw:overflow-y-auto tw:[&_b]:block tw:[&_b]:text-button tw:[&_p]:m-power-hint-p-margin tw:[&_p]:text-body-small tw:[&_p]:leading-power-hint-p-line-height",
     actions: "power-hint-actions tw:flex tw:justify-end tw:items-center tw:gap-small",
   } as const;
 }

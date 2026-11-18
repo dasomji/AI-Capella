@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { chromium } from "playwright";
 import { build } from "vite";
 import tailwind from "@tailwindcss/vite";
+import { ownerFixture } from "./owner-decisions-fixture.mjs";
 
 // Exercise the real hint and overlay toolkit without relying on a machine running at 30 fps.
 const source = (name) => fileURLToPath(new URL(`../src/${name}`, import.meta.url));
@@ -33,7 +36,75 @@ const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH,
   args: ["--no-sandbox"],
 });
+const evidence = path.resolve(process.env.BROWSER_EVIDENCE ?? '.review-evidence/power-hint');
+await fs.mkdir(evidence, { recursive: true });
+const measurements = [];
+const { server, base } = await ownerFixture(evidence);
 try {
+  // Use the populated player and hint, with a deterministic trigger independent of
+  // device frame cadence. Include both acceptance-suite sizes and portrait/landscape.
+  for (const theme of ['night-paper', 'parchment']) for (const language of ['en', 'de']) {
+    const page = await browser.newPage();
+    await page.addInitScript(language => localStorage.setItem('ai-capella-lang',language),language);
+    await page.routeWebSocket('**', ws => ws.close());
+    await page.goto(base + 'owner.html');
+    await page.waitForFunction(() => window.ownerReady);
+    await page.evaluate(async theme => {
+      const { setThemePreference } = await import('/src/design-system/theme/index.ts');
+      setThemePreference(theme);
+      await owner.player(16);
+      const { createPowerHint } = await import('/src/powerHint.ts');
+      const frame = createPowerHint();
+      for (let stamp = 0; stamp <= 6000; stamp += 1000/30) frame(stamp, 2);
+      if (sessionStorage.getItem('ai-capella-power-hint-shown') !== '1') throw Error('Capped frames must show the hint');
+    }, theme);
+    for (const [width,height] of [[1440,1000],[650,1000],[1440,900],[768,1024],[390,844],[844,390]]) {
+      await page.setViewportSize({ width, height });
+      await page.waitForFunction(() => document.querySelector('.power-hint.show'));
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+        await Promise.all(document.getAnimations().filter(a=>a.effect?.getComputedTiming().iterations!==Infinity).map(a=>a.finished));
+      });
+      // ResizeObserver schedules placement for the next rendering frame.
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const geometry = await page.evaluate(() => {
+        const rect = el => el.getBoundingClientRect().toJSON();
+        const hint = document.querySelector('.power-hint');
+        const controls = [...document.querySelectorAll('#player button,#player input')]
+          .filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
+          .map(el => ({ action: el.dataset.action ?? el.id, ...rect(el) }));
+        return { hint: rect(hint), controls };
+      });
+      const overlaps = geometry.controls.filter(r => geometry.hint.left < r.right && geometry.hint.right > r.left && geometry.hint.top < r.bottom && geometry.hint.bottom > r.top);
+      assert.ok(geometry.controls.length > 10, 'Use a populated player, including the numbered voice key');
+      measurements.push({ theme, language, width, height, ...geometry, overlaps });
+      if (!overlaps.length) {
+        assert.ok(geometry.hint.top >= 0 && geometry.hint.bottom <= height, 'Hint remains within the viewport');
+        const opener = page.locator('[data-action="open-controls"]');
+        if (await opener.isVisible()) {
+          await opener.click();
+          await page.locator('dialog[open]').waitFor();
+          await page.keyboard.press('Escape');
+          await page.locator('dialog[open]').waitFor({state:'detached'});
+        }
+      }
+      await page.screenshot({path:path.join(evidence,`${theme}-${language}-${width}x${height}.png`)});
+    }
+    // Persistent, but both dismissal choices remain reachable even in short landscape.
+    await page.getByRole('button', {name: language === 'en' ? 'Got it' : 'Verstanden', exact:true}).click();
+    await page.locator('.power-hint').waitFor({state:'detached'});
+    await page.evaluate(async () => {
+      const {createPowerHint} = await import('/src/powerHint.ts');
+      const frame = createPowerHint();
+      for (let stamp=0;stamp<=6000;stamp+=1000/30) frame(stamp,2);
+    });
+    assert.equal(await page.locator('.power-hint').count(),0,'Automatic hint is once per visit');
+    await page.close();
+  }
+  await fs.writeFile(path.join(evidence,'player-geometry.json'), JSON.stringify(measurements,null,2));
+  assert.equal(measurements.filter(m=>m.overlaps.length).length, 0,
+    `Power hint covers player controls: ${JSON.stringify(measurements.filter(m=>m.overlaps.length).map(({theme,language,width,height,hint,overlaps})=>({theme,language,width,height,hint,overlaps})))}`);
+  console.log('POWER HINT: player controls never overlap at all six viewports, EN/DE and both supported themes');
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
     const page = await browser.newPage({ viewport });
     page.setDefaultTimeout(2000);
@@ -117,4 +188,5 @@ try {
   console.log("POWER HINT: desktop/mobile, both overlay orders, sign-out clicks and dismissals passed");
 } finally {
   await browser.close();
+  await server.close();
 }
