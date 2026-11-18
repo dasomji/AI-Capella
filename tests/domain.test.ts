@@ -1923,3 +1923,18 @@ test('account deletion verifies fresh and aged session passwords before confirma
     assert.equal((await pool.query('select id from "user" where id=$1', [singer.id])).rowCount, 0);
   }
 });
+
+
+test('voice identities persist with the piece across rename and removal',async()=>{
+ const singer=await account();const e=await ok('ensembles','POST',{name:'Numbered choir'},singer.cookie);
+ const content=(await import('node:fs')).readFileSync('tests/fixtures/voices-16.musicxml','utf8');
+ let piece=await ok(`ensembles/${e.id}/pieces`,'POST',{title:'Sixteen voices',content:{format:'musicxml',body:content},idempotencyKey:crypto.randomUUID()},singer.cookie);
+ const numbers=Object.fromEntries(Array.from({length:16},(_,i)=>['P'+(i+1),i+1]));
+ const patch=(op:string,key:string,value:unknown)=>ok(`ensembles/${e.id}/pieces/${piece.id}`,'PATCH',{op,key,value},singer.cookie);
+ piece=await patch('defaults','voiceNumbers',numbers);
+ await patch('partName','P4','Renamed green voice');await patch('removed','P2',true);
+ const fresh=await ok(`ensembles/${e.id}/pieces/${piece.id}`,'GET',undefined,singer.cookie);
+ assert.deepEqual(fresh.settings.formatDefaults.voiceNumbers,numbers);
+ const invalid=await request(`ensembles/${e.id}/pieces/${piece.id}`,'PATCH',{op:'defaults',key:'voiceNumbers',value:{P1:1,P2:1}},singer.cookie);
+ assert.equal(invalid.status,400,'duplicate voice numbers are rejected');
+});

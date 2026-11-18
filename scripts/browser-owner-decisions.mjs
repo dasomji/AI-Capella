@@ -24,6 +24,7 @@ try {
   if(width===768&&!baseline)assert.ok(await page.locator('.song-card').first().evaluate(e=>Math.abs(e.getBoundingClientRect().width-280)<1),'D23 keeps the tablet card width');
   results.push({theme,width,height,cards,mismatch});await shot('library');
   await page.locator('#lib-menu-btn').click();await page.getByRole('dialog',{name:baseline?'Language':'Settings',exact:true}).waitFor();await shot('settings');await page.keyboard.press('Escape');
+  if(!baseline){await page.evaluate(async()=>{(await import('/src/i18n.ts')).setLang('de');window.owner.library();});await page.locator('#lib-menu-btn').click();await page.getByRole('dialog',{name:'Einstellungen',exact:true}).waitFor();await shot('settings-de');await page.keyboard.press('Escape');await page.evaluate(async()=>{(await import('/src/i18n.ts')).setLang('en');window.owner.library();});}
   // Live re-theme is checked in renderer-themes, where the rehearsal appearance hold is bypassed explicitly.
   await page.evaluate(()=>window.owner.player(16));if(!baseline)await page.locator('[data-voice-key] button').last().waitFor();
   if(!baseline)assert.equal(await page.locator('[data-voice-key] button').count(),16);
