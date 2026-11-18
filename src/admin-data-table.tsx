@@ -29,7 +29,8 @@ const features = tableFeatures({
 });
 const interactive = "a,button,input,select,textarea,label,summary,[role=button]";
 /**
- * One server page at a time; cursors are scoped to the complete filter/sort/limit query.
+ * Lists fetch one server page at a time; detail members may opt into cached client filtering.
+ * Cursors remain scoped to the complete filter/sort/limit query.
  * Pieces, audit, jobs, users, ensembles, memberships and pickers all share this table.
  */
 export function AdminDataTable({
@@ -37,6 +38,7 @@ export function AdminDataTable({
   columns,
   filters = {},
   search = "",
+  clientSearch,
   onOpen,
   revision = 0,
   caption,
@@ -53,6 +55,8 @@ export function AdminDataTable({
   columns: AdminColumn[];
   filters?: Record<string, string>;
   search?: string;
+  /** Load cursor pages once, then filter these fields locally before pagination. */
+  clientSearch?: readonly string[];
   /** Opens the row's detail; rows keep a real link in their first cell for keyboard users. */
   onOpen?: (row: AdminRow) => void;
   revision?: number;
@@ -91,9 +95,20 @@ export function AdminDataTable({
       })),
     [columns],
   );
+  const needle = search.trim().toLocaleLowerCase();
+  const matching = clientSearch && needle
+    ? rows.filter(row => clientSearch.some(key => String(row[key] ?? "").toLocaleLowerCase().includes(needle)))
+    : rows;
+  const visibleRows = clientSearch
+    ? matching.slice(pagination.pageIndex * pagination.pageSize, (pagination.pageIndex + 1) * pagination.pageSize)
+    : rows;
+  const hasNext = clientSearch ? (pagination.pageIndex + 1) * pagination.pageSize < matching.length : !!next;
+  useEffect(() => {
+    if (clientSearch) setPagination(p => ({ ...p, pageIndex: 0 }));
+  }, [search, filterKey, sorting[0]?.id, sorting[0]?.desc, pagination.pageSize]);
   const table = useTable({
     features,
-    data: rows,
+    data: visibleRows,
     columns: defs,
     getRowId: (r) => r.id,
     manualSorting: true,
@@ -110,10 +125,11 @@ export function AdminDataTable({
   const signature = JSON.stringify([
     path,
     filterKey,
-    search,
+    clientSearch ? "" : search,
+    !!clientSearch,
     sortKey,
     sort?.desc,
-    pagination.pageSize,
+    clientSearch ? null : pagination.pageSize,
   ]);
   const signatureRef = useRef(signature),
     loadedPage = useRef<string | null>(null);
@@ -127,12 +143,12 @@ export function AdminDataTable({
       setCursors([undefined]);
       setNext(null);
       setRows([]);
-      if (pagination.pageIndex) {
+      if (!clientSearch && pagination.pageIndex) {
         setPagination((p) => ({ ...p, pageIndex: 0 }));
         return;
       }
     }
-    const pageKey = JSON.stringify([signature, pagination.pageIndex]);
+    const pageKey = JSON.stringify([signature, clientSearch ? 0 : pagination.pageIndex]);
     // Only retain data and its cursor when refreshing the page currently displayed.
     const refresh = loadedPage.current === pageKey;
     const current = ++generation.current;
@@ -140,16 +156,25 @@ export function AdminDataTable({
       try {
         const params = new URLSearchParams({
           ...filters,
-          search,
-          limit: String(pagination.pageSize),
+          search: clientSearch ? "" : search,
+          limit: String(clientSearch ? 100 : pagination.pageSize),
           ...(sortKey ? { sort: sortKey } : {}),
           ...(sort ? { direction: sort.desc ? "desc" : "asc" } : {}),
-          ...(!changed && cursors[pagination.pageIndex]
+          ...(!clientSearch && !changed && cursors[pagination.pageIndex]
             ? { cursor: cursors[pagination.pageIndex] }
             : {}),
         });
         for (const [key, value] of [...params]) if (value === "") params.delete(key);
-        const r = await adminRequest(path + (path.includes("?") ? "&" : "?") + params);
+        const requestPage = () => adminRequest(path + (path.includes("?") ? "&" : "?") + params);
+        const r = await requestPage();
+        if (clientSearch) {
+          while (r.nextCursor && current === generation.current) {
+            params.set("cursor", r.nextCursor);
+            const page = await requestPage();
+            r.items.push(...page.items);
+            r.nextCursor = page.nextCursor;
+          }
+        }
         if (current !== generation.current) return;
         loadedPage.current = pageKey;
         setRows(r.items);
@@ -173,7 +198,7 @@ export function AdminDataTable({
       clearTimeout(timer);
       generation.current++;
     };
-  }, [signature, pagination.pageIndex, revision, retry]);
+  }, [signature, clientSearch ? 0 : pagination.pageIndex, revision, retry]);
   const label = (id: string) => columns.find((c) => c.id === id)?.label ?? "";
   return (
     <section data-admin={dataAdmin} aria-label={caption} aria-busy={busy}>
@@ -261,7 +286,7 @@ export function AdminDataTable({
         </Table>
       </TableWrap>
       {busy && <Loading layout="tw:sr-only">{m.loading}</Loading>}
-      {!busy && !error && !rows.length && (
+      {!busy && !error && !visibleRows.length && (
         <EmptyState
           variant="compact"
           title={filtered ? t.emptyFiltered : (emptyTitle ?? t.emptyTitle)}
@@ -269,7 +294,7 @@ export function AdminDataTable({
           action={filtered && onClear ? <Button size="compact" type="button" onClick={onClear}>{t.clear}</Button> : undefined}
         />
       )}
-      {(pagination.pageIndex > 0 || next || rows.length > 0) && (
+      {(pagination.pageIndex > 0 || hasNext || visibleRows.length > 0) && (
         <TablePagination data-admin="pagination">
           <Button
             size="compact"
@@ -288,10 +313,10 @@ export function AdminDataTable({
           <Button
             size="compact"
             type="button"
-            aria-disabled={busy || !next}
+            aria-disabled={busy || !hasNext}
             onClick={() => {
-              if (busy || !next) return;
-              setCursors((old) => [...old.slice(0, pagination.pageIndex + 1), next!]);
+              if (busy || !hasNext) return;
+              if (!clientSearch) setCursors((old) => [...old.slice(0, pagination.pageIndex + 1), next!]);
               table.nextPage();
             }}
           >

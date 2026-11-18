@@ -1,6 +1,7 @@
 import { Button, Checkbox, ConfirmDialog, Dialog, Field, Input, Status, Textarea } from "./design-system/react";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
+import { AdminToolbar } from "./admin-toolbar";
 import { AdminDataTable, type AdminColumn } from "./admin-data-table";
 import { adminRequest, managementError, AdminRequestError } from "./admin-request";
 import { adminManagementMessages } from "./i18n";
@@ -327,14 +328,16 @@ type Action =
   | { kind: "add" | "invite" };
 
 /** Membership oversight and AICAP-26 management for one user or ensemble detail page. */
-export function AdminMemberships({ entity, profile, onChanged }: {
+export function AdminMemberships({ entity, profile, onChanged, searchLabel }: {
   entity: "users" | "ensembles";
+  searchLabel: string;
   profile: AdminRow;
   onChanged: () => Promise<void>;
 }) {
   const { t, fill, language } = useAdmin();
   const d = adminManagementMessages[language];
   const [action, setAction] = useState<Action | null>(null),
+    [search, setSearch] = useState(""),
     [revision, setRevision] = useState(0),
     [status, setStatus] = useState(""),
     [rows, setRows] = useState<AdminRow[]>([]);
@@ -420,8 +423,13 @@ export function AdminMemberships({ entity, profile, onChanged }: {
         }
       >
         {status && <Status variant="admin" intent={status === d.refreshFailed || status === d.invitationNotSent ? "warning" : "success"}>{status}</Status>}
+        <AdminToolbar query={search ? { search } : {}} setQuery={q => setSearch(q.search ?? "")} fields={[]} search={searchLabel} />
         <AdminDataTable
           data-admin="memberships"
+          search={search}
+          clientSearch={entity === "users" ? ["name", "email", "ensemble_name"] : ["name", "email"]}
+          filtered={!!search.trim()}
+          onClear={() => setSearch("")}
           path="memberships"
           caption={entity === "users" ? t.userMemberships : t.ensembleMembers}
           columns={columns}
