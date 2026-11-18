@@ -337,7 +337,7 @@ Add a theme through one complete token block and one registry entry. Run
 
 **D26 interim.** Until room permissions are designed separately, the EN/DE introduction describes the current Together behavior: everyone controls shared playback on every device; volume, mute and solo remain personal. It promises no missing “take the lead” command and introduces no new session permissions.
 
-**D21 pending owner approval.** An extended voice palette requires owner approval against the current colors before implementation. Existing voice colors, labels and renderer identification cues remain; this round makes no palette change.
+**D42 A (D21 approved).** The selected extension supplies colors 9–16 and stable numbered names in voice controls, score labels and the accessible key. The first eight palette roles and small-score spacing remain. D43’s Parchment green change still awaits comparison approval. See the applied decisions in [the design-system guide](design-system.md) for persistence and renderer boundaries.
 
 ### Responsive regression checks
 

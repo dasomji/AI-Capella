@@ -2,7 +2,12 @@
 
 Canvas consumers read the immutable `design-system/theme` snapshot. `theme.ts`, `palette.ts`
 and `design.ts` retain only the compatibility bindings still used by callers. Fonts at canvas
-sinks use `snapshot.fonts`; part assignments use `colorForPart(index, count, snapshot)`.
+sinks use `snapshot.fonts`. Score part assignments use `voiceColor(part, score, snapshot)` to
+retain the stored part-number identity; decorative assignments use `colorForPart(index, count, snapshot)`.
+The eight-entry `spectrum` preserves small-score spacing. `extendedSpectrum` resolves the approved
+sixteen roles directly for larger scores; extending `spectrum.length` would recolor small pieces.
+Neutral numbers/names remain available when pigments or overview callouts coincide. D43 keeps
+Parchment voice 4 unchanged until comparison approval.
 
 A snapshot selects paper versus waves from `material-fibre`, and a typed renderer strategy
 from each theme’s `material-strategy` role (`ink` or `light`). Browser `color-scheme` does
