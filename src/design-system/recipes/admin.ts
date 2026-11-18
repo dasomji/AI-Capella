@@ -66,7 +66,7 @@ export function adminRecipe() {
       "tw:block tw:m-flush tw:mt-small tw:max-h-(--ds-admin-content-height) tw:overflow-auto tw:p-control tw:rounded-field tw:bg-surface-sunken tw:font-mono tw:text-small tw:leading-leading-body tw:text-ink tw:whitespace-pre-wrap tw:wrap-anywhere " + focus,
     picker: "tw:grid tw:m-flush tw:p-flush tw:list-none tw:max-h-(--ds-admin-picker-height) tw:overflow-y-auto tw:min-w-flush",
     sort:
-      "tw:inline-flex tw:items-center tw:gap-micro tw:m-flush tw:px-flush tw:py-flush tw:min-h-control-height-compact tw:touch:min-h-control-target-touch tw:border-0 tw:rounded-field tw:bg-transparent tw:font-control tw:text-small tw:font-weight-label tw:leading-leading-body tw:text-ink-secondary tw:whitespace-nowrap tw:cursor-pointer tw:hover:text-ink tw:aria-disabled:cursor-wait " + focus,
+      "tw:inline-flex tw:items-center tw:gap-micro tw:m-flush tw:px-flush tw:py-flush tw:min-h-control-height-compact tw:touch:min-h-control-target-touch tw:touch:min-w-control-target-touch tw:border-0 tw:rounded-field tw:bg-transparent tw:font-control tw:text-small tw:font-weight-label tw:leading-leading-body tw:text-ink-secondary tw:whitespace-nowrap tw:cursor-pointer tw:hover:text-ink tw:aria-disabled:cursor-wait " + focus,
     nowrap: "tw:whitespace-nowrap",
     srOnly: "tw:sr-only",
   } as const;
