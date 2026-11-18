@@ -251,7 +251,7 @@ export function memoizeByTheme<T>(fn: (theme: ThemeSnapshot) => T): () => T {
 export function notifyThemeMaterialChange() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('design-material-change'));
 }
-export type Breakpoint = 'phone' | 'phone-wide' | 'account' | 'compact' | 'wordmark' | 'score' | 'panel';
+export type Breakpoint = 'phone' | 'phone-wide' | 'account' | 'compact' | 'wordmark' | 'score' | 'panel' | 'transport';
 export function breakpoint(name: Breakpoint): string {
   if (typeof document === 'undefined') throw Error('breakpoint() requires a styled client document');
   const result = getComputedStyle(document.documentElement).getPropertyValue(`--tw-breakpoint-${name}`).trim();
