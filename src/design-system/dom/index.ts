@@ -2,6 +2,7 @@ import * as r from "../recipes";
 import * as p from "../parts";
 import {
   openDialog,
+  menuPresentation,
   bindMenu,
   toast,
   type DialogBehaviorOptions,
@@ -484,7 +485,7 @@ export function createDialog(options: DialogOptions) {
   const slots = r.dialogRecipe(options),
     dialog = element("dialog", slots.panel, undefined, options);
   dialog.dataset.ds = "dialog";
-  dialog.dataset.dialogLayout = options.variant === "transcription-review" ? "fullscreen" : "centered";
+  dialog.dataset.dialogLayout = options.presentation === "anchored" ? "anchored" : options.variant === "transcription-review" ? "fullscreen" : "centered";
   const titleId = `ds-dialog-${++fieldId}-title`,
     bodyId = titleId + "-body";
   if (options.title && !dialog.hasAttribute("aria-label") && !dialog.hasAttribute("aria-labelledby"))
@@ -534,6 +535,14 @@ export function createDialog(options: DialogOptions) {
     requestClose: () => controller?.requestClose("button"),
     setBusy: (value: boolean) => controller?.setBusy(value),
   };
+}
+/** Small main menus share D48 policy; forms and sheets retain D12 centering. */
+export function createMenuOverlay(options: DialogOptions & { anchor: HTMLElement }) {
+  const { anchor, ...dialog } = options;
+  const presentation = menuPresentation();
+  return createDialog({ ...dialog, presentation, behavior: { ...dialog.behavior,
+    opener: anchor, ...(presentation === "anchored" ? { anchor } : {}),
+  } });
 }
 export const createSheet = ({
   variant = "sheet",
