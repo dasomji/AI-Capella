@@ -6,6 +6,8 @@ import { mkdir, readFile, writeFile, stat } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import pg from "pg";
+import { createTestContainers } from "./test-containers.mjs";
+import { testStorageArgs } from "./test-storage.mjs";
 import {
   S3Client,
   ListObjectsV2Command,
@@ -144,10 +146,9 @@ export async function disposable() {
   const id = `aicap-restore-${randomUUID()}`,
     db = id + "-db",
     store = id + "-s3";
-  const owned = [];
+  const fixtures = await createTestContainers();
   try {
-    command([
-      "run",
+    await fixtures.run([
       "-d",
       "--name",
       db,
@@ -159,23 +160,14 @@ export async function disposable() {
       "127.0.0.1::5432",
       "postgres:17-alpine",
     ]);
-    owned.push(db);
-    command([
-      "run",
+    await fixtures.run([
       "-d",
       "--name",
       store,
       "-p",
       "127.0.0.1::8333",
-      "-v",
-      `${resolve("scripts/s3-local-master.toml")}:/etc/seaweedfs/master.toml:ro`,
-      "chrislusf/seaweedfs:4.06",
-      "server",
-      "-dir=/data",
-      "-master.volumeSizeLimitMB=64",
-      "-s3",
+      ...testStorageArgs(),
     ]);
-    owned.push(store);
     const port = (n) =>
       command(["port", n, n === db ? "5432" : "8333"])
         .split(":")
@@ -228,12 +220,10 @@ export async function disposable() {
       db,
       env,
       client,
-      close() {
-        for (const n of owned.reverse()) command(["rm", "-fv", n]);
-      },
+      close: () => fixtures.close(),
     };
   } catch (e) {
-    for (const n of owned.reverse()) command(["rm", "-fv", n]);
+    await fixtures.close();
     throw e;
   }
 }
@@ -382,7 +372,7 @@ export async function verify(dump, objects) {
     return report;
   } finally {
     await db?.end();
-    fixture.close();
+    await fixture.close();
     for (const key of Object.keys(process.env))
       if (!(key in savedEnv)) delete process.env[key];
     Object.assign(process.env, savedEnv);

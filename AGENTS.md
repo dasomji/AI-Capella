@@ -17,6 +17,12 @@ phase plan and progress log live in `docs/PLAN.md`.
   secret rotation, no sending real email, no endpoint retirement. Local Docker (rootless context)
   is fine for Postgres, SeaweedFS and test mail.
 - Routine tests never call paid AI providers or Resend. Stub them at the external boundary.
+- Launch disposable Docker fixtures through `scripts/test-containers.mjs`
+  (`await createTestContainers()`, `await fixtures.run([...])`, and
+  `await fixtures.close()` in `finally`). Use `testStorageArgs()` from
+  `scripts/test-storage.mjs` for SeaweedFS. Do not create ad-hoc persistent test
+  containers: the shared launcher owns cleanup, including interrupted runners.
+  Never globally prune Docker volumes; Compose/Lizardtail development data is persistent.
 - Secrets: never commit `.env` files, keys or tokens; only `.env.example` with placeholders.
 - Preserve musical behavior: `audioEngine.ts`, MusicXML/MIDI parsing, score timeline, piano roll,
   staff view and PDF export must keep working. Move them, do not rewrite them.

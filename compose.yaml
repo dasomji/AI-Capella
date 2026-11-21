@@ -18,9 +18,9 @@ services:
     ports: ['127.0.0.1:21025:1025', '127.0.0.1:28025:8025']
   seaweedfs:
     image: chrislusf/seaweedfs:4.06
-    command: 'server -dir=/data -s3 -s3.config=/etc/seaweedfs/s3.json'
+    command: 'server -dir=/data -master.volumePreallocate=false -master.volumeSizeLimitMB=64 -s3 -s3.config=/etc/seaweedfs/s3.json'
     ports: ['127.0.0.1:28333:8333']
-    volumes: ['seaweed:/data', './scripts/s3-local.json:/etc/seaweedfs/s3.json:ro']
+    volumes: ['seaweed:/data', './scripts/s3-local.json:/etc/seaweedfs/s3.json:ro', './scripts/s3-local-master.toml:/etc/seaweedfs/master.toml:ro']
 volumes:
   postgres:
   seaweed:

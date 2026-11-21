@@ -106,7 +106,9 @@ jobs:
             migration)
               suite --id migration-build --title 'Build for the migration suite' -- npm run build
               suite --id migration --title 'Legacy migration against the Firestore emulator' -- npm run test:migration ;;
-            backup) suite --id backup --title 'Backup and isolated restore' -- npm run test:backup ;;
+            backup)
+              suite --id containers --title 'Fixture cleanup and disk allocation' -- npm run test:containers
+              suite --id backup --title 'Backup and isolated restore' -- npm run test:backup ;;
             docker)
               suite --id docker-web --title 'Build web image (Dockerfile)' --repro 'docker build -f Dockerfile .' -- docker build -t lightscore-ci-web -f Dockerfile .
               suite --id canary-web --title 'Web image ops:canary (sandbox + PDF support)' -- docker run --rm lightscore-ci-web npm run ops:canary
@@ -208,7 +210,7 @@ jobs:
       - &start-fixtures
         name: Start local S3 and pre-pull fixture images (in the background)
         run: |
-          docker run -d --name ci-seaweedfs -p 127.0.0.1:28333:8333 -v "$PWD/scripts/s3-local.json:/etc/seaweedfs/s3.json:ro" -v "$PWD/scripts/s3-local-master.toml:/etc/seaweedfs/master.toml:ro" chrislusf/seaweedfs:4.06@sha256:a064c6923daf4451c943cec2f437a67523d7792ee589089bc4d4c27a61d78dea server -master.volumeSizeLimitMB=64 -s3 -s3.config=/etc/seaweedfs/s3.json
+          docker run --rm --restart=no -d --name ci-seaweedfs -p 127.0.0.1:28333:8333 -v "$PWD/scripts/s3-local.json:/etc/seaweedfs/s3.json:ro" -v "$PWD/scripts/s3-local-master.toml:/etc/seaweedfs/master.toml:ro" chrislusf/seaweedfs:4.06@sha256:a064c6923daf4451c943cec2f437a67523d7792ee589089bc4d4c27a61d78dea server -master.volumePreallocate=false -master.volumeSizeLimitMB=64 -s3 -s3.config=/etc/seaweedfs/s3.json
           # Harness-owned containers (scripts/browser-isolated.mjs, integration.mjs, ops-backup.mjs).
           (docker pull -q postgres:17-alpine && docker pull -q axllent/mailpit:v1.27) > "$RUNNER_TEMP/prepull.log" 2>&1 &
       - *setup-node

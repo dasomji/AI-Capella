@@ -2,14 +2,9 @@ import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
 import { existsSync } from "node:fs";
 import { chromium } from "playwright";
+import { createTestContainers } from "./test-containers.mjs";
 let restartServer;
-const names = [],
-  children = [];
-const docker = (args) => {
-  const r = spawnSync("docker", args, { encoding: "utf8" });
-  if (r.status !== 0) throw Error(r.stderr);
-  return r.stdout.trim();
-};
+const fixtures = await createTestContainers();
 async function port() {
   const s = createServer();
   await new Promise((r) => s.listen(0, "127.0.0.1", r));
@@ -20,7 +15,7 @@ async function port() {
 async function run(args, env) {
   const c = spawn(process.execPath, args, { env, stdio: ["inherit","inherit","inherit","ipc"] });
   c.on("message", async m=>{if(m.type==="restart"){try{await restartServer();c.send({type:"restarted"});}catch(e){c.send({error:String(e)});}}});
-  children.push(c);
+  fixtures.trackChild(c);
   const code = await new Promise((r) => c.on("exit", r));
   if (code !== 0) throw Error(`Command failed (${code}): ${args.join(" ")}`);
 }
@@ -31,8 +26,7 @@ try {
     appPort = Number(process.env.BROWSER_PORT) || (await port());
   const db = `aicap-browser-db-${process.pid}`,
     mail = `aicap-browser-mail-${process.pid}`;
-  docker([
-    "run",
+  await fixtures.run([
     "-d",
     "--name",
     db,
@@ -44,9 +38,7 @@ try {
     `127.0.0.1:${dbPort}:5432`,
     "postgres:17-alpine",
   ]);
-  names.push(db);
-  docker([
-    "run",
+  await fixtures.run([
     "-d",
     "--name",
     mail,
@@ -56,7 +48,6 @@ try {
     `127.0.0.1:${mailPort}:8025`,
     "axllent/mailpit:v1.27",
   ]);
-  names.push(mail);
   let ready = false;
   for (let i = 0; i < 100; i++) {
     if (
@@ -94,7 +85,7 @@ try {
     ["--import", "tsx", "server/entry.ts"],
     { env, stdio: "inherit" },
   );
-  children.push(server);
+  fixtures.trackChild(server);
   ready = false;
   for (let i = 0; i < 150; i++) {
     try {
@@ -108,7 +99,7 @@ try {
   if (!ready) throw Error("Server did not start");
   restartServer=async()=>{
     server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));
-    server=spawn(process.execPath,["--import","tsx","server/entry.ts"],{env,stdio:"inherit"});children.push(server);
+    server=spawn(process.execPath,["--import","tsx","server/entry.ts"],{env,stdio:"inherit"});fixtures.trackChild(server);
     for(let i=0;i<150;i++){try{if((await fetch(base+'/readyz')).ok)return;}catch{}await new Promise(r=>setTimeout(r,100));}
     throw Error('Restart readiness timeout');
   };
@@ -125,10 +116,5 @@ try {
   await run([process.env.BROWSER_SCRIPT || "scripts/browser-phase2b.mjs"], env);
   if(!process.env.BROWSER_SCRIPT) {await run(["scripts/browser-phase5a.mjs"],env);await run(["scripts/browser-sync.mjs"],env);await run(["scripts/browser-sync-acceptance.mjs"],env);}
 } finally {
-  for (const c of children)
-    if (c.exitCode === null) {
-      c.kill("SIGTERM");
-      await new Promise((r) => c.once("exit", r));
-    }
-  for (const n of names.reverse()) docker(["rm", "-fv", n]);
+  await fixtures.close();
 }

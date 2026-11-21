@@ -75,6 +75,48 @@ Integration owns disposable Postgres and launches actual HTTP/dev/start servers;
 SeaweedFS and Mailpit must be running at the compose endpoints. Browser harnesses
 own disposable DB/mail and separate build roots, use real account sessions and
 exercise account/theme, offline/logout, sync/restart and transcription flows.
+
+### Disposable Docker fixtures
+
+All repository test launchers use `scripts/test-containers.mjs`. A separate watcher
+owns each run's containers, marked with a random `com.lightscore.test-run` label.
+Tests call `await fixtures.close()` in `finally`; SIGINT/SIGTERM also close the
+scope, and IPC disconnect lets the watcher clean up after a crashed or SIGKILLed
+runner. Containers use `--rm --restart=no`, and cleanup uses `docker rm -fv` to
+remove their anonymous data volumes. It only touches that run's label. A failed
+launch/name collision cannot remove another run's fixture. CI additionally has an
+`always()` cleanup step for its job-scoped S3 service.
+
+New scripts must use the shared launcher, not ad-hoc `docker run -d` commands:
+
+```js
+import { createTestContainers } from './test-containers.mjs';
+import { testStorageArgs } from './test-storage.mjs';
+const fixtures = await createTestContainers();
+try {
+  await fixtures.run(['-d', '--name', uniqueName, '-p', '127.0.0.1::8333', ...testStorageArgs()]);
+  // Exercise the fixture; fixtures.trackChild(child) also handles child shutdown.
+} finally {
+  await fixtures.close();
+}
+```
+
+`testStorageArgs()`, Compose and CI explicitly pass
+`-master.volumePreallocate=false -master.volumeSizeLimitMB=64` and mount the
+committed `scripts/s3-local-master.toml` (`copy_1 = 1`). This overrides the image
+entrypoint's 1 GiB preallocation and seven-volume growth defaults on every machine.
+`npm run test:containers` exercises real Docker cleanup after normal completion,
+failure, SIGINT, SIGTERM and SIGKILL, cross-run ownership, and allocated disk blocks
+after real S3 writes. CI runs it as part of the backup check.
+
+Compose and Lizardtail development databases/storage intentionally remain persistent.
+Settings changes do not release existing reservations; retiring old environments
+requires separate, explicit removal of their data. No user-space watcher can run
+while the machine or Docker daemon is unavailable; simultaneous loss of the runner
+and watcher may require scoped cleanup after recovery. Never use global volume pruning.
+
+### Browser evidence
+
 CHROMIUM_PATH overrides the executable. Evidence defaults to `.review-evidence/<suite>` (the standard harness uses `browser`);
 set `BROWSER_EVIDENCE` to select a directory, including for admin/final suites;
 never use these harnesses against existing users/production services. They stub

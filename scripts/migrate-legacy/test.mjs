@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
 import { mkdir, writeFile, access } from "node:fs/promises";
+import { createTestContainers } from "../test-containers.mjs";
 const prerequisites =
   "Migration tests require Java on PATH, Docker, npm ci, and npm ci --prefix rules-test (see docs/MIGRATION.md).";
 try {
@@ -75,9 +76,9 @@ await writeFile(
     firestore: { rules: process.cwd() + "/firestore.rules" },
   }),
 );
+const fixtures = await createTestContainers();
 try {
-  run("docker", [
-    "run",
+  await fixtures.run([
     "-d",
     "--name",
     name,
@@ -119,9 +120,10 @@ try {
     ],
     { env, stdio: "inherit" },
   );
+  fixtures.trackChild(child);
   process.exitCode = await new Promise((r) =>
     child.on("exit", (c) => r(c ?? 1)),
   );
 } finally {
-  run("docker", ["rm", "-fv", name]);
+  await fixtures.close();
 }

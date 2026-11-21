@@ -112,5 +112,5 @@ try {
   );
 } finally {
   await db?.end();
-  source.close();
+  await source.close();
 }

@@ -222,5 +222,5 @@ try {
     await exit;
   }
   await db?.end();
-  fixture.close();
+  await fixture.close();
 }
