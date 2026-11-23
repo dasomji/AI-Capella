@@ -4,7 +4,7 @@ import { backingSize } from './pixels';
 import type { MeasureInfo, NoteEvent, PartInfo, Score, ScoreMark } from './score';
 import type { PartMixState } from './audioEngine';
 import { MARK_WEIGHT, INK1, PAPER, paper, stageFill, playheadBeam, readingStrip, drawQueryMark } from './theme';
-import { backlight, NIGHT_PAPER, paintPaper, paperKind, STILL } from './paper';
+import { backlight, NIGHT_PAPER, paintPaper, paperKind, paperRepeatPx, STILL } from './paper';
 import { around, SliceRing } from './sliceRing';
 
 import { drawRulerSignature, signatureChanges, type SignatureChange } from './signatures';
@@ -76,16 +76,6 @@ let fontEpoch = 0;
 let paperEpoch = 0;
 if (typeof document !== 'undefined' && 'fonts' in document) document.fonts.addEventListener('loadingdone', () => fontEpoch++);
 if (typeof window !== 'undefined') window.addEventListener('paperchange', () => paperEpoch++);
-
-/**
- * How far the paper's texture repeats (css px) at a stretch -- as paper.ts lays it: a 512-texel tile
- * at 0.5 px per texel, scaled within one octave (its fold()). The cached paper (paintPaperArea) is
- * shown at an offset within one repeat.
- */
-function paperRepeatPx(stretch: number): number {
-  const l = Math.log2(Math.max(1e-3, stretch));
-  return 256 * 2 ** (l - Math.floor(l));
-}
 
 const mod = (a: number, n: number) => ((a % n) + n) % n;
 

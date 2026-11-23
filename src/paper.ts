@@ -443,6 +443,15 @@ function fold(s: number): { a: number; f: number } {
   return { a: 2 ** f, f };
 }
 
+/**
+ * How far the paper's texture repeats (CSS px) along an axis stretched by `stretch` (a PaperFrame's
+ * sx or sy), as paintPaper lays it -- for a caller that keeps the paper painted and shows it at an
+ * offset within one repeat (the sheet view).
+ */
+export function paperRepeatPx(stretch: number): number {
+  return N * TS * fold(stretch).a;
+}
+
 // The layers for the current stretch, composed once into one tile (with the paper's colour, when
 // asked): the coarser layer at the tile's own scale, the finer at half (which repeats exactly in it),
 // so the screen needs one fill per frame. Composed again only when the stretch moves on (weights in
