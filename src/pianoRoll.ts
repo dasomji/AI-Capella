@@ -289,23 +289,36 @@ export class PianoRoll {
 
   /** Mute hides a part entirely; when any part is soloed, every non-soloed (and non-muted) part is dimmed. */
   setPartMix(mix: Map<string, PartMixState>) {
-    this.hiddenParts = new Set();
-    this.dimmedParts = new Set();
+    const hidden = new Set<string>();
+    const dimmed = new Set<string>();
     const anySolo = Array.from(mix.values()).some((s) => s === 'solo');
     for (const [partId, state] of mix) {
-      if (state === 'muted') this.hiddenParts.add(partId);
-      else if (anySolo && state !== 'solo') this.dimmedParts.add(partId);
+      if (state === 'muted') hidden.add(partId);
+      else if (anySolo && state !== 'solo') dimmed.add(partId);
     }
+    // (As with the setters below: the same again repaints nothing.)
+    const same = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].every((id) => b.has(id));
+    if (same(hidden, this.hiddenParts) && same(dimmed, this.dimmedParts)) return;
+    this.hiddenParts = hidden;
+    this.dimmedParts = dimmed;
     this.invalidateBuffers();
   }
 
+  /**
+   * The same key again changes nothing -- and must repaint nothing: every Play, Pause and seek
+   * applies the whole playback state, this included, and repainting the buffers for it stalled the
+   * first frame of every Play (measured on a phone-class CPU: 0.25 s for six voices, 1 s for a
+   * dense eight-voice piece), and threw away the stretch painted ahead.
+   */
   setTranspose(semitones: number) {
+    if (semitones === this.transpose) return;
     this.transpose = semitones;
     this.updatePitchRange();
     this.invalidateBuffers();
   }
 
   setZoom(factor: number) {
+    if (this.pixelsPerBeat === BASE_PIXELS_PER_BEAT * factor) return;
     this.pixelsPerBeat = BASE_PIXELS_PER_BEAT * factor;
     this.invalidateBuffers();
   }
@@ -520,6 +533,7 @@ export class PianoRoll {
 
   /** Section letters (rehearsal marks) printed as boxed letters in the ruler. */
   setSections(sections: { label: string; beat: number }[]) {
+    if (sections.length === this.sections.length && sections.every((s, i) => s.label === this.sections[i].label && s.beat === this.sections[i].beat)) return;
     this.sections = sections;
     this.invalidateBuffers();
   }
@@ -548,11 +562,14 @@ export class PianoRoll {
 
   resize() {
     const rect = this.canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    const size = backingSize(this.canvas, rect.width, rect.height, dpr);
+    // Nothing changed (a resize is also asked for when only something around the roll did): the
+    // canvas, its buffers and the syllables' bitmaps all stand.
+    if (rect.width === this.cssWidth && rect.height === this.cssHeight && dpr === this.dpr && this.canvas.width === size.w && this.canvas.height === size.h && this.cssWidth > 0) return;
     this.cssWidth = rect.width;
     this.cssHeight = rect.height;
-    this.dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-
-    const size = backingSize(this.canvas, rect.width, rect.height, this.dpr);
+    this.dpr = dpr;
     this.canvas.width = size.w;
     this.canvas.height = size.h;
     this.ctx2d.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
