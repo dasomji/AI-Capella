@@ -403,9 +403,13 @@ export class PianoRoll {
     this.fitView = null;
   }
 
-  /** True while a zoom glide or the lamp's glide is in progress (the caller keeps rendering until it ends). */
+  /**
+   * True while a zoom glide is in progress, or part of the buffer is still to be painted (the caller
+   * keeps rendering until it ends -- so a paused roll finishes its buffer then and there, not in
+   * the first frames of the next Play).
+   */
   isAnimating(): boolean {
-    return this.fitGlide !== null;
+    return this.fitGlide !== null || (this.bufferUnpainted > 0 && !this.contentBufferDirty && this.cssWidth > 0);
   }
 
   /** Ends a glide where it is and freezes the fitted zoom, so hand scrolling works from there. */
@@ -1032,7 +1036,10 @@ export class PianoRoll {
       let i = last + 1;
       while (i < n && this.bufferPainted[i]) i++;
       if (i >= n) for (i = first - 1; i >= 0 && this.bufferPainted[i]; ) i--;
-      if (i < 0) break;
+      if (i < 0) {
+        this.bufferUnpainted = 0;
+        break;
+      }
       this.paintBufferSlice(i, rowHeight);
     } while (this.bufferUnpainted && performance.now() - t0 < NEXT_SLICE_BUDGET_MS);
   }
@@ -1136,19 +1143,30 @@ export class PianoRoll {
     const lead = Math.max(0, Math.min(visibleBeatsSpan * NEXT_BUFFER_LEAD, ahead * 0.8));
     if (!this.next) {
       if (viewTo + margin + lead <= end) return;
-      const { originBeat, beatsSpan } = this.bufferSpan(viewFrom + lead, visibleBeatsSpan, margin);
+      // Laid out for the view as it will be when the buffer in use runs out -- which is `lead`
+      // from here when this starts on time, and less when it starts late (the buffer in use was
+      // itself still being painted): counted from here then, the next stretch began beyond where
+      // the view was when it was needed, and was thrown away for a repaint.
+      const { originBeat, beatsSpan } = this.bufferSpan(Math.min(viewFrom + lead, end - margin - (viewTo - viewFrom)), visibleBeatsSpan, margin);
       const set = this.sizeBufferSet(this.spare, beatsSpan);
       this.next = { ...set, origin: originBeat, span: beatsSpan, rowHeight, done: 0, slices: Math.max(2, Math.ceil(set.content.width / NEXT_SLICE_DEVICE_PX)) };
       return; // painting starts next frame: this one has had its share of work
     }
     const next = this.next;
     if (next.done >= next.slices || next.rowHeight !== rowHeight) return;
-    // A slice per frame -- more while there's time left in this one.
+    // A slice per frame -- more while there's time left in this one, and as many as it takes to
+    // keep pace with the music: all of them by the time the view is one slice short of the end of
+    // the buffer in use. Where frames come slowly (a slow device, a moment of other work) a slice
+    // per frame was not enough; the view then reached that end with the next stretch unfinished,
+    // which was thrown away and everything in view painted at once instead -- a hitch, and on a
+    // device slow enough, one after another.
+    const used = lead > 0 ? (viewTo + margin + lead - end) / lead : 1;
+    const due = Math.min(next.slices, Math.ceil(used * (next.slices + 1)));
     const t0 = performance.now();
     do {
       this.paintSlice(next, next.origin, next.span, rowHeight, next.done / next.slices, (next.done + 1) / next.slices);
       next.done++;
-    } while (next.done < next.slices && performance.now() - t0 < NEXT_SLICE_BUDGET_MS);
+    } while (next.done < next.slices && (next.done < due || performance.now() - t0 < NEXT_SLICE_BUDGET_MS));
     if (next.done >= next.slices) this.paintRuler(next.ruler, next.origin, next.span * this.pixelsPerBeat);
   }
 
