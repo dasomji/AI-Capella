@@ -565,7 +565,16 @@ test('AICAP-31 PDF, 50 MP photo, brute force and recipient floods log one redact
  }finally{clock.now=original;output.mock.restore();}
 });
 
+// Fixture account creation is independent of the network-abuse scenarios below.
+// A full run creates more than 60 accounts on loopback within one auth window.
+async function resetFixtureNetwork() {
+ const {createRateLimitKey}=await import('@better-auth/core/utils/ip');
+ for(const ip of ['127.0.0.1','::1'])for(const path of ['/sign-up/email','/verify-email-password'])
+  await pool.query('delete from rate_limit where key=$1',[createRateLimitKey(ip,path)]);
+}
+
 test('AICAP-31 request, upload, mail and account guards emit exact redacted stdout records',{timeout:30000},async t=>{
+ await resetFixtureNetwork();
  const {lead,e,source}=await setup();const outsider=await account();
  const {api}=await import('../server/http.server');
  const {createHash}=await import('node:crypto');
@@ -645,6 +654,7 @@ test('AICAP-31 request, upload, mail and account guards emit exact redacted stdo
 });
 
 test('AICAP-31 worker, render and preview guards emit exact stdout records',{timeout:30000},async t=>{
+ await resetFixtureNetwork();
  const {lead,e,source}=await setup();
  const {BoundedPageRenderer}=await import('../server/page-renderer.server');const {Readable}=await import('node:stream');
  const {validateScore}=await import('../server/score-validation.server');
@@ -683,6 +693,7 @@ test('AICAP-31 worker, render and preview guards emit exact stdout records',{tim
 });
 
 test('AICAP-31 password evaluation and registration guards log actual rejection fields',async t=>{
+ await resetFixtureNetwork();
  const {lead}=await setup(),{api}=await import('../server/http.server'),{createHash}=await import('node:crypto');
  await (await import('../server/background.server')).flushBackground();
  const out=t.mock.method(console,'log',()=>{});
