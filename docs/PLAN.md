@@ -3016,3 +3016,38 @@ Open questions at handoff:
   AICAP-27 tracks that gap. Requested explicit checks are recorded in the report.
 - Plane currently has no In Review state. AICAP-26 remains In Progress for the
   owning agent's review rather than being marked Done before handoff review.
+
+### AICAP-32 — smooth playback on low-power phones (2026-11-23)
+
+Measured first with `scripts/perf-playback.mjs` (real player, stubbed API, 360x740 phone at 3x,
+CPU throttled x4/x6; software canvas and the accelerated path on SwiftShader), then fixed what
+the measurements showed. How to run and read the profile, and what costs:
+`docs/agents/playback-performance.md`.
+
+- Audio: the schedule is laid a little on every tick, four seconds ahead (was: five seconds at
+  once, eight ahead). Bursts of up to 2,250 audio nodes in one task are gone, and with them the
+  audio clock's stalls with the sung voice. Notes are laid from a list sorted by start (a swung
+  score is not in that order). Voices that have sounded are let go of.
+- Piano roll: Play, Pause and seek no longer repaint the buffers (the key was set again each
+  time); a repaint paints what is in view first and the rest over the next frames; a slice draws
+  only what reaches into it; the slurs' fade toward the words is clipped around the slurs; the
+  stretch painted ahead keeps pace with the music; the lantern's glow is drawn over its strip only;
+  the overview strip repaints when its playhead moves a pixel.
+- Sheet view: the music is laid out once and pre-painted into a ring of slices
+  (`src/sliceRing.ts`); only the stretch where notes sound, the lamp, the shade and the tempo
+  marks are drawn per frame; paper and margin are cached.
+
+Medians at x4, software canvas, 20 s: dense eight-voice roll 8.4 -> 14.7 frames per second,
+longest frame 450 -> 150 ms, Play to the first moving frame 1083 -> 138 ms; with gel notes
+1.1 -> 31; sheet view 10 -> 17, frames over 100 ms 56 -> 1; sung voice: audio stalls 6 -> 0.
+Evidence, pixel comparisons and the report are outside git under
+`/home/dev/.local/state/aicap-design/impl/aicap-32/`.
+
+Visible differences, all in the sheet view: barlines, ruler ticks and the music move on whole
+device pixels; a beam group entering at the right edge is drawn as engraved from the start
+(it used to show flags until the whole group was in view); a tied note keeps its continuation near
+the left edge.
+
+Left undone: the lamp's `backlight()` strip is repainted every frame and is now the largest
+per-frame cost in the paper themes; the gel roll's lit notes use a shadow blur per frame; the
+profile has no real phone GPU. A phone remains the final judge (`?fps=1`).

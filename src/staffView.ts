@@ -649,6 +649,7 @@ export class StaffView {
   private notesByStaff: Map<string, NoteEvent[]>; // by PartLayout.key
   private layouts: PartLayout[];
   private lyricLineOf = new Map<NoteEvent, number>(); // see lyricLines; absent: the first line
+  private lyricReachPx = LYRIC_REACH_PX; // how far the piece's longest syllable reaches from its note (see paintRange)
   private hiddenParts = new Set<string>();
   private dimmedParts = new Set<string>();
   private signatureAt: Map<number, SignatureChange>; // by bar start beat
@@ -713,6 +714,7 @@ export class StaffView {
       else this.notesByStaff.set(key, [note]);
     }
     for (const list of this.notesByStaff.values()) list.sort((a, b) => a.startBeat - b.startBeat);
+    for (const note of score.notes) if (note.lyric) this.lyricReachPx = Math.max(this.lyricReachPx, lyricReach(note.lyric));
 
     // Rest gaps depend only on each staff's own notes and the piece's total length -- static for
     // the life of this score, so computed once here rather than every render.
@@ -1015,6 +1017,14 @@ export class StaffView {
       this.paintRange(ctx, layouts, G, width, displayBeat, playheadBeat);
       ctx.restore();
     }
+    // The tempo marks, over the music (drawTempoMarks), where the pre-painted rows are.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(G, STAFF_RULER_HEIGHT_PX, width - G, height - STAFF_RULER_HEIGHT_PX);
+    ctx.clip();
+    ctx.translate(0, ring ? Math.round((STAFF_RULER_HEIGHT_PX - this.scrollY + this.ringTop) * k) / k - this.ringTop : STAFF_RULER_HEIGHT_PX - this.scrollY);
+    this.drawTempoMarks(ctx, gridBeat, gridBeat - (this.playheadX() - G) / this.pixelsPerBeat, gridBeat + (width - this.playheadX()) / this.pixelsPerBeat);
+    ctx.restore();
 
     // Played music steps back, as in the piano roll.
     if (playheadPx > G) {
@@ -1081,9 +1091,12 @@ export class StaffView {
   private paintRange(ctx: CanvasRenderingContext2D, layouts: PartLayout[], from: number, to: number, displayBeat: number, playheadBeat: number) {
     this.drawFrom = from - RANGE_SLACK_PX;
     this.drawTo = to + RANGE_SLACK_PX;
-    const startBeat = displayBeat + (this.drawFrom - this.playheadX()) / this.pixelsPerBeat;
-    // (A syllable is centred on its note: one starting this far right can still reach in.)
-    const endBeat = displayBeat + (this.drawTo + LYRIC_REACH_PX - this.playheadX()) / this.pixelsPerBeat;
+    // (A syllable is centred on its note: one starting as far right, or left, as the piece's longest
+    // syllable reaches can still reach in -- drawStaff looks two beats back of startBeat, which
+    // zoomed far out is less than that.)
+    const beatAtX = (x: number) => displayBeat + (x - this.playheadX()) / this.pixelsPerBeat;
+    const startBeat = Math.min(beatAtX(this.drawFrom), beatAtX(this.drawFrom - this.lyricReachPx) + 2);
+    const endBeat = beatAtX(this.drawTo + this.lyricReachPx);
     this.drawBarlines(ctx, layouts, displayBeat, startBeat, endBeat);
     for (const layout of layouts) this.drawStaff(ctx, layout, displayBeat, playheadBeat, startBeat, endBeat);
     this.drawMarks(ctx, layouts, displayBeat);
@@ -1757,11 +1770,33 @@ export class StaffView {
     if (!layouts.length) return;
     const shift = this.beatToX(0, displayBeat); // laid out with beat 0 at x = 0
     for (const lm of this.laidMarks) {
+      if (lm.tempo) continue; // each frame, by what is in view (drawTempoMarks)
       const x = lm.x + shift;
       // (Script letters can swing out a little past their measured width.)
       if (x + lm.w + 20 < this.drawFrom || x - 20 > this.drawTo) continue;
-      const alpha = lm.tempo ? undefined : this.dimmedParts.has(lm.layout.partId) ? 0.35 : 1;
+      const alpha = this.dimmedParts.has(lm.layout.partId) ? 0.35 : 1;
       drawInkMark(ctx, lm.mark, { x, y: lm.layout.topY - lm.rise, x2: lm.x2 === undefined ? undefined : lm.x2 + shift, alpha, scale: lm.scale });
+    }
+  }
+
+  /**
+   * The tempo marks over the top staff, written each frame rather than pre-painted with the music:
+   * one that would run into the mark before it is left out -- but only while that mark is in view
+   * (or up to eight beats before it), so which are written depends on where the view is. Laid out
+   * for the whole piece once, the later of two close marks was never written at all when zoomed
+   * far out. There are only a few of them.
+   */
+  private drawTempoMarks(ctx: CanvasRenderingContext2D, displayBeat: number, startBeat: number, endBeat: number) {
+    const shift = this.beatToX(0, displayBeat); // laid out with beat 0 at x = 0
+    let rowEnd = -Infinity;
+    for (const lm of this.laidMarks) {
+      if (!lm.tempo) continue;
+      const m = lm.mark;
+      if (!((m.endBeat ?? m.beat) >= startBeat - 8 && m.beat <= endBeat)) continue;
+      const x = lm.x + shift;
+      if (x < rowEnd + 12) continue;
+      drawInkMark(ctx, m, { x, y: lm.layout.topY - lm.rise, scale: lm.scale });
+      rowEnd = x + lm.w;
     }
   }
 
@@ -1774,13 +1809,11 @@ export class StaffView {
     if (!this.marks || !layouts.length) return out;
     const ctx = this.ctx2d;
     const atZero = this.playheadX() / this.pixelsPerBeat; // a displayBeat that puts beat 0 at x = 0
-    let rowEnd = -Infinity;
+    // (Every tempo mark: which of two close ones is written is decided by the view, in drawTempoMarks.)
     for (const m of this.marks.lane) {
       if (m.kind !== 'tempo') continue;
       const x = this.beatToX(m.beat, atZero) + NOTE_X_OFFSET_PX - 4;
-      if (x < rowEnd + 12) continue;
       const w = drawInkMark(ctx, m, { x, y: 0, scale: 1.05 }, true);
-      rowEnd = x + w;
       out.push({ mark: m, layout: layouts[0], x, x2: undefined, w, rise: 26, scale: 1.05, tempo: true });
     }
     // Shared dynamics and hairpins stand on every staff; shared words once, over the top one.
