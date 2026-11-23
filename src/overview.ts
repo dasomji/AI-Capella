@@ -20,6 +20,11 @@ export class OverviewStrip {
   private partColor: (partId: string) => string;
   private notesLayer: HTMLCanvasElement | null = null;
   private dirty = true;
+  // Where the playhead was last painted (CSS px), and whether anything else changed since: the
+  // whole piece is a few hundred pixels wide here, so the playhead stays on its pixel for a second
+  // or more -- and until it moves on, a frame has nothing to repaint (it used to, 60 times a second).
+  private shownAt: number | null = null;
+  private stale = true;
   private themeRevision = -1;
   private cssWidth = 0;
   private cssHeight = 0;
@@ -50,16 +55,19 @@ export class OverviewStrip {
     this.canvas.width = size.w;
     this.canvas.height = size.h;
     this.dirty = true;
+    this.stale = true;
   }
 
   setMix(dimmed: Set<string>, hidden: Set<string>) {
     this.dimmed = dimmed;
     this.hidden = hidden;
     this.dirty = true;
+    this.stale = true;
   }
 
   setLoopRegion(loop: LoopRegion | null) {
     this.loop = loop;
+    this.stale = true;
   }
 
   beatToX(beat: number): number {
@@ -126,6 +134,10 @@ export class OverviewStrip {
     const theme = readTheme();
     if (this.themeRevision !== theme.revision) { this.themeRevision = theme.revision; this.dirty = true; }
     if (this.cssWidth <= 0 || this.cssHeight <= 0) return;
+    const px = Math.round(this.beatToX(playheadBeat));
+    if (!this.dirty && !this.stale && this.notesLayer && px === this.shownAt) return;
+    this.shownAt = px;
+    this.stale = false;
     if (this.dirty || !this.notesLayer) this.buildNotesLayer();
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
@@ -146,7 +158,6 @@ export class OverviewStrip {
       ctx.fillRect(Math.round(x2), top - 4, 1, bottom - top + 8);
     }
     if (this.notesLayer) ctx.drawImage(this.notesLayer, 0, 0, this.cssWidth, this.cssHeight);
-    const px = Math.round(this.beatToX(playheadBeat));
     ctx.fillStyle = theme.color('score-overview-past').rgba(Number(theme.roles['score-overview-past-alpha']));
     ctx.fillRect(PAD_X, top - 4, Math.max(0, px - PAD_X), bottom - top + 8);
     ctx.fillStyle = PAPER;
