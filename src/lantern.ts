@@ -148,6 +148,11 @@ export class Lantern {
   private width = 0;
   private height = 0;
   private ready = false; // under() has composed this frame's glow for over()
+  // The part of the roll's width the glow lies in (CSS px, on whole pixels of its layer): beyond
+  // the strip along the reading line it is nothing, and laying nothing over the rest of the screen
+  // -- half of it on a phone, two thirds on a laptop -- cost as much as the glow itself.
+  private glowFrom = 0;
+  private glowTo = 0;
 
   /**
    * Behind the paper. `drawFilters` paints the holes' colour filters into the given context, which
@@ -214,6 +219,12 @@ export class Lantern {
     fillStrip(g, lampX, HALO_REACH, HALO_STOPS, width, height);
     g.globalCompositeOperation = 'lighter';
     fillStrip(g, lampX, PAPER_GLOW_REACH, PAPER_GLOW_STOPS, width, height);
+    // Where that is: the strip's reach (the wider of the two), and two pixels of the layer more on
+    // either side, for the pixel its edge falls in and the one it is smoothed into when enlarged.
+    const reach = Math.min(HALO_REACH[2], Math.max(HALO_REACH[1], width * HALO_REACH[0]));
+    const cell = 1 / HALO_SCALE;
+    this.glowFrom = Math.max(0, (Math.floor((lampX - reach) / cell) - 2) * cell);
+    this.glowTo = Math.max(this.glowFrom, Math.min(width, (Math.ceil((lampX + reach) / cell) + 2) * cell));
 
     // ...which also brightens the holes themselves (added here, on the small layer: adding it to
     // the full screen costs a lot more on some devices -- see over()).
@@ -221,7 +232,7 @@ export class Lantern {
       t.setTransform(1, 0, 0, 1, 0, 0);
       t.globalCompositeOperation = 'lighter';
       t.globalAlpha = HOLE_BOOST;
-      resample(t, glow, HALO_SCALE, LIGHT_SCALE, width, height);
+      this.drawGlow(t, LIGHT_SCALE);
     }
 
     const smoothing = ctx.imageSmoothingEnabled;
@@ -229,6 +240,16 @@ export class Lantern {
     ctx.drawImage(through, 0, 0, width * LIGHT_SCALE, height * LIGHT_SCALE, 0, 0, width, height);
     ctx.imageSmoothingEnabled = smoothing;
     this.ready = true;
+  }
+
+  /**
+   * Draws the glow into `ctx` (at `toScale`), enlarged exactly as the whole layer would be, but only
+   * the part of it that holds anything (glowFrom..glowTo).
+   */
+  private drawGlow(ctx: CanvasRenderingContext2D, toScale: number) {
+    const w = this.glowTo - this.glowFrom;
+    if (!this.glow || w <= 0) return;
+    ctx.drawImage(this.glow, this.glowFrom * HALO_SCALE, 0, w * HALO_SCALE, this.height * HALO_SCALE, this.glowFrom * toScale, 0, w * toScale, this.height * toScale);
   }
 
   /** In front of the paper (after under() in the same frame): the lamp's glow and the holes' halos. */
@@ -242,7 +263,7 @@ export class Lantern {
     const smoothing = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true;
     ctx.globalCompositeOperation = readTheme().material.lanternComposite;
-    ctx.drawImage(this.glow, 0, 0, this.width * HALO_SCALE, this.height * HALO_SCALE, 0, 0, this.width, this.height);
+    this.drawGlow(ctx, 1);
     if (readTheme().material.lanternComposite === 'multiply') ctx.globalCompositeOperation = 'source-over';
     ctx.imageSmoothingEnabled = smoothing;
   }
