@@ -467,18 +467,39 @@ test('UI endpoints isolate ensembles, validate pages/options and sandbox cached 
  const row=(await pool.query('select options from transcription_jobs where id=$1',[j.id])).rows[0];assert.equal(row.options.title,'score');
 });
 
+/** Virtual time for the worker's lease timers: time moves only when the test fires the next due timer. */
+function virtualClock(){
+ let now=0,seq=0;const timers=new Map<number,{at:number,every?:number,fn:()=>void}>();
+ const add=(fn:()=>void,ms:number,every?:number)=>{const id=++seq;timers.set(id,{at:now+ms,every,fn});return id;};
+ return {now:()=>now,setTimeout:(fn:()=>void,ms:number)=>add(fn,ms),setInterval:(fn:()=>void,ms:number)=>add(fn,ms,ms),clearTimeout:(id:unknown)=>{timers.delete(id as number);},clearInterval:(id:unknown)=>{timers.delete(id as number);},
+  /** Advance to the earliest due timer and run it; false when no timer is pending. */
+  runNext(){let next:[number,{at:number,every?:number,fn:()=>void}]|undefined;for(const entry of timers)if(!next||entry[1].at<next[1].at)next=entry;if(!next)return false;const [id,timer]=next;now=timer.at;if(timer.every)timer.at+=timer.every;else timers.delete(id);timer.fn();return true;}};
+}
+
 test('persistent or hung heartbeat and stuck rendering release before lease expiry',{timeout:60000},async()=>{
+ const {ReferenceRenderer}=await import('../server/transcription-provider.server');const {heartbeatInterval}=await import('../server/lease-deadline');
  for(const mode of ['failed','hung','render','context','legacy-context','call-insert']){
- const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);const query=pool.query,lease=env.TRANSCRIPTION_LEASE_MS;env.TRANSCRIPTION_LEASE_MS=5000;
+ const {lead,e,source}=await setup();const j=await job(e.id,lead.cookie,source.id);const query=pool.query,lease=env.TRANSCRIPTION_LEASE_MS,leaseMs=5000;env.TRANSCRIPTION_LEASE_MS=leaseMs;
+ // Each mode stalls the page at one point while the heartbeat fails or hangs; `stalled` resolves once the worker waits there.
+ let stall!:()=>void;const stalled=new Promise<void>(resolve=>stall=resolve);const hang=()=>{stall();return new Promise<never>(()=>{});};
  pool.query=function(this:typeof pool,...args:any[]){const sql=String(args[0]);
  if(sql.startsWith('update job_pages p set lease_expires_at') )return mode==='failed'?Promise.reject(Error('persistent heartbeat fixture')):new Promise(()=>{});
- if(mode==='context'&&sql.startsWith('select metrics,result_xml'))return new Promise(()=>{});
- if(mode==='legacy-context'&&sql.startsWith('select metrics,result_xml'))return sql.includes('limit 1')?Promise.resolve({rows:[{result_xml:'legacy',metrics:{}}]}):new Promise(()=>{});
- if(mode==='call-insert'&&sql.startsWith('insert into provider_calls'))return new Promise(()=>{});
+ if(mode==='context'&&sql.startsWith('select metrics,result_xml'))return hang();
+ if(mode==='legacy-context'&&sql.startsWith('select metrics,result_xml'))return sql.includes('limit 1')?Promise.resolve({rows:[{result_xml:'legacy',metrics:{}}]}):hang();
+ if(mode==='call-insert'&&sql.startsWith('insert into provider_calls'))return hang();
  return (query as any).apply(this,args);} as any;
- const provider=new FakeProvider(()=> 'success',10000);let aborted=false;
- const renderer=mode==='render'?{render:async(_input:any,signal:AbortSignal)=>{signal.addEventListener('abort',()=>{aborted=true;},{once:true});return new Promise<any>(()=>{});}}:undefined;
- const started=performance.now();try{await new TranscriptionWorker(provider,renderer).tick();assert.ok(performance.now()-started<5000,`${mode}: lease deadline exceeded`);assert.equal(mode==='render'?aborted:true,true);assert.notEqual((await (query as any).call(pool,'select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running');}finally{pool.query=query;env.TRANSCRIPTION_LEASE_MS=lease;}
+ // A provider far slower than the lease; it stops only when the worker aborts the page.
+ const provider=new FakeProvider(()=> 'success',60000);const transcribe=provider.transcribePage.bind(provider);provider.transcribePage=(...args)=>{stall();return transcribe(...args);};
+ let signal:AbortSignal|undefined,abortedAt:number|undefined;const clock=virtualClock();const reference=new ReferenceRenderer();
+ const renderer={render:(input:any,pageSignal:AbortSignal)=>{signal=pageSignal;pageSignal.addEventListener('abort',()=>{abortedAt=clock.now();},{once:true});return mode==='render'?hang():reference.render(input);}};
+ try{
+ const tick=new TranscriptionWorker(provider,renderer,undefined,clock).tick();
+ assert.equal(await Promise.race([stalled.then(()=>'stalled'),tick.then(()=>'finished')]),'stalled',`${mode}: worker finished before reaching the stall`);
+ // Virtual time stood still until now, so it measures from lease acquisition; between timers only microtasks run.
+ while(!signal!.aborted&&clock.runNext())await new Promise(resolve=>setImmediate(resolve));
+ // The worker must give up one heartbeat before the lease runs out, leaving that interval for the release writes.
+ assert.ok(abortedAt!==undefined&&abortedAt<=leaseMs-heartbeatInterval(leaseMs),`${mode}: lease deadline exceeded (aborted at virtual ${abortedAt} ms of a ${leaseMs} ms lease)`);
+ await tick;assert.notEqual((await (query as any).call(pool,'select state from job_pages where job_id=$1',[j.id])).rows[0].state,'running');}finally{pool.query=query;env.TRANSCRIPTION_LEASE_MS=lease;}
  }
 });
 
