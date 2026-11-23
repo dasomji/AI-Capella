@@ -993,6 +993,12 @@ export class StaffView {
     } else {
       ctx.fillStyle = stageFill(ctx, height);
       ctx.fillRect(0, 0, width, height);
+      if (this.paperCache) {
+        // No paper here: its cache's memory back (a zero-sized canvas holds none).
+        this.paperCache.width = this.paperCache.height = 0;
+        this.paperCache = null;
+        this.paperStamp = '';
+      }
     }
 
     if (ring) this.showMusic(ctx, layouts, shift, gridBeat, playheadBeat, width, height);
