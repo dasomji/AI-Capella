@@ -323,7 +323,7 @@ interface LaidNote {
 interface LaidStaff {
   notes: LaidNote[];
   maxDur: number; // the longest note, in beats (a note starting that far back can still be in view)
-  beams: { startBeat: number; group: BeamStem[] }[];
+  beams: { startBeat: number; order: number; group: BeamStem[] }[]; // order: as laid out (drawBeams' order)
   maxBeamSpan: number;
   beamUp: Map<BeamStem, boolean>;
 }
@@ -668,6 +668,8 @@ export class StaffView {
   private gutterPx = 80;
   private sections: { label: string; beat: number }[] = [];
   private markedBars = new Set<number>();
+  private sectionsSeen = ''; // what the ruler shows of the sections and marked bars (by value)
+  private markedBarsSeen = '';
   // Fill-the-height factor (see MAX_FILL_SCALE) and the extra room between staves it leaves.
   // render() draws in "logical" units -- cssWidth/cssHeight/pixelsPerBeat swapped for the
   // scaled-down values -- under a ctx.scale(fill), so the drawing code itself is unchanged.
@@ -827,16 +829,19 @@ export class StaffView {
 
   /** Section letters (rehearsal marks) printed as boxed letters in the ruler. */
   setSections(sections: { label: string; beat: number }[]) {
-    const same = sections.length === this.sections.length && sections.every((s, i) => s.label === this.sections[i].label && s.beat === this.sections[i].beat);
+    // (Compared by value: the caller may hand in the same array, edited in place.)
+    const seen = sections.map((s) => `${s.label}@${s.beat}`).join('|');
     this.sections = sections;
-    if (!same) this.version++;
+    if (seen !== this.sectionsSeen) this.version++;
+    this.sectionsSeen = seen;
   }
 
   /** Bar numbers the scan wasn't sure of, marked with a "?" in the ruler. */
   setMarkedBars(bars: Set<number>) {
-    const same = bars.size === this.markedBars.size && [...bars].every((b) => this.markedBars.has(b));
+    const seen = [...bars].sort((a, b) => a - b).join('|');
     this.markedBars = bars;
-    if (!same) this.version++;
+    if (seen !== this.markedBarsSeen) this.version++;
+    this.markedBarsSeen = seen;
   }
 
   /**
@@ -1303,7 +1308,8 @@ export class StaffView {
       }
     }
     if (lo > hi) return null;
-    // A shadow's blur reaches about 1.2x its value, in device px (the transform doesn't scale it).
+    // A shadow's blur reaches about 1.2x its value (1.5x: with room to spare), in device px -- the
+    // transform doesn't scale it.
     const glow = (1.5 * Number(this.theme.roles['score-staff-glow-blur'])) / (this.dpr * this.fill) + 1;
     return [lo - glow, hi + glow];
   }
@@ -1579,8 +1585,10 @@ export class StaffView {
       if (note.startBeat + note.durationBeats < startBeat - 2) continue;
       this.drawNote(ctx, note, bottomLineIndex, bottomLineY, displayBeat, playheadBeat, color, dimmed, accidental, segments, chords);
     }
-    const groups: BeamStem[][] = [];
-    for (let i = firstIndexAtOrAfter(laid.beams, startBeat - 2 - laid.maxBeamSpan); i < laid.beams.length && laid.beams[i].startBeat <= endBeat; i++) groups.push(laid.beams[i].group);
+    const near: LaidStaff['beams'] = [];
+    for (let i = firstIndexAtOrAfter(laid.beams, startBeat - 2 - laid.maxBeamSpan); i < laid.beams.length && laid.beams[i].startBeat <= endBeat; i++) near.push(laid.beams[i]);
+    // (In the order they are engraved in: overlapping groups of two voices lie as they always did.)
+    const groups = near.sort((a, b) => a.order - b.order).map((b) => b.group);
     this.drawBeams(ctx, groups, laid.beamUp, bottomLineY, displayBeat, playheadBeat, color, dimmed);
 
     const rests = this.restsByStaff.get(layout.key) ?? [];
@@ -1746,7 +1754,7 @@ export class StaffView {
       laidNotes.push({ startBeat: note.startBeat, note, accidental: showAccidental, segments: segmentsOf.get(note)!, chords: chords.get(note) });
       maxDur = Math.max(maxDur, note.durationBeats);
     }
-    const beams = beamGroups.map((group) => ({ startBeat: group[0].beat, group })).sort((a, b) => a.startBeat - b.startBeat);
+    const beams = beamGroups.map((group, order) => ({ startBeat: group[0].beat, order, group })).sort((a, b) => a.startBeat - b.startBeat);
     const maxBeamSpan = beamGroups.reduce((m, g) => Math.max(m, g[g.length - 1].beat + g[g.length - 1].dur - g[0].beat), 0);
     return { notes: laidNotes, maxDur, beams, maxBeamSpan, beamUp };
   }
