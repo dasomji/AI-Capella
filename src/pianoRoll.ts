@@ -545,7 +545,9 @@ export class PianoRoll {
   /** Section letters (rehearsal marks) printed as boxed letters in the ruler. */
   setSections(sections: { label: string; beat: number }[]) {
     if (sections.length === this.sections.length && sections.every((s, i) => s.label === this.sections[i].label && s.beat === this.sections[i].beat)) return;
-    this.sections = sections;
+    // A copy: the caller goes on adding to, removing from and relabelling its own list, which would
+    // then always equal itself here.
+    this.sections = sections.map((s) => ({ ...s }));
     this.invalidateBuffers();
   }
 
@@ -1327,7 +1329,8 @@ export class PianoRoll {
         // Painting one slice (prepareNextBuffer): syllables well away from it are left out -- not
         // even their bitmaps made, which for a new stretch of music took a whole frame -- but those
         // near it still take their place in the lane, and a held one's extender may reach in.
-        if (slice && (x > slice.x1 + SLICE_LYRIC_REACH_PX || (x < slice.x0 - SLICE_LYRIC_REACH_PX && !note.lyricExtend))) continue;
+        // (So may the hyphen to a word's next syllable, which sits midway between the two.)
+        if (slice && (x > slice.x1 + SLICE_LYRIC_REACH_PX || (x < slice.x0 - SLICE_LYRIC_REACH_PX && !note.lyricExtend && !note.lyricJoin))) continue;
         const bmp = this.getLyricBitmap(note.lyric!, textColor, fontPx, 550);
         const row = Math.round(y);
         const used = lyricLane.get(row) ?? [];

@@ -18,7 +18,7 @@ window.scheduleCheck = {
   seekBar: (n) => seekToBeat(currentScore.measures.find((m) => m.number === n).startBeat),
   toggle: () => togglePlay(),
   engine: () => audioEngine,
-  notes: () => currentScore.notes.map((n) => [n.startBeat, n.durationBeats]),
+  notes: () => currentScore.notes.map((n) => [n.startBeat, n.durationBeats, n.midi, n.partId]),
 };`;
 const { server, base } = await ownerFixture(out, hooks);
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
@@ -61,7 +61,16 @@ async function run(name, { sound = 'piano', slowTimer = false, seek = false, thr
     // before it is stopped by it, and is none of its notes.
     const engine = window.scheduleCheck.engine();
     const play = engine.play.bind(engine);
-    engine.play = (...a) => { window.laidFrom = window.started.length; return play(...a); };
+    engine.play = (...a) => { window.laidFrom = window.started.length; window.askedFrom = window.asked.length; return play(...a); };
+    // Every note the engine asks for: when, which pitch, which voice.
+    window.asked = [];
+    const playNote = engine.playNote.bind(engine);
+    engine.playNote = (destination, start, duration, midi, level) => {
+      let part = '';
+      for (const [id, gain] of engine.partGains) if (gain === destination) part = id;
+      window.asked.push({ start, midi, part });
+      return playNote(destination, start, duration, midi, level);
+    };
     window.scheduleCheck.toggle();
   });
   await page.waitForFunction(() => window.scheduleCheck.engine().isPlaying() && !window.scheduleCheck.engine().isHeldUp());
@@ -74,7 +83,7 @@ async function run(name, { sound = 'piano', slowTimer = false, seek = false, thr
   await page.waitForTimeout(9000);
   const state = await page.evaluate(() => {
     const engine = window.scheduleCheck.engine();
-    return { started: window.started.slice(window.laidFrom), notes: window.scheduleCheck.notes(), from: engine.playStartBeat, at: engine.playStartCtxTime, spb: engine.secPerBeat, upTo: engine.scheduledUpToBeat, now: engine.context.currentTime, voices: engine.scheduledVoices.length };
+    return { started: window.started.slice(window.laidFrom), asked: window.asked.slice(window.askedFrom), notes: window.scheduleCheck.notes(), from: engine.playStartBeat, at: engine.playStartCtxTime, spb: engine.secPerBeat, upTo: engine.scheduledUpToBeat, now: engine.context.currentTime, voices: engine.scheduledVoices.length };
   });
   await page.evaluate(() => window.scheduleCheck.toggle());
   await page.waitForFunction(() => !window.scheduleCheck.engine().isPlaying());
@@ -87,11 +96,23 @@ async function run(name, { sound = 'piano', slowTimer = false, seek = false, thr
   const sources = state.started.filter((s) => !s.lfo);
   if (sound === 'piano') assert.ok(sources.every((s) => s.kind === 'AudioBufferSourceNode'), `${name}: the sampled piano plays`);
   const expected = [];
-  for (const [start, duration] of state.notes) {
-    if (start + duration <= state.from || start >= state.upTo) continue;
-    expected.push(state.at + Math.max(0, start - state.from) * state.spb);
-  }
   const key = (t) => Math.round(t * 1e4);
+  // Each note by itself -- its time, pitch and voice --, so one played twice for another left out shows.
+  const wanted = new Map();
+  for (const [start, duration, midi, part] of state.notes) {
+    if (start + duration <= state.from || start >= state.upTo) continue;
+    const when = state.at + Math.max(0, start - state.from) * state.spb;
+    expected.push(when);
+    const id = `${key(when)}|${midi}|${part}`;
+    wanted.set(id, (wanted.get(id) ?? 0) + 1);
+  }
+  const got = new Map();
+  for (const a of state.asked) {
+    const id = `${key(a.start)}|${a.midi}|${a.part}`;
+    got.set(id, (got.get(id) ?? 0) + 1);
+  }
+  assert.equal(state.asked.length, expected.length, `${name}: as many notes asked for as are due (${state.asked.length} of ${expected.length})`);
+  for (const [id, n] of wanted) assert.equal(got.get(id) ?? 0, n, `${name}: note ${id} (time|pitch|voice) laid ${n} time(s)`);
   const count = new Map();
   for (const s of sources) count.set(key(s.when), (count.get(key(s.when)) ?? 0) + 1);
   const want = new Map();

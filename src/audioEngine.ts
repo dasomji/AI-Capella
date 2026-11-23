@@ -3,7 +3,7 @@ import { positionAt } from './rehearsal/controller';
 import { secondsAt, beatAt, type PieceTiming } from './rehearsal/timeline';
 import type { RehearsalState } from './rehearsal/contract';
 import { serverToAudioTime } from './rehearsal/client-clock';
-import type { Score } from './score';
+import type { NoteEvent, Score } from './score';
 import { getBeatMarkers } from './score';
 import { dynamicLevels } from './dynamics';
 
@@ -1059,9 +1059,23 @@ export class AudioEngine {
     voices.length = kept;
   }
 
-  /** The first of this.score.notes (sorted ascending by beat) that starts at or after `beat`. */
+  // The notes in the order they are laid: by start, those that can't be scheduled left out.
+  private laidOrder: NoteEvent[] | null = null;
+
+  /**
+   * The score's notes sorted by start (those starting together in the score's order), without any
+   * whose start or length isn't a finite number. The score's own list is not always in that order:
+   * with swing, a note written at b + 5/8 sounds at b + 3/4, after the triplet written behind it at
+   * b + 2/3. Laid a little at a time, a note out of order would fall behind a top-up's range and
+   * never be laid -- as it already could, more rarely, at the edge of the five-second top-ups.
+   */
+  private notesInOrder(): NoteEvent[] {
+    return (this.laidOrder ??= this.score.notes.filter((n) => Number.isFinite(n.startBeat) && Number.isFinite(n.durationBeats)).sort((a, b) => a.startBeat - b.startBeat));
+  }
+
+  /** The first of notesInOrder() that starts at or after `beat`. */
   private firstNoteFrom(beat: number): number {
-    const notes = this.score.notes;
+    const notes = this.notesInOrder();
     let lo = 0;
     let hi = notes.length;
     while (lo < hi) {
@@ -1072,13 +1086,12 @@ export class AudioEngine {
     return lo;
   }
 
-  /** Both this.score.notes and this.beatMarkers are sorted ascending by beat, so each top-up
+  /** The notes (notesInOrder) and this.beatMarkers are sorted ascending by beat, so each top-up
    *  resumes scanning where the last one left off rather than rescanning from zero. */
   private scheduleNotesInRange(fromBeatExclusive: number, toBeatExclusive: number) {
-    const notes = this.score.notes;
+    const notes = this.notesInOrder();
     for (let i = this.firstNoteFrom(fromBeatExclusive); i < notes.length; i++) {
       const note = notes[i];
-      if (note.startBeat < fromBeatExclusive) continue; // (only where a malformed start upset the search)
       if (note.startBeat >= toBeatExclusive) break;
       // A note with a non-finite (or otherwise unschedulable) start/duration -- e.g. from a
       // malformed source file -- would make `start`/`dur` below NaN or Infinity, which Web Audio
