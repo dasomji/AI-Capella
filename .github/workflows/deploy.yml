@@ -47,11 +47,11 @@ jobs:
         run: echo "CI_JOB_STARTED=$(date +%s)" >> "$GITHUB_ENV"
       - &checkout
         name: Check out the revision under test
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - &setup-node
         name: Set up Node 22 with the npm download cache
         id: node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -60,21 +60,21 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Set up Java 21 for the Firestore emulator
         if: matrix.task == 'migration'
-        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: '21'
       - name: Restore Firebase emulator cache
         id: firebase-cache
         if: matrix.task == 'migration'
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ runner.os }}-${{ hashFiles('rules-test/package-lock.json') }}
       - name: Restore rules-test node_modules cache
         id: rules-cache
         if: matrix.task == 'migration'
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: rules-test/node_modules
           key: rules-test-modules-${{ runner.os }}-node${{ steps.node.outputs.node-version }}-${{ hashFiles('rules-test/package-lock.json') }}
@@ -118,7 +118,7 @@ jobs:
       - &upload-failure
         name: Upload failure evidence (logs, screenshots, Playwright traces)
         if: failure() || cancelled()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: failure-${{ env.CI_JOB_LABEL || github.job }}
           include-hidden-files: true
@@ -145,7 +145,7 @@ jobs:
       - &upload-result
         name: Upload job result for the CI overview
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ci-result-${{ env.CI_JOB_LABEL || github.job }}
           include-hidden-files: true
@@ -261,7 +261,7 @@ jobs:
       - &playwright-cache
         name: Restore Playwright Chromium cache
         id: pw-cache
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}
@@ -459,10 +459,10 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Check out the CI scripts
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Collect job results
         continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: ci-result-*
           path: ${{ runner.temp }}/ci-results
