@@ -1341,6 +1341,11 @@ export class StaffView {
     ctx.restore();
   }
 
+  private partLabel(partId: string): string {
+    const part = this.score.parts.find((p) => p.id === partId);
+    return part ? voiceLabel(part) : '';
+  }
+
   /** The played shade's fade (paper): over [0, PAST_FADE_PX], drawn translated to where it ends. */
   private pastFadeOf(ctx: CanvasRenderingContext2D): CanvasGradient {
     const stamp = `${this.theme.revision}|${this.pastShade}`;
@@ -1366,7 +1371,10 @@ export class StaffView {
       this.drawMargin(ctx, layouts, startBeat, height);
       return;
     }
-    const stamp = `${this.version}|${this.theme.revision}|${fontEpoch}|${paperEpoch}|${paperKind()}|${fifths}|${this.scrollY}|${k}|${height}|${this.cssWidth}`;
+    // (A voice renamed changes its part's name in place: its label is part of what the cache shows.)
+    let names = '';
+    for (const layout of layouts) if (layout.staff === 1) names += `|${this.partLabel(layout.partId)}`;
+    const stamp = `${this.version}|${this.theme.revision}|${fontEpoch}|${paperEpoch}|${paperKind()}|${fifths}|${this.scrollY}|${k}|${height}|${this.cssWidth}${names}`;
     if (stamp !== this.marginStamp || !this.marginCache) {
       this.marginStamp = stamp;
       const c = (this.marginCache ??= document.createElement('canvas'));
@@ -1376,8 +1384,7 @@ export class StaffView {
       mctx.font = `600 12px ${this.theme.fonts['canvas-text']}`;
       let reach = this.gutterPx + 28;
       for (const layout of layouts) {
-        const part = layout.staff === 1 ? this.score.parts.find((p) => p.id === layout.partId) : undefined;
-        if (part) reach = Math.max(reach, 25 + mctx.measureText(voiceLabel(part)).width + 4);
+        if (layout.staff === 1) reach = Math.max(reach, 25 + mctx.measureText(this.partLabel(layout.partId)).width + 4);
       }
       const cw = Math.min(Math.ceil(Math.min(reach, this.cssWidth) * k), Math.max(1, Math.round(this.cssWidth * k)));
       const ch = Math.max(1, Math.ceil(height * k));
