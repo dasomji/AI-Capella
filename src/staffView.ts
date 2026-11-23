@@ -1,10 +1,11 @@
 import { voiceLabel } from './voiceIdentity';
 import { readTheme, breakpoint, memoizeByTheme } from './design-system/theme';
 import { backingSize } from './pixels';
-import type { MeasureInfo, NoteEvent, PartInfo, Score } from './score';
+import type { MeasureInfo, NoteEvent, PartInfo, Score, ScoreMark } from './score';
 import type { PartMixState } from './audioEngine';
 import { MARK_WEIGHT, INK1, PAPER, paper, stageFill, playheadBeam, readingStrip, drawQueryMark } from './theme';
-import { backlight, NIGHT_PAPER, paintPaper, STILL } from './paper';
+import { backlight, NIGHT_PAPER, paintPaper, paperKind, STILL } from './paper';
+import { around, SliceRing } from './sliceRing';
 
 import { drawRulerSignature, signatureChanges, type SignatureChange } from './signatures';
 import { drawInkMark, layoutMarks, MARKS_ON, type MarkLayout } from './goldInk';
@@ -49,6 +50,44 @@ const LYRIC_LINE_STEP_PX = 16;
 const MAX_FILL_SCALE_NARROW = 1.4;
 const MAX_FILL_SCALE = 1.3;
 const FILL_BOTTOM_PX = 12;
+
+// The music is pre-painted (see StaffView.paintSlice): in slices of the strip this wide, kept in a
+// ring of slots a little wider than the view -- the slices on screen, these many ahead of it (painted
+// one per frame while playing on, so a frame never paints the music it shows) and behind it.
+const SLICE_DEVICE_PX = 256;
+const SLICES_AHEAD = 2;
+const SLICES_BEHIND = 1;
+const MAX_RING_DEVICE_PX = 8192; // defensive cap on a canvas side, as the roll's (wider: drawn directly)
+const MAX_CACHE_DEVICE_PIXELS = 12e6; // the paper's cache, above this (a huge screen): painted directly
+// A stretch drawn on its own (a slice, the sounding notes) also draws what lies this close beyond
+// its edges: the furthest a note's accidental, dot or displaced head reaches past its own place
+// beyond drawNote's 20 px of culling slack, and a syllable's half width (which can be wider).
+const RANGE_SLACK_PX = 8;
+const LYRIC_REACH_PX = 80;
+// How far a sounding note's lit parts reach from its head (accidental, dot, flag, a second's head).
+const LIT_HEAD_REACH_PX = 24;
+const PAST_FADE_PX = 72; // on paper the shade fades in over this width left of the playhead
+// A syllable's half width, at most (12 px type: no letter wider than its size).
+const lyricReach = (lyric: string) => lyric.length * 6 + 4;
+
+// What the pre-painted music and caches were painted with, besides the view's own state: a web font
+// arriving (canvas text drawn before falls back to another face) and the paper's texture made anew.
+let fontEpoch = 0;
+let paperEpoch = 0;
+if (typeof document !== 'undefined' && 'fonts' in document) document.fonts.addEventListener('loadingdone', () => fontEpoch++);
+if (typeof window !== 'undefined') window.addEventListener('paperchange', () => paperEpoch++);
+
+/**
+ * How far the paper's texture repeats (css px) at a stretch -- as paper.ts lays it: a 512-texel tile
+ * at 0.5 px per texel, scaled within one octave (its fold()). The cached paper (paintPaperArea) is
+ * shown at an offset within one repeat.
+ */
+function paperRepeatPx(stretch: number): number {
+  const l = Math.log2(Math.max(1e-3, stretch));
+  return 256 * 2 ** (l - Math.floor(l));
+}
+
+const mod = (a: number, n: number) => ((a % n) + n) % n;
 
 // Engraving glyphs from the SMuFL font (Eugene, bundled as a subset -- see theme.ts FONT_MUSIC). SMuFL
 // fonts are drawn at 4 staff spaces per em, with each glyph's origin at its musical reference point
@@ -258,6 +297,38 @@ interface ChordPlace {
   stemUp: boolean;
   stemTo: number | null;
   dx: number;
+}
+
+type Segment = { startBeat: number; durationBeats: number };
+
+/** One note as engraved (see layStaff): whether it shows an accidental, its heads, its chord places. */
+interface LaidNote {
+  startBeat: number;
+  note: NoteEvent;
+  accidental: boolean;
+  segments: Segment[];
+  chords: (ChordPlace | undefined)[] | undefined;
+}
+
+/** A staff's music laid out once for the whole piece: notes and beam groups, both by start. */
+interface LaidStaff {
+  notes: LaidNote[];
+  maxDur: number; // the longest note, in beats (a note starting that far back can still be in view)
+  beams: { startBeat: number; group: BeamStem[] }[];
+  maxBeamSpan: number;
+  beamUp: Map<BeamStem, boolean>;
+}
+
+/** A dynamic, hairpin, word or tempo mark where drawMarks writes it, x at beat 0 = 0. */
+interface LaidMark {
+  mark: ScoreMark;
+  layout: PartLayout;
+  x: number;
+  x2: number | undefined;
+  w: number;
+  rise: number; // its baseline this far above the staff's top line
+  scale: number;
+  tempo: boolean;
 }
 
 /** Ledger-line positions (in the same half-step units as staff position) needed for a note this far outside the staff. */
@@ -544,8 +615,13 @@ function lyricLines(notes: NoteEvent[]): { lines: number; lineOf: Map<NoteEvent,
  * notes never collide with clefs, and the clef you're reading is always in view. Muted voices
  * leave the stack entirely instead of leaving a gap.
  *
- * Redraws directly every frame (no offscreen buffer like PianoRoll): fine at a choir
- * arrangement's note density, with per-frame work bounded to the visible measures.
+ * The music is laid out once for the whole piece (layStaff, layMarks) and pre-painted, as it rests,
+ * into slices of a strip kept in a ring a little wider than the view (paintSlice) -- the next
+ * slices painted ahead one per frame while playing on -- and each frame shows them at whole device
+ * pixels, like PianoRoll's buffer. Drawn anew every frame: only what moves against the music or
+ * depends on the playhead -- the paper's lamp, the notes sounding now (in a narrow stretch, drawn
+ * with everything else there in the original order, so their glow lies as before), the played
+ * shade, the playhead; the paper and the pinned margin come from caches.
  *
  * Reflects the app's transpose setting fully, like a real transposed part: both the key signature
  * and every note's spelling shift together, derived from the same circle-of-fifths shift (see
@@ -585,6 +661,30 @@ export class StaffView {
   // scaled-down values -- under a ctx.scale(fill), so the drawing code itself is unchanged.
   private fill = 1;
   private extraGap = 0;
+  // Bumped by every change of what the pre-painted music looks like (zoom, transpose, mix, size...).
+  private version = 0;
+  // The stretch being drawn, in the drawing's x: what lies beyond it (plus the drawing code's own
+  // slack) is left out. The view's music area when drawn directly; a slice; the sounding notes.
+  private drawFrom = 0;
+  private drawTo = 0;
+  private laid = new Map<string, LaidStaff>(); // by PartLayout.key, see layStaff
+  private laidMarks: LaidMark[] = [];
+  private laidStamp = '';
+  // The ring of pre-painted slices (see paintSlice): the music and the ruler's bar numbers, each
+  // slice SLICE_DEVICE_PX wide; the music covers the content rows [ringTop, ringTop + ringHeight).
+  private ring = new SliceRing(SLICE_DEVICE_PX);
+  private ringMusic: HTMLCanvasElement | null = null;
+  private ringRuler: HTMLCanvasElement | null = null;
+  private ringStamp = '';
+  private ringTop = 0;
+  private ringHeight = 0;
+  private marginCache: HTMLCanvasElement | null = null;
+  private marginStamp = '';
+  private paperCache: HTMLCanvasElement | null = null;
+  private paperStamp = '';
+  private pastFade: CanvasGradient | null = null;
+  private pastFadeStamp = '';
+  private stats = { slices: 0, sync: 0, ahead: 0, litPx: 0, laidMs: 0 };
 
   constructor(canvas: HTMLCanvasElement, score: Score, partColor: (partId: string) => string) {
     this.canvas = canvas;
@@ -648,6 +748,7 @@ export class StaffView {
     this.canvas.width = size.w;
     this.canvas.height = size.h;
     this.ctx2d.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.version++;
     this.setZoom(this.zoom);
     this.updateFill();
     this.scrollByPixels(0);
@@ -696,25 +797,34 @@ export class StaffView {
   }
 
   setZoom(factor: number) {
-    this.zoom = factor;
     const base = this.cssWidth > 0 && this.cssWidth < mobileBreakpointPx() ? BASE_PIXELS_PER_BEAT_NARROW : BASE_PIXELS_PER_BEAT;
+    if (factor === this.zoom && base * factor === this.pixelsPerBeat) return;
+    this.zoom = factor;
     this.pixelsPerBeat = base * factor;
+    this.version++;
   }
 
   /** Fully key-signature-aware: also shifts the drawn key signature, not just note spellings. */
   setTranspose(semitones: number) {
+    if (semitones === this.transpose) return;
     this.transpose = semitones;
     this.updateGutter();
+    this.laid.clear(); // spellings, so places, stems and accidentals
+    this.version++;
   }
 
   /** Section letters (rehearsal marks) printed as boxed letters in the ruler. */
   setSections(sections: { label: string; beat: number }[]) {
+    const same = sections.length === this.sections.length && sections.every((s, i) => s.label === this.sections[i].label && s.beat === this.sections[i].beat);
     this.sections = sections;
+    if (!same) this.version++;
   }
 
   /** Bar numbers the scan wasn't sure of, marked with a "?" in the ruler. */
   setMarkedBars(bars: Set<number>) {
+    const same = bars.size === this.markedBars.size && [...bars].every((b) => this.markedBars.has(b));
     this.markedBars = bars;
+    if (!same) this.version++;
   }
 
   /**
@@ -741,13 +851,18 @@ export class StaffView {
    * while ducked (non-soloed during a regular Solo) parts draw at DIMMED_ALPHA without lyrics.
    */
   setPartMix(mix: Map<string, PartMixState>) {
-    this.hiddenParts = new Set();
-    this.dimmedParts = new Set();
+    const hidden = new Set<string>();
+    const dimmed = new Set<string>();
     const anySolo = Array.from(mix.values()).some((s) => s === 'solo');
     for (const [partId, state] of mix) {
-      if (state === 'muted') this.hiddenParts.add(partId);
-      else if (anySolo && state !== 'solo') this.dimmedParts.add(partId);
+      if (state === 'muted') hidden.add(partId);
+      else if (anySolo && state !== 'solo') dimmed.add(partId);
     }
+    const same = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].every((p) => b.has(p));
+    if (same(hidden, this.hiddenParts) && same(dimmed, this.dimmedParts)) return;
+    this.hiddenParts = hidden;
+    this.dimmedParts = dimmed;
+    this.version++;
     this.updateFill();
     this.scrollByPixels(0);
   }
@@ -800,6 +915,16 @@ export class StaffView {
     return current ?? this.score.measures[0];
   }
 
+  /**
+   * A line's x on a whole device pixel (a barline, a ruler tick) -- of the drawing's x, whose 0 is
+   * on a whole device pixel wherever the music is drawn (the canvas, a slice, see paintSlice): so a
+   * line falls on the same device pixel in every one of them.
+   */
+  private snapX(x: number): number {
+    const k = this.dpr * this.fill;
+    return Math.round(x * k) / k;
+  }
+
   private beatToX(beat: number, displayBeat: number): number {
     return this.playheadX() + (beat - displayBeat) * this.pixelsPerBeat;
   }
@@ -829,55 +954,87 @@ export class StaffView {
     }
   }
 
+  /** Counters for profiling (development): slices painted, of them in the frame that showed them, ... */
+  debugInfo() {
+    return { ...this.stats, slots: this.ring.slots, ringW: this.ringMusic?.width ?? 0, ringH: this.ringMusic?.height ?? 0 };
+  }
+
   private renderLogical(displayBeat: number, playheadBeat: number) {
     const ctx = this.ctx2d;
     const width = this.cssWidth;
     const height = this.cssHeight;
     if (width <= 0 || height <= 0) return;
     const G = this.gutterPx;
+    const k = this.dpr * this.fill; // device px per drawing unit
 
     const startBeat = displayBeat - (this.playheadX() - G) / this.pixelsPerBeat;
-    const endBeat = displayBeat + (width - this.playheadX()) / this.pixelsPerBeat;
     const layouts = this.visibleLayouts();
     const playheadPx = Math.round(this.beatToX(playheadBeat, displayBeat));
+    this.ensureLaid(layouts);
+    // The pre-painted music lies on a grid of whole device pixels (see paintSlice), so it is shown
+    // at whole device pixels: as if at `gridBeat`, within half a device pixel of displayBeat.
+    const ring = this.ensureRing(width, height);
+    const shift = Math.round((this.playheadX() - displayBeat * this.pixelsPerBeat) * k);
+    const gridBeat = ring ? (this.playheadX() - shift / k) / this.pixelsPerBeat : displayBeat;
 
     if ((this.theme.material.surface === 'paper')) {
       // The music is printed on the paper: it lies under the notes anchored to beat 0 and the top
       // of the staves, moving and stretching with them; around the reading line the lamp behind it
       // shows its inside.
-      const frame = { x: this.beatToX(0, displayBeat), y: STAFF_RULER_HEIGHT_PX - this.scrollY, sx: this.pixelsPerBeat / BASE_PIXELS_PER_BEAT, sy: 1 };
+      const frame = { x: this.beatToX(0, gridBeat), y: STAFF_RULER_HEIGHT_PX - this.scrollY, sx: this.pixelsPerBeat / BASE_PIXELS_PER_BEAT, sy: 1 };
       // (The margin and the ruler are painted over the rest.)
-      paintPaper(ctx, G, STAFF_RULER_HEIGHT_PX, width - G, height - STAFF_RULER_HEIGHT_PX, frame, 'surface', NIGHT_PAPER);
+      this.paintPaperArea(ctx, G, width, height, frame);
       if (playheadPx > G - 60 && playheadPx < width + 160) backlight(ctx, playheadPx, STAFF_RULER_HEIGHT_PX, height - STAFF_RULER_HEIGHT_PX, frame, PAPER_BACKLIGHT);
     } else {
       ctx.fillStyle = stageFill(ctx, height);
       ctx.fillRect(0, 0, width, height);
     }
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(G, STAFF_RULER_HEIGHT_PX, width - G, height - STAFF_RULER_HEIGHT_PX);
-    ctx.clip();
-    ctx.translate(0, STAFF_RULER_HEIGHT_PX - this.scrollY);
-    this.drawBarlines(ctx, layouts, displayBeat, startBeat, endBeat);
-    for (const layout of layouts) this.drawStaff(ctx, layout, displayBeat, playheadBeat, startBeat, endBeat);
-    this.drawMarks(ctx, layouts, displayBeat, startBeat, endBeat);
-    ctx.restore();
+    if (ring) this.showMusic(ctx, layouts, shift, gridBeat, playheadBeat, width, height);
+    else {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(G, STAFF_RULER_HEIGHT_PX, width - G, height - STAFF_RULER_HEIGHT_PX);
+      ctx.clip();
+      ctx.translate(0, STAFF_RULER_HEIGHT_PX - this.scrollY);
+      this.paintRange(ctx, layouts, G, width, displayBeat, playheadBeat);
+      ctx.restore();
+    }
 
     // Played music steps back, as in the piano roll.
     if (playheadPx > G) {
+      const end = Math.min(width, playheadPx);
       if ((this.theme.material.surface === 'paper')) {
-        // A soft edge, as on the punched roll, so the lamp's strip isn't cut in half.
-        const fade = ctx.createLinearGradient(playheadPx - 72, 0, playheadPx, 0);
-        fade.addColorStop(0, this.pastShade);
-        fade.addColorStop(1, this.theme.color('score-past').rgba(0));
-        ctx.fillStyle = fade;
-      } else ctx.fillStyle = this.pastShade;
-      ctx.fillRect(G, STAFF_RULER_HEIGHT_PX, Math.min(width, playheadPx) - G, height - STAFF_RULER_HEIGHT_PX);
+        // A soft edge, as on the punched roll, so the lamp's strip isn't cut in half. The shade is
+        // even up to the fade (the gradient pads there): a flat fill, and the gradient over just
+        // the last PAST_FADE_PX -- split on a whole device pixel, so the two fills meet cleanly.
+        const fadeAt = playheadPx - PAST_FADE_PX;
+        const flatTo = Math.min(end, Math.max(G, Math.round(fadeAt * k) / k));
+        ctx.fillStyle = this.pastShade;
+        if (flatTo > G) ctx.fillRect(G, STAFF_RULER_HEIGHT_PX, flatTo - G, height - STAFF_RULER_HEIGHT_PX);
+        if (end > flatTo) {
+          ctx.save();
+          ctx.translate(fadeAt, 0);
+          ctx.fillStyle = this.pastFadeOf(ctx);
+          ctx.fillRect(flatTo - fadeAt, STAFF_RULER_HEIGHT_PX, end - flatTo, height - STAFF_RULER_HEIGHT_PX);
+          ctx.restore();
+        }
+      } else {
+        ctx.fillStyle = this.pastShade;
+        ctx.fillRect(G, STAFF_RULER_HEIGHT_PX, end - G, height - STAFF_RULER_HEIGHT_PX);
+      }
     }
 
-    this.drawMargin(ctx, layouts, startBeat, height);
-    this.drawRuler(ctx, displayBeat, startBeat, endBeat);
+    this.showMargin(ctx, layouts, startBeat, height);
+    if (ring) {
+      this.drawRulerGround(ctx);
+      this.showRing(ctx, this.ringRuler!, shift, 0, 0, Math.round(STAFF_RULER_HEIGHT_PX * k), width, null);
+    } else {
+      const endBeat = displayBeat + (width - this.playheadX()) / this.pixelsPerBeat;
+      this.drawFrom = G;
+      this.drawTo = width;
+      this.drawRuler(ctx, displayBeat, startBeat, endBeat);
+    }
 
     // Playhead, positioned from playheadBeat (the actual sounding position), not displayBeat.
     if (playheadPx >= G - 16 && playheadPx <= width + 16) {
@@ -899,6 +1056,331 @@ export class StaffView {
       ctx.closePath();
       ctx.fill();
     }
+  }
+
+  /**
+   * The music over [from, to) of the drawing's x, as at displayBeat, in the content's coordinates
+   * (y from the top of the staves): barlines, staves, marks -- in that order, as always. With
+   * playheadBeat -Infinity nothing is lit (the music at rest, as pre-painted).
+   */
+  private paintRange(ctx: CanvasRenderingContext2D, layouts: PartLayout[], from: number, to: number, displayBeat: number, playheadBeat: number) {
+    this.drawFrom = from - RANGE_SLACK_PX;
+    this.drawTo = to + RANGE_SLACK_PX;
+    const startBeat = displayBeat + (this.drawFrom - this.playheadX()) / this.pixelsPerBeat;
+    // (A syllable is centred on its note: one starting this far right can still reach in.)
+    const endBeat = displayBeat + (this.drawTo + LYRIC_REACH_PX - this.playheadX()) / this.pixelsPerBeat;
+    this.drawBarlines(ctx, layouts, displayBeat, startBeat, endBeat);
+    for (const layout of layouts) this.drawStaff(ctx, layout, displayBeat, playheadBeat, startBeat, endBeat);
+    this.drawMarks(ctx, layouts, displayBeat);
+  }
+
+  /** The whole piece's music and marks laid out for what the view shows now (see layStaff, layMarks). */
+  private ensureLaid(layouts: PartLayout[]) {
+    const stamp = `${this.version}|${this.theme.revision}|${fontEpoch}|${this.pixelsPerBeat}`;
+    if (stamp === this.laidStamp) return;
+    const t0 = performance.now();
+    this.laidStamp = stamp;
+    for (const layout of layouts) this.laidStaff(layout);
+    this.laidMarks = this.layMarks(layouts);
+    this.stats.laidMs += performance.now() - t0;
+  }
+
+  private laidStaff(layout: PartLayout): LaidStaff {
+    let laid = this.laid.get(layout.key);
+    if (!laid) this.laid.set(layout.key, (laid = this.layStaff(layout)));
+    return laid;
+  }
+
+  /**
+   * The ring of pre-painted slices, sized for the view (or null: too wide for one, drawn directly).
+   * Emptied when what it shows changes, or when the view scrolls out of the rows it holds.
+   */
+  private ensureRing(width: number, height: number): SliceRing | null {
+    const k = this.dpr * this.fill;
+    const sd = this.ring.width;
+    const slots = Math.ceil(((width - this.gutterPx) * k) / sd) + 1 + SLICES_AHEAD + SLICES_BEHIND;
+    if (slots * sd > MAX_RING_DEVICE_PX || typeof document === 'undefined') return null;
+    // Rows: the view's, and a quarter of it above and below (scrolling a little stays in them).
+    const view = height - STAFF_RULER_HEIGHT_PX;
+    const reach = this.contentHeightPx() > view ? Math.round(view / 4) : 0;
+    const rows = view + 2 * reach;
+    const stamp = `${this.laidStamp}|${k}|${slots}|${rows}|${width}|${this.gutterPx}`;
+    if (stamp !== this.ringStamp || !this.ringMusic || !this.ringRuler) {
+      this.ringStamp = stamp;
+      this.ringMusic ??= document.createElement('canvas');
+      this.ringRuler ??= document.createElement('canvas');
+      // Only a real change of size is set: setting it (even to the same) allocates the canvas anew.
+      const size = (c: HTMLCanvasElement, w: number, h: number) => {
+        if (c.width !== w) c.width = w;
+        if (c.height !== h) c.height = h;
+      };
+      size(this.ringMusic, slots * sd, Math.ceil(rows * k) + 2);
+      size(this.ringRuler, slots * sd, Math.ceil(STAFF_RULER_HEIGHT_PX * k));
+      this.ringHeight = rows;
+      this.ring.reset(slots);
+      this.ringTop = Number.NaN;
+    }
+    if (!(this.scrollY >= this.ringTop - 1e-6 && this.scrollY + view <= this.ringTop + this.ringHeight + 1e-6)) {
+      this.ringTop = Math.max(0, this.scrollY - reach);
+      this.ring.clear();
+    }
+    return this.ring;
+  }
+
+  /**
+   * Paints slice i of the music (and of the ruler's bar numbers) into its slot, as the music rests:
+   * slice i holds the strip's device columns [i, i + 1) x SLICE_DEVICE_PX, where the strip's column
+   * of a beat is beat x pixelsPerBeat in device px -- the same grid for every slice, so they meet
+   * seamlessly, and the view shows them at whole device pixels.
+   */
+  private paintSlice(layouts: PartLayout[], i: number) {
+    const k = this.dpr * this.fill;
+    const sd = this.ring.width;
+    const left = this.ring.slotOf(i) * sd;
+    const w = sd / k;
+    // A displayBeat that puts this slice's left edge at x = 0.
+    const at = (this.playheadX() + i * w) / this.pixelsPerBeat;
+    const music = this.ringMusic!.getContext('2d');
+    if (music) {
+      music.save();
+      music.setTransform(1, 0, 0, 1, 0, 0);
+      music.clearRect(left, 0, sd, this.ringMusic!.height);
+      music.beginPath();
+      music.rect(left, 0, sd, this.ringMusic!.height);
+      music.clip();
+      music.setTransform(k, 0, 0, k, left, -this.ringTop * k);
+      this.paintRange(music, layouts, 0, w, at, -Infinity);
+      music.restore();
+    }
+    const ruler = this.ringRuler!.getContext('2d');
+    if (ruler) {
+      ruler.save();
+      ruler.setTransform(1, 0, 0, 1, 0, 0);
+      ruler.clearRect(left, 0, sd, this.ringRuler!.height);
+      ruler.beginPath();
+      ruler.rect(left, 0, sd, this.ringRuler!.height);
+      ruler.clip();
+      ruler.setTransform(k, 0, 0, k, left, 0);
+      this.drawFrom = -RANGE_SLACK_PX;
+      this.drawTo = w + RANGE_SLACK_PX;
+      this.drawRulerLabels(ruler, at, at + (this.drawFrom - this.playheadX()) / this.pixelsPerBeat, at + (this.drawTo - this.playheadX()) / this.pixelsPerBeat);
+      ruler.restore();
+    }
+    this.ring.hold(i);
+    this.stats.slices++;
+  }
+
+  /**
+   * The pre-painted music on screen (at device offset `shift` from the strip), its slices painted
+   * first where missing -- and where notes sound now, that stretch drawn directly over the paper
+   * instead (lit, with everything else there, in the original order). Then, if this frame had no
+   * slice to paint, the next one ahead.
+   */
+  private showMusic(ctx: CanvasRenderingContext2D, layouts: PartLayout[], shift: number, gridBeat: number, playheadBeat: number, width: number, height: number) {
+    const k = this.dpr * this.fill;
+    const left = Math.round(this.gutterPx * k);
+    const right = Math.round(width * k);
+    const [first, last] = this.ring.span(left - shift, right - shift);
+    let painted = 0;
+    for (let i = first; i <= last; i++) {
+      if (this.ring.holds(i)) continue;
+      this.paintSlice(layouts, i);
+      painted++;
+    }
+    this.stats.sync += painted;
+    const lit = this.litStretch(layouts, gridBeat, playheadBeat);
+    const gapFrom = lit ? clamp(Math.floor(lit[0] * k), left, right) : right;
+    const gapTo = lit ? clamp(Math.ceil(lit[1] * k), left, right) : right;
+    const top = Math.round(STAFF_RULER_HEIGHT_PX * k);
+    // The ring's row for content y is (y - ringTop) x k; on screen it is at (ruler + y - scrollY) x k.
+    const dy = Math.round((STAFF_RULER_HEIGHT_PX - this.scrollY + this.ringTop) * k);
+    this.showRing(ctx, this.ringMusic!, shift, top - dy, top, Math.round(height * k), width, gapFrom < gapTo ? [gapFrom, gapTo] : null);
+    this.stats.litPx = Math.max(0, gapTo - gapFrom);
+    if (gapFrom < gapTo) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(gapFrom / k, top / k, (gapTo - gapFrom) / k, height - top / k);
+      ctx.clip();
+      ctx.translate(0, dy / k - this.ringTop);
+      this.paintRange(ctx, layouts, gapFrom / k, gapTo / k, gridBeat, playheadBeat);
+      ctx.restore();
+    }
+    if (painted) return;
+    for (let d = 1; d <= SLICES_AHEAD + SLICES_BEHIND; d++) {
+      const i = d <= SLICES_AHEAD ? last + d : first - (d - SLICES_AHEAD);
+      if (this.ring.holds(i)) continue;
+      this.paintSlice(layouts, i);
+      this.stats.ahead++;
+      return;
+    }
+  }
+
+  /**
+   * Copies a ring's slices to the screen's device columns [gutter, width) (all of them already
+   * painted), rows [top, bottom) from the ring's row srcTop on -- leaving out the device columns
+   * `gap`. 1:1 at whole device pixels.
+   */
+  private showRing(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, shift: number, srcTop: number, top: number, bottom: number, width: number, gap: [number, number] | null) {
+    const k = this.dpr * this.fill;
+    const sd = this.ring.width;
+    const left = Math.round(this.gutterPx * k);
+    const right = Math.round(width * k);
+    const rows = Math.min(bottom - top, canvas.height - srcTop);
+    if (rows <= 0 || srcTop < 0) return;
+    const [first, last] = this.ring.span(left - shift, right - shift);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    for (let i = first; i <= last; i++) {
+      const from = Math.max(left, i * sd + shift);
+      const to = Math.min(right, (i + 1) * sd + shift);
+      const src = this.ring.slotOf(i) * sd - i * sd - shift; // + screen column = the ring's column
+      for (const [a, b] of gap ? around(from, to, gap[0], gap[1]) : [[from, to]]) {
+        if (b > a) ctx.drawImage(canvas, src + a, srcTop, b - a, rows, a, top, b - a, rows);
+      }
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Where the music sounding at playheadBeat lies in the drawing's x (as at displayBeat), its glow
+   * included: everything there is drawn lit, the rest is the pre-painted music. Null: none sounds.
+   */
+  private litStretch(layouts: PartLayout[], displayBeat: number, playheadBeat: number): [number, number] | null {
+    let lo = Infinity;
+    let hi = -Infinity;
+    const xOf = (beat: number) => this.beatToX(beat, displayBeat) + NOTE_X_OFFSET_PX;
+    const sounds = (from: number, to: number) => this.soundAt(from) <= playheadBeat && playheadBeat < this.soundAt(to);
+    for (const layout of layouts) {
+      if (this.dimmedParts.has(layout.partId)) continue; // a ducked voice is never lit
+      const laid = this.laidStaff(layout);
+      const notes = laid.notes;
+      // (With swing a note sounds a little off its written beat: a beat either way is ample.)
+      for (let i = firstIndexAtOrAfter(notes, playheadBeat - laid.maxDur - 1); i < notes.length && notes[i].startBeat <= playheadBeat + 1; i++) {
+        const { note, segments } = notes[i];
+        if (!sounds(note.startBeat, note.startBeat + note.durationBeats)) continue;
+        if (note.lyric && (this.lyricLineOf.get(note) ?? 0) >= 0) {
+          const x = xOf(note.startBeat);
+          lo = Math.min(lo, x - lyricReach(note.lyric));
+          hi = Math.max(hi, x + lyricReach(note.lyric));
+        }
+        for (const seg of segments) {
+          if (!sounds(seg.startBeat, seg.startBeat + seg.durationBeats)) continue;
+          const x = xOf(seg.startBeat);
+          lo = Math.min(lo, x - LIT_HEAD_REACH_PX);
+          hi = Math.max(hi, x + LIT_HEAD_REACH_PX);
+        }
+      }
+      // A beam lights around each sounding stem: from halfway to the stem before to halfway on.
+      const beams = laid.beams;
+      for (let i = firstIndexAtOrAfter(beams, playheadBeat - laid.maxBeamSpan - 1); i < beams.length && beams[i].startBeat <= playheadBeat + 1; i++) {
+        const group = beams[i].group;
+        for (let s = 0; s < group.length; s++) {
+          if (!sounds(group[s].beat, group[s].beat + group[s].dur)) continue;
+          lo = Math.min(lo, xOf(group[Math.max(0, s - 1)].beat) - LIT_HEAD_REACH_PX);
+          hi = Math.max(hi, xOf(group[Math.min(group.length - 1, s + 1)].beat) + LIT_HEAD_REACH_PX);
+        }
+      }
+    }
+    if (lo > hi) return null;
+    // A shadow's blur reaches about 1.5x its value (device px, at least as far in drawing units).
+    const glow = 1.5 * Number(this.theme.roles['score-staff-glow-blur']) + 2;
+    return [lo - glow, hi + glow];
+  }
+
+  /**
+   * The paper under the music (as paintPaper paints it), from a cache: painted once, a repeat of the
+   * texture wider and taller than the music's area, shown at the offset within one repeat where
+   * `frame` puts it -- to the nearest device pixel.
+   */
+  private paintPaperArea(ctx: CanvasRenderingContext2D, G: number, width: number, height: number, frame: { x: number; y: number; sx: number; sy: number }) {
+    const k = this.dpr * this.fill;
+    const repeatX = paperRepeatPx(frame.sx);
+    const repeatY = paperRepeatPx(frame.sy);
+    const w = width - G + repeatX + 2;
+    const h = height - STAFF_RULER_HEIGHT_PX + repeatY + 2;
+    if (w * h * k * k > MAX_CACHE_DEVICE_PIXELS || typeof document === 'undefined') {
+      paintPaper(ctx, G, STAFF_RULER_HEIGHT_PX, width - G, height - STAFF_RULER_HEIGHT_PX, frame, 'surface', NIGHT_PAPER);
+      return;
+    }
+    const stamp = `${this.theme.revision}|${paperEpoch}|${paperKind()}|${NIGHT_PAPER}|${k}|${frame.sx}|${frame.sy}|${w}|${h}`;
+    if (stamp !== this.paperStamp || !this.paperCache) {
+      this.paperStamp = stamp;
+      const c = (this.paperCache ??= document.createElement('canvas'));
+      const cw = Math.ceil(w * k);
+      const ch = Math.ceil(h * k);
+      if (c.width !== cw) c.width = cw;
+      if (c.height !== ch) c.height = ch;
+      const pctx = c.getContext('2d');
+      if (!pctx) return;
+      pctx.setTransform(k, 0, 0, k, 0, 0);
+      paintPaper(pctx, 0, 0, w, h, { x: 0, y: 0, sx: frame.sx, sy: frame.sy }, 'surface', NIGHT_PAPER);
+    }
+    // The cache's x shows the texture where the screen's x + frame.x (within a repeat) does.
+    const u = Math.round(mod(G - frame.x, repeatX) * k);
+    const v = Math.round(mod(STAFF_RULER_HEIGHT_PX - frame.y, repeatY) * k);
+    const x0 = Math.round(G * k);
+    const y0 = Math.round(STAFF_RULER_HEIGHT_PX * k);
+    const cw = Math.round(width * k) - x0;
+    const ch = Math.round(height * k) - y0;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this.paperCache, u, v, cw, ch, x0, y0, cw, ch);
+    ctx.restore();
+  }
+
+  /** The played shade's fade (paper): over [0, PAST_FADE_PX], drawn translated to where it ends. */
+  private pastFadeOf(ctx: CanvasRenderingContext2D): CanvasGradient {
+    const stamp = `${this.theme.revision}|${this.pastShade}`;
+    if (!this.pastFade || stamp !== this.pastFadeStamp) {
+      this.pastFadeStamp = stamp;
+      const fade = ctx.createLinearGradient(0, 0, PAST_FADE_PX, 0);
+      fade.addColorStop(0, this.pastShade);
+      fade.addColorStop(1, this.theme.color('score-past').rgba(0));
+      this.pastFade = fade;
+    }
+    return this.pastFade;
+  }
+
+  /**
+   * The pinned margin (drawMargin), from a cache painted again only when it changes: the key at the
+   * left edge, a vertical scroll, the mix, the theme, the size.
+   */
+  private showMargin(ctx: CanvasRenderingContext2D, layouts: PartLayout[], startBeat: number, height: number) {
+    const k = this.dpr * this.fill;
+    const measure = this.measureAtOrBefore(startBeat);
+    const fifths = measure ? this.transposedFifths(measure.fifths) : 0;
+    if (typeof document === 'undefined') {
+      this.drawMargin(ctx, layouts, startBeat, height);
+      return;
+    }
+    const stamp = `${this.version}|${this.theme.revision}|${fontEpoch}|${paperEpoch}|${paperKind()}|${fifths}|${this.scrollY}|${k}|${height}|${this.cssWidth}`;
+    if (stamp !== this.marginStamp || !this.marginCache) {
+      this.marginStamp = stamp;
+      const c = (this.marginCache ??= document.createElement('canvas'));
+      const mctx = c.getContext('2d');
+      if (!mctx) return;
+      // Its paper and the fade into the music, and the voices' names, which can reach further.
+      mctx.font = `600 12px ${this.theme.fonts['canvas-text']}`;
+      let reach = this.gutterPx + 28;
+      for (const layout of layouts) {
+        const part = layout.staff === 1 ? this.score.parts.find((p) => p.id === layout.partId) : undefined;
+        if (part) reach = Math.max(reach, 25 + mctx.measureText(voiceLabel(part)).width + 4);
+      }
+      const cw = Math.min(Math.ceil(Math.min(reach, this.cssWidth) * k), Math.max(1, Math.round(this.cssWidth * k)));
+      const ch = Math.max(1, Math.ceil(height * k));
+      if (c.width !== cw) c.width = cw;
+      if (c.height !== ch) c.height = ch;
+      mctx.setTransform(1, 0, 0, 1, 0, 0);
+      mctx.clearRect(0, 0, cw, ch);
+      mctx.setTransform(k, 0, 0, k, 0, 0);
+      this.drawMargin(mctx, layouts, startBeat, height);
+    }
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.marginCache, 0, 0);
+    ctx.restore();
   }
 
   /** The pinned left margin: voice name above each staff, then clef and key signature on it. */
@@ -979,18 +1461,28 @@ export class StaffView {
 
   private drawRuler(ctx: CanvasRenderingContext2D, displayBeat: number, startBeat: number, endBeat: number) {
     const G = this.gutterPx;
-    ctx.fillStyle = INK1;
-    ctx.fillRect(0, 0, this.cssWidth, STAFF_RULER_HEIGHT_PX);
-    ctx.fillStyle = paper(0.12);
-    ctx.fillRect(0, STAFF_RULER_HEIGHT_PX - 1, this.cssWidth, 1);
+    this.drawRulerGround(ctx);
     ctx.save();
     ctx.beginPath();
     ctx.rect(G, 0, this.cssWidth - G, STAFF_RULER_HEIGHT_PX);
     ctx.clip();
+    this.drawRulerLabels(ctx, displayBeat, startBeat, endBeat);
+    ctx.restore();
+  }
+
+  private drawRulerGround(ctx: CanvasRenderingContext2D) {
+    ctx.fillStyle = INK1;
+    ctx.fillRect(0, 0, this.cssWidth, STAFF_RULER_HEIGHT_PX);
+    ctx.fillStyle = paper(0.12);
+    ctx.fillRect(0, STAFF_RULER_HEIGHT_PX - 1, this.cssWidth, 1);
+  }
+
+  /** The bar numbers, section letters, query marks and signature changes along the ruler. */
+  private drawRulerLabels(ctx: CanvasRenderingContext2D, displayBeat: number, startBeat: number, endBeat: number) {
     ctx.textBaseline = 'alphabetic';
     for (const measure of this.score.measures) {
       if (measure.startBeat < startBeat - 8 || measure.startBeat > endBeat) continue;
-      const x = Math.round(this.beatToX(measure.startBeat, displayBeat));
+      const x = this.snapX(this.beatToX(measure.startBeat, displayBeat));
       ctx.fillStyle = paper(0.4);
       ctx.fillRect(x, STAFF_RULER_HEIGHT_PX - 10, 1, 9);
       let textX = x + 6;
@@ -1018,7 +1510,6 @@ export class StaffView {
         drawRulerSignature(ctx, change, fifths, after + 7, paper(0.85));
       }
     }
-    ctx.restore();
   }
 
   private drawBarlines(ctx: CanvasRenderingContext2D, layouts: PartLayout[], displayBeat: number, startBeat: number, endBeat: number) {
@@ -1030,14 +1521,14 @@ export class StaffView {
     ctx.fillStyle = paper(0.28);
     for (const measure of this.score.measures) {
       if (measure.startBeat < startBeat - 4 || measure.startBeat > endBeat) continue;
-      const x = Math.round(this.beatToX(measure.startBeat, displayBeat));
+      const x = this.snapX(this.beatToX(measure.startBeat, displayBeat));
       ctx.fillRect(x, top, 1, bottom - top);
       // A change of key is marked with a double bar line, as printed.
       if (this.signatureAt.get(measure.startBeat)?.keyChange) ctx.fillRect(x - 3, top, 1, bottom - top);
     }
     // Final barline: a classical thin + thick double bar, culled in pixel space.
-    const endX = Math.round(this.beatToX(this.score.totalBeats, displayBeat));
-    if (endX >= -4 && endX <= this.cssWidth + this.pixelsPerBeat) {
+    const endX = this.snapX(this.beatToX(this.score.totalBeats, displayBeat));
+    if (endX >= this.drawFrom - this.gutterPx - 4 && endX <= this.drawTo + this.pixelsPerBeat) {
       ctx.fillStyle = paper(0.55);
       ctx.fillRect(endX, top, 1, bottom - top);
       ctx.fillRect(endX + 4, top, 3.5, bottom - top);
@@ -1054,24 +1545,56 @@ export class StaffView {
 
     // Staff lines: neutral paper, the same for every voice -- the voice's colour lives in its notes.
     ctx.fillStyle = paper(dimmed ? 0.12 : 0.22);
-    for (let i = 0; i < 5; i++) ctx.fillRect(this.gutterPx, Math.round(layout.topY + i * SP), this.cssWidth - this.gutterPx, 1);
+    for (let i = 0; i < 5; i++) ctx.fillRect(this.drawFrom, Math.round(layout.topY + i * SP), this.drawTo - this.drawFrom, 1);
     ctx.globalAlpha = dimmed ? DIMMED_ALPHA : 1;
 
-    // Accidental bookkeeping (which pitches this measure already has an accidental established for,
-    // per standard notation convention) starts at the measure governing the viewport's left edge;
-    // notes are startBeat-sorted, so a binary search skips straight there and the loop breaks once
-    // past the visible range -- O(notes near the viewport) per frame, not O(whole piece).
-    const effectiveMeasure = this.measureAtOrBefore(startBeat);
+    // The notes laid out once (layStaff); those near the stretch drawn are found by binary search
+    // (startBeat-sorted), the loop breaking once past it -- O(notes near it), not O(whole piece).
+    const laid = this.laidStaff(layout);
+    const notes = laid.notes;
+    for (let i = firstIndexAtOrAfter(notes, startBeat - 2 - laid.maxDur); i < notes.length; i++) {
+      const { note, accidental, segments, chords } = notes[i];
+      if (note.startBeat > endBeat) break;
+      if (note.startBeat + note.durationBeats < startBeat - 2) continue;
+      this.drawNote(ctx, note, bottomLineIndex, bottomLineY, displayBeat, playheadBeat, color, dimmed, accidental, segments, chords);
+    }
+    const groups: BeamStem[][] = [];
+    for (let i = firstIndexAtOrAfter(laid.beams, startBeat - 2 - laid.maxBeamSpan); i < laid.beams.length && laid.beams[i].startBeat <= endBeat; i++) groups.push(laid.beams[i].group);
+    this.drawBeams(ctx, groups, laid.beamUp, bottomLineY, displayBeat, playheadBeat, color, dimmed);
+
+    const rests = this.restsByStaff.get(layout.key) ?? [];
+    const restsStartIdx = firstIndexAtOrAfter(rests, startBeat - 2);
+    // A rest gap starting well before the cursor can still extend into view (a whole-measure rest
+    // whose start is far left of startBeat) -- back up to the previous gap too.
+    const restsSearchIdx = restsStartIdx > 0 ? restsStartIdx - 1 : 0;
+    ctx.globalAlpha = dimmed ? DIMMED_ALPHA * 0.8 : 0.8;
+    for (let i = restsSearchIdx; i < rests.length; i++) {
+      const gap = rests[i];
+      if (gap.startBeat > endBeat) break;
+      if (gap.startBeat + gap.durationBeats < startBeat - 2) continue;
+      this.drawRestGap(ctx, gap, bottomLineY, displayBeat, color);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /**
+   * One staff's music engraved for the whole piece, once (again only after a transpose): each
+   * note's accidental, its heads (a tied note's split at its ties or bar lines), its chord places
+   * (stem direction, a second's displaced head) and the beam groups. Laid out over the whole piece,
+   * a tie or beam reaching past the edge of the view is laid out as it is engraved.
+   */
+  private layStaff(layout: PartLayout): LaidStaff {
+    // Accidental bookkeeping: which pitches this measure already has an accidental established
+    // for, per standard notation convention.
     // The bar a note is in: by its printed number, among the bars at its place -- a repeated bar is
     // played (and drawn) again under the same number, its accidentals starting afresh.
     const measures = this.score.measures;
-    let at = Math.max(0, effectiveMeasure ? measures.indexOf(effectiveMeasure) : 0);
+    let at = 0;
     let currentMeasure: MeasureInfo | undefined;
     let currentMeasureNumber = -1;
     let impliedAlter: Record<string, number> = {};
     const accidentalMap = new Map<string, number>();
     const notes = this.notesByStaff.get(layout.key) ?? [];
-    const notesStartIdx = effectiveMeasure ? firstIndexAtOrAfter(notes, effectiveMeasure.startBeat) : 0;
     // The noteheads struck together in this part -- a note's own head, or a tied note's head carried
     // on past a bar line -- are grouped by when they sound and by voice. A voice's heads together are
     // a chord: one stem for all of them, in the direction the note furthest from the middle line asks
@@ -1085,7 +1608,7 @@ export class StaffView {
     const chords = new Map<NoteEvent, (ChordPlace | undefined)[]>();
     const segmentsOf = new Map<NoteEvent, { startBeat: number; durationBeats: number }[]>();
     const heads = new Map<number, { n: NoteEvent; k: number; dur: number; pos: number }[]>();
-    for (let i = notesStartIdx; i < notes.length && notes[i].startBeat <= endBeat; i++) {
+    for (let i = 0; i < notes.length; i++) {
       const n = notes[i];
       const segs = n.tieSegments ? segmentsFromTieLengths(n.startBeat, n.tieSegments) : splitIntoNotatedSegments(n.startBeat, n.durationBeats, this.score.measures);
       segmentsOf.set(n, segs);
@@ -1179,9 +1702,10 @@ export class StaffView {
         chords.get(h.n)![h.k] = { stemUp, stemTo: !inBeam && h === owner ? far : null, dx: displaced ? (stemUp ? 1 : -1) * (HEAD_W - STEM_THICKNESS) : 0 };
       });
     }
-    for (let i = notesStartIdx; i < notes.length; i++) {
+    const laidNotes: LaidNote[] = [];
+    let maxDur = 0;
+    for (let i = 0; i < notes.length; i++) {
       const note = notes[i];
-      if (note.startBeat > endBeat) break;
       while (at + 1 < measures.length && measures[at + 1].startBeat <= note.startBeat + 1e-6) at++;
       // (A grace note just before its bar's first beat already belongs to that bar.)
       const own = measures[at]?.number === note.measureNumber || measures[at + 1]?.number !== note.measureNumber ? measures[at] : measures[at + 1];
@@ -1198,39 +1722,47 @@ export class StaffView {
       const showAccidental = !note.unpitched && spelling.alter !== trackedAlter;
       if (!note.unpitched) accidentalMap.set(key, spelling.alter);
 
-      if (note.startBeat + note.durationBeats < startBeat - 2) continue;
-      this.drawNote(ctx, note, bottomLineIndex, bottomLineY, displayBeat, playheadBeat, color, dimmed, showAccidental, segmentsOf.get(note), chords.get(note));
+      laidNotes.push({ startBeat: note.startBeat, note, accidental: showAccidental, segments: segmentsOf.get(note)!, chords: chords.get(note) });
+      maxDur = Math.max(maxDur, note.durationBeats);
     }
-    this.drawBeams(ctx, beamGroups, beamUp, bottomLineY, displayBeat, playheadBeat, color, dimmed);
-
-    const rests = this.restsByStaff.get(layout.key) ?? [];
-    const restsStartIdx = firstIndexAtOrAfter(rests, startBeat - 2);
-    // A rest gap starting well before the cursor can still extend into view (a whole-measure rest
-    // whose start is far left of startBeat) -- back up to the previous gap too.
-    const restsSearchIdx = restsStartIdx > 0 ? restsStartIdx - 1 : 0;
-    ctx.globalAlpha = dimmed ? DIMMED_ALPHA * 0.8 : 0.8;
-    for (let i = restsSearchIdx; i < rests.length; i++) {
-      const gap = rests[i];
-      if (gap.startBeat > endBeat) break;
-      if (gap.startBeat + gap.durationBeats < startBeat - 2) continue;
-      this.drawRestGap(ctx, gap, bottomLineY, displayBeat, color);
-    }
-    ctx.globalAlpha = 1;
+    const beams = beamGroups.map((group) => ({ startBeat: group[0].beat, group })).sort((a, b) => a.startBeat - b.startBeat);
+    const maxBeamSpan = beamGroups.reduce((m, g) => Math.max(m, g[g.length - 1].beat + g[g.length - 1].dur - g[0].beat), 0);
+    return { notes: laidNotes, maxDur, beams, maxBeamSpan, beamUp };
   }
 
   /**
    * Dynamics, hairpins and words in gold ink above each staff, as printed in a choral score (so
    * here a dynamic every voice shares stands on every staff); tempo marks above the top staff.
    */
-  private drawMarks(ctx: CanvasRenderingContext2D, layouts: PartLayout[], displayBeat: number, startBeat: number, endBeat: number) {
-    if (!this.marks || !layouts.length) return;
-    const inView = (m: { beat: number; endBeat?: number }) => (m.endBeat ?? m.beat) >= startBeat - 8 && m.beat <= endBeat;
+  private drawMarks(ctx: CanvasRenderingContext2D, layouts: PartLayout[], displayBeat: number) {
+    if (!layouts.length) return;
+    const shift = this.beatToX(0, displayBeat); // laid out with beat 0 at x = 0
+    for (const lm of this.laidMarks) {
+      const x = lm.x + shift;
+      // (Script letters can swing out a little past their measured width.)
+      if (x + lm.w + 20 < this.drawFrom || x - 20 > this.drawTo) continue;
+      const alpha = lm.tempo ? undefined : this.dimmedParts.has(lm.layout.partId) ? 0.35 : 1;
+      drawInkMark(ctx, lm.mark, { x, y: lm.layout.topY - lm.rise, x2: lm.x2 === undefined ? undefined : lm.x2 + shift, alpha, scale: lm.scale });
+    }
+  }
+
+  /**
+   * Where drawMarks writes each mark, for the whole piece (at beat 0 = x 0): marks at the same spot
+   * are written one after the other, so each is measured once here (drawInkMark's measure).
+   */
+  private layMarks(layouts: PartLayout[]): LaidMark[] {
+    const out: LaidMark[] = [];
+    if (!this.marks || !layouts.length) return out;
+    const ctx = this.ctx2d;
+    const atZero = this.playheadX() / this.pixelsPerBeat; // a displayBeat that puts beat 0 at x = 0
     let rowEnd = -Infinity;
     for (const m of this.marks.lane) {
-      if (m.kind !== 'tempo' || !inView(m)) continue;
-      const x = this.beatToX(m.beat, displayBeat) + NOTE_X_OFFSET_PX - 4;
+      if (m.kind !== 'tempo') continue;
+      const x = this.beatToX(m.beat, atZero) + NOTE_X_OFFSET_PX - 4;
       if (x < rowEnd + 12) continue;
-      rowEnd = x + drawInkMark(ctx, m, { x, y: layouts[0].topY - 26, scale: 1.05 });
+      const w = drawInkMark(ctx, m, { x, y: 0, scale: 1.05 }, true);
+      rowEnd = x + w;
+      out.push({ mark: m, layout: layouts[0], x, x2: undefined, w, rise: 26, scale: 1.05, tempo: true });
     }
     // Shared dynamics and hairpins stand on every staff; shared words once, over the top one.
     const shared = this.marks.lane.filter((m) => m.kind === 'dynamic' || m.kind === 'wedge');
@@ -1239,18 +1771,17 @@ export class StaffView {
       // A part on several staves: each staff its own marks, the shared ones over its top staff.
       const ofPart = (this.marks.byPart.get(layout.partId) ?? []).filter((m) => (m.staff ?? 1) === layout.staff || layout.ofStaves === 1);
       const own = [...(layout.staff === 1 ? shared : []), ...(layout === layouts[0] ? sharedWords : []), ...ofPart];
-      const alpha = this.dimmedParts.has(layout.partId) ? 0.35 : 1;
       own.sort((a, b) => a.beat - b.beat);
       let lastEnd = -Infinity; // marks at the same spot are written one after the other
       for (const m of own) {
-        if (!inView(m)) continue;
-        const x = Math.max(lastEnd + 9, this.beatToX(m.beat, displayBeat) + (m.kind === 'wedge' ? NOTE_X_OFFSET_PX : NOTE_X_OFFSET_PX - 6));
-        const x2 = m.endBeat !== undefined ? Math.max(x + 12, this.beatToX(m.endBeat, displayBeat) + NOTE_X_OFFSET_PX) : undefined;
-        const y = layout.topY - (m.kind === 'wedge' ? 12 : 8);
-        const w = drawInkMark(ctx, m, { x, y, x2, alpha, scale: 0.9 });
+        const x = Math.max(lastEnd + 9, this.beatToX(m.beat, atZero) + (m.kind === 'wedge' ? NOTE_X_OFFSET_PX : NOTE_X_OFFSET_PX - 6));
+        const x2 = m.endBeat !== undefined ? Math.max(x + 12, this.beatToX(m.endBeat, atZero) + NOTE_X_OFFSET_PX) : undefined;
+        const w = drawInkMark(ctx, m, { x, y: 0, x2, scale: 0.9 }, true);
         lastEnd = x + w;
+        out.push({ mark: m, layout, x, x2, w, rise: m.kind === 'wedge' ? 12 : 8, scale: 0.9, tempo: false });
       }
     }
+    return out;
   }
 
   /** Splits one silent gap into notated segments and draws each as a rest glyph. */
@@ -1261,7 +1792,7 @@ export class StaffView {
     ctx.fillStyle = color;
     for (const seg of segments) {
       const x = this.beatToX(seg.startBeat, displayBeat) + NOTE_X_OFFSET_PX;
-      if (x < this.gutterPx - 20 || x > this.cssWidth + 20) continue;
+      if (x < this.drawFrom - 20 || x > this.drawTo + 20) continue;
       const shape = classifyDuration(seg.durationBeats);
       // Whole rests hang from the 4th line; every other rest is centred on the middle line.
       const glyph = { whole: GLYPH.restWhole, half: GLYPH.restHalf, quarter: GLYPH.restQuarter, eighth: GLYPH.rest8th, sixteenth: GLYPH.rest16th, thirtysecond: GLYPH.rest32nd }[shape.name];
@@ -1309,7 +1840,7 @@ export class StaffView {
         const headX = this.beatToX(st.beat, displayBeat) + NOTE_X_OFFSET_PX - HEAD_W / 2;
         return up ? headX + HEAD_W - STEM_THICKNESS : headX;
       });
-      if (xs[xs.length - 1] < this.gutterPx - 40 || xs[0] > this.cssWidth + 40) continue;
+      if (xs[xs.length - 1] < this.drawFrom - 40 || xs[0] > this.drawTo + 40) continue;
       // Each stem's beam end: from the head nearest the beam, the usual stem length on.
       const levels = Math.max(...group.map((st) => st.marks?.length ?? 1));
       const reach = STEM_LENGTH + Math.max(0, levels - 1) * BEAM_STEP;
@@ -1413,7 +1944,9 @@ export class StaffView {
   ) {
     const firstX = this.beatToX(note.startBeat, displayBeat) + NOTE_X_OFFSET_PX;
     const lastX = this.beatToX(note.startBeat + note.durationBeats, displayBeat) + NOTE_X_OFFSET_PX;
-    if (lastX < this.gutterPx - 20 || firstX > this.cssWidth + 20) return;
+    // (Its syllable, centred on it, can reach further than the rest.)
+    const reach = note.lyric ? Math.max(20, lyricReach(note.lyric)) : 20;
+    if (lastX < this.drawFrom - reach || firstX > this.drawTo + reach) return;
 
     const spelling = this.effectiveSpelling(note);
     const staffPosition = diatonicIndex(spelling.step, spelling.octave) - bottomLineIndex;
@@ -1461,7 +1994,7 @@ export class StaffView {
       const stemUp = chord ? chord.stemUp : ownUp;
       const shift = chord?.dx ?? 0;
       const segX = this.beatToX(seg.startBeat, displayBeat) + NOTE_X_OFFSET_PX;
-      const onScreen = segX >= this.gutterPx - 20 && segX <= this.cssWidth + 20;
+      const onScreen = segX >= this.drawFrom - 20 && segX <= this.drawTo + 20;
       const shape = classifyDuration(seg.durationBeats);
 
       if (onScreen) {
