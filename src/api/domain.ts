@@ -114,8 +114,7 @@ const sections = z
         beat: z.number().finite().nonnegative(),
       })
       .strict(),
-  )
-  .max(1000);
+  );
 const savedValues = {
   transpose: z.number().int().min(-48).max(48),
   bpm: z.number().finite().min(1).max(1000),
@@ -183,20 +182,22 @@ export const settingsInput = z
             : v.key === "percussion"
             ? z
                 .record(partKey, z.boolean())
-                .refine((v) => Object.keys(v).length <= 256)
             : z.never();
         break;
     }
-    if (
-      !schema.safeParse(v.value).success ||
-      (v.key !== undefined && !partKey.safeParse(v.key).success)
-    )
-      ctx.addIssue({ code: "custom", message: "Invalid setting value" });
+    const parsed = schema.safeParse(v.value);
+    if (!parsed.success) for (const issue of parsed.error.issues)
+      ctx.addIssue({ ...issue, path: ["value", ...issue.path] });
+    if (v.key !== undefined) {
+      const key = partKey.safeParse(v.key);
+      if (!key.success) for (const issue of key.error.issues)
+        ctx.addIssue({ ...issue, path: ["key", ...issue.path] });
+    }
   });
 export const reorderInput = z
   .object({
-    pieceIds: z.array(z.string()).max(10000),
-    expectedOrder: z.array(z.string()).max(10000),
+    pieceIds: z.array(z.string()),
+    expectedOrder: z.array(z.string()),
   })
   .strict();
 export const metadataSchema = z.object({

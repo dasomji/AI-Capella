@@ -10,4 +10,4 @@ if(contentType==='application/pdf'){
 }
 await sharp(image,{limitInputPixels:40000000,pages:1}).rotate().resize({width:3500,height:3500,fit:'inside',withoutEnlargement:true}).flatten({background:'#ffffff'}).grayscale().normalise().png().toFile(dir+'/raster.png');
 
-}catch(error){console.error(JSON.stringify({code:error.code??'render_failed',stderr:String(error.stderr??error.message).slice(0,4096)}));process.exit(error.code==='ENOENT'?70:65);}
+}catch(error){console.error(JSON.stringify({code:error.code??'render_failed',stderr:String(error.stderr??error.message).slice(0,4096)}));process.exit(error.code==='ENOENT'?70:/pixel/i.test(error.message)?66:65);}

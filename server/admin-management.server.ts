@@ -1,3 +1,4 @@
+import { logRejectedRequest } from './logger.server';
 import type { Context } from "hono";
 import type { PoolClient } from "pg";
 import { z } from "zod";
@@ -78,35 +79,7 @@ async function event(
 }
 /** Also used by the outer Origin boundary, after its database-backed session check. */
 export async function rejectedAdminOrigin(actor: string, path: string) {
-  const match = path.match(
-    /^\/api\/admin\/(?:ensembles\/([^/]+)\/(members|invitations)(?:\/([^/]+))?|users\/([^/]+)\/sysadmin)$/,
-  );
-  if (!match) return;
-  const { adminLimit } = await import("./admin.server");
-  try {
-    await adminLimit(actor, "origin-audit", 20);
-  } catch (error) {
-    if (error instanceof DomainError && error.code === "rate_limited") return;
-    throw error;
-  }
-  const [, ensemble, kind, id, user] = match;
-  const identity =
-    kind === "members"
-      ? await membershipIdentity(pool as unknown as PoolClient, ensemble, id)
-      : {};
-  await event(
-    pool as unknown as PoolClient,
-    actor,
-    user ? "user" : kind === "members" ? "membership" : "invitation",
-    user ?? id ?? ensemble,
-    null,
-    "rejected",
-    "untrusted_origin",
-    "",
-    null,
-    null,
-    identity,
-  );
+  logRejectedRequest("admin.origin_rejected", path);
 }
 /** Scope the lookup to the URL ensemble, including historical removals. Unknown IDs stay explicit. */
 async function membershipIdentity(
@@ -126,7 +99,6 @@ async function membershipIdentity(
 }
 export function registerAdminManagement(
   admin: typeof AdminRouter,
-  limit: (actor: string, kind: string, max: number) => Promise<void>,
   json: (c: Context, data: any, status?: any) => Response,
 ) {
   type Result = {
@@ -153,7 +125,6 @@ export function registerAdminManagement(
       let raw: unknown;
       // Do not hold transaction connections or advisory locks while waiting for the body/pool.
       try {
-        await limit(actor, "mutation", 20);
         raw = await c.req.json();
         input = schema.parse(raw);
         reason = (input as { reason: string }).reason;

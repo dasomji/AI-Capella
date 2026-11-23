@@ -2,7 +2,7 @@
 export class UploadSlots {
   private users = new Map<string, number>();
   private active = 0;
-  constructor(private globalMax: number, private userMax: number) {}
+  constructor(private globalMax: number, private userMax: number = Infinity) {}
   take(user: string): { code: 429 | 503 } | { release: () => void } {
     const count = this.users.get(user) ?? 0;
     if (count >= this.userMax) return { code: 429 };

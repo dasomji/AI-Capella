@@ -178,16 +178,16 @@ test('worker process death recovers expired leases under a frozen non-UTC clock'
  const done=await view(e.id,lead.cookie,j.id);assert.equal(done.state,'completed');assert.equal(done.pages[0].attempts,2);assert.equal((await pool.query("select outcome from provider_calls where job_id=$1 order by started_at",[j.id])).rows[0].outcome,'abandoned');
  }finally{child.kill('SIGKILL');await exited;}
 });
-test('transcribe-only access cannot import, edit-only can import, and job admission limits persist',async()=>{
+test('transcribe-only access cannot import, edit-only can import, and jobs queue without personal admission caps',async()=>{
  const {lead,e,source}=await setup();const member=await account();await pool.query('insert into memberships(ensemble_id,user_id,ai_transcription) values($1,$2,true)',[e.id,member.id]);
  const j=await job(e.id,member.cookie,source.id);await new TranscriptionWorker().tick();
  assert.equal((await request(`ensembles/${e.id}/transcriptions/${j.id}/import`,'POST',{},member.cookie)).status,403);
  await pool.query('update memberships set ai_transcription=false,edit_music_pieces=true where ensemble_id=$1 and user_id=$2',[e.id,member.id]);
  assert.equal((await request(`ensembles/${e.id}/transcriptions/${j.id}`,'GET',undefined,member.cookie)).status,403);
  assert.equal((await request(`ensembles/${e.id}/transcriptions/${j.id}/import`,'POST',{},member.cookie)).status,200);
- const active=[];for(let i=0;i<env.TRANSCRIPTION_USER_MAX;i++)active.push(await job(e.id,lead.cookie,source.id));
+ const active=[];for(let i=0;i<3;i++)active.push(await job(e.id,lead.cookie,source.id));
  
- const r=await fetch(base+`/api/ensembles/${e.id}/transcriptions`,{method:'POST',headers:{origin:base,cookie:lead.cookie,'content-type':'application/json','idempotency-key':crypto.randomUUID()},body:JSON.stringify({sourceObjects:[source.id]})});assert.equal(r.status,429);
+ const r=await fetch(base+`/api/ensembles/${e.id}/transcriptions`,{method:'POST',headers:{origin:base,cookie:lead.cookie,'content-type':'application/json','idempotency-key':crypto.randomUUID()},body:JSON.stringify({sourceObjects:[source.id]})});assert.equal(r.status,201);
  for(const a of active)await ok(`ensembles/${e.id}/transcriptions/${a.id}/cancel`,'POST',{},lead.cookie);
 });
 test('signed GET expires and in-flight cancellation fences the page checkpoint',async()=>{
@@ -198,14 +198,14 @@ test('signed GET expires and in-flight cancellation fences the page checkpoint',
  for(let i=0;i<50;i++){if((await view(e.id,lead.cookie,j.id)).pages[0].state==='running')break;await delay(10);}
  await ok(`ensembles/${e.id}/transcriptions/${j.id}/cancel`,'POST',{},lead.cookie);await work;const state=await view(e.id,lead.cookie,j.id);assert.equal(state.state,'cancelled');assert.equal(state.pages[0].state,'cancelled');
 });
-test('permission revoked between pages prevents the next provider call and ensemble admission is bounded',async()=>{
+test('permission revoked between pages prevents the next provider call and ensemble jobs queue',async()=>{
  const {lead,e,source}=await setup();const member=await account();await pool.query('insert into memberships(ensemble_id,user_id,ai_transcription) values($1,$2,true)',[e.id,member.id]);
  const j=await ok(`ensembles/${e.id}/transcriptions`,'POST',{sourceObjects:[source.id,source.id]},member.cookie);let calls=0;const worker=new TranscriptionWorker(new FakeProvider(()=>{calls++;return 'uncertain';}));await worker.tick();
  await pool.query('update memberships set ai_transcription=false where ensemble_id=$1 and user_id=$2',[e.id,member.id]);await worker.tick();assert.equal(calls,1);assert.equal((await view(e.id,lead.cookie,j.id)).failure_reason,'permission_revoked');
  await pool.query('update memberships set ai_transcription=true where ensemble_id=$1 and user_id=$2',[e.id,member.id]);
  const active=[];for(let i=0;i<2;i++){active.push(await job(e.id,lead.cookie,source.id));active.push(await job(e.id,member.cookie,source.id));}
  const third=await account();await pool.query('insert into memberships(ensemble_id,user_id,ai_transcription) values($1,$2,true)',[e.id,third.id]);
- const r=await fetch(base+`/api/ensembles/${e.id}/transcriptions`,{method:'POST',headers:{origin:base,cookie:third.cookie,'content-type':'application/json','idempotency-key':crypto.randomUUID()},body:JSON.stringify({sourceObjects:[source.id]})});assert.equal(r.status,429);
+ const r=await fetch(base+`/api/ensembles/${e.id}/transcriptions`,{method:'POST',headers:{origin:base,cookie:third.cookie,'content-type':'application/json','idempotency-key':crypto.randomUUID()},body:JSON.stringify({sourceObjects:[source.id]})});assert.equal(r.status,201);
  for(const a of active)await ok(`ensembles/${e.id}/transcriptions/${a.id}/cancel`,'POST',{},lead.cookie);
 });
 test('sysadmin stop and metrics APIs enforce platform role, and sole-member closure deletes originals',async()=>{
@@ -342,10 +342,8 @@ test('parallel uploads dedupe and cross-ensemble/idempotency mismatches fail',as
  const key=crypto.randomUUID();await job(e.id,lead.cookie,source.id,key);
  const r=await fetch(base+`/api/ensembles/${e.id}/transcriptions`,{method:'POST',headers:{origin:base,cookie:lead.cookie,'content-type':'application/json','idempotency-key':key},body:JSON.stringify({sourceObjects:[source.id],options:{language:'de'}})});assert.equal(r.status,409);
 });
-test('polyglot image trailers and storage ceiling are rejected',async()=>{
+test('polyglot image trailers are rejected',async()=>{
  const {lead,e}=await setup();const poly=await upload(e.id,lead.cookie,Buffer.concat([png,Buffer.from('<html/>')]));assert.equal(poly.status,422);
- const limit=env.TRANSCRIPTION_STORAGE_MAX_BYTES;env.TRANSCRIPTION_STORAGE_MAX_BYTES=1;
- try{const photo=await sharp({create:{width:23,height:23,channels:3,background:'blue'}}).png().toBuffer();const r=await upload(e.id,lead.cookie,photo);assert.equal((await r.json()).code,'storage_limit');}finally{env.TRANSCRIPTION_STORAGE_MAX_BYTES=limit;}
 });
 test('animated WebP and encrypted PDF are explicitly rejected',async()=>{
  const {lead,e}=await setup();const raw=Buffer.alloc(16*32*3);raw.fill(255,16*16*3);
@@ -400,7 +398,7 @@ test('usage sysadmin gate and SQL DST half-open buckets retain failed attempts',
  assert.equal((await request(path)).status,404);
  await pool.query("insert into platform_roles(user_id,role) values($1,'sysadmin')",[lead.id]);
  assert.equal((await request('admin/transcription/usage?from=2026-03-08&to=2026-03-09','GET',undefined,lead.cookie)).status,422);
- const excessive=await request('admin/transcription/usage?from=2025-01-01T00:00:00Z&to=2026-02-01T00:00:00Z','GET',undefined,lead.cookie);assert.equal(excessive.status,422);assert.match((await excessive.json()).message,/366 days/);
+ const excessive=await request('admin/transcription/usage?from=2025-01-01T00:00:00Z&to=2026-02-01T00:00:00Z','GET',undefined,lead.cookie);assert.equal(excessive.status,200);
  const page=(await pool.query('select id from job_pages where job_id=$1',[j.id])).rows[0];
  for(const [i,instant] of ['2026-03-08T04:59:59Z','2026-03-08T05:00:00Z','2026-03-09T03:59:59Z','2026-03-09T04:00:00Z'].entries())await pool.query(`insert into provider_calls(job_id,page_id,attempt,lease_owner,started_at,finished_at,outcome,model,prompt_version,usage,estimated_cost) values($1,$2,$3,$4,$5::timestamptz,$5::timestamptz+$3::int*interval '1 second','failed','usage-fixture','v1',$6,$7)`,[j.id,page.id,i+1,crypto.randomUUID(),instant,{inputTokens:10,outputTokens:20},.25]);
  const {usageSQL}=await import('../server/usage.server');
@@ -512,4 +510,54 @@ test('abort during provider insert closes a late running call as abandoned',{tim
  try{await new TranscriptionWorker(provider).tick();assert.ok(release);release();await inserted;
  for(let i=0;i<50;i++){const row=(await (query as any).call(pool,'select outcome,finished_at from provider_calls where job_id=$1',[j.id])).rows[0];if(row?.outcome==='abandoned'){assert.ok(row.finished_at);return;}await delay(20);}assert.fail('late insert remained running');
  }finally{pool.query=query;env.TRANSCRIPTION_TIMEOUT_MS=timeout;}
+});
+
+
+test('AICAP-31 five same-user jobs queue, global concurrency stays two, and every job finishes',async()=>{
+ const {lead,e,source}=await setup();const active=[];
+ for(let i=0;i<5;i++)active.push(await job(e.id,lead.cookie,source.id));
+ const provider=new FakeProvider(()=> 'success',200),workers=Array.from({length:5},()=>new TranscriptionWorker(provider));
+ const pending=workers.map(w=>w.tick());await delay(100);
+ assert.ok((await pool.query("select count(*)::int n from job_pages where state='running'")).rows[0].n<=2);
+ await Promise.all(pending);
+ for(let i=0;i<5;i++)await Promise.all(workers.map(w=>w.tick()));
+ for(const j of active)assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
+});
+test('AICAP-31 cursor visits all 205 unimported jobs including identical timestamps',async()=>{
+ const {lead,e,source}=await setup();const first=await job(e.id,lead.cookie,source.id);
+ await pool.query(`insert into transcription_jobs(ensemble_id,user_id,started_by,request_key,request_hash,options,model,prompt_version,created_at) select $1,$2,$2,'history-'||n,'fixture','{}','fake','v1','2026-01-01T00:00:00.123456Z' from generate_series(1,204) n`,[e.id,lead.id]);
+ const ids:string[]=[];let cursor:string|null=null;
+ do{const page=await ok(`ensembles/${e.id}/transcriptions${cursor?'?cursor='+encodeURIComponent(cursor):''}`,'GET',undefined,lead.cookie);ids.push(...page.items.map((j:any)=>j.id));cursor=page.nextCursor;}while(cursor);
+ assert.equal(ids.length,205);assert.equal(new Set(ids).size,205);assert.ok(ids.includes(first.id));
+ const other=await account();assert.equal((await request(`ensembles/${e.id}/transcriptions`,'GET',undefined,other.cookie)).status,404);
+ assert.equal((await request(`ensembles/${e.id}/transcriptions?cursor=garbage`,'GET',undefined,lead.cookie)).status,400);
+});
+
+test('AICAP-31 PDF, 50 MP photo, brute force and recipient floods log one redacted hit',async t=>{
+ const {lead,e}=await setup();
+ const {api}=await import('../server/http.server');
+ const output=t.mock.method(console,'log',()=>{});
+ const records=()=>output.mock.calls.flatMap(c=>{try{return [JSON.parse(String(c.arguments[0]))];}catch{return [];}}).filter(r=>r.event==='limit.hit');
+ const hit=async(limit:string,value:number,work:()=>Response|Promise<Response>,status:number)=>{
+  const before=records().length;const r=await work();assert.equal(r.status,status,await r.clone().text());
+  const added=records().slice(before);assert.equal(added.length,1);assert.equal(added[0].limit,limit);assert.equal(added[0].value,value);
+  assert.ok(added[0].route.startsWith('/api/'));assert.doesNotMatch(JSON.stringify(added[0]),/test.com|example.test|203\.0\.113|private-token|Singer/);
+ };
+ await hit('source.pdf_bytes',sourceLimits.pdf,()=>api.fetch(new Request(base+`/api/ensembles/${e.id}/originals`,{method:'POST',headers:{origin:base,cookie:lead.cookie,'content-length':String(sourceLimits.pdf+1)},body:'%PDF-'})),413);
+ const huge=await sharp({create:{width:10000,height:5000,channels:3,background:'white'}}).png().toBuffer();
+ await hit('source.pixels',40000000,()=>upload(e.id,lead.cookie,huge),422);
+ const victim=crypto.randomUUID()+'@test.com';
+ for(let i=0;i<10;i++)assert.equal((await api.fetch(new Request(base+'/api/auth/sign-in/email',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'203.0.113.5'},body:JSON.stringify({email:victim,password:'wrong-password'})}))).status,401);
+ await hit('auth.wrong_password',10,()=>api.fetch(new Request(base+'/api/auth/sign-in/email',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'203.0.113.5'},body:JSON.stringify({email:victim,password:'wrong-password'})})),429);
+ // Better Auth's own rejection path, independent of our per-account guard.
+ for(let i=0;i<5;i++)assert.equal((await api.fetch(new Request(base+'/api/auth/request-password-reset',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'203.0.113.6'},body:JSON.stringify({email:'missing@test.com'})}))).status,200);
+ await hit('auth.network_reset_request',5,()=>api.fetch(new Request(base+'/api/auth/request-password-reset',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'203.0.113.6'},body:JSON.stringify({email:'missing@test.com'})})),429);
+ const body={email:'recipient@test.com',idempotencyKey:crypto.randomUUID()};
+ await ok(`ensembles/${e.id}/invitations`,'POST',body,lead.cookie);
+ await hit('invitation.recipient_minute',1,()=>request(`ensembles/${e.id}/invitations`,'POST',{...body,idempotencyKey:crypto.randomUUID()},lead.cookie),429);
+ const original=clock.now;let now=Date.now();clock.now=()=>new Date(now);
+ try{
+  for(let i=0;i<4;i++){now+=61000;await ok(`ensembles/${e.id}/invitations`,'POST',{...body,idempotencyKey:crypto.randomUUID()},lead.cookie);}
+  now+=61000;await hit('invitation.recipient_day',5,()=>request(`ensembles/${e.id}/invitations`,'POST',{...body,idempotencyKey:crypto.randomUUID()},lead.cookie),429);
+ }finally{clock.now=original;output.mock.restore();}
 });

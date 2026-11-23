@@ -1,3 +1,4 @@
+import { logLimitHit, logValidationLimit } from './logger.server';
 import { registerAdminManagement } from './admin-management.server';
 import { Hono,type Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
@@ -12,7 +13,7 @@ import { transcriptionUsage, usageSQL } from './usage.server';
 import { processingPaused } from './transcription.server';
 import { storage } from './storage.server';
 import { env } from './env.server';
-import { logError, logAdminContentAccess, logAdminCapHit } from './logger.server';
+import { logError, logAdminContentAccess } from './logger.server';
 function numericRow(row:Record<string,any>){return Object.fromEntries(Object.entries(row).map(([k,v])=>[k,v!==null&&['calls','pages','jobs','attempts','latency','estimated_cost','input_tokens','output_tokens','known_cost_usd','estimated_cost_usd','estimated_cost_per_page_usd','estimated_cost_per_job_usd'].includes(k)?Number(v):v]));}
 /** Only actual database Date values are formatted; score bodies remain opaque. */
 function adminJSON(c:Context,data:any,status:ContentfulStatusCode=200){
@@ -25,13 +26,13 @@ export const admin = new Hono<{
         actor: string;
     };
 }>();
-admin.onError((e, c) => { if (e instanceof DomainError)
+admin.onError((e, c) => { logValidationLimit(e); if (e instanceof DomainError)
     return adminJSON(c, { code: e.code, message: e.code==='rate_limited' ? e.message : undefined, ...(e.code==='rate_limited' ? (e as any).limit : {}) }, e.status as 400); if (e instanceof z.ZodError || e instanceof SyntaxError || (typeof (e as any)?.code==='string' && (e as any).code.startsWith('22')))
     return adminJSON(c, { code: 'invalid_input', message: 'Use bounded filters and ISO instants with offset or Z.' }, 422); logError('admin.http', e); return adminJSON(c, { code: 'service_unavailable' }, 500); });
 export async function adminLimit(actor: string, kind: string, max: number, windowMs = 60000) {
     const r = await pool.query(`insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request<=$2-$3 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request<=$2-$3 then $2 else rate_limit.last_request end returning count`, ['admin:' + kind + ':' + actor, Date.now(),windowMs]);
     if (r.rows[0].count > max) {
-        logAdminCapHit(actor,kind,max,windowMs);
+        logLimitHit('admin.content_'+(windowMs===86400000?'day':windowMs===3600000?'hour':'minute'),'user',max);
         const error=new DomainError('rate_limited',429);const unit=windowMs===86400000?'day':windowMs===3600000?'hour':'minute';error.message=`Admin limit reached (${max} per ${unit}). Please wait before trying again.`;(error as any).limit={max,unit};throw error;
     }
 }
@@ -160,5 +161,5 @@ catch (e) {
 } });
 admin.get('/transcription/metrics',async c=>{const q=await statsRange(c);const rows=(await pool.query(`select c.model,c.prompt_version,c.outcome as state,count(*)::int as attempts,sum(extract(epoch from(c.finished_at-c.started_at))*1000) as latency,sum(c.estimated_cost::text::numeric) as estimated_cost,sum((c.usage->>'inputTokens')::numeric) as input_tokens,sum((c.usage->>'outputTokens')::numeric) as output_tokens from provider_calls c join transcription_jobs j on j.id=c.job_id where c.started_at >= $1 and c.started_at < $2 and ($3::text is null or j.ensemble_id=$3) group by c.model,c.prompt_version,c.outcome`,[q.from,q.to,q.ensemble??null])).rows;return adminJSON(c,rows.map(numericRow));});
 admin.get('/transcription/failures',async c=>{const q=await statsRange(c);return adminJSON(c,{items:(await pool.query("select coalesce(c.error_kind,'unknown') as reason,count(*)::int as calls from provider_calls c join transcription_jobs j on j.id=c.job_id where c.started_at >= $1 and c.started_at < $2 and ($3::text is null or j.ensemble_id=$3) and c.outcome='failed' group by c.error_kind order by calls desc limit 100",[q.from,q.to,q.ensemble??null])).rows});});
-registerAdminManagement(admin,adminLimit,adminJSON);
+registerAdminManagement(admin,adminJSON);
 admin.all('*', c => adminJSON(c, { code: 'not_found' }, 404));

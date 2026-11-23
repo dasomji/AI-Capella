@@ -1,3 +1,4 @@
+import { logLimitHit } from './logger.server';
 import { createHash } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { pool } from './db/index.server';
@@ -20,12 +21,12 @@ export async function allowAccountMail(email:string, kind:'verify'|'reset', requ
     const sent=(await db.query('select count(*)::int as count from rate_limit where key like $1 and last_request > $2',[key+':sent:%',now-86400000])).rows[0].count;
     // Conservatively retain pre-upgrade fixed-window usage until its window expires.
     const legacy=(await db.query('select count,last_request from rate_limit where key=$1',[key+':day'])).rows[0];
-    if(sent+(legacy && Number(legacy.last_request)>now-86400000?legacy.count:0)>=100){await db.query('rollback');return false;}
+    if(sent+(legacy && Number(legacy.last_request)>now-86400000?legacy.count:0)>=100){await db.query('rollback');logLimitHit('account_mail.recipient_day','user',100);return false;}
     for(const [budget,window,max] of budgets){
       const row=(await db.query('select count,last_request from rate_limit where key=$1',[budget])).rows[0];
       if(row && Number(row.last_request)>now-window && row.count>=max){
         await db.query('rollback');
-        console.info(JSON.stringify({timestamp:new Date().toISOString(),level:'info',event:'auth.mail_suppressed',kind,reason:budget.endsWith(':interval')?'interval':budget.endsWith(':day')?'recipient_daily':'requester_share'}));
+        logLimitHit(budget.endsWith(':interval')?'account_mail.recipient_minute':'account_mail.requester_day',budget.endsWith(':interval')?'user':'ip',max);
         return false;
       }
     }

@@ -50,5 +50,5 @@ parentPort.on('message', async ({raw,format,timing})=>{
       derived=timingFromScore(score);
     }
     parentPort.postMessage({validation,timing:derived,raw,hash:createHash('sha256').update(raw).digest('hex'),size:Buffer.byteLength(raw)});
-  } catch(error) { parentPort.postMessage({error:['invalid_text','invalid_xml','empty_score','nesting_limit'].includes(error.message)?error.message:'invalid_score'}); }
+  } catch(error) { parentPort.postMessage({limitValue:error.message==='nesting_limit'?(format==='musicxml'?256:64):undefined,error:['invalid_text','invalid_xml','empty_score','nesting_limit'].includes(error.message)?error.message:'invalid_score'}); }
 });

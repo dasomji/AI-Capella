@@ -3,15 +3,16 @@ const mocks=vi.hoisted(()=>({heartbeatFail:false,failBegin:false,released:vi.fn(
 vi.mock('../server/db/index.server',()=>({pool:{query:mocks.query,connect:async()=>({query:async(sql:string,args:any[])=>{if(typeof sql==='object'){if(mocks.heartbeatFail)throw Error('probe timeout');return {rows:[{}]};}if(sql==='begin'&&mocks.failBegin)throw Error('database');return sql.includes('advisory')?{rows:[{locked:mocks.locked}]}:['begin','commit','rollback'].includes(sql)?{}:mocks.query(sql,args);},on:(_event:string,fn:any)=>{mocks.ownerError=fn;},release:mocks.released})}}));
 vi.mock('../server/domain.server',()=>({authorize:mocks.authorize,onMembershipChange:(fn:any)=>{mocks.member=fn;return ()=>{};},onLibraryChange:(fn:any)=>{mocks.library=fn;return ()=>{};}}));
 vi.mock('../server/env.server',()=>({env:{PLAYBACK_LEAD_MS:400}}));
-vi.mock('../server/logger.server',()=>({logError:vi.fn()}));
+vi.mock('../server/logger.server',()=>({logError:vi.fn(),logLimitHit:vi.fn()}));
 vi.mock('../server/score-validation.server',()=>({validateScore:mocks.validate}));
+import {logLimitHit} from '../server/logger.server';
 import {installRehearsal} from '../server/rehearsal.server';
 import {initialState} from '../src/rehearsal/controller';
 const ensemble='00000000-0000-4000-8000-000000000001';
 const timing={derivationVersion:3,baseBpm:120,totalBeats:100,tempos:[{beat:0,bpm:120}],measures:[]};
 let stored=new Map<string,any>(), recovery:any[]=[];
 let cleanup:(()=>void)|undefined;
-beforeEach(()=>{mocks.heartbeatFail=false;mocks.failBegin=false;mocks.released.mockClear();mocks.locked=true;vi.useFakeTimers();mocks.query.mockReset();mocks.authorize.mockReset();stored=new Map();recovery=[];
+beforeEach(()=>{vi.mocked(logLimitHit).mockClear();mocks.heartbeatFail=false;mocks.failBegin=false;mocks.released.mockClear();mocks.locked=true;vi.useFakeTimers();mocks.query.mockReset();mocks.authorize.mockReset();stored=new Map();recovery=[];
  mocks.query.mockImplementation(async(sql:string,args:any[])=>{
   if(sql==='select ensemble_id,revision,state from rehearsal_sessions')return {rows:recovery};
   if(sql.startsWith('select state'))return {rows:stored.has(args[0])?[{state:stored.get(args[0])}]:[]};
@@ -237,6 +238,7 @@ it('throttles clock pings independently per socket',()=>{
  for(let n=0;n<25;n++)a.ping(()=>count++);expect(count).toBe(20);
  b.ping(()=>count++);expect(count).toBe(21);app.setNow(2000);
  for(let n=0;n<11;n++)a.ping(()=>count++);expect(count).toBe(31);
+ expect(logLimitHit).toHaveBeenCalledWith('rehearsal.clock_socket','user',20,'/rehearsal/clock');
 });
 it('evicts an idle committed snapshot so a later join loads persistence',async()=>{
  const app=setup(),c=app.socket('idle');await c.emit('rehearsal:join',{ensembleId:ensemble});c.socket.disconnect();

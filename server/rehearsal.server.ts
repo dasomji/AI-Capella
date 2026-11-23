@@ -1,3 +1,4 @@
+import { logLimitHit } from './logger.server';
 import { ZodError } from 'zod';
 import type { PoolClient } from 'pg';
 import type { Namespace, Socket } from 'socket.io';
@@ -26,7 +27,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
         b.tokens=Math.min(burst,b.tokens+(time-b.at)*rate/1000); b.at=time;
         buckets.delete(key); buckets.set(key,b);
         if(buckets.size>10000) buckets.delete(buckets.keys().next().value!);
-        if(b.tokens<1)return false; b.tokens--; return true;
+        if(b.tokens<1){const [kind,scope]=key.split(':');logLimitHit('rehearsal.'+(kind==='ping'?'clock':kind)+'_'+(scope==='ensemble'?'ensemble':scope==='user'?'user':'socket'),scope==='ensemble'?'ensemble':'user',burst,'/rehearsal/'+(kind==='cmd'?'command':kind==='ping'?'clock':'read'));return false;} b.tokens--; return true;
     }
     function errorCode(error: any): Ack['code'] {
         const code = error?.code ?? error?.message;
@@ -40,7 +41,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
     const membership = new Map<Socket, Set<string>>();
     let generation = 0, closed = false;
     function serial<T>(id: string, fn: () => Promise<T>): Promise<T> {
-        if ((depths.get(id) ?? 0) >= 32) return Promise.reject(Error('rate_limited'));
+        if ((depths.get(id) ?? 0) >= 32) {logLimitHit('rehearsal.queue','ensemble',32,'/rehearsal/command');return Promise.reject(Error('rate_limited'));}
         depths.set(id,(depths.get(id) ?? 0)+1);
         const result = (queues.get(id) ?? Promise.resolve()).catch(() => { }).then(fn); queues.set(id, result); void result.finally(() => { depths.set(id,depths.get(id)!-1); if (queues.get(id) === result)
         { queues.delete(id); depths.delete(id); } }).catch(() => { }); return result; }
@@ -209,7 +210,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
     }
     async function member(socket: Socket, e: string) {
         if (closed || !ownershipReady) throw Error('unavailable');
-        if (socket.data.expiresAt <= now()) throw Error('session_expired');
+        if (socket.data.expiresAt <= now()) {logLimitHit('auth.session_expiry','user',7*86400,'/rehearsal');throw Error('session_expired');}
         if (!socket.connected)
             throw Error('forbidden');
         let set = membership.get(socket);
@@ -259,7 +260,7 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
       try{await reconcileDeleted(e);}catch(error){logError('rehearsal.library',error);loseOwnership();}
     });
     ns.on('connection', socket => {
-        if ([...ns.sockets.values()].filter(s=>s.data.userId===socket.data.userId).length>10) { socket.emit('rehearsal:closed',{code:'socket_limit'});socket.disconnect(true); return; }
+        if ([...ns.sockets.values()].filter(s=>s.data.userId===socket.data.userId).length>10) { logLimitHit('rehearsal.sockets','user',10,'/rehearsal/socket');socket.emit('rehearsal:closed',{code:'socket_limit'});socket.disconnect(true); return; }
         let inFlight=0;
         socket.on('clock:ping', (ack: unknown) => { if (typeof ack === 'function' && admit('ping:'+socket.id,10,20))
             ack({ serverTime: now() }); });
@@ -271,7 +272,8 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
                 if (!parsed.success)
                     return ack({ code: 'invalid' });
                 const e=parsed.data.ensembleId;
-                if(inFlight>=4 || !admit('read:socket:'+socket.id) || !admit('read:user:'+socket.data.userId)) return ack({code:'rate_limited'});
+                if(inFlight>=4){logLimitHit('rehearsal.in_flight','user',4,'/rehearsal/read');return ack({code:'rate_limited'});}
+                if(!admit('read:socket:'+socket.id) || !admit('read:user:'+socket.data.userId)) return ack({code:'rate_limited'});
                 inFlight++;
                 try {
                     await waitReady();
@@ -293,7 +295,8 @@ export function installRehearsal(ns: Namespace, options: { now?: () => number; i
             const commandId = typeof (input as any)?.commandId === 'string' ? (input as any).commandId : '';
             const reject = (code: Ack['code']) => ack({ commandId, status: 'rejected', code });
             const receivedAt=now();
-            if(inFlight>=4 || !admit('cmd:socket:'+socket.id) || !admit('cmd:user:'+socket.data.userId)) return reject('rate_limited');
+            if(inFlight>=4){logLimitHit('rehearsal.in_flight','user',4,'/rehearsal/command');return reject('rate_limited');}
+            if(!admit('cmd:socket:'+socket.id) || !admit('cmd:user:'+socket.data.userId)) return reject('rate_limited');
             if (!parsed.success)
                 return reject('invalid');
             const e = parsed.data;

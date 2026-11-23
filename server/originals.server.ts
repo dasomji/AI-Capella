@@ -1,3 +1,4 @@
+import { logStorageUsage, logLimitHit } from './logger.server';
 import { truncateTitle } from '../src/api/title';
 import { sandboxReady,sandboxEnv } from './sandbox.server';
 import { logError,logChildError } from './logger.server';
@@ -21,7 +22,7 @@ export async function inspectSource(path:string):Promise<{type:string;pages:numb
  child.once('error',()=>{clearTimeout(timer);logError('sandbox.launch');reject(new DomainError('sandbox_unavailable',503));});
  child.once('close',(code,signal)=>{clearTimeout(timer);
  if(expired || code || signal){logChildError('transcription.inspect',stderr,code);reject(new DomainError('source_too_complex',422));return;}
- try{const r=JSON.parse(output);r.error?reject(new DomainError(['pixel_limit','page_limit','invalid_magic','invalid_source','unsupported_image_format','animated_image','encrypted_pdf'].includes(r.error)?r.error:'invalid_source',422)):resolve(r);}catch{reject(new DomainError('invalid_source',422));}
+ try{const r=JSON.parse(output);if(r.error==='pixel_limit')logLimitHit('source.pixels','server',sourceLimits.pixels);if(r.error==='page_limit')logLimitHit('transcription.pages','server',sourceLimits.pages);r.error?reject(new DomainError(['pixel_limit','page_limit','invalid_magic','invalid_source','unsupported_image_format','animated_image','encrypted_pdf'].includes(r.error)?r.error:'invalid_source',422)):resolve(r);}catch{reject(new DomainError('invalid_source',422));}
  });
  });
 }
@@ -35,24 +36,27 @@ export async function uploadOriginal(user:string,ensemble:string,body:ReadableSt
  try {
  while(true){const chunk=await reader.read();if(chunk.done)break;clearTimeout(idle);idle=setTimeout(expire,sourceLimits.idleMs);size+=chunk.value.length;
  if(first.length<5){first=Buffer.concat([first,Buffer.from(chunk.value.subarray(0,5-first.length))]);if(first.length===5 && first.toString()!=='%PDF-')limit=sourceLimits.photo;}
- if(size>limit)throw new DomainError('body_too_large',413);
+ if(size>limit){logLimitHit(limit===sourceLimits.pdf?'source.pdf_bytes':'source.photo_bytes','server',limit);throw new DomainError('body_too_large',413);}
  hash.update(chunk.value);await file.writeFile(chunk.value);
  }
  if(timedOut)throw new DomainError('upload_timeout',408);
- await file.close();const info=await inspectSource(path);if(size>(info.type==='application/pdf'?sourceLimits.pdf:sourceLimits.photo))throw new DomainError('body_too_large',413);
+ await file.close();const info=await inspectSource(path);if(size>(info.type==='application/pdf'?sourceLimits.pdf:sourceLimits.photo)){logLimitHit(info.type==='application/pdf'?'source.pdf_bytes':'source.photo_bytes','server',info.type==='application/pdf'?sourceLimits.pdf:sourceLimits.photo);throw new DomainError('body_too_large',413);}
  const digest=hash.digest('hex');
  const key=`ensembles/${ensemble}/originals/${randomUUID()}`;
  // Commit orphan protection before streaming; never hold an ensemble lock over I/O.
  await pool.query('insert into object_deletions(object_key) values($1)',[key]);
  await store.put(key,createReadStream(path),size,info.type);
- return await transaction(async db=>{
+ let usage:number|undefined;
+ const result=await transaction(async db=>{
  await lockEnsemble(db,ensemble);await authorize(db,user,ensemble,'transcribe');
  const old=(await db.query("select * from stored_objects where ensemble_id=$1 and sha256=$2 and kind='original' and state='ready'",[ensemble,digest])).rows[0];if(old)return old;
  const used=(await db.query("select coalesce(sum(size),0)::text as bytes from stored_objects where ensemble_id=$1 and kind='original' and state='ready'",[ensemble])).rows[0];
- if(Number(used.bytes)+size>env.TRANSCRIPTION_STORAGE_MAX_BYTES)throw new DomainError('storage_limit',413);
+ usage=Number(used.bytes)+size;
  const row=(await db.query("insert into stored_objects(ensemble_id,user_id,object_key,kind,size,content_type,sha256,original_filename,provenance,state) values($1,$2,$3,'original',$4,$5,$6,$7,$8,'ready') returning *",[ensemble,user,key,size,info.type,digest,sanitizeOriginalFilename(filename),JSON.stringify(info)])).rows[0];
  await db.query('delete from object_deletions where object_key=$1',[key]);await audit(db,ensemble,user,'original.upload',row.id);return row;
  });
+ if(usage!==undefined)logStorageUsage(ensemble,usage);
+ return result;
  } finally {clearTimeout(timer);clearTimeout(idle);await reader.cancel().catch(()=>{});reader.releaseLock();await file.close().catch(()=>{});await rm(dir,{recursive:true,force:true});}
 }
 /** Only explicit outbox keys without live DB references, or explicitly selected derivatives. */

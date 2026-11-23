@@ -1363,17 +1363,16 @@ test(
 );
 
 test(
-  "review: daily budgets, user mutation throttle, depth bound and expired pending renewal",
+  "usage remains unrestricted; depth bound and expired pending renewal",
   { timeout: 30000 },
   async () => {
-    const { env } = await import("../server/env.server");
     const u = await account(),
       e = await ok("ensembles", "POST", { name: "Budgets" }, u.cookie),
       path = `ensembles/${e.id}`;
     const now = new Date();
     await pool.query(
       "insert into invitation_sends(ensemble_id,email,inviter_id,created_at) select $1,'used@example.test',$2,$3 from generate_series(1,$4::int)",
-      [e.id, u.id, now, env.INVITE_ENSEMBLE_DAILY_MAX],
+      [e.id, u.id, now, 50],
     );
     assert.equal(
       (
@@ -1384,14 +1383,14 @@ test(
           u.cookie,
         )
       ).status,
-      429,
+      201,
     );
     await pool.query("delete from invitation_sends where ensemble_id=$1", [
       e.id,
     ]);
     await pool.query(
       "insert into invitation_sends(ensemble_id,email,inviter_id,created_at) select 'other-ensemble','used@example.test',$1,$2 from generate_series(1,$3::int)",
-      [u.id, now, env.INVITE_USER_DAILY_MAX],
+      [u.id, now, 100],
     );
     assert.equal(
       (
@@ -1402,28 +1401,28 @@ test(
           u.cookie,
         )
       ).status,
-      429,
+      201,
     );
     await pool.query("delete from invitation_sends where inviter_id=$1", [
       u.id,
     ]);
     await pool.query(
       "insert into rate_limit(key,count,last_request) values($1,$2,$3) on conflict(key) do update set count=excluded.count,last_request=excluded.last_request",
-      ["domain:" + u.id, env.DOMAIN_USER_MINUTE_MAX, now.getTime()],
+      ["domain:" + u.id, 120, now.getTime()],
     );
     assert.equal(
       (await request(path, "PATCH", { name: "Throttled" }, u.cookie)).status,
-      429,
+      200,
     );
     await pool.query("delete from rate_limit where key=$1", ["domain:" + u.id]);
     await pool.query(
       "update rate_limit set count=$2,last_request=$3 where key=$1",
-      ["ensemble-create:" + u.id, env.ENSEMBLE_USER_DAILY_MAX, now.getTime()],
+      ["ensemble-create:" + u.id, 10, now.getTime()],
     );
     assert.equal(
       (await request("ensembles", "POST", { name: "Too many" }, u.cookie))
         .status,
-      429,
+      201,
     );
     let nested: any = true;
     for (let n = 0; n < 70; n++) nested = { child: nested };
@@ -1566,13 +1565,13 @@ test(
       recipient.cookie,
     );
     assert.equal(deny.status, 403);
-    assert.ok(
+    assert.equal(
       (
         await pool.query(
           "select 1 from audit_events where actor_id=$1 and outcome='denied'",
           [recipient.id],
         )
-      ).rowCount,
+      ).rowCount, 0,
     );
     const { rateLimitAddress } = await import("../server/client-ip.server");
     assert.equal(
@@ -1706,16 +1705,16 @@ test('upload admission precedes body reads and releases slots after success and 
   const {api}=await import('../server/http.server');
   const owner=await account();
   const e=await ok('ensembles','POST',{name:'Upload admission'},owner.cookie);
-  let controller!: ReadableStreamDefaultController<Uint8Array>;
-  const pending=api.fetch(new Request(base+`/api/ensembles/${e.id}/pieces`,{
+  const controllers:ReadableStreamDefaultController<Uint8Array>[]=[];
+  const pending=Array.from({length:4},()=>api.fetch(new Request(base+`/api/ensembles/${e.id}/pieces`,{
     method:'POST',headers:{origin:base,cookie:owner.cookie,'content-type':'text/xml','x-score-title':'Pending'},
-    body:new ReadableStream<Uint8Array>({start(c){controller=c;}}),duplex:'half',
-  } as RequestInit));
+    body:new ReadableStream<Uint8Array>({start(c){controllers.push(c);}}),duplex:'half',
+  } as RequestInit)));
   await delay(100);
   const blocked=await request(`ensembles/${e.id}/pieces`,'POST',{title:'Blocked',content:{format:'musicxml',body:xml}},owner.cookie);
-  assert.equal(blocked.status,429); assert.equal(blocked.headers.get('retry-after'),'2');
-  controller.enqueue(new TextEncoder().encode(xml));controller.close();
-  assert.equal((await pending).status,201);
+  assert.equal(blocked.status,503); assert.equal(blocked.headers.get('retry-after'),'2');
+  for(const controller of controllers){controller.enqueue(new TextEncoder().encode(xml));controller.close();}
+  for(const response of await Promise.all(pending))assert.equal(response.status,201);
   assert.equal((await request(`ensembles/${e.id}/pieces`,'POST',{title:'Invalid',content:{format:'musicxml',body:'invalid'}},owner.cookie)).status,400);
   assert.equal((await request(`ensembles/${e.id}/pieces`,'POST',{title:'Released',content:{format:'musicxml',body:xml}},owner.cookie)).status,201);
 });
@@ -1937,4 +1936,22 @@ test('voice identities persist with the piece across rename and removal',async()
  assert.deepEqual(fresh.settings.formatDefaults.voiceNumbers,numbers);
  const invalid=await request(`ensembles/${e.id}/pieces/${piece.id}`,'PATCH',{op:'defaults',key:'voiceNumbers',value:{P1:1,P2:1}},singer.cookie);
  assert.equal(invalid.status,400,'duplicate voice numbers are rejected');
+});
+
+
+test('AICAP-31 organizer creates 11 ensembles, sends 101 invitations and makes 121 edits', {timeout:60000}, async()=>{
+ const u=await account();const ensembles=[];
+ for(let i=0;i<11;i++)ensembles.push(await ok('ensembles','POST',{name:'Rehearsal '+i},u.cookie));
+ for(let i=0;i<101;i++)await ok(`ensembles/${ensembles[0].id}/invitations`,'POST',{email:`singer-${i}@test.com`,idempotencyKey:crypto.randomUUID()},u.cookie);
+ for(let i=0;i<121;i++)await ok(`ensembles/${ensembles[0].id}`,'PATCH',{name:'Rehearsal '+i},u.cookie);
+});
+
+
+test('AICAP-31 another per-part setting is accepted above the former key quota',async()=>{
+ const owner=await account(),e=await ok('ensembles','POST',{name:'Settings'},owner.cookie);
+ const piece=await ok(`ensembles/${e.id}/pieces`,'POST',{title:'Settings',content:{format:'musicxml',body:xml}},owner.cookie);
+ const names=Object.fromEntries(Array.from({length:1025},(_,i)=>['part-'+i,'Voice']));
+ await pool.query('update music_pieces set part_names=$2 where id=$1',[piece.id,names]);
+ const result=await ok(`ensembles/${e.id}/pieces/${piece.id}`,'PATCH',{op:'partName',key:'new-part',value:'Voice'},owner.cookie);
+ assert.equal(result.settings.partNames['new-part'],'Voice');
 });

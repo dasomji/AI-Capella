@@ -153,9 +153,9 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
       for(let i=0;i<35;i++)await json(path,sys.cookie);
     }
     assert.equal(await auditCount(),beforeUnboundedReads,'Repeated list reads create no audit rows');
-    const capLogs=stdout.mock.calls.flatMap(call=>{try{return [JSON.parse(String(call.arguments[0]))];}catch{return [];}}).filter(record=>record.event==='admin.cap_hit');
-    assert.deepEqual([...new Set(capLogs.map(record=>record.kind))].sort(),['content','content-day','content-hour']);
-    assert.ok(capLogs.every(record=>record.timestamp.endsWith('Z')&&record.level==='warn'&&record.actor===sys.id));
+    const capLogs=stdout.mock.calls.flatMap(call=>{try{return [JSON.parse(String(call.arguments[0]))];}catch{return [];}}).filter(record=>record.event==='limit.hit'&&record.limit.startsWith('admin.content_'));
+    assert.deepEqual([...new Set(capLogs.map(record=>record.limit))].sort(),['admin.content_day','admin.content_hour','admin.content_minute']);
+    assert.ok(capLogs.every(record=>record.timestamp.endsWith('Z')&&record.level==='warn'&&record.scope==='user'&&!('actor' in record)));
     // D49: the real SQL endpoint searches the full relationship, beyond its first 100 rows.
     const detail=(await (await req('/api/ensembles',lead.cookie,'POST',{name:'Testchor'})).json()).id;
     const memberPrefix='search-'+detail+'-';
@@ -256,7 +256,6 @@ test('admin management: guarded transactions, permissions, invitations and live 
        assert.equal(denied.status,404);
      }
      assert.equal((await req(path,unverified.cookie,method,body)).status,404);
-     await pool.query('delete from rate_limit where key=$1',['admin:mutation:'+sys.id]);
      for(const cookie of ['',member.cookie,lead.cookie]){const r=await req(path,cookie,method,body);assert.equal(r.status,404,path);assert.equal(r.headers.get('cache-control'),'no-store');}
      for(const bad of [undefined,'',' ', 'x'.repeat(1001),'\0','\ud800'])assert.equal((await req(path,sys.cookie,method,{...body,reason:bad})).status,422,path);
      for(const origin of [undefined,'https://untrusted.example.test']){
@@ -266,7 +265,7 @@ test('admin management: guarded transactions, permissions, invitations and live 
    await pool.query('delete from platform_roles where user_id=$1',[unverified.id]);
    assert.deepEqual(await state(),unchanged);
    assert.equal(Number((await pool.query("select count(*) from audit_events where actor_id=$1 and outcome='invalid_input'",[sys.id])).rows[0].count),30);
-   assert.equal(Number((await pool.query("select count(*) from audit_events where actor_id=$1 and outcome='untrusted_origin'",[sys.id])).rows[0].count),10);
+   assert.equal(Number((await pool.query("select count(*) from audit_events where actor_id=$1 and outcome='untrusted_origin'",[sys.id])).rows[0].count),0);
    await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);
  });
  await t.test('invalid bodies retain only valid trimmed audit reasons and invitation identities',async()=>{
@@ -414,21 +413,20 @@ test('admin management: guarded transactions, permissions, invitations and live 
      }
    } finally { clock.now=original; }
  });
- await t.test('body validation and rate caps complete while platform writes hold the exclusive lock',async()=>{
+ await t.test('body validation completes while platform writes hold the exclusive lock',async()=>{
    const blocker=await pool.connect();
    try {
      await blocker.query('begin');await blocker.query("select pg_advisory_xact_lock(hashtextextended('platform:sysadmin',0))");
      await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);
      assert.equal((await req(members,sys.cookie,'POST',{userId:member.id,permissions:none,reason:''})).status,422);
-     await pool.query("insert into rate_limit(key,count,last_request) values($1,20,$2) on conflict(key) do update set count=20,last_request=$2",['admin:mutation:'+sys.id,Date.now()]);
-     assert.equal((await req(members,sys.cookie,'POST',{userId:member.id,permissions:none,reason})).status,429);
    } finally {await blocker.query('rollback');blocker.release();await pool.query('delete from rate_limit where key like $1',['admin:%:'+sys.id]);}
  });
- await t.test('untrusted origin audit is bounded without changing the rejection',async()=>{
-   await pool.query("insert into rate_limit(key,count,last_request) values($1,20,$2) on conflict(key) do update set count=20,last_request=$2",['admin:origin-audit:'+sys.id,Date.now()]);
+ await t.test('untrusted origins log without writing audit rows',async t=>{
+   const output=t.mock.method(console,'log',()=>{});
    const before=(await pool.query("select count(*)::int n from audit_events where actor_id=$1 and outcome='untrusted_origin'",[sys.id])).rows[0].n;
    const response=await fetch(base+members,{method:'POST',headers:{cookie:sys.cookie,origin:'https://untrusted.example.test','content-type':'application/json'},body:JSON.stringify({userId:member.id,permissions:none,reason})});assert.equal(response.status,403);
    assert.equal((await pool.query("select count(*)::int n from audit_events where actor_id=$1 and outcome='untrusted_origin'",[sys.id])).rows[0].n,before);
+   const records=output.mock.calls.map(c=>JSON.parse(String(c.arguments[0]))).filter(r=>r.event==='admin.origin_rejected');assert.equal(records.length,1);assert.doesNotMatch(JSON.stringify(records),/management-|example.test/);
  });
  await t.test('stored management audit metadata contains identity and no credentials',async()=>{
    const events=(await pool.query("select action,metadata from audit_events where actor_id=$1 and action in ('admin.membership.add','admin.membership.permissions','admin.membership.remove','admin.invitation.create','admin.user.sysadmin')",[sys.id])).rows;
@@ -439,9 +437,11 @@ test('admin management: guarded transactions, permissions, invitations and live 
      if(event.action.startsWith('admin.membership.')) {assert.ok('userId' in event.metadata);assert.equal(event.metadata.ensembleId,e);}
    }
  });
- await t.test('a database-backed mutation cap rejects attempts and audits the cap outcome',async()=>{
-   await pool.query("insert into rate_limit(key,count,last_request) values($1,20,$2) on conflict(key) do update set count=20,last_request=$2",['admin:mutation:'+sys.id,Date.now()]);
-   assert.equal((await req(members,sys.cookie,'POST',{userId:member.id,permissions:none,reason})).status,429);
-   assert.ok((await pool.query("select 1 from audit_events where actor_id=$1 and outcome='rate_limited'",[sys.id])).rowCount);
- });
+});
+
+
+test('AICAP-31 21 management mutations are accepted in one minute',async()=>{
+ const sys=await person('limits-admin'),member=await person('limits-target');
+ await changeAdminRole(process.env.DATABASE_URL!,sys.email,true);
+ for(let i=0;i<21;i++)assert.equal((await req('/api/admin/users/'+member.id+'/sysadmin',sys.cookie,'PUT',{sysadmin:i%2===0,expected:i%2!==0,reason:'Limit removal acceptance'})).status,200);
 });
