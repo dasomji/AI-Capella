@@ -1,5 +1,9 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:net';
+import { existsSync } from 'node:fs';
+// Every suite here imports or serves the production build; without it they crash or wait on a server that never starts.
+const buildEntry = `${process.env.LIGHTSCORE_BUILD_ROOT ?? 'dist'}/server/server.js`;
+if (!existsSync(buildEntry)) { console.error(`test:integration requires a built client and server (${buildEntry} is missing); run npm run build first`); process.exit(1); }
 const reservation = createServer(); await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
 const hostPort = reservation.address().port; await new Promise(resolve => reservation.close(resolve));
 const appReservation = createServer(); await new Promise(resolve => appReservation.listen(0,'127.0.0.1',resolve));
