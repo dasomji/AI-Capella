@@ -23,6 +23,8 @@ phase plan and progress log live in `docs/PLAN.md`.
 - Design: use the shared Tailwind/CSS-variable system; preserve existing appearance and DE/EN strings.
   See `docs/agents/design-system.md` for tokens, themes, recipes, compatibility boundaries and the guard.
   Do not add a parallel palette, font stack or screen-specific component system.
+- Playback smoothness: profile before and after touching the roll, the sheet view, the render loop
+  or audio scheduling (`scripts/perf-playback.mjs`); see `docs/agents/playback-performance.md`.
 - Domain words: *ensemble*, *ensemble lead*, *music piece*, *member*, *sysadmin* (platform role).
 - Time: instants are `timestamptz` (`timestamp(..., { withTimezone: true })`), business/display
   zone is configured centrally (UTC initially), logs use UTC.

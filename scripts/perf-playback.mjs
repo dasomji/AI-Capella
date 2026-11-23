@@ -4,7 +4,7 @@
  * audio path. See docs/agents/playback-performance.md.
  *
  *   node scripts/perf-playback.mjs [--scenario name[,name]] [--throttle 4] [--seconds 20]
- *                                  [--label baseline] [--trace] [--profile] [--runs 1]
+ *                                  [--label baseline] [--trace] [--profile] [--alloc] [--gpu] [--runs 1]
  *
  * Results (JSON per scenario, summary.md) go to PERF_EVIDENCE, outside Git by default.
  */
@@ -253,6 +253,23 @@ function readProfile(profile, seconds) {
   return { top: [...self].sort((a, b) => b[1] - a[1]).slice(0, 40).map(([fn, ms]) => ({ fn, msPerSec: round(ms / seconds), share: round(ms / total, 3) })) };
 }
 
+/** Bytes allocated per second by function, from the sampling heap profile. */
+function readAllocations(profile, seconds) {
+  const self = new Map();
+  let total = 0;
+  const walk = (node) => {
+    const f = node.callFrame;
+    if (node.selfSize) {
+      const key = `${f.functionName || '(anonymous)'} ${f.url.split('/').slice(-1)[0].split('?')[0]}:${f.lineNumber + 1}`;
+      self.set(key, (self.get(key) ?? 0) + node.selfSize);
+      total += node.selfSize;
+    }
+    for (const child of node.children ?? []) walk(child);
+  };
+  walk(profile.head);
+  return { kbPerSec: round(total / 1024 / seconds, 1), top: [...self].sort((a, b) => b[1] - a[1]).slice(0, 25).map(([fn, bytes]) => ({ fn, kbPerSec: round(bytes / 1024 / seconds, 1) })) };
+}
+
 const { server, base } = await ownerFixture(out, hooks);
 const demo = await fs.readFile('public/evening-rise.musicxml', 'utf8');
 const dense = denseScore();
@@ -292,6 +309,8 @@ try {
         await cdp.send('Profiler.start');
       }
       await cdp.send('HeapProfiler.enable');
+      // What allocates: sampled, counting what a collection has taken back since as well.
+      if (args.alloc) await cdp.send('HeapProfiler.startSampling', { samplingInterval: 8192, includeObjectsCollectedByMajorGC: true, includeObjectsCollectedByMinorGC: true });
       const heapBefore = (await cdp.send('Runtime.getHeapUsage')).usedSize;
       await page.evaluate(() => {
         window.__frames.length = 0;
@@ -312,6 +331,8 @@ try {
       const raw = await page.evaluate(() => window.__perf.stop(window.perfHooks.engine().context));
       let profile = null;
       if (args.profile) profile = readProfile((await cdp.send('Profiler.stop')).profile, seconds);
+      let alloc = null;
+      if (args.alloc) alloc = readAllocations((await cdp.send('HeapProfiler.stopSampling')).profile, seconds);
       let trace = null;
       if (args.trace) {
         const buffer = await browser.stopTracing();
@@ -328,7 +349,7 @@ try {
       const heap = { startMb: round(heapBefore / 1e6, 1), endMb: round(heapSamples.at(-1) / 1e6, 1), peakMb: round(Math.max(...heapSamples) / 1e6, 1), risenMbPerSec: round(allocated / 1e6 / seconds, 2), falls: collections };
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
       await page.screenshot({ path: path.join(out, `${name}.png`) });
-      const summary = { scenario: name, run, throttle, seconds, state, errors, ...summarize(raw, trace, profile, heap) };
+      const summary = { scenario: name, run, throttle, seconds, state, errors, ...summarize(raw, trace, profile, heap), ...(alloc ? { alloc } : {}) };
       results[runs > 1 ? `${name}#${run}` : name] = summary;
       await fs.writeFile(path.join(out, `${name}${runs > 1 ? `-${run}` : ''}.json`), JSON.stringify({ summary, raw: { ...raw, frames: raw.frames.map((f) => ({ t: round(f.t, 1), beat: round(f.beat, 4), ms: round(f.ms), heard: round(f.heard, 4), rebuilds: f.rebuilds, swaps: f.swaps, next: f.next })) } }));
       const f = summary.frames;
