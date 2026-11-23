@@ -61,7 +61,12 @@ if (mode === 'overview') {
   for (const [id, need] of Object.entries(needs)) {
     if (id === 'checks') continue; // matrix legs report individually
     // Matrix legs label themselves `<job>-<leg>` (integration-domain, integration-transcription).
-    if (!jobs.some((j) => j.job === id || j.job.startsWith(`${id}-`))) jobs.push({ job: id, title: id, status: need.result, suites: [], missing: true });
+    // A failed matrix job whose uploaded legs all passed still has a leg without a record: keep it visible.
+    const records = jobs.filter((j) => j.job === id || j.job.startsWith(`${id}-`));
+    const unrepresented = need.result !== 'success' && records.every((j) => j.status === 'success');
+    if (!records.length || unrepresented) {
+      jobs.push({ job: id, title: records.length ? `${id} (leg without a result record)` : id, status: need.result, suites: [], missing: true });
+    }
   }
   const order = (j) => (j.job.startsWith('checks-') ? 1 : 0);
   jobs.sort((a, b) => order(a) - order(b) || (b.finished - b.started || 0) - (a.finished - a.started || 0));
