@@ -17,8 +17,20 @@ const MIN_NOTE_DURATION_SEC = 0.02; // floor so a zero/near-zero-duration note c
 // everything derived from it (the reported playback position, and therefore every future
 // reschedule's math too). Instead, only ever schedule a bounded lookahead window of real time
 // ahead of the current position, topped up incrementally as playback progresses (see tick()).
-const LOOKAHEAD_SEC = 8; // schedule this many seconds of audio ahead of the current position
-const LOOKAHEAD_REFILL_SEC = 3; // top up once the scheduled horizon is within this many seconds of "now"
+// Four seconds, not more (it was eight): a note laid ahead is already in the audio graph, and its
+// filters are run through from then on, sounding or not. With the sung voice (a dozen nodes a
+// note) eight seconds of a dense eight-voice piece overloaded the audio thread -- measured: its
+// clock ran 7.5% slow, in stalls of up to 0.4 s, each one a gap in the sound; with four there are none.
+const LOOKAHEAD_SEC = 4; // schedule this many seconds of audio ahead of the current position
+// Never less than this ahead: what Play lays at once, and what a top-up that finds less (timers
+// slowed to one a second in a background tab) fills up to straight away.
+const LOOKAHEAD_REFILL_SEC = 3;
+// Above that the horizon grows to LOOKAHEAD_SEC by at most this much per top-up, and is then kept
+// there by a little every tick. Topping up five seconds of music in one go (as it was: every time
+// the horizon had run down to LOOKAHEAD_REFILL_SEC) made hundreds to thousands of audio nodes in a
+// single task -- measured on a slow phone's CPU: 30-90 ms with the piano and 240-440 ms with the
+// sung voice, a visible hitch every five seconds, and with the voice the sound itself stalled.
+const LOOKAHEAD_STEP_SEC = 0.5;
 // clearSchedule() needs to fade a voice's gain to (near-)zero before stopping its oscillators --
 // stopping a still-sounding oscillator with no ramp truncates the waveform mid-cycle, which is an
 // audible click/pop. This just needs to be short enough that an early Stop/Pause/reschedule
@@ -47,6 +59,8 @@ export function startTonesLeadSec(count: number, bpm: number): number {
 interface Voice {
   sources: AudioScheduledSourceNode[];
   gain: GainNode;
+  /** The context time by which all of its sources have stopped (see AudioEngine.forgetEnded). */
+  until: number;
 }
 
 /** The playback sound, chosen per device: the sampled grand piano, or a sustained sung "oo". */
@@ -128,7 +142,8 @@ export function playSampledNote(ctx: AudioContext, destination: AudioNode, start
   gain.gain.setTargetAtTime(0, noteOff, SAMPLE_RELEASE_SEC);
   source.connect(gain).connect(destination);
   source.start(startTime, sample.onset);
-  source.stop(Math.min(noteOff + SAMPLE_RELEASE_SEC * 7, startTime + (sample.buffer.duration - sample.onset) / source.playbackRate.value));
+  const stopTime = Math.min(noteOff + SAMPLE_RELEASE_SEC * 7, startTime + (sample.buffer.duration - sample.onset) / source.playbackRate.value);
+  source.stop(stopTime);
   source.addEventListener('ended', () => {
     try {
       source.disconnect();
@@ -137,7 +152,7 @@ export function playSampledNote(ctx: AudioContext, destination: AudioNode, start
       // already disconnected
     }
   });
-  return { sources: [source], gain };
+  return { sources: [source], gain, until: stopTime };
 }
 
 // ---- Sustained voice ("oo") ------------------------------------------------------------------
@@ -214,7 +229,7 @@ export function playVoiceNote(ctx: AudioContext, destination: AudioNode, startTi
       }
     }
   });
-  return { sources, gain: amp };
+  return { sources, gain: amp, until: noteOff + 0.35 };
 }
 
 // ---- Room --------------------------------------------------------------------------------------
@@ -344,7 +359,7 @@ export function playPianoNote(
     }
   });
 
-  return { sources: oscillators, gain: ampGain };
+  return { sources: oscillators, gain: ampGain, until: stopTime };
 }
 
 // Vowel "u" formants (Hz, relative level, bandwidth Hz) -- a dark, rounded "oo" that sits well
@@ -422,7 +437,7 @@ export function playDuNote(ctx: AudioContext, destination: AudioNode, startTime:
       }
     }
   });
-  return { sources: [source, lfo], gain: amp };
+  return { sources: [source, lfo], gain: amp, until: stopTime };
 }
 
 function playClick(ctx: AudioContext, destination: AudioNode, startTime: number, accent: boolean): Voice {
@@ -448,7 +463,7 @@ function playClick(ctx: AudioContext, destination: AudioNode, startTime: number,
       // already disconnected
     }
   });
-  return { sources: [osc], gain };
+  return { sources: [osc], gain, until: startTime + 0.05 };
 }
 
 // A percussion note (a clap, a stamp, a drum -- NoteEvent.unpitched): a short burst of noise
@@ -498,7 +513,7 @@ function playTap(ctx: AudioContext, destination: AudioNode, startTime: number, s
       }
     }
   });
-  return { sources: [src], gain };
+  return { sources: [src], gain, until: startTime + 0.1 };
 }
 
 /** A stamp or bass drum: a low sine falling in pitch, with a little low noise for the floor. */
@@ -523,7 +538,7 @@ function playThump(ctx: AudioContext, destination: AudioNode, startTime: number,
       }
     }
   });
-  return { sources: [osc], gain };
+  return { sources: [osc], gain, until: startTime + 0.22 };
 }
 
 export type PartMixState = 'normal' | 'muted' | 'solo';
@@ -938,6 +953,7 @@ export class AudioEngine {
   private sharedServerNow(c= this.canonical!) {return c.server+(this.ctx.currentTime-c.audio-this.outputDelay()-this.outputLatencyOffsetMs/1000)*1000;}
   private fillShared() {
     const c=this.canonical;if(!c || this.sharedClockReady?.()===false)return;this.waiting=this.ctx.state!=='running';if(this.waiting)return;
+    this.forgetEnded();
     this.waiting=false;
     const {state:s,timing:t}=c;
     if(s.status!=='playing' && s.status!=='countingIn')return;
@@ -992,9 +1008,9 @@ export class AudioEngine {
   }
 
   /**
-   * Tops up the schedule as playback progresses. Called once per animation frame from the render
-   * loop while playing -- cheap when there's nothing to do (a single beat comparison), and only
-   * actually schedules anything once the already-scheduled horizon gets close.
+   * Tops up the schedule as playback progresses. Called several times a second while playing (its
+   * own timer in main.ts, which keeps firing in a background tab) -- each call lays only the little
+   * that has come into the lookahead since the last one (see scheduleAhead).
    */
   tick() {
     if(this.canonical){this.fillShared();return;}
@@ -1007,13 +1023,22 @@ export class AudioEngine {
       if(!this.canonical)this.play(this.scheduledBeat(), 60 / this.secPerBeat, this.lastTranspose);
       return;
     }
-    const horizonBeats = LOOKAHEAD_REFILL_SEC / this.secPerBeat;
-    if (this.scheduledUpToBeat - this.scheduledBeat() < horizonBeats) this.scheduleAhead(false);
+    this.scheduleAhead(false);
   }
 
+  /**
+   * Lays the notes (and clicks) up to the lookahead's horizon. Play lays LOOKAHEAD_REFILL_SEC at
+   * once -- no more, so the music starts promptly -- and the top-ups then take the horizon out to
+   * LOOKAHEAD_SEC in small steps and keep it there: a little work on every tick rather than a
+   * burst every few seconds. A top-up that finds less than LOOKAHEAD_REFILL_SEC ahead (the timer
+   * slowed in a background tab) fills up to there at once, as before.
+   */
   private scheduleAhead(includeAlreadySounding: boolean) {
-    const lookaheadBeats = LOOKAHEAD_SEC / this.secPerBeat;
-    const targetBeat = this.scheduledBeat() + lookaheadBeats;
+    const now = this.scheduledBeat();
+    const aheadSec = (this.scheduledUpToBeat - now) * this.secPerBeat;
+    const reachSec = includeAlreadySounding || aheadSec < LOOKAHEAD_REFILL_SEC ? LOOKAHEAD_REFILL_SEC + (includeAlreadySounding ? 0 : LOOKAHEAD_STEP_SEC) : Math.min(LOOKAHEAD_SEC, aheadSec + LOOKAHEAD_STEP_SEC);
+    const targetBeat = now + reachSec / this.secPerBeat;
+    this.forgetEnded();
     if (targetBeat <= this.scheduledUpToBeat && !includeAlreadySounding) return;
     const fromBeatExclusive = includeAlreadySounding ? -Infinity : this.scheduledUpToBeat;
     this.scheduleNotesInRange(fromBeatExclusive, targetBeat);
@@ -1021,11 +1046,39 @@ export class AudioEngine {
     this.scheduledUpToBeat = Math.max(this.scheduledUpToBeat, targetBeat);
   }
 
-  /** Both this.score.notes and this.beatMarkers are sorted ascending by beat, so each top-up can
-   *  resume scanning from roughly where the last one left off rather than rescanning from zero. */
+  /**
+   * Lets go of the voices that have sounded: kept, every note ever played stayed in the list (and
+   * its audio nodes in memory) until the next Pause, which then went through all of them -- after
+   * a few minutes of a dense piece, tens of thousands.
+   */
+  private forgetEnded() {
+    const now = this.ctx.currentTime;
+    const voices = this.scheduledVoices;
+    let kept = 0;
+    for (let i = 0; i < voices.length; i++) if (voices[i].until > now) voices[kept++] = voices[i];
+    voices.length = kept;
+  }
+
+  /** The first of this.score.notes (sorted ascending by beat) that starts at or after `beat`. */
+  private firstNoteFrom(beat: number): number {
+    const notes = this.score.notes;
+    let lo = 0;
+    let hi = notes.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (notes[mid].startBeat < beat) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+
+  /** Both this.score.notes and this.beatMarkers are sorted ascending by beat, so each top-up
+   *  resumes scanning where the last one left off rather than rescanning from zero. */
   private scheduleNotesInRange(fromBeatExclusive: number, toBeatExclusive: number) {
-    for (const note of this.score.notes) {
-      if (note.startBeat < fromBeatExclusive) continue;
+    const notes = this.score.notes;
+    for (let i = this.firstNoteFrom(fromBeatExclusive); i < notes.length; i++) {
+      const note = notes[i];
+      if (note.startBeat < fromBeatExclusive) continue; // (only where a malformed start upset the search)
       if (note.startBeat >= toBeatExclusive) break;
       // A note with a non-finite (or otherwise unschedulable) start/duration -- e.g. from a
       // malformed source file -- would make `start`/`dur` below NaN or Infinity, which Web Audio

@@ -51,7 +51,9 @@ window.perfHooks = {
 
 // In the page, before the app: counts and clocks the profile reads afterwards.
 function collectors() {
-  const perf = (window.__perf = { raf: [], long: [], loaf: [], audio: [], nodes: [], ticks: [], running: false });
+  const perf = (window.__perf = { raf: [], long: [], loaf: [], audio: [], nodes: [], ticks: [], load: [], running: false, tapped: 0 });
+  // The tap on Play, to tell how long the music takes to start moving.
+  addEventListener('pointerdown', (e) => { if (perf.running && !perf.tapped) perf.tapped = e.timeStamp; }, { capture: true });
   const loop = (ts) => {
     if (perf.running) perf.raf.push(ts);
     requestAnimationFrame(loop);
@@ -83,8 +85,15 @@ function collectors() {
     };
   }
   perf.start = (ctx, engine) => {
-    perf.raf.length = perf.long.length = perf.loaf.length = perf.audio.length = perf.nodes.length = perf.ticks.length = 0;
+    perf.raf.length = perf.long.length = perf.loaf.length = perf.audio.length = perf.nodes.length = perf.ticks.length = perf.load.length = 0;
     perf.running = true;
+    perf.tapped = 0;
+    // The audio thread's own load, where the browser reports it (an experimental feature).
+    if (ctx.renderCapacity && !perf.capacity) {
+      perf.capacity = ctx.renderCapacity;
+      perf.capacity.addEventListener('update', (e) => { if (perf.running) perf.load.push({ t: performance.now(), average: e.averageLoad, peak: e.peakLoad, underrun: e.underrunRatio }); });
+      perf.capacity.start({ updateInterval: 1 });
+    }
     made = 0;
     let last = 0;
     // The engine's top-up, timed: how long each call keeps the main thread.
@@ -109,7 +118,7 @@ function collectors() {
     clearInterval(perf.timer);
     const stats = ctx.playbackStats;
     return {
-      raf: perf.raf, long: perf.long, loaf: perf.loaf, audio: perf.audio, nodes: perf.nodes, ticks: perf.ticks,
+      raf: perf.raf, long: perf.long, loaf: perf.loaf, audio: perf.audio, nodes: perf.nodes, ticks: perf.ticks, load: perf.load, tapped: perf.tapped,
       playbackStats: stats ? { fallbackFramesDuration: stats.fallbackFramesDuration, fallbackFramesEvents: stats.fallbackFramesEvents, totalFramesDuration: stats.totalFramesDuration, averageLatency: stats.averageLatency, maximumLatency: stats.maximumLatency } : null,
       baseLatency: ctx.baseLatency, outputLatency: ctx.outputLatency, sampleRate: ctx.sampleRate,
       frames: (window.__frames ?? []).slice(),
@@ -180,8 +189,11 @@ function summarize(raw, trace, profile, heap) {
     audio: {
       maxStallMs: round(stall), stalls, stalledMs: round(stalled), clockRatio: round(audioSpan.ctx / (audioSpan.perf || 1), 4),
       scheduling: { bursts: raw.ticks.length, nodes: raw.ticks.reduce((a, t) => a + t.nodes, 0), maxNodes: Math.max(0, ...raw.ticks.map((t) => t.nodes)), p50: round(quantile(tickMs, 0.5)), max: round(tickMs.at(-1) ?? 0), total: round(tickMs.reduce((a, b) => a + b, 0)) },
+      load: raw.load.length ? { average: round(raw.load.reduce((a, l) => a + l.average, 0) / raw.load.length, 3), peak: round(Math.max(...raw.load.map((l) => l.peak)), 3), underrun: round(Math.max(...raw.load.map((l) => l.underrun)), 3) } : null,
       playbackStats: raw.playbackStats, baseLatency: raw.baseLatency, outputLatency: raw.outputLatency,
     },
+    // From the tap on Play to the end of the first frame of moving music.
+    startMs: raw.tapped && frames.length ? round(frames[0].t + frames[0].ms - raw.tapped, 0) : null,
     ...(heap ? { heap } : {}),
     ...(trace ? { trace } : {}),
     ...(profile ? { profile } : {}),
@@ -244,7 +256,7 @@ function readProfile(profile, seconds) {
 const { server, base } = await ownerFixture(out, hooks);
 const demo = await fs.readFile('public/evening-rise.musicxml', 'utf8');
 const dense = denseScore();
-const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', '--enable-blink-features=AudioContextPlaybackStats', ...(args.gpu ? ['--enable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : [])] });
+const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', '--enable-blink-features=AudioContextPlaybackStats,AudioRenderCapacity', ...(args.gpu ? ['--enable-gpu', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : [])] });
 const results = {};
 try {
   for (const name of chosen) {
@@ -320,7 +332,7 @@ try {
       results[runs > 1 ? `${name}#${run}` : name] = summary;
       await fs.writeFile(path.join(out, `${name}${runs > 1 ? `-${run}` : ''}.json`), JSON.stringify({ summary, raw: { ...raw, frames: raw.frames.map((f) => ({ t: round(f.t, 1), beat: round(f.beat, 4), ms: round(f.ms), heard: round(f.heard, 4), rebuilds: f.rebuilds, swaps: f.swaps, next: f.next })) } }));
       const f = summary.frames;
-      console.log(`${name.padEnd(18)} x${throttle} fps ${String(f.fps).padStart(5)} p50 ${f.p50} p95 ${f.p95} p99 ${f.p99} max ${f.max} | >25ms ${f.over25} >50ms ${f.over50} >100ms ${f.over100} | draw p50 ${summary.draw.p50} p95 ${summary.draw.p95} max ${summary.draw.max} | long ${summary.longTasks.count}/${summary.longTasks.max}ms | sched max ${summary.audio.scheduling.max}ms/${summary.audio.scheduling.maxNodes}n | stall ${summary.audio.maxStallMs}ms x${summary.audio.stalls} | heap +${heap.risenMbPerSec}MB/s${errors.length ? ` | ERRORS ${errors.join('; ')}` : ''}`);
+      console.log(`${name.padEnd(18)} x${throttle} fps ${String(f.fps).padStart(5)} p50 ${f.p50} p95 ${f.p95} p99 ${f.p99} max ${f.max} | >25ms ${f.over25} >50ms ${f.over50} >100ms ${f.over100} | draw p50 ${summary.draw.p50} p95 ${summary.draw.p95} max ${summary.draw.max} | long ${summary.longTasks.count}/${summary.longTasks.max}ms | sched max ${summary.audio.scheduling.max}ms/${summary.audio.scheduling.maxNodes}n | stall ${summary.audio.maxStallMs}ms x${summary.audio.stalls} load ${summary.audio.load ? `${summary.audio.load.average}/${summary.audio.load.peak}` : '-'} | start ${summary.startMs}ms | heap +${heap.risenMbPerSec}MB/s${errors.length ? ` | ERRORS ${errors.join('; ')}` : ''}`);
       await context.close();
     }
   }
