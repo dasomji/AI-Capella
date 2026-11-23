@@ -568,10 +568,19 @@ test('AICAP-31 PDF, 50 MP photo, brute force and recipient floods log one redact
 // Fixture account creation is independent of the network-abuse scenarios below.
 // A full run creates more than 60 accounts on loopback within one auth window.
 async function resetFixtureNetwork() {
- const {createRateLimitKey}=await import('@better-auth/core/utils/ip');
- for(const ip of ['127.0.0.1','::1'])for(const path of ['/sign-up/email','/verify-email-password'])
-  await pool.query('delete from rate_limit where key=$1',[createRateLimitKey(ip,path)]);
+ const {createRateLimitKey,normalizeIP}=await import('@better-auth/core/utils/ip');
+ for(const ip of ['127.0.0.1','::1'])for(const path of ['/sign-up/email','/sign-in/email','/verify-email-password'])
+  await pool.query('delete from rate_limit where key=$1',[createRateLimitKey(normalizeIP(ip)!,path)]);
 }
+
+test('AICAP-31 fixture accounts reset exhausted normalized loopback buckets',async()=>{
+ const {createRateLimitKey,normalizeIP}=await import('@better-auth/core/utils/ip');
+ for(const ip of ['127.0.0.1','::1'])for(const [path,max] of [['/sign-up/email',60],['/sign-in/email',60],['/verify-email-password',100]] as const)
+  await pool.query('insert into rate_limit(key,count,last_request) values($1,$2,$3) on conflict(key) do update set count=$2,last_request=$3',[createRateLimitKey(normalizeIP(ip)!,path),max,Date.now()]);
+ assert.equal((await request('auth/sign-up/email','POST',{email:crypto.randomUUID()+'@test.com',name:'Fixture',password:'fixture-password-42'})).status,429);
+ await resetFixtureNetwork();
+ assert.ok((await account()).id);
+});
 
 test('AICAP-31 request, upload, mail and account guards emit exact redacted stdout records',{timeout:30000},async t=>{
  await resetFixtureNetwork();
