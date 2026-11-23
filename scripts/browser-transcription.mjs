@@ -37,14 +37,14 @@ try{
  await page.getByRole('button',{name:'Review',exact:true}).first().click();await page.locator('.tx-score svg').first().waitFor();assert.ok((await page.locator('.tx-review-items').innerText()).includes(hostile));assert.equal(await page.locator('.tx-review-items img').count(),0);assert.equal(await page.evaluate(()=>window.providerExecuted),undefined);await page.unroute('**/report');
  // Visual fixtures reuse a real completed job/result; only job-list states are overridden.
  // No provider call is made for the failed/paused/cancelled matrix examples.
- const completed=(await req(context,`/ensembles/${e}/transcriptions`)).find(j=>j.state==='completed');
+ const completed=(await req(context,`/ensembles/${e}/transcriptions`)).items.find(j=>j.state==='completed');
  const pngFixture=await sharp({create:{width:140,height:180,channels:3,background:'#eee3c7'}}).png().toBuffer();
  for(const theme of [{name:'dark',scheme:'dark'},{name:'light',scheme:'light'},{name:'papier',scheme:'light',design:'papier'}])for(const width of [1440,390])for(const language of ['de','en']){
   const c=await browser.newContext({storageState:await context.storageState(),colorScheme:theme.scheme,viewport:{width,height:1000}});
   await c.addInitScript(({language,design})=>{localStorage.setItem('ai-capella-lang',language);if(design)localStorage.setItem('ai-capella-design',design);else localStorage.removeItem('ai-capella-design');},{language,design:theme.design});
   const p=await c.newPage(),prefix=`${theme.name}-${width}-${language}`;
   const states=['running','completed','failed','paused','cancelled'];
-  await p.route(`**/api/ensembles/${e}/transcriptions`,route=>route.request().method()==='GET'?route.fulfill({json:states.map((state,i)=>({...completed,id:state==='completed'?completed.id:`visual-${state}`,state:state==='paused'?'queued':state,stage:state==='paused'?'processing_paused':state,options:{title:language==='de'?'Abendlied':'Evening song'},failure_reason:state==='failed'?'provider_timeout':undefined,pages:completed.pages.map((page,n)=>({...page,state:state==='running'?(n===0?'completed':'running'):state==='paused'?'queued':state}))}))}):route.continue());
+  await p.route(`**/api/ensembles/${e}/transcriptions`,route=>route.request().method()==='GET'?route.fulfill({json:{nextCursor:null,items:states.map((state,i)=>({...completed,id:state==='completed'?completed.id:`visual-${state}`,state:state==='paused'?'queued':state,stage:state==='paused'?'processing_paused':state,options:{title:language==='de'?'Abendlied':'Evening song'},failure_reason:state==='failed'?'provider_timeout':undefined,pages:completed.pages.map((page,n)=>({...page,state:state==='running'?(n===0?'completed':'running'):state==='paused'?'queued':state}))}))}}):route.continue());
   await library(p);await p.locator('.tx-job').nth(4).waitFor();
   await shot(`jobs-all-${prefix}`,p);await assertPlayerContrast(p,['.tx-job h3','.tx-job .tx-pencil','.tx-job .tx-actions > button']);
   assert.equal(await p.locator('.tx-job .tx-actions > button').count(),1);assert.equal(await p.locator('.tx-job svg').count(),0);
@@ -81,7 +81,7 @@ try{
  await page.locator('#library-back-btn').click();
  await db.query('insert into transcription_control(id,paused) values(1,true) on conflict(id) do update set paused=true');
  await page.locator('#transcription-entry').click();const png=await sharp({create:{width:100,height:120,channels:3,background:'white'}}).png().toBuffer();await page.locator('input[accept="image/jpeg,image/png,image/webp"]').setInputFiles(await Promise.all([1,2,3].map(async n=>({name:`Photo ${n}.png`,mimeType:'image/png',buffer:await sharp(png).resize(100+n).png().toBuffer()}))));
- await page.getByRole('button',{name:'Move page right',exact:true}).first().click();assert.match(await page.locator('.tx-photo').first().innerText(),/Photo 2/);await shot('photos-reordered');await page.getByRole('button',{name:'Start reading',exact:true}).click();await page.getByText('Paused – processing is temporarily suspended',{exact:true}).first().waitFor({timeout:15000});await shot('jobs-paused');const photoJob=(await req(context,`/ensembles/${e}/transcriptions`)).find(j=>j.pages.length===3);assert.deepEqual(photoJob.pages.map(p=>p.original_filename),['Photo 2.png','Photo 1.png','Photo 3.png']);
+ await page.getByRole('button',{name:'Move page right',exact:true}).first().click();assert.match(await page.locator('.tx-photo').first().innerText(),/Photo 2/);await shot('photos-reordered');await page.getByRole('button',{name:'Start reading',exact:true}).click();await page.getByText('Paused – processing is temporarily suspended',{exact:true}).first().waitFor({timeout:15000});await shot('jobs-paused');const photoJob=(await req(context,`/ensembles/${e}/transcriptions`)).items.find(j=>j.pages.length===3);assert.deepEqual(photoJob.pages.map(p=>p.original_filename),['Photo 2.png','Photo 1.png','Photo 3.png']);
  await page.locator('.tx-job details summary').first().click();await page.getByRole('menuitem',{name:'Cancel',exact:true}).click();await page.getByText('Cancelled',{exact:true}).waitFor();await shot('jobs-cancelled');await page.locator('.tx-job details summary').first().click();await page.getByRole('menuitem',{name:'Retry',exact:true}).click();await page.getByText('Paused – processing is temporarily suspended',{exact:true}).first().waitFor();
  await db.query('update transcription_control set paused=false');await page.getByRole('button',{name:'Review',exact:true}).first().waitFor({timeout:30000});
  const memberContext=await browser.newContext({viewport:{width:390,height:900},locale:'en-US'});await memberContext.addInitScript(()=>{localStorage.setItem('ai-capella-intro-off','1');localStorage.setItem('ai-capella-lang','en');});const member=await account(memberContext,'member');await db.query('insert into memberships(ensemble_id,user_id,ai_transcription) values($1,$2,true)',[e,member]);const memberPage=await memberContext.newPage();await library(memberPage);await memberPage.locator('#transcription-entry').waitFor();await memberPage.getByRole('button',{name:'Review',exact:true}).first().click();await memberPage.locator('.tx-score svg').first().waitFor();assert.ok(await memberPage.getByRole('button',{name:'Add to repertoire',exact:true}).isDisabled());await memberPage.getByText('Adding to repertoire requires someone with “Edit pieces” permission.').waitFor();
@@ -89,6 +89,17 @@ try{
  await req(context,`/ensembles/${e}/members/${membership.id}`,'PATCH',{editPieces:true});await memberPage.waitForFunction(()=>document.querySelector('.tx-review-actions > button')?.disabled===false);
  await req(context,`/ensembles/${e}/members/${membership.id}`,'PATCH',{editPieces:false});await memberPage.waitForFunction(()=>document.querySelector('.tx-review-actions > button')?.disabled===true);
  await req(context,`/ensembles/${e}/members/${membership.id}`,'PATCH',{transcribe:false});await memberPage.locator('dialog.transcription-review').waitFor({state:'detached'});assert.ok(await memberPage.locator('#transcription-entry').isHidden());assert.ok(await memberPage.locator('#transcription-jobs').isHidden());assert.equal((await memberContext.request.get(base+`/api/ensembles/${e}/transcriptions`)).status(),403);await memberContext.close();
+ // Cursor pagination reaches old jobs in the actual UI and survives periodic refresh.
+ const historyIds=(await db.query(`insert into transcription_jobs(ensemble_id,user_id,started_by,request_key,request_hash,options,model,prompt_version,state,created_at) select $1,$2,$2,'browser-history-'||n,'fixture',jsonb_build_object('title','History '||n),'fake','v1','cancelled','2026-01-01T00:00:00.123456Z' from generate_series(1,204) n returning id`,[e,lead])).rows.map(r=>r.id);
+ await library(page);await page.getByRole('button',{name:'Load older transcriptions',exact:true}).waitFor();
+ while(await page.getByRole('button',{name:'Load older transcriptions',exact:true}).count()) {
+  const before=await page.locator('.tx-job').count();await page.getByRole('button',{name:'Load older transcriptions',exact:true}).click();
+  await page.waitForFunction(before=>document.querySelectorAll('.tx-job').length>before,before);
+ }
+ const visibleIds=await page.locator('.tx-job').evaluateAll(cards=>cards.map(c=>c.dataset.job));
+ for(const id of historyIds)assert.ok(visibleIds.includes(id));
+ await shot('history-all-pages');
+ await db.query('delete from transcription_jobs where id=any($1::text[])',[historyIds]);
  const next=await req(context,'/ensembles','POST',{name:'Destination Choir'});
  await page.addInitScript(({user,ensemble})=>{localStorage.removeItem('ai-capella-mode-v2');sessionStorage.removeItem('ai-capella-mode-switch');localStorage.removeItem('ai-capella-seen');localStorage.removeItem(`lightscore-place:${user}`);localStorage.setItem(`lightscore-ensemble:${user}`,ensemble);},{user:lead,ensemble:e});await page.reload();await page.locator('.ded-other').filter({hasText:'Destination Choir'}).click();await page.locator('#mode-solo-btn').click();
  await page.route('**/api/transcription/config',route=>route.fulfill({json:{pdf:50*1024*1024,photo:20*1024*1024,pages:1}}));
@@ -97,7 +108,7 @@ try{
  assert.ok(await page.getByRole('button',{name:'Start reading',exact:true}).isDisabled());assert.ok(await page.locator('dialog .tx-error[role=alert]').innerText());await page.getByRole('button',{name:'Remove',exact:true}).last().click();
  const created=page.waitForResponse(r=>r.url().endsWith(`/ensembles/${next.id}/transcriptions`)&&r.request().method()==='POST');
  await page.getByRole('button',{name:'Start reading',exact:true}).click();assert.equal((await created).status(),201);
- assert.equal((await req(context,`/ensembles/${next.id}/transcriptions`)).length,1);
+ assert.equal((await req(context,`/ensembles/${next.id}/transcriptions`)).items.length,1);
  assert.deepEqual(errors,[]);console.log('Phase 4c browser acceptance passed');
 }catch(error){console.error('Browser failure',error,await page.locator('body').innerText());await shot('failure');throw error;}finally{
  if(worker){worker.kill('SIGTERM');await new Promise(r=>worker.once('exit',r));}await browser.close();await db.end();const objects=await s3.send(new ListObjectsV2Command({Bucket:process.env.S3_BUCKET}));if(objects.Contents?.length)await s3.send(new DeleteObjectsCommand({Bucket:process.env.S3_BUCKET,Delete:{Objects:objects.Contents.map(o=>({Key:o.Key}))}}));await s3.send(new DeleteBucketCommand({Bucket:process.env.S3_BUCKET}));s3.destroy();

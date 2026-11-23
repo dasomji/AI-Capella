@@ -127,6 +127,8 @@ export function installTranscription(options: {
     generation = 0,
     refreshSequence = 0,
     jobs: TranscriptionJob[] = [],
+    historyPages = 1,
+    nextCursor: string | null = null,
     dialog: HTMLDialogElement | undefined,
     importButton: HTMLButtonElement | undefined,
     permissionNote: HTMLElement | undefined;
@@ -136,16 +138,25 @@ export function installTranscription(options: {
   const socket = options.socket;
   const jobMenus: (() => void)[] = [];
   const base = () => `/ensembles/${scope}`;
-  async function refresh() {
+  async function refresh(pages = historyPages) {
     const e = scope,
       g = generation,
       sequence = ++refreshSequence;
     if (!canTranscribe(e)) return;
+    historyPages=pages;
     try {
-      const rows = await api<TranscriptionJob[]>(`${base()}/transcriptions`);
+      const rows: TranscriptionJob[]=[];
+      let cursor:string|null=null;
+      for(let i=0;i<pages;i++) {
+        const page: {items:TranscriptionJob[];nextCursor:string|null}=await api<{items:TranscriptionJob[];nextCursor:string|null}>(`/ensembles/${e}/transcriptions${cursor?'?cursor='+encodeURIComponent(cursor):''}`);
+        rows.push(...page.items);cursor=page.nextCursor;
+        if(!cursor)break;
+      }
       if (g !== generation || sequence !== refreshSequence || !canTranscribe(e))
         return;
-      if (JSON.stringify(jobs) !== JSON.stringify(rows)) {
+      historyPages=pages;
+      if (JSON.stringify(jobs) !== JSON.stringify(rows) || nextCursor!==cursor) {
+        nextCursor=cursor;
         jobs = rows;
         renderJobs();
       }
@@ -162,6 +173,7 @@ export function installTranscription(options: {
       generation++;
       dialog?.close();
       jobs = [];
+      historyPages=1;nextCursor=null;
       host.replaceChildren();
     }
     const allowed = canTranscribe(scope);
@@ -170,6 +182,7 @@ export function installTranscription(options: {
     if (!allowed) {
       generation++;
       jobs = [];
+      historyPages=1;nextCursor=null;
       host.replaceChildren();
       dialog?.close();
     }
@@ -231,7 +244,7 @@ export function installTranscription(options: {
             menu.open = false;
             summary.focus();
             void api(`${base()}/transcriptions/${j.id}/${kind}`, "POST")
-              .then(refresh)
+              .then(()=>refresh())
               .catch((e) => {
                 status.textContent = errorText(e);
               });
@@ -291,6 +304,7 @@ export function installTranscription(options: {
       card.append(actions);
       host.append(card);
     }
+    if(nextCursor)host.append(button(tr('loadMore'),()=>void refresh(historyPages+1),{variant:'standard'}));
   }
   async function start() {
     sync();
