@@ -1,3 +1,4 @@
+import { SESSION_EXPIRY_SECONDS, VERIFICATION_EXPIRY_SECONDS, PASSWORD_MAX_LENGTH } from './protective-limits.mjs';
 import { allowAccountMail } from "./auth-guards.server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -46,6 +47,7 @@ function makeAuth() {
     },
     emailAndPassword: {
       enabled: true,
+      maxPasswordLength: PASSWORD_MAX_LENGTH,
       onExistingUserSignUp: async ({ user }) => {
         await auth.api.requestPasswordReset({
           body: { email: user.email, redirectTo: `${env.BETTER_AUTH_URL}/` },
@@ -65,6 +67,7 @@ function makeAuth() {
         ) : undefined,
     },
     emailVerification: {
+      expiresIn: VERIFICATION_EXPIRY_SECONDS,
       sendOnSignUp: true,
       sendOnSignIn: false,
       autoSignInAfterVerification: false,
@@ -84,7 +87,7 @@ function makeAuth() {
       },
     },
     session: {
-      expiresIn: 60 * 60 * 24 * 7,
+      expiresIn: SESSION_EXPIRY_SECONDS,
       updateAge: 60 * 60 * 24,
       cookieCache: { enabled: false },
     },

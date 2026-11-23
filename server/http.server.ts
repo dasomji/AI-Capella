@@ -1,3 +1,5 @@
+import { normalizePathname } from '@better-auth/core/utils/url';
+import { REQUEST_MAX_BYTES, PASSWORD_CONCURRENT, FAILED_PASSWORD_CONCURRENT, WRONG_PASSWORD_MINUTE, REGISTRATION_ACCOUNT_MINUTE, PASSWORD_CONFIRM_ATTEMPTS, PASSWORD_MAX_LENGTH, VERIFICATION_EXPIRY_SECONDS } from './protective-limits.mjs';
 import { logLimitHit, withLimitRequest } from './logger.server';
 import { rejectedAdminOrigin } from './admin-management.server';
 import { admin } from './admin.server';
@@ -60,7 +62,7 @@ api.use("*", async (c, next) => {
     if (/^\/api\/admin(?:\/|$)/.test(c.req.path)) {
       c.header('Cache-Control','no-store');
       const session=await adminSession(c.req.raw.headers);
-      if(session)await rejectedAdminOrigin(session.user.id,c.req.path);
+      if(session)rejectedAdminOrigin(c.req.path);
     }
     return c.json({ error: "Untrusted origin" }, 403);
   }
@@ -111,8 +113,8 @@ api.use("/api/*", async (c, next) => {
       c.req.method === "POST" &&
       /^\/api\/ensembles\/[^/]+\/pieces(?:\/[^/]+\/versions)?$/.test(c.req.path)
         ? env.SCORE_MAX_BYTES
-        : 16384,
-    onError: (c) => { logLimitHit(scorePath && c.req.method === "POST" ? "score.bytes" : "request.bytes","server",scorePath && c.req.method === "POST" ? env.SCORE_MAX_BYTES : 16384);return c.json({ code: "body_too_large" }, 413); },
+        : REQUEST_MAX_BYTES,
+    onError: (c) => { logLimitHit(scorePath && c.req.method === "POST" ? "score.bytes" : "request.bytes","server",scorePath && c.req.method === "POST" ? env.SCORE_MAX_BYTES : REQUEST_MAX_BYTES);return c.json({ code: "body_too_large" }, 413); },
   })(c, next); } finally { release?.(); }
 });
 api.get("/healthz", (c) => c.json({ status: "ok" }));
@@ -149,7 +151,7 @@ api.use("/api/auth/*", async (c, next) => {
   const ip = c.req.header("x-lightscore-socket-ip") ?? "";
   const key = digest + ":" + ip;
   if (passwordChecks.has(key)) {
-    logLimitHit("auth.password_concurrent","user",1);
+    logLimitHit("auth.password_concurrent","user",PASSWORD_CONCURRENT);
     c.header("Retry-After", "1");
     return c.json({code:"TOO_MANY_ATTEMPTS"},429);
   }
@@ -160,7 +162,7 @@ api.use("/api/auth/*", async (c, next) => {
     const failure = (await pool.query("select count,last_request from rate_limit where key=$1",[failureKey])).rows[0];
     if (failure?.count > 0 && Number(failure.last_request) > Date.now()-60000) {
       const count = failedPasswordChecks.get(digest) ?? 0;
-      if (count >= 4) { logLimitHit("auth.failed_password_concurrent","user",4); c.header("Retry-After","1"); return c.json({code:"TOO_MANY_ATTEMPTS"},429); }
+      if (count >= FAILED_PASSWORD_CONCURRENT) { logLimitHit("auth.failed_password_concurrent","user",FAILED_PASSWORD_CONCURRENT); c.header("Retry-After","1"); return c.json({code:"TOO_MANY_ATTEMPTS"},429); }
       failedPasswordChecks.set(digest,count+1); counted=true;
     }
     await next();
@@ -206,8 +208,8 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
   if(path.endsWith("/verify-email-password") && c.req.method === "POST") {
     const body = await c.req.json();
     try {
-      if(typeof body.password==='string' && body.password.length>128)logLimitHit('input.text','server',128);
-      if(typeof body.token!=="string" || typeof body.password!=="string" || body.password.length>128) return c.json({code:"INVALID_INPUT"},422);
+      if(typeof body.password==='string' && body.password.length>PASSWORD_MAX_LENGTH)logLimitHit('input.password','server',PASSWORD_MAX_LENGTH);
+      if(typeof body.token!=="string" || typeof body.password!=="string" || body.password.length>PASSWORD_MAX_LENGTH) return c.json({code:"INVALID_INPUT"},422);
       const {payload}=await jwtVerify(body.token,new TextEncoder().encode(env.BETTER_AUTH_SECRET),{algorithms:["HS256"]});
       if(typeof payload.email!=="string" || payload.updateTo) return c.json({code:"INVALID_TOKEN"},400);
       const tokens = await transaction(async db=>{
@@ -215,7 +217,7 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
         if(!user) throw Error("invalid");
         const key="verify-password:"+user.id+":"+c.req.header("x-lightscore-socket-ip");
         const failure=(await db.query('select count,last_request from rate_limit where key=$1',[key])).rows[0];
-        if(failure && failure.count>=5 && Number(failure.last_request)>Date.now()-900000) {logLimitHit("auth.verify_password","user",5);return null;}
+        if(failure && failure.count>=PASSWORD_CONFIRM_ATTEMPTS && Number(failure.last_request)>Date.now()-900000) {logLimitHit("auth.verify_password","user",PASSWORD_CONFIRM_ATTEMPTS);return null;}
         const credential=(await db.query("select password from account where user_id=$1 and provider_id='credential'",[user.id])).rows[0];
         if(!credential || !(await verifyPassword({hash:credential.password,password:body.password}))) {
           await db.query(`insert into rate_limit(key,count,last_request) values($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request<$2-900000 then 1 else rate_limit.count+1 end,last_request=case when rate_limit.last_request<$2-900000 then $2 else rate_limit.last_request end`,[key,Date.now()]);return null;
@@ -226,7 +228,7 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
       if(!tokens) return c.json({code:"INVALID_PASSWORD"},401);
       for(const row of tokens) revoked(row.token);
       return c.json({status:true});
-    } catch(error) {if((error as {code?:string})?.code==='ERR_JWT_EXPIRED')logLimitHit('auth.verification_expiry','user',3600);return c.json({code:"INVALID_TOKEN"},400);}
+    } catch(error) {if((error as {code?:string})?.code==='ERR_JWT_EXPIRED')logLimitHit('auth.verification_expiry','user',VERIFICATION_EXPIRY_SECONDS);return c.json({code:"INVALID_TOKEN"},400);}
   }
   let emailFailureKey: string | undefined;
   let globalFailureKey: string | undefined;
@@ -243,7 +245,7 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
       emailFailureKey = emailKey + ":" + group;
       globalFailureKey = emailKey;
       const globalFailures = (await pool.query("select count,last_request from rate_limit where key=$1",[emailKey])).rows[0];
-      if(globalFailures && Number(globalFailures.last_request)>now-60000) await new Promise(resolve=>setTimeout(resolve,Math.min(1000,Math.max(0,globalFailures.count-10)*10)));
+      if(globalFailures && Number(globalFailures.last_request)>now-60000) await new Promise(resolve=>setTimeout(resolve,Math.min(1000,Math.max(0,globalFailures.count-WRONG_PASSWORD_MINUTE)*10)));
       const failures = (
         await pool.query(
           "select count,last_request from rate_limit where key=$1",
@@ -252,18 +254,18 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
       ).rows[0];
       if (
         failures &&
-        failures.count >= 10 &&
+        failures.count >= WRONG_PASSWORD_MINUTE &&
         Number(failures.last_request) > now - 60000
       )
-        { logLimitHit(path.endsWith("/sign-in/email")?"auth.wrong_password":"auth.registration_account","user",path.endsWith("/sign-in/email")?10:100); return c.json({ code: "TOO_MANY_ATTEMPTS" }, 429); }
+        { logLimitHit("auth.wrong_password","user",WRONG_PASSWORD_MINUTE); return c.json({ code: "TOO_MANY_ATTEMPTS" }, 429); }
     }
-    for (const [key, max] of (path.endsWith("/sign-up/email") ? [[emailKey, 100] as const] : [])) {
+    for (const [key, max] of (path.endsWith("/sign-up/email") ? [[emailKey, REGISTRATION_ACCOUNT_MINUTE] as const] : [])) {
       const result = await pool.query(
         `insert into rate_limit(key,count,last_request) values ($1,1,$2) on conflict(key) do update set count=case when rate_limit.last_request < $2-60000 then 1 else rate_limit.count+1 end, last_request=case when rate_limit.last_request < $2-60000 then $2 else rate_limit.last_request end returning count`,
         [key, now],
       );
       if (result.rows[0].count > max)
-        { logLimitHit(path.endsWith("/sign-in/email")?"auth.wrong_password":"auth.registration_account","user",path.endsWith("/sign-in/email")?10:100); return c.json({ code: "TOO_MANY_ATTEMPTS" }, 429); }
+        { logLimitHit("auth.registration_account","user",max); return c.json({ code: "TOO_MANY_ATTEMPTS" }, 429); }
     }
   }
   const response = await withRequestLog(
@@ -272,7 +274,9 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
   );
   if(response.status===429 && response.headers.has('x-retry-after')) {
     const context=await auth.$context;
-    const authPath=path.replace(/^\/api\/auth/,'');
+    // Match Better Auth exactly, including trailing slashes and percent-encoded paths.
+    // This configuration has exact custom rules and no plugin rate rules.
+    const authPath=normalizePathname(c.req.url,new URL(context.baseURL).pathname);
     const custom=context.rateLimit.customRules?.[authPath];
     const max=custom && typeof custom==='object'?custom.max:/^\/(sign-in|sign-up|change-password|change-email|forget-password)/.test(authPath)||authPath==='/request-password-reset'||authPath==='/send-verification-email'||/^\/email-otp\/(send-verification-otp|request-password-reset)$/.test(authPath)?3:context.rateLimit.max;
     const kind=({'/sign-in/email':'sign_in','/sign-up/email':'sign_up','/request-password-reset':'reset_request','/send-verification-email':'verification_request'} as Record<string,string>)[authPath]??(max===3?'sensitive':'default');
@@ -280,8 +284,8 @@ api.on(["GET", "POST"], "/api/auth/*", async (c) => {
   }
   if(response.status===400 && response.headers.get('content-type')?.includes('json')) {
     const body=await response.clone().json().catch(()=>null);
-    if(body?.code==='PASSWORD_TOO_LONG')logLimitHit('input.text','server',128);
-    if(body?.code==='TOKEN_EXPIRED')logLimitHit('auth.verification_expiry','user',3600);
+    if(body?.code==='PASSWORD_TOO_LONG')logLimitHit('input.password','server',PASSWORD_MAX_LENGTH);
+    if(body?.code==='TOKEN_EXPIRED')logLimitHit('auth.verification_expiry','user',VERIFICATION_EXPIRY_SECONDS);
   }
   const responseHeaders=new Headers(response.headers);
   if(path.endsWith('/sign-out'))responseHeaders.set('Clear-Site-Data','"cache"');

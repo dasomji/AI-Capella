@@ -109,8 +109,9 @@ Platform role writes (including CLI) take an exclusive advisory transaction lock
 other management writes take its shared counterpart and recheck the actor's
 verified database role while holding it. The membership snapshot check prevents
 silent lost updates; each successful change and its audit row commit together.
-Rejected authenticated attempts record a safe failure outcome; untrusted Origins
-are recorded after concealment/authorization. Audit payloads contain reason and
+Rejected authenticated management attempts record a safe failure outcome.
+Untrusted Origins emit metadata-only stdout events after concealment/authorization
+and write no in-app audit rows (ADR 0008). Management audit payloads contain reason and
 before/after permission booleans, never invitation tokens or credentials.
 
 Invitations reuse the existing SHA-256 token, 14-day expiry, recipient flood protection, idempotency,

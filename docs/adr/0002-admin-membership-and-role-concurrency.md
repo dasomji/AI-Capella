@@ -42,3 +42,9 @@ in-app audit to mutations. List/detail/content/download/preview reads no longer
 write audit rows. This leaves the atomic success commit, failure savepoint and
 independent mutation rate counter described above unchanged; authenticated
 rejected mutation outcomes and CLI role writes remain audited.
+
+
+[ADR 0008](0008-limits-follow-usage-data.md) subsequently removes the independent
+admin management mutation counter. Failed management outcomes and successful
+CLI role changes remain audited; rejected Origins and ordinary domain denials
+go only to metadata-only stdout events, with no audit-row budget.

@@ -376,7 +376,8 @@ reorder decisions above.
   removal alone evicts. Library emission runs after commit in tracked background
   work, batches recipient membership/session checks, and logs transient failures
   without evicting sockets or changing the HTTP result. Version, metadata-op,
-  account deletion and bounded denied-mutation audits contain ids/op names only.
+  account deletion audits contain ids/op names only. AICAP-31 replaces ordinary
+  denied-mutation audits with metadata-only stdout events (ADR 0008).
 - Account closure computes sole-member ensembles under locks. DELETE requires an
   exact explicit `deleteEnsembleIds` list; mismatch returns 409 with current ids.
   Sole-member ensembles and their pieces are deleted. Last leads of shared
@@ -408,7 +409,8 @@ from fresh disposable DB/Mailpit/server, including the account-deletion sheet;
 `npm run db:generate` reported no schema changes. Regressions include chunked body
 limits, change-password token omission, post-commit emitter failure, transient
 socket membership reads, original-error preservation after rollback failure,
-issuer acceptance clamps, deny audits, creation/mutation/email budgets, stale
+issuer acceptance clamps, deny audits and creation/mutation/email budgets
+(the guessed usage budgets and deny audits were removed by AICAP-31), stale
 order/revision separation, legacy invitation budget backfill and pre-hijack
 password recovery. The migration conservatively ages legacy send counts from
 last_sent_at because older per-send instants were not stored. Windows are elapsed
@@ -1383,8 +1385,8 @@ Phase 4a implementation details:
   callable in dev/tests. PostgreSQL `FOR UPDATE SKIP LOCKED`, timestamptz leases,
   heartbeat and claim tokens provide crash recovery without Redis. Pages within
   one job are sequential for previous-page context; different jobs run in
-  parallel. Admission is serialized per initiator and ensemble (2/4 active jobs
-  by default), with 2 globally active pages, a 20-second provider timeout and
+  parallel. AICAP-31 removes per-initiator/ensemble admission quotas (ADR 0008),
+  keeping 2 globally active pages, a 20-second provider timeout and
   at most 3 automatic attempts with capped exponential backoff. Upload admission
   uses the Phase 3b UploadSlots implementation and configured limits.
 - Every worker provider step rechecks the initiating user's current capability.
@@ -1972,8 +1974,8 @@ verification. No paid requests, deployment, push or production access.
   retain the complete report and canonical MusicXML. Listen opens a temporary,
   unsaved Solo score with persistence controls disabled. Import is pending-guarded
   and server-idempotent, preserves the optional title and opens the library piece.
-- Minimal server additions: capability-gated ensemble job read model (most recent
-  100 jobs), bounded private source-page PNG endpoint (read audits retired by ADR 0007) using the existing
+- Minimal server additions: capability-gated ensemble job read model (AICAP-31 replaces the newest-100 cutoff
+  with cursor pagination, ADR 0008), bounded private source-page PNG endpoint (read audits retired by ADR 0007) using the existing
   sandbox renderer and upload admission, optional title and la/other language
   values on job creation, and import title from captured job options. The API
   Dockerfile now installs Poppler for on-demand PDF comparison. No schema changes.
@@ -3000,7 +3002,8 @@ tables and keep membership permissions, Save and Remove within 390 px. The
 browser journey verifies full pagination, exact sort order, page resets, keyboard
 activation, page-2 refreshes and completed screenshots. Backend regressions also
 cover IDOR, stale DELETE/role writes, unchanged rejected state, unverified admins
-and stored audit metadata. Origin-rejection audit writes are rate limited. ADR 0002
+and stored audit metadata. AICAP-31 replaces Origin-rejection audit writes with metadata-only stdout
+events; no audit-row budget remains (ADR 0008). ADR 0002
 is unchanged. Final same-commit check results and per-finding commit/test mapping
 are in `/tmp/aicap-admin/report.md` under “Review fixes”.
 

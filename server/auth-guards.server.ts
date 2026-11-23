@@ -1,3 +1,4 @@
+import { ACCOUNT_MAIL_RECIPIENT_DAY } from './protective-limits.mjs';
 import { logLimitHit } from './logger.server';
 import { createHash } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -21,7 +22,7 @@ export async function allowAccountMail(email:string, kind:'verify'|'reset', requ
     const sent=(await db.query('select count(*)::int as count from rate_limit where key like $1 and last_request > $2',[key+':sent:%',now-86400000])).rows[0].count;
     // Conservatively retain pre-upgrade fixed-window usage until its window expires.
     const legacy=(await db.query('select count,last_request from rate_limit where key=$1',[key+':day'])).rows[0];
-    if(sent+(legacy && Number(legacy.last_request)>now-86400000?legacy.count:0)>=100){await db.query('rollback');logLimitHit('account_mail.recipient_day','user',100);return false;}
+    if(sent+(legacy && Number(legacy.last_request)>now-86400000?legacy.count:0)>=ACCOUNT_MAIL_RECIPIENT_DAY){await db.query('rollback');logLimitHit('account_mail.recipient_day','user',ACCOUNT_MAIL_RECIPIENT_DAY);return false;}
     for(const [budget,window,max] of budgets){
       const row=(await db.query('select count,last_request from rate_limit where key=$1',[budget])).rows[0];
       if(row && Number(row.last_request)>now-window && row.count>=max){

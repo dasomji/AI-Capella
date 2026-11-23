@@ -1,13 +1,14 @@
+import { PREVIEW_CONCURRENT, PREVIEW_WAITING } from './protective-limits.mjs';
 export class PreviewBusyError extends Error {constructor(public limit:string,public value:number){super('render_busy');}}
 import { UploadSlots } from './upload-slots.server';
 /** Independent admission: two renders, four waiting requests, two seconds maximum. */
 export class PreviewAdmission {
- private slots=new UploadSlots(2,2);private waiting=0;
+ private slots=new UploadSlots(PREVIEW_CONCURRENT,PREVIEW_CONCURRENT);private waiting=0;
  async take(user:string,signal:AbortSignal){
   const first=this.slots.take(user);if(!('code' in first))return first;
-  if(this.waiting>=4)throw new PreviewBusyError('preview.waiting',4);this.waiting++;
+  if(this.waiting>=PREVIEW_WAITING)throw new PreviewBusyError('preview.waiting',PREVIEW_WAITING);this.waiting++;
   const until=Date.now()+2000;
-  try{while(Date.now()<until){signal.throwIfAborted();await new Promise(r=>setTimeout(r,25));const slot=this.slots.take(user);if(!('code' in slot))return slot;}throw new PreviewBusyError('preview.concurrent',2);}finally{this.waiting--;}
+  try{while(Date.now()<until){signal.throwIfAborted();await new Promise(r=>setTimeout(r,25));const slot=this.slots.take(user);if(!('code' in slot))return slot;}throw new PreviewBusyError('preview.concurrent',PREVIEW_CONCURRENT);}finally{this.waiting--;}
  }
 }
 /** Memory-only derived PNGs; eviction can never delete original storage. */

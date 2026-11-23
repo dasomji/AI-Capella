@@ -1,0 +1,24 @@
+// Shared by server entry points and isolated native workers; values are unchanged.
+export const REQUEST_MAX_BYTES = 16384;
+export const SCORE_JSON_DEPTH = 64;
+export const SCORE_XML_DEPTH = 256;
+export const SCORE_VALIDATION_WAITING = 8;
+export const RENDER_SOURCE_MAX_BYTES = 50 * 1024 * 1024;
+export const RENDER_MAX_PIXELS = 40000000;
+export const PREVIEW_CONCURRENT = 2;
+export const PREVIEW_WAITING = 4;
+export const REHEARSAL_QUEUE = 32;
+export const REHEARSAL_SOCKETS = 10;
+export const REHEARSAL_IN_FLIGHT = 4;
+export const PASSWORD_CONCURRENT = 1;
+export const FAILED_PASSWORD_CONCURRENT = 4;
+export const WRONG_PASSWORD_MINUTE = 10;
+export const REGISTRATION_ACCOUNT_MINUTE = 100;
+export const PASSWORD_CONFIRM_ATTEMPTS = 5;
+export const PASSWORD_MAX_LENGTH = 128;
+export const VERIFICATION_EXPIRY_SECONDS = 3600;
+export const SESSION_EXPIRY_SECONDS = 7 * 86400;
+export const INVITATION_RECIPIENT_MINUTE = 1;
+export const INVITATION_RECIPIENT_DAY = 5;
+export const INVITATION_EXPIRY_SECONDS = 14 * 86400;
+export const ACCOUNT_MAIL_RECIPIENT_DAY = 100;

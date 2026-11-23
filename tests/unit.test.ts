@@ -322,3 +322,29 @@ it('saved settings and reorder schemas rely on body bounds instead of count quot
  expect(settingsInput.safeParse({op:'defaults',key:'percussion',value:Object.fromEntries(Array.from({length:257},(_,i)=>['p'+i,true]))}).success).toBe(true);
  expect(reorderInput.safeParse({pieceIds:Array(10001).fill('p'),expectedOrder:Array(10001).fill('p')}).success).toBe(true);
 });
+
+it('does not invent a route outside request context',async()=>{
+ const {logLimitHit}=await import('../server/logger.server');const out=vi.spyOn(console,'log').mockImplementation(()=>{});
+ try{logLimitHit('render.pixels','server',40000000);expect(JSON.parse(out.mock.calls[0][0]).route).toBe('unknown');}finally{out.mockRestore();}
+});
+it('validation logs stable field names and ignores numeric UI ranges',async()=>{
+ const {z}=await import('zod');const {logValidationLimit,withLimitRequest}=await import('../server/logger.server');
+ const out=vi.spyOn(console,'log').mockImplementation(()=>{});
+ try{
+  for(const [field,name,max] of [['name','name',200],['title','title',200],['label','label',200],['idempotencyKey','idempotency_key',200],['reason','admin_reason',1000],['cursor','admin_cursor',2048]] as const){
+   const result=z.object({[field]:z.string().max(max)}).safeParse({[field]:'x'.repeat(max+1)});
+   withLimitRequest('/api/ensembles/private-token',()=>logValidationLimit(result.error));
+   expect(JSON.parse(out.mock.calls.at(-1)![0])).toMatchObject({event:'limit.hit',limit:'input.'+name,scope:'server',value:max,route:'/api/ensembles/:id'});
+  }
+  const before=out.mock.calls.length;
+  for(const field of ['bpm','transpose','limit'])logValidationLimit(z.object({[field]:z.number().max(1)}).safeParse({[field]:2}).error);
+  expect(out.mock.calls).toHaveLength(before);
+ }finally{out.mockRestore();}
+});
+
+it('classifies only sharp input-pixel overflow as render.pixels',async()=>{
+ const {renderFailureExit}=await import('../server/render-failure.mjs');
+ expect(renderFailureExit({message:'Input image exceeds pixel limit'})).toBe(66);
+ expect(renderFailureExit({message:'unsupported pixel format'})).toBe(65);
+ expect(renderFailureExit({message:'pixel decoder failed',code:'ENOENT'})).toBe(70);
+});

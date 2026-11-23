@@ -1,3 +1,4 @@
+import { SCORE_VALIDATION_WAITING, SCORE_JSON_DEPTH } from './protective-limits.mjs';
 import { logLimitHit } from './logger.server';
 import { Worker } from 'node:worker_threads';
 import { DomainError } from './domain.server';
@@ -9,9 +10,10 @@ const queue:Job[]=[];
 const slots=new Set<Slot>();
 // Two CPU workers and eight waiting bodies at most. Idle workers retire after one second.
 export function validateScore(raw:string,format:'score'|'musicxml',timing=false):Promise<Result> {
-  if(queue.length>=8) {logLimitHit('score.validation_queue','server',8);return Promise.reject(new DomainError('validation_busy',503));}
+  if(queue.length>=SCORE_VALIDATION_WAITING) {logLimitHit('score.validation_queue','server',SCORE_VALIDATION_WAITING);return Promise.reject(new DomainError('validation_busy',503));}
   return new Promise<Result>((resolve,reject)=>{queue.push({raw,format,timing,resolve,reject});drain();}).catch(error=>{
-    if(error.code==='nesting_limit')logLimitHit('score.nesting','server',error.limitValue??64);
+    if(error.limitName==='score.xml_nesting')logLimitHit(error.limitName,'server',error.limitValue);
+    if(error.code==='nesting_limit')logLimitHit('score.nesting','server',error.limitValue??SCORE_JSON_DEPTH);
     throw error;
   });
 }
@@ -26,11 +28,11 @@ function retire(slot:Slot,error?:unknown){
 function createSlot():Slot{
   const slot:Slot={worker:new Worker(new URL('./score-worker.mjs',import.meta.url))};
   slots.add(slot);
-  slot.worker.on('message',(result:Result & {error?:string;limitValue?:number})=>{
+  slot.worker.on('message',(result:Result & {error?:string;limitName?:string;limitValue?:number})=>{
     const job=slot.job;
     if(!job)return;
     clearTimeout(slot.timeout);slot.job=undefined;
-    if(result.error) job.reject(Object.assign(new DomainError(result.error,['invalid_text','nesting_limit'].includes(result.error)?422:400),{limitValue:result.limitValue}));
+    if(result.error) job.reject(Object.assign(new DomainError(result.error,['invalid_text','nesting_limit'].includes(result.error)?422:400),{limitName:result.limitName,limitValue:result.limitValue}));
     else job.resolve(result);
     slot.worker.unref();
     slot.idle=setTimeout(()=>retire(slot),1000);slot.idle.unref();

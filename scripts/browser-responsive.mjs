@@ -62,7 +62,7 @@ try {
    if(p==='/api/me')data={user:{id:'lead',name:'Test lead',email:'admin@test.com',sysadmin:true}};
    else if(p==='/api/ensembles')data=['fixture','other'].map((id,i)=>({id,name:i?'Another ensemble':'Testchor',kind:'choir',isLead:true,membershipId:'membership',capabilities:{manageMembers:true,editPieces:true,transcribe:true}}));
    else if(p==='/api/transcription/config')data={pdf:50e6,photo:20e6,pages:20};
-   else if(p.endsWith('/transcriptions'))data=[{id:'fixture-job',state:'failed',stage:'failed',options:{title:'Evening song'},pages:[]}];
+   else if(p.endsWith('/transcriptions'))data={items:[{id:'fixture-job',state:'failed',stage:'failed',options:{title:'Evening song'},pages:[]}],nextCursor:null};
    else if(p.endsWith('/members'))data=[{id:'member',userId:'member',name:'Test singer',email:'user@test.com',isLead:false,capabilities:{}}];
    else if(p.endsWith('/pieces')||p.endsWith('/invitations')||p==='/api/auth/list-sessions')data=[];
    return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});

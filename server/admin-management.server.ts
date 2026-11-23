@@ -78,7 +78,7 @@ async function event(
   );
 }
 /** Also used by the outer Origin boundary, after its database-backed session check. */
-export async function rejectedAdminOrigin(actor: string, path: string) {
+export function rejectedAdminOrigin(path: string) {
   logRejectedRequest("admin.origin_rejected", path);
 }
 /** Scope the lookup to the URL ensemble, including historical removals. Unknown IDs stay explicit. */

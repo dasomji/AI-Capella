@@ -516,11 +516,14 @@ test('abort during provider insert closes a late running call as abandoned',{tim
 test('AICAP-31 five same-user jobs queue, global concurrency stays two, and every job finishes',async()=>{
  const {lead,e,source}=await setup();const active=[];
  for(let i=0;i<5;i++)active.push(await job(e.id,lead.cookie,source.id));
- const provider=new FakeProvider(()=> 'success',200),workers=Array.from({length:5},()=>new TranscriptionWorker(provider));
- const pending=workers.map(w=>w.tick());await delay(100);
- assert.ok((await pool.query("select count(*)::int n from job_pages where state='running'")).rows[0].n<=2);
- await Promise.all(pending);
- for(let i=0;i<5;i++)await Promise.all(workers.map(w=>w.tick()));
+ const fake=new FakeProvider(()=> 'success',200);let running=0,peak=0;
+ const provider={...fake,model:fake.model,promptVersion:fake.promptVersion,transcribePage:async(...args:Parameters<typeof fake.transcribePage>)=>{
+  running++;peak=Math.max(peak,running);assert.ok(running<=2,'provider overlap exceeds global page capacity');
+  try{return await fake.transcribePage(...args);}finally{running--;}
+ }};
+ const workers=Array.from({length:5},()=>new TranscriptionWorker(provider));
+ for(let i=0;i<6;i++)await Promise.all(workers.map(w=>w.tick()));
+ assert.equal(peak,2,'test must create real contention');
  for(const j of active)assert.equal((await view(e.id,lead.cookie,j.id)).state,'completed');
 });
 test('AICAP-31 cursor visits all 205 unimported jobs including identical timestamps',async()=>{
@@ -538,26 +541,167 @@ test('AICAP-31 PDF, 50 MP photo, brute force and recipient floods log one redact
  const {api}=await import('../server/http.server');
  const output=t.mock.method(console,'log',()=>{});
  const records=()=>output.mock.calls.flatMap(c=>{try{return [JSON.parse(String(c.arguments[0]))];}catch{return [];}}).filter(r=>r.event==='limit.hit');
- const hit=async(limit:string,value:number,work:()=>Response|Promise<Response>,status:number)=>{
+ const hit=async(limit:string,value:number,scope:string,route:string,work:()=>Response|Promise<Response>,status:number)=>{
   const before=records().length;const r=await work();assert.equal(r.status,status,await r.clone().text());
   const added=records().slice(before);assert.equal(added.length,1);assert.equal(added[0].limit,limit);assert.equal(added[0].value,value);
-  assert.ok(added[0].route.startsWith('/api/'));assert.doesNotMatch(JSON.stringify(added[0]),/test.com|example.test|203\.0\.113|private-token|Singer/);
+  assert.equal(added[0].scope,scope);assert.equal(added[0].route,route);assert.doesNotMatch(JSON.stringify(added[0]),/test.com|example.test|203\.0\.113|private-token|Singer/);
  };
- await hit('source.pdf_bytes',sourceLimits.pdf,()=>api.fetch(new Request(base+`/api/ensembles/${e.id}/originals`,{method:'POST',headers:{origin:base,cookie:lead.cookie,'content-length':String(sourceLimits.pdf+1)},body:'%PDF-'})),413);
+ await hit('source.pdf_bytes',sourceLimits.pdf,'server','/api/ensembles/:id/originals',()=>api.fetch(new Request(base+`/api/ensembles/${e.id}/originals`,{method:'POST',headers:{origin:base,cookie:lead.cookie,'content-length':String(sourceLimits.pdf+1)},body:'%PDF-'})),413);
  const huge=await sharp({create:{width:10000,height:5000,channels:3,background:'white'}}).png().toBuffer();
- await hit('source.pixels',40000000,()=>upload(e.id,lead.cookie,huge),422);
+ await hit('source.pixels',40000000,'server','/api/ensembles/:id/originals',()=>upload(e.id,lead.cookie,huge),422);
  const victim=crypto.randomUUID()+'@test.com';
  for(let i=0;i<10;i++)assert.equal((await api.fetch(new Request(base+'/api/auth/sign-in/email',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'203.0.113.5'},body:JSON.stringify({email:victim,password:'wrong-password'})}))).status,401);
- await hit('auth.wrong_password',10,()=>api.fetch(new Request(base+'/api/auth/sign-in/email',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'203.0.113.5'},body:JSON.stringify({email:victim,password:'wrong-password'})})),429);
+ await hit('auth.wrong_password',10,'user','/api/auth/sign-in/email',()=>api.fetch(new Request(base+'/api/auth/sign-in/email',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'203.0.113.5'},body:JSON.stringify({email:victim,password:'wrong-password'})})),429);
  // Better Auth's own rejection path, independent of our per-account guard.
  for(let i=0;i<5;i++)assert.equal((await api.fetch(new Request(base+'/api/auth/request-password-reset',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'203.0.113.6'},body:JSON.stringify({email:'missing@test.com'})}))).status,200);
- await hit('auth.network_reset_request',5,()=>api.fetch(new Request(base+'/api/auth/request-password-reset',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'203.0.113.6'},body:JSON.stringify({email:'missing@test.com'})})),429);
+ await hit('auth.network_reset_request',5,'ip','/api/auth/request-password-reset',()=>api.fetch(new Request(base+'/api/auth/request-password-reset',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'203.0.113.6'},body:JSON.stringify({email:'missing@test.com'})})),429);
  const body={email:'recipient@test.com',idempotencyKey:crypto.randomUUID()};
  await ok(`ensembles/${e.id}/invitations`,'POST',body,lead.cookie);
- await hit('invitation.recipient_minute',1,()=>request(`ensembles/${e.id}/invitations`,'POST',{...body,idempotencyKey:crypto.randomUUID()},lead.cookie),429);
+ await hit('invitation.recipient_minute',1,'ensemble','/api/ensembles/:id/invitations',()=>request(`ensembles/${e.id}/invitations`,'POST',{...body,idempotencyKey:crypto.randomUUID()},lead.cookie),429);
  const original=clock.now;let now=Date.now();clock.now=()=>new Date(now);
  try{
   for(let i=0;i<4;i++){now+=61000;await ok(`ensembles/${e.id}/invitations`,'POST',{...body,idempotencyKey:crypto.randomUUID()},lead.cookie);}
-  now+=61000;await hit('invitation.recipient_day',5,()=>request(`ensembles/${e.id}/invitations`,'POST',{...body,idempotencyKey:crypto.randomUUID()},lead.cookie),429);
+  now+=61000;await hit('invitation.recipient_day',5,'ensemble','/api/ensembles/:id/invitations',()=>request(`ensembles/${e.id}/invitations`,'POST',{...body,idempotencyKey:crypto.randomUUID()},lead.cookie),429);
  }finally{clock.now=original;output.mock.restore();}
+});
+
+test('AICAP-31 request, upload, mail and account guards emit exact redacted stdout records',{timeout:30000},async t=>{
+ const {lead,e,source}=await setup();const outsider=await account();
+ const {api}=await import('../server/http.server');
+ const {createHash}=await import('node:crypto');
+ const {createRateLimitKey}=await import('@better-auth/core/utils/ip');
+ const {SignJWT}=await import('jose');
+ const {withLimitRequest}=await import('../server/logger.server');
+ const {allowAccountMail}=await import('../server/auth-guards.server');
+ await (await import('../server/background.server')).flushBackground();
+ const out=t.mock.method(console,'log',()=>{});
+ const records=()=>out.mock.calls.flatMap(c=>{try{return [JSON.parse(String(c.arguments[0]))];}catch{return [];}});
+ const exact=async(event:string,fields:Record<string,unknown>,work:()=>unknown|Promise<unknown>)=>{
+  const before=records().length;await work();const added=records().slice(before).filter(r=>r.event===event);
+  assert.equal(added.length,1,JSON.stringify(added));
+  for(const [key,value] of Object.entries(fields))assert.equal(added[0][key],value,key);
+  assert.doesNotMatch(JSON.stringify(added[0]),/test.com|example.test|198\.51|private-token|Singer/);
+  return added[0];
+ };
+ const hit=(limit:string,scope:string,value:number,route:string,work:()=>unknown|Promise<unknown>)=>exact('limit.hit',{limit,scope,value,route},work);
+ const status=async(r:Response|Promise<Response>,expected:number)=>{const response=await r;assert.equal(response.status,expected,await response.clone().text());};
+ const req=(path:string,body:BodyInit,headers:Record<string,string>={},cookie=lead.cookie)=>api.fetch(new Request(base+'/api/'+path,{method:'POST',headers:{origin:base,cookie,'content-type':'application/json',...headers},body}));
+ await hit('request.bytes','server',16384,'/api/ensembles',()=>status(req('ensembles','x'.repeat(16385)),413));
+ await hit('score.bytes','server',env.SCORE_MAX_BYTES,'/api/ensembles/:id/pieces',()=>status(req(`ensembles/${e.id}/pieces`,'x',{'content-length':String(env.SCORE_MAX_BYTES+1)}),413));
+ await exact('domain.denied',{route:'/api/ensembles/:id'},()=>status(request(`ensembles/${e.id}`,'PATCH',{name:'Denied'},outsider.cookie),404));
+ const {uploadAdmission}=await import('../server/upload-admission.server');
+ const slots=Array.from({length:4},()=>uploadAdmission.take(lead.id));
+ try{for(const suffix of ['pieces','originals'])await hit('upload.concurrent','server',4,'/api/ensembles/:id/'+suffix,()=>status(req(`ensembles/${e.id}/${suffix}`,'x'),503));}
+ finally{for(const slot of slots)if('release' in slot)slot.release();}
+ // Streamed limits have no Content-Length and run through the real upload reader.
+ for(const [name,bytes,prefix] of [['source.pdf_bytes',sourceLimits.pdf,'%PDF-'],['source.photo_bytes',sourceLimits.photo,'photo']] as const){
+  const data=new Uint8Array(bytes+1);data.set(new TextEncoder().encode(prefix));
+  await hit(name,'server',bytes,'/api/ensembles/:id/originals',()=>status(api.fetch(new Request(base+`/api/ensembles/${e.id}/originals`,{method:'POST',headers:{origin:base,cookie:lead.cookie},body:new ReadableStream({start(c){c.enqueue(data);c.close();}}),duplex:'half'} as RequestInit)),413));
+ }
+ const image=await sharp({create:{width:13,height:17,channels:3,background:'blue'}}).png().toBuffer();
+ const used=Number((await pool.query("select coalesce(sum(size),0) bytes from stored_objects where ensemble_id=$1 and kind='original' and state='ready'",[e.id])).rows[0].bytes);
+ const usage=await exact('storage.usage',{bytes:used+image.length},()=>status(upload(e.id,lead.cookie,image),201));
+ assert.match(usage.ensemble,/^[a-f0-9]{64}$/);assert.equal(usage.ensemble,createHash('sha256').update(e.id).digest('hex'));assert.ok(!JSON.stringify(usage).includes(e.id));
+ const seed=async(key:string,count:number)=>pool.query('insert into rate_limit(key,count,last_request) values($1,$2,$3) on conflict(key) do update set count=$2,last_request=$3',[key,count,Date.now()]);
+ // Use the actual Better Auth storage key and handler. Trailing slashes must select
+ // the very same custom rule as the library, including its configured value.
+ for(const [path,name,max,method] of [['sign-in/email/','sign_in',60,'POST'],['sign-up/email/','sign_up',60,'POST'],['request-password-reset/','reset_request',5,'POST'],['send-verification-email/','verification_request',5,'POST'],['get-session/','default',100,'GET'],['change-password/','sensitive',3,'POST']] as const){
+  const ip='198.51.100.202',key=createRateLimitKey(ip,'/'+path.replace(/\/+$/,''));await seed(key,max);
+  await hit('auth.network_'+name,'ip',max,'/api/auth/'+path,()=>status(api.fetch(new Request(base+'/api/auth/'+path,{method,headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':ip},...(method==='POST'?{body:JSON.stringify({email:crypto.randomUUID()+'@test.com',password:'incorrect-password',name:'Singer'})}:{})})),429));
+  await pool.query('delete from rate_limit where key=$1',[key]);
+ }
+ const email=crypto.randomUUID()+'@test.com';const mailKey='account-mail:'+createHash('sha256').update(email).digest('hex')+':reset';
+ for(const [suffix,count,name,scope,max] of [[':day',100,'recipient_day','user',100],[':interval',1,'recipient_minute','user',1],[':ip:'+createHash('sha256').update('internal').digest('hex'),2,'requester_day','ip',2]] as const){
+  await seed(mailKey+suffix,count);
+  await hit('account_mail.'+name,scope,max,'/api/auth/request-password-reset',()=>withLimitRequest('/api/auth/request-password-reset',async()=>assert.equal(await allowAccountMail(email,'reset'),false)));
+  await pool.query('delete from rate_limit where key=$1',[mailKey+suffix]);
+ }
+ // Two simultaneous confirmations can both pass the read at four failures;
+ // the atomic increment rejects the sixth failure through the second call site.
+ await seed('account-password:'+lead.id,4);
+ await hit('account.delete_password','user',5,'/api/account',async()=>{
+  const codes=await Promise.all([request('account','DELETE',{password:'wrong'},lead.cookie),request('account','DELETE',{password:'wrong'},lead.cookie)]);
+  assert.deepEqual(codes.map(r=>r.status).sort(),[401,429]);
+ });
+ await seed('account-password:'+lead.id,5);
+ await hit('account.delete_password','user',5,'/api/account',()=>status(request('account','DELETE',{password:'wrong'},lead.cookie),429));
+ await hit('input.password','server',128,'/api/auth/sign-up/email',()=>status(req('auth/sign-up/email',JSON.stringify({email:crypto.randomUUID()+'@test.com',name:'Singer',password:'x'.repeat(129)}),{'x-lightscore-socket-ip':'198.51.100.204'}),400));
+ const token=await new SignJWT({email:lead.email}).setProtectedHeader({alg:'HS256'}).setExpirationTime('1h').sign(new TextEncoder().encode(env.BETTER_AUTH_SECRET));
+ const ip='198.51.100.203';await seed('verify-password:'+lead.id+':'+ip,5);
+ await hit('auth.verify_password','user',5,'/api/auth/verify-email-password',()=>status(req('auth/verify-email-password',JSON.stringify({token,password:'wrong'}),{'x-lightscore-socket-ip':ip}),401));
+ const expired=await new SignJWT({email:lead.email}).setProtectedHeader({alg:'HS256'}).setExpirationTime(1).sign(new TextEncoder().encode(env.BETTER_AUTH_SECRET));
+ await hit('auth.verification_expiry','user',3600,'/api/auth/verify-email-password',()=>status(req('auth/verify-email-password',JSON.stringify({token:expired,password:'wrong'}),{'x-lightscore-socket-ip':ip}),400));
+ await hit('input.password','server',128,'/api/auth/verify-email-password',()=>status(req('auth/verify-email-password',JSON.stringify({token,password:'x'.repeat(129)}),{'x-lightscore-socket-ip':ip}),422));
+ const {createJob}=await import('../server/transcription.server');
+ await hit('transcription.pages','server',60,'unknown',()=>assert.rejects(createJob(lead.id,e.id,crypto.randomUUID(),Array(61).fill(source.id),{}),{code:'page_limit'}));
+ const {PDFDocument}=await import('pdf-lib');const pdf=await PDFDocument.create();for(let i=0;i<61;i++)pdf.addPage([20,20]);
+ const pdfBytes=Buffer.from(await pdf.save());
+ await hit('transcription.pages','server',60,'/api/ensembles/:id/originals',()=>status(upload(e.id,lead.cookie,pdfBytes),422));
+ // Expired invitation belongs to the signed-in recipient and still has a valid hash.
+ const inviteToken='private-token',recipient=await account();
+ await pool.query("insert into invitations(ensemble_id,email,inviter_id,token_hash,expires_at) values($1,$2,$3,$4,now()-interval '1 second')",[e.id,recipient.email,lead.id,createHash('sha256').update(inviteToken).digest('hex')]);
+ await hit('invitation.expiry','ensemble',1209600,'/api/invitations/:id/accept',()=>status(request('invitations/'+inviteToken+'/accept','POST',{},recipient.cookie),409));
+ out.mock.restore();
+});
+
+test('AICAP-31 worker, render and preview guards emit exact stdout records',{timeout:30000},async t=>{
+ const {lead,e,source}=await setup();
+ const {BoundedPageRenderer}=await import('../server/page-renderer.server');const {Readable}=await import('node:stream');
+ const {validateScore}=await import('../server/score-validation.server');
+ const {previewAdmission}=await import('../server/page-preview.server');
+ const out=t.mock.method(console,'log',()=>{});
+ const records=()=>out.mock.calls.flatMap(c=>{try{return [JSON.parse(String(c.arguments[0]))];}catch{return [];}}).filter(r=>r.event==='limit.hit');
+ const hit=async(limit:string,value:number,route:string,work:()=>unknown|Promise<unknown>)=>{
+  const before=records().length;await work();const added=records().slice(before);
+  assert.equal(added.length,1,JSON.stringify(added));assert.deepEqual(added[0],{timestamp:added[0].timestamp,level:'warn',event:'limit.hit',limit,scope:'server',value,route});
+ };
+ const render=(data:Buffer)=>new BoundedPageRenderer({get:async()=>Readable.from([data])}).render({objectKey:'unused',contentType:'image/png',sourcePage:1,pageIndex:0},new AbortController().signal);
+ await hit('render.source_bytes',52428800,'unknown',()=>assert.rejects(render(Buffer.alloc(52428801)),{reason:'invalid_output'}));
+ const huge=await sharp({create:{width:10000,height:5000,channels:3,background:'white'}}).png().toBuffer();
+ await hit('render.pixels',40000000,'unknown',()=>assert.rejects(render(huge),{reason:'render_failed',retryable:false}));
+ const before=records().length;await assert.rejects(render(Buffer.from('unsupported pixel format')),{reason:'render_failed'});assert.equal(records().length,before,'ordinary render failures are not pixel hits');
+ const {api}=await import('../server/http.server');
+ let deep:any={};for(let i=0;i<65;i++)deep={child:deep};
+ await hit('score.nesting',64,'unknown',()=>assert.rejects(validateScore(JSON.stringify(deep),'score'),{code:'nesting_limit'}));
+ await hit('score.xml_nesting',100,'unknown',()=>assert.rejects(validateScore('<score-partwise><part>'+ '<x>'.repeat(257)+'<note/>'+'</x>'.repeat(257)+'</part></score-partwise>','musicxml'),{code:'invalid_score'}));
+ await hit('score.nesting',64,'/api/ensembles/:id',async()=>assert.equal((await api.fetch(new Request(base+`/api/ensembles/${e.id}`,{method:'PATCH',headers:{origin:base,cookie:lead.cookie,'content-type':'application/json'},body:JSON.stringify(deep)}))).status,422));
+ const pending=Array.from({length:10},()=>validateScore('{}','score').catch(()=>{}));
+ await hit('score.validation_queue',8,'unknown',()=>assert.rejects(validateScore('{}','score'),{code:'validation_busy'}));await Promise.all(pending);
+ const slots=await Promise.all([previewAdmission.take(lead.id,new AbortController().signal),previewAdmission.take(lead.id,new AbortController().signal)]);
+ try{
+  const path=`ensembles/${e.id}/originals/${source.id}/pages/1`,route='/api/ensembles/:id/originals/:id/pages/:id';
+  const take=previewAdmission.take.bind(previewAdmission);let arrivals=0;
+  const observe=t.mock.method(previewAdmission,'take',(...args:Parameters<typeof take>)=>{arrivals++;return take(...args);});
+  const waiting=Array.from({length:4},()=>request(path,'GET',undefined,lead.cookie));
+  // Observe all four real requests waiting before exhausting the waiting capacity.
+  for(let i=0;i<100 && arrivals<4;i++)await delay(10);
+  assert.equal(arrivals,4,'four requests reached real admission');
+  await hit('preview.waiting',4,route,async()=>assert.equal((await request(path,'GET',undefined,lead.cookie)).status,503));
+  const start=records().length;for(const r of await Promise.all(waiting))assert.equal(r.status,503);
+  const added=records().slice(start);assert.equal(added.length,4);for(const r of added)assert.deepEqual(r,{timestamp:r.timestamp,level:'warn',event:'limit.hit',limit:'preview.concurrent',scope:'server',value:2,route});
+ }finally{for(const slot of slots)slot.release();out.mock.restore();}
+});
+
+test('AICAP-31 password evaluation and registration guards log actual rejection fields',async t=>{
+ const {lead}=await setup(),{api}=await import('../server/http.server'),{createHash}=await import('node:crypto');
+ await (await import('../server/background.server')).flushBackground();
+ const out=t.mock.method(console,'log',()=>{});
+ const records=()=>out.mock.calls.map(c=>JSON.parse(String(c.arguments[0]))).filter(r=>r.event==='limit.hit');
+ const attempt=(ip:string,email=lead.email)=>api.fetch(new Request(base+'/api/auth/sign-in/email',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':ip},body:JSON.stringify({email,password:'wrong-password'})}));
+ let before=records().length;
+ const concurrent=await Promise.all(Array.from({length:8},()=>attempt('198.51.100.210')));
+ const denied=concurrent.filter(r=>r.status===429).length;assert.ok(denied>0);
+ const verify=(hits:any[],limit:string,value:number,route:string)=>{for(const r of hits)assert.deepEqual(r,{timestamp:r.timestamp,level:'warn',event:'limit.hit',limit,scope:'user',value,route});};
+ let hits=records().slice(before);assert.equal(hits.length,denied);verify(hits,'auth.password_concurrent',1,'/api/auth/sign-in/email');
+ const digest=createHash('sha256').update(lead.email).digest('hex');
+ for(let i=0;i<8;i++)await pool.query('insert into rate_limit(key,count,last_request) values($1,1,$2)',['email:'+digest+':/api/auth/sign-in/email:198.51.100.'+(220+i),Date.now()]);
+ before=records().length;
+ const failed=await Promise.all(Array.from({length:8},(_,i)=>attempt('198.51.100.'+(220+i))));
+ hits=records().slice(before);assert.ok(hits.length>0);assert.equal(hits.length,failed.filter(r=>r.status===429).length);verify(hits,'auth.failed_password_concurrent',4,'/api/auth/sign-in/email');
+ const email=crypto.randomUUID()+'@test.com';
+ await pool.query('insert into rate_limit(key,count,last_request) values($1,100,$2)',['email:'+createHash('sha256').update(email).digest('hex')+':/api/auth/sign-up/email',Date.now()]);
+ before=records().length;
+ assert.equal((await api.fetch(new Request(base+'/api/auth/sign-up/email',{method:'POST',headers:{origin:base,'content-type':'application/json','x-lightscore-socket-ip':'198.51.100.230'},body:JSON.stringify({email,password:'fixture-password',name:'Singer'})}))).status,429);
+ hits=records().slice(before);assert.equal(hits.length,1);verify(hits,'auth.registration_account',100,'/api/auth/sign-up/email');
+ out.mock.restore();
 });

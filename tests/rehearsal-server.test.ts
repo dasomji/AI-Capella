@@ -3,16 +3,14 @@ const mocks=vi.hoisted(()=>({heartbeatFail:false,failBegin:false,released:vi.fn(
 vi.mock('../server/db/index.server',()=>({pool:{query:mocks.query,connect:async()=>({query:async(sql:string,args:any[])=>{if(typeof sql==='object'){if(mocks.heartbeatFail)throw Error('probe timeout');return {rows:[{}]};}if(sql==='begin'&&mocks.failBegin)throw Error('database');return sql.includes('advisory')?{rows:[{locked:mocks.locked}]}:['begin','commit','rollback'].includes(sql)?{}:mocks.query(sql,args);},on:(_event:string,fn:any)=>{mocks.ownerError=fn;},release:mocks.released})}}));
 vi.mock('../server/domain.server',()=>({authorize:mocks.authorize,onMembershipChange:(fn:any)=>{mocks.member=fn;return ()=>{};},onLibraryChange:(fn:any)=>{mocks.library=fn;return ()=>{};}}));
 vi.mock('../server/env.server',()=>({env:{PLAYBACK_LEAD_MS:400}}));
-vi.mock('../server/logger.server',()=>({logError:vi.fn(),logLimitHit:vi.fn()}));
 vi.mock('../server/score-validation.server',()=>({validateScore:mocks.validate}));
-import {logLimitHit} from '../server/logger.server';
 import {installRehearsal} from '../server/rehearsal.server';
 import {initialState} from '../src/rehearsal/controller';
 const ensemble='00000000-0000-4000-8000-000000000001';
 const timing={derivationVersion:3,baseBpm:120,totalBeats:100,tempos:[{beat:0,bpm:120}],measures:[]};
 let stored=new Map<string,any>(), recovery:any[]=[];
 let cleanup:(()=>void)|undefined;
-beforeEach(()=>{vi.mocked(logLimitHit).mockClear();mocks.heartbeatFail=false;mocks.failBegin=false;mocks.released.mockClear();mocks.locked=true;vi.useFakeTimers();mocks.query.mockReset();mocks.authorize.mockReset();stored=new Map();recovery=[];
+beforeEach(()=>{vi.spyOn(console,'log').mockImplementation(()=>{});vi.spyOn(console,'error').mockImplementation(()=>{});mocks.heartbeatFail=false;mocks.failBegin=false;mocks.released.mockClear();mocks.locked=true;vi.useFakeTimers();mocks.query.mockReset();mocks.authorize.mockReset();stored=new Map();recovery=[];
  mocks.query.mockImplementation(async(sql:string,args:any[])=>{
   if(sql==='select ensemble_id,revision,state from rehearsal_sessions')return {rows:recovery};
   if(sql.startsWith('select state'))return {rows:stored.has(args[0])?[{state:stored.get(args[0])}]:[]};
@@ -26,7 +24,7 @@ function setup(){
  let connected:any;const broadcasts:any[]=[];const sockets=new Map(),rooms=new Map();
  const ns={sockets,adapter:{rooms},on:(_e:string,fn:any)=>connected=fn,to:()=>({emit:(_e:string,state:any)=>broadcasts.push(state)})};
  let now=1000;cleanup=installRehearsal(ns as any,{now:()=>now,idleMs:600000});
- function socket(id:string,user=id){const handlers=new Map();const socket:any={id,connected:true,data:{userId:user,expiresAt:1e9},rooms:new Set(),on:(e:string,fn:any)=>handlers.set(e,fn),join:async(room:string)=>{socket.rooms.add(room);const set=rooms.get(room)??new Set();set.add(id);rooms.set(room,set);},leave:async(room:string)=>{socket.rooms.delete(room);rooms.get(room)?.delete(id);},disconnect:()=>{socket.connected=false;for(const set of rooms.values())set.delete(id);handlers.get('disconnect')?.();}};sockets.set(id,socket);connected(socket);
+ function socket(id:string,user=id){const handlers=new Map();const socket:any={id,connected:true,emit:()=>{},data:{userId:user,expiresAt:1e9},rooms:new Set(),on:(e:string,fn:any)=>handlers.set(e,fn),join:async(room:string)=>{socket.rooms.add(room);const set=rooms.get(room)??new Set();set.add(id);rooms.set(room,set);},leave:async(room:string)=>{socket.rooms.delete(room);rooms.get(room)?.delete(id);},disconnect:()=>{socket.connected=false;for(const set of rooms.values())set.delete(id);handlers.get('disconnect')?.();}};sockets.set(id,socket);connected(socket);
  return {socket,ping:(ack:any)=>handlers.get('clock:ping')(ack),emit:(event:string,input:any)=>new Promise<any>(resolve=>handlers.get(event)(input,resolve))};}
  return {socket,broadcasts,setNow:(n:number)=>now=n};
 }
@@ -238,7 +236,7 @@ it('throttles clock pings independently per socket',()=>{
  for(let n=0;n<25;n++)a.ping(()=>count++);expect(count).toBe(20);
  b.ping(()=>count++);expect(count).toBe(21);app.setNow(2000);
  for(let n=0;n<11;n++)a.ping(()=>count++);expect(count).toBe(31);
- expect(logLimitHit).toHaveBeenCalledWith('rehearsal.clock_socket','user',20,'/rehearsal/clock');
+ expectHit('rehearsal.clock_socket','user',20,'/rehearsal/clock');
 });
 it('evicts an idle committed snapshot so a later join loads persistence',async()=>{
  const app=setup(),c=app.socket('idle');await c.emit('rehearsal:join',{ensembleId:ensemble});c.socket.disconnect();
@@ -291,4 +289,49 @@ it('polls a long-held ownership lock every second and acquires within three seco
  const c=app.socket('handoff');
  expect((await c.emit('rehearsal:join',{ensembleId:ensemble})).state).toBeDefined();
  expect((await c.emit('rehearsal:command',command())).status).toBe('accepted');
+});
+
+function expectHit(limit:string,scope:string,value:number,route:string) {
+ const hits=vi.mocked(console.log).mock.calls.map(([line])=>JSON.parse(String(line))).filter(r=>r.event==='limit.hit');
+ expect(hits).toContainEqual({timestamp:expect.stringMatching(/Z$/),level:'warn',event:'limit.hit',limit,scope,value,route});
+}
+it.each(['read','cmd'] as const)('logs %s socket, user and ensemble buckets using real stdout',async kind=>{
+ const app=setup();
+ const send=async(c:ReturnType<typeof app.socket>)=>c.emit(kind==='read'?'rehearsal:snapshot':'rehearsal:command',kind==='read'?{ensembleId:ensemble}:command());
+ // Join before commands; each scope is exhausted independently with fresh identities.
+ const a=app.socket('a','shared'),b=app.socket('b','shared');
+ await a.emit('rehearsal:join',{ensembleId:ensemble});await b.emit('rehearsal:join',{ensembleId:ensemble});
+ for(let i=0;i<21;i++)await send(a);
+ expectHit('rehearsal.'+kind+'_socket','user',20,'/rehearsal/'+(kind==='read'?'read':'command'));
+ await send(b);
+ expectHit('rehearsal.'+kind+'_user','user',20,'/rehearsal/'+(kind==='read'?'read':'command'));
+ // Reset token buckets by advancing the injected clock, not real time.
+ app.setNow(100000);
+ const clients=Array.from({length:6},(_,i)=>app.socket('scope-'+i));
+ for(const c of clients)await c.emit('rehearsal:join',{ensembleId:ensemble});
+ for(let i=0;i<101;i++)await send(clients[i%6]);
+ expectHit('rehearsal.'+kind+'_ensemble','ensemble',100,'/rehearsal/'+(kind==='read'?'read':'command'));
+});
+it.each(['rehearsal:snapshot','rehearsal:command'])('logs in-flight %s admission',async event=>{
+ const app=setup(),c=app.socket('blocked');await c.emit('rehearsal:join',{ensembleId:ensemble});
+ let release!:()=>void;const gate=new Promise<void>(r=>release=r);mocks.authorize.mockImplementation(()=>gate);
+ const input=event==='rehearsal:command'?command():{ensembleId:ensemble};
+ const pending=Array.from({length:4},()=>c.emit(event,input));
+ expect((await c.emit(event,input)).code).toBe('rate_limited');
+ expectHit('rehearsal.in_flight','user',4,'/rehearsal/'+(event==='rehearsal:command'?'command':'read'));
+ release();await Promise.all(pending);
+});
+it('logs socket count, queue depth and expired sessions',async()=>{
+ const app=setup();for(let i=0;i<11;i++)app.socket('extra-'+i,'same');
+ expectHit('rehearsal.sockets','user',10,'/rehearsal/socket');
+ const expired=app.socket('expired');expired.socket.data.expiresAt=0;
+ expect((await expired.emit('rehearsal:join',{ensembleId:ensemble})).code).toBe('session_expired');
+ expectHit('auth.session_expiry','user',604800,'/rehearsal');
+ const clients=Array.from({length:9},(_,i)=>app.socket('queue-'+i));
+ for(const c of clients)await c.emit('rehearsal:join',{ensembleId:ensemble});
+ let release!:()=>void;const gate=new Promise<void>(r=>release=r);mocks.authorize.mockImplementation(()=>gate);
+ const pending=clients.flatMap(c=>Array.from({length:4},()=>c.emit('rehearsal:command',command())));
+ for(let i=0;i<10;i++)await Promise.resolve();
+ expectHit('rehearsal.queue','ensemble',32,'/rehearsal/command');
+ release();await Promise.all(pending);
 });

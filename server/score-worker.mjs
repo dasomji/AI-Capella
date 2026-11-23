@@ -1,3 +1,4 @@
+import { SCORE_JSON_DEPTH, SCORE_XML_DEPTH } from './protective-limits.mjs';
 import { cleanMusicXML,normalizeTimewise } from './musicxml-input.mjs';
 import { parentPort } from 'node:worker_threads';
 import { createHash } from 'node:crypto';
@@ -6,7 +7,7 @@ import { tsImport } from 'tsx/esm/api';
 const { timingFromScore } = await tsImport('../src/rehearsal/timeline.ts', import.meta.url);
 const { contentInput } = await tsImport('../src/api/domain.ts', import.meta.url);
 function canonical(value, depth=0) {
-  if(depth>64) throw Error('nesting_limit');
+  if(depth>SCORE_JSON_DEPTH) throw Error('nesting_limit');
   if(typeof value==='string' && (value.includes('\0') || !value.isWellFormed())) throw Error('invalid_text');
   if(value && typeof value==='object' && Object.keys(value).some(k=>k.includes('\0') || !k.isWellFormed())) throw Error('invalid_text');
   if(Array.isArray(value)) return '['+value.map(v=>canonical(v,depth+1)).join(',')+']';
@@ -26,11 +27,17 @@ parentPort.on('message', async ({raw,format,timing})=>{
     } else {
       raw=cleanMusicXML(raw);
       if(XMLValidator.validate(raw)!==true) throw Error('invalid_xml');
-      const parsed=new XMLParser({ignoreAttributes:false,processEntities:false}).parse(raw);
+      const parser=new XMLParser({ignoreAttributes:false,processEntities:false});
+      let parsed;
+      try{parsed=parser.parse(raw);}catch(error){
+        // The parser's existing depth guard can reject before our traversal guard.
+        if(error.message==='Maximum nested tags exceeded'){error.limitName='score.xml_nesting';error.limitValue=parser.options.maxNestedTags;}
+        throw error;
+      }
       const roots=Object.keys(parsed).filter(k=>!k.startsWith('?') && k!=='!DOCTYPE');
       if(roots.length!==1 || !(parsed['score-partwise'] || parsed['score-timewise'])) throw Error('invalid_xml');
       const visit=(v,part=false,depth=0)=>{
-        if(depth>256) throw Error('nesting_limit');
+        if(depth>SCORE_XML_DEPTH) throw Error('nesting_limit');
         return !!v && typeof v==='object' && Object.entries(v).some(([k,c])=>(part && k==='note') || visit(c,part || k==='part',depth+1));
       };
       if(!visit(parsed)) throw Error('empty_score');
@@ -50,5 +57,5 @@ parentPort.on('message', async ({raw,format,timing})=>{
       derived=timingFromScore(score);
     }
     parentPort.postMessage({validation,timing:derived,raw,hash:createHash('sha256').update(raw).digest('hex'),size:Buffer.byteLength(raw)});
-  } catch(error) { parentPort.postMessage({limitValue:error.message==='nesting_limit'?(format==='musicxml'?256:64):undefined,error:['invalid_text','invalid_xml','empty_score','nesting_limit'].includes(error.message)?error.message:'invalid_score'}); }
+  } catch(error) { parentPort.postMessage({limitName:error.limitName,limitValue:error.limitValue??(error.message==='nesting_limit'?(format==='musicxml'?SCORE_XML_DEPTH:SCORE_JSON_DEPTH):undefined),error:['invalid_text','invalid_xml','empty_score','nesting_limit'].includes(error.message)?error.message:'invalid_score'}); }
 });

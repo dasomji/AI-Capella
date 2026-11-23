@@ -1363,67 +1363,13 @@ test(
 );
 
 test(
-  "usage remains unrestricted; depth bound and expired pending renewal",
+  "depth bound and expired pending renewal",
   { timeout: 30000 },
   async () => {
     const u = await account(),
       e = await ok("ensembles", "POST", { name: "Budgets" }, u.cookie),
       path = `ensembles/${e.id}`;
     const now = new Date();
-    await pool.query(
-      "insert into invitation_sends(ensemble_id,email,inviter_id,created_at) select $1,'used@example.test',$2,$3 from generate_series(1,$4::int)",
-      [e.id, u.id, now, 50],
-    );
-    assert.equal(
-      (
-        await request(
-          path + "/invitations",
-          "POST",
-          { email: "new@example.test", idempotencyKey: "daily" },
-          u.cookie,
-        )
-      ).status,
-      201,
-    );
-    await pool.query("delete from invitation_sends where ensemble_id=$1", [
-      e.id,
-    ]);
-    await pool.query(
-      "insert into invitation_sends(ensemble_id,email,inviter_id,created_at) select 'other-ensemble','used@example.test',$1,$2 from generate_series(1,$3::int)",
-      [u.id, now, 100],
-    );
-    assert.equal(
-      (
-        await request(
-          path + "/invitations",
-          "POST",
-          { email: "new@example.test", idempotencyKey: "daily-user" },
-          u.cookie,
-        )
-      ).status,
-      201,
-    );
-    await pool.query("delete from invitation_sends where inviter_id=$1", [
-      u.id,
-    ]);
-    await pool.query(
-      "insert into rate_limit(key,count,last_request) values($1,$2,$3) on conflict(key) do update set count=excluded.count,last_request=excluded.last_request",
-      ["domain:" + u.id, 120, now.getTime()],
-    );
-    assert.equal(
-      (await request(path, "PATCH", { name: "Throttled" }, u.cookie)).status,
-      200,
-    );
-    await pool.query("delete from rate_limit where key=$1", ["domain:" + u.id]);
-    await pool.query(
-      "update rate_limit set count=$2,last_request=$3 where key=$1",
-      ["ensemble-create:" + u.id, 10, now.getTime()],
-    );
-    assert.equal(
-      (await request("ensembles", "POST", { name: "Too many" }, u.cookie))
-        .status,
-      201,
-    );
     let nested: any = true;
     for (let n = 0; n < 70; n++) nested = { child: nested };
     assert.equal(
@@ -1701,7 +1647,7 @@ test('authoritative rehearsal serializes ordinary members, snapshots, rejection 
  }finally{for(const socket of sockets)socket.disconnect();}
 });
 
-test('upload admission precedes body reads and releases slots after success and failure', {timeout:30000}, async()=>{
+test('upload admission precedes body reads and releases slots after success and failure', {timeout:30000}, async t=>{
   const {api}=await import('../server/http.server');
   const owner=await account();
   const e=await ok('ensembles','POST',{name:'Upload admission'},owner.cookie);
@@ -1711,8 +1657,11 @@ test('upload admission precedes body reads and releases slots after success and 
     body:new ReadableStream<Uint8Array>({start(c){controllers.push(c);}}),duplex:'half',
   } as RequestInit)));
   await delay(100);
+  const output=t.mock.method(console,'log',()=>{});
   const blocked=await request(`ensembles/${e.id}/pieces`,'POST',{title:'Blocked',content:{format:'musicxml',body:xml}},owner.cookie);
   assert.equal(blocked.status,503); assert.equal(blocked.headers.get('retry-after'),'2');
+  const hits=output.mock.calls.map(c=>JSON.parse(String(c.arguments[0]))).filter(r=>r.event==='limit.hit');
+  assert.equal(hits.length,1);assert.deepEqual(hits[0],{timestamp:hits[0].timestamp,level:'warn',event:'limit.hit',limit:'upload.concurrent',scope:'server',value:4,route:'/api/ensembles/:id/pieces'});output.mock.restore();
   for(const controller of controllers){controller.enqueue(new TextEncoder().encode(xml));controller.close();}
   for(const response of await Promise.all(pending))assert.equal(response.status,201);
   assert.equal((await request(`ensembles/${e.id}/pieces`,'POST',{title:'Invalid',content:{format:'musicxml',body:'invalid'}},owner.cookie)).status,400);

@@ -15,7 +15,7 @@ const server=createServer(async(req,res)=>{
    const file=path.join(build,'client',url.pathname),body=await fs.readFile(file);
    res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'application/octet-stream');res.end(body);return;
   }
-  if(url.pathname.startsWith('/api/')){res.setHeader('Content-Type','application/json');res.end('{}');return;}
+  if(url.pathname.startsWith('/api/')){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(url.pathname.endsWith('/transcriptions')?{items:[],nextCursor:null}:{}));return;}
   const response=await entry.fetch(new Request(`http://localhost:${server.address().port}${req.url}`));
   res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
  }catch(error){res.statusCode=500;res.end(String(error));}
@@ -29,7 +29,8 @@ try {
   page.on('response',response=>{const u=new URL(response.url());if(u.pathname.startsWith('/assets/')&&/\.(js|css)$/.test(u.pathname))assets.add(u.pathname);});
   await page.route('**/api/**',route=>{
    const u=new URL(route.request().url());let data=[];
-   if(u.pathname==='/api/me')data={user:{id:'fixture',email:'user@test.com',name:'Test User'}};
+   if(u.pathname.endsWith('/transcriptions'))data={items:[],nextCursor:null};
+   else if(u.pathname==='/api/me')data={user:{id:'fixture',email:'user@test.com',name:'Test User'}};
    return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
   });
   await page.routeWebSocket('**',ws=>ws.close());

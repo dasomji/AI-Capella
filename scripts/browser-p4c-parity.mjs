@@ -23,7 +23,7 @@ try{for(const theme of ['night-paper','parchment'])for(const [width,height] of [
    else if(path.endsWith('/members'))data=[{id:'lead-membership',userId:'lead',name:'Ensemble Lead',email:'admin@test.com',isLead:true,capabilities:{}},{id:'member',userId:'member',name:'Test User',email:'user@test.com',isLead:false,capabilities:{manageMembers:false,editPieces:true,transcribe:false}}];
    else if(path.endsWith('/invitations'))data=[{id:'invite',email:'singer@test.com',state:'pending',deliveryState:'sent'}];
    else if(path==='/api/transcription/config')data={pdf:50e6,photo:20e6,pages:20};
-   else if(path.endsWith('/transcriptions'))data=[window.fixtureJob];
+   else if(path.endsWith('/transcriptions'))data={items:[window.fixtureJob],nextCursor:null};
    else if(path.endsWith('/result'))return new Response(xml);
    else if(path.endsWith('/report'))data={measures:[{measure:1,part:'S',page:1,localMeasure:'1'}],validation:{structurallyValid:true,warnings:[{code:'measure_duration',measure:1,part:'S'}],uncertainties:[],errors:[]}};
    else if(path.includes('/originals/'))return new Response(Uint8Array.from(atob(png),c=>c.charCodeAt(0)),{headers:{'Content-Type':'image/png'}});

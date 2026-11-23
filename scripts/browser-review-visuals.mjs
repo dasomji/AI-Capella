@@ -29,7 +29,7 @@ try {
   await page.routeWebSocket('**',ws=>ws.close());
   await page.route('**/api/**',route=>{
    const p=new URL(route.request().url()).pathname;
-   const data=p==='/api/me'?{user:{id:'lead',name:'Test lead',email:'admin@test.com',sysadmin:true}}:p==='/api/ensembles'?[{id:'fixture',name:'Testchor',kind:'choir',isLead:true,membershipId:'lead-membership',capabilities:{manageMembers:true,editPieces:true,transcribe:true}}]:p.endsWith('/members')?[]:p==='/api/transcription/config'?{pdf:50e6,photo:20e6,pages:20}:[];
+   const data=p==='/api/me'?{user:{id:'lead',name:'Test lead',email:'admin@test.com',sysadmin:true}}:p==='/api/ensembles'?[{id:'fixture',name:'Testchor',kind:'choir',isLead:true,membershipId:'lead-membership',capabilities:{manageMembers:true,editPieces:true,transcribe:true}}]:p.endsWith('/transcriptions')?{items:[],nextCursor:null}:p.endsWith('/members')?[]:p==='/api/transcription/config'?{pdf:50e6,photo:20e6,pages:20}:[];
    return route.fulfill({contentType:'application/json',body:JSON.stringify(data)});
   });
   await context.addInitScript(()=>{localStorage.setItem('ai-capella-lang','de');localStorage.setItem('ai-capella-intro-off','1');});

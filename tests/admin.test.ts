@@ -156,6 +156,13 @@ test('admin: real sessions, every boundary, projection, CLI, audit, pagination a
     const capLogs=stdout.mock.calls.flatMap(call=>{try{return [JSON.parse(String(call.arguments[0]))];}catch{return [];}}).filter(record=>record.event==='limit.hit'&&record.limit.startsWith('admin.content_'));
     assert.deepEqual([...new Set(capLogs.map(record=>record.limit))].sort(),['admin.content_day','admin.content_hour','admin.content_minute']);
     assert.ok(capLogs.every(record=>record.timestamp.endsWith('Z')&&record.level==='warn'&&record.scope==='user'&&!('actor' in record)));
+    for(const [limit,value] of [['admin.content_minute',10],['admin.content_hour',30],['admin.content_day',200]]) {
+      const tier=capLogs.filter(record=>record.limit===limit);assert.equal(tier.length,2);
+      assert.deepEqual(tier.map(({scope,value,route})=>({scope,value,route})),[
+        {scope:'user',value,route:'/api/admin/pieces/:id/content'},
+        {scope:'user',value,route:'/api/admin/pieces/:id/originals/:id/download'},
+      ]);
+    }
     // D49: the real SQL endpoint searches the full relationship, beyond its first 100 rows.
     const detail=(await (await req('/api/ensembles',lead.cookie,'POST',{name:'Testchor'})).json()).id;
     const memberPrefix='search-'+detail+'-';
@@ -440,8 +447,14 @@ test('admin management: guarded transactions, permissions, invitations and live 
 });
 
 
-test('AICAP-31 21 management mutations are accepted in one minute',async()=>{
+test('AICAP-31 21 role and 21 membership mutations are accepted in one minute',async()=>{
  const sys=await person('limits-admin'),member=await person('limits-target');
  await changeAdminRole(process.env.DATABASE_URL!,sys.email,true);
  for(let i=0;i<21;i++)assert.equal((await req('/api/admin/users/'+member.id+'/sysadmin',sys.cookie,'PUT',{sysadmin:i%2===0,expected:i%2!==0,reason:'Limit removal acceptance'})).status,200);
+ const e=(await (await req('/api/ensembles',sys.cookie,'POST',{name:'Management admission'})).json()).id;
+ const m=(await pool.query('insert into memberships(ensemble_id,user_id) values($1,$2) returning id',[e,member.id])).rows[0].id;
+ for(let i=0;i<21;i++)assert.equal((await req('/api/admin/ensembles/'+e+'/members/'+m,sys.cookie,'PATCH',{
+  reason:'Limit removal acceptance',expected:{isLead:false,manageMembers:false,editPieces:i%2!==0,transcribe:false},permissions:{isLead:false,manageMembers:false,editPieces:i%2===0,transcribe:false}
+ })).status,200);
+
 });

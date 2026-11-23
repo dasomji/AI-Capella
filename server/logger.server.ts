@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { SCORE_JSON_DEPTH } from './protective-limits.mjs';
 const requests = new AsyncLocalStorage<string>();
 export function withRequestLog<T>(id: string, run: () => T): T { return requests.run(id, run); }
 // Never serialize error messages, request bodies, URLs, headers or arbitrary metadata.
@@ -28,9 +29,10 @@ export function logAdminContentAccess(actor: string, targetType: 'piece' | 'orig
 
 import { createHash } from 'node:crypto';
 const limitRequests = new AsyncLocalStorage<{route:string; hit:boolean}>();
-const routeWords = new Set('api auth sign-in sign-up email request-password-reset reset-password send-verification-email verify-email verify-email-password get-session sign-out delete-account account ensembles invitations resend members pieces versions settings reorder originals pages transcriptions import cancel retry result report transcription config admin users sysadmin control usage metrics failures rehearsal read command socket join clock content download'.split(' '));
+const routeWords = new Set('api auth sign-in sign-up email change-password change-email forget-password email-otp send-verification-otp request-password-reset reset-password send-verification-email verify-email verify-email-password get-session sign-out delete-account account ensembles invitations accept resend members pieces versions settings reorder originals pages transcriptions import cancel retry result report config admin users sysadmin control usage metrics failures rehearsal read command socket join clock content download'.split(' '));
 /** Keep only known route vocabulary: path parameters and queries can contain secrets. */
 export function limitRoute(route:string) {
+  if (!route || route === 'unknown') return 'unknown';
   return route.split('?')[0].split('/').map(p=>!p?'':routeWords.has(p)?p:':id').join('/');
 }
 export function withLimitRequest<T>(route:string,run:()=>T):T {
@@ -43,7 +45,7 @@ export function logLimitHit(limit:string,scope:'ip'|'user'|'ensemble'|'server',v
   if(request)request.hit=true;
   console.log(JSON.stringify({timestamp:new Date().toISOString(),level:'warn',event:'limit.hit',
     limit:/^[a-z][a-z0-9_.]{0,100}$/.test(limit)?limit:'unknown',scope:['ip','user','ensemble','server'].includes(scope)?scope:'server',
-    value:Number.isFinite(value)?value:0,route:limitRoute(route??request?.route??'/transcription')}));
+    value:Number.isFinite(value)?value:0,route:limitRoute(route??request?.route??'unknown')}));
 }
 export function logRejectedRequest(event:'domain.denied'|'admin.origin_rejected'|'admin.denied',route:string) {
   console.log(JSON.stringify({timestamp:new Date().toISOString(),level:'warn',event,route:limitRoute(route)}));
@@ -55,10 +57,15 @@ export function logStorageUsage(ensemble:string,bytes:number) {
 /** Child validators return typed codes; logging happens in the server, never child stdout. */
 export function logValidationLimit(error:unknown) {
   const code=(error as {code?:string})?.code;
-  if(code==='nesting_limit')logLimitHit('score.nesting','server',64);
+  if(code==='nesting_limit')logLimitHit('score.nesting','server',SCORE_JSON_DEPTH);
   if(error && typeof error==='object' && 'issues' in error && Array.isArray(error.issues)) {
-    for(const issue of error.issues)if(issue.code==='too_big' && typeof issue.maximum==='number') {
-      logLimitHit(issue.origin==='string'?'input.text':'input.items','server',issue.maximum);break;
+    for(const issue of error.issues)if(issue.code==='too_big' && (issue.origin==='string' || issue.origin==='array') && typeof issue.maximum==='number') {
+      // Only schema field names from this allowlist become series names. Numeric UI ranges
+      // (tempo, transpose, pagination, etc.) are design settings, not protective limits.
+      const names:Record<string,string>={email:'email',name:'name',title:'title',label:'label',reason:'admin_reason',search:'admin_search',cursor:'admin_cursor',outcome:'admin_outcome',state:'admin_state',action:'admin_action',actor:'admin_actor',target:'admin_target',ensemble:'ensemble_id',user:'user_id',userId:'user_id',targetType:'admin_target_type',idempotencyKey:'idempotency_key',key:'setting_key',password:'delete_password',deleteEnsembleIds:'delete_ensembles'};
+      const field=issue.path?.filter((part:unknown)=>typeof part==='string').at(-1);
+      const name=names[field] ?? (issue.path?.includes('perPartVolumes') || issue.path?.includes('perPartOffsets') ? 'part_key' : 'field');
+      logLimitHit('input.'+name,'server',issue.maximum);break;
     }
   }
 }

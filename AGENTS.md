@@ -11,7 +11,6 @@ phase plan and progress log live in `docs/PLAN.md`.
 ## Guardrails (all agents)
 
 - Add no usage limits without owner consent; protective limits must log hits.
-
 - Never touch the upstream prototype repo, its Firebase project (`ai-capella`), its live Cloud
   Functions or its scan service. Read its code here only as reference.
 - Provision nothing: no Railway/Coolify deployments, no production databases or buckets, no

@@ -18,6 +18,7 @@ try {
    let data={},status=200;
    if(path==='/api/ensembles'&&request.method()==='POST') {if(holdCreate)await new Promise(resolve=>{releaseCreate=resolve;});if(rejectCreate){data={code:'service_unavailable'};status=503;}else data={id:'fixture'};}
    else if(path==='/api/ensembles')data=[ensemble];
+   else if(path.endsWith('/transcriptions'))data={items:[],nextCursor:null};
    else if(path==='/api/me')data={user:{id:'lead',name:'Test lead',email:'admin@test.com'}};
    else if(path==='/api/ensembles/fixture/members')data=[{id:'member',userId:'singer',name:'Singer',email:'user@test.com',isLead:false,capabilities}];
    else if(path==='/api/ensembles/fixture/members/member'&&request.method()==='PATCH') {Object.assign(capabilities,request.postDataJSON());patches++;}
