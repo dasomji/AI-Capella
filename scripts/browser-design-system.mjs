@@ -37,6 +37,10 @@ export async function verifyDesignSystemPage({ specimens } = {}) {
   let elements = 0,
     properties = 0,
     attributes = 0;
+  // CSSOM lists the same supported longhands for every element and pseudo-element, then its custom
+  // properties. Enumerating ~1,400 design tokens per element only to drop them dominated this check,
+  // so the standard list is read once. (Inline: page.evaluate serializes only this function.)
+  const standardProps = [...getComputedStyle(document.documentElement)].filter((prop) => !prop.startsWith("--"));
   const checkedRows = specimens ? rows.filter(row => specimens.includes(row.dataset.specimen)) : rows;
   if (specimens && checkedRows.length !== specimens.length) throw Error("Requested comparison specimen missing");
   for (const row of checkedRows) {
@@ -119,7 +123,7 @@ export async function verifyDesignSystemPage({ specimens } = {}) {
         const left = getComputedStyle(react[index], pseudo),
           right = getComputedStyle(dom[index], pseudo);
         elements++;
-        for (const prop of [...left].filter(prop => !prop.startsWith("--"))) {
+        for (const prop of standardProps) {
           properties++;
           if (left.getPropertyValue(prop) !== right.getPropertyValue(prop))
             mismatches.push({
@@ -323,6 +327,10 @@ export async function verifyDesignSystemContexts({ specimens } = {}) {
     b = [...document.querySelectorAll('[data-renderer="dom"]')].filter(matches);
   const mismatches = [];
   let properties = 0;
+  // CSSOM lists the same supported longhands for every element and pseudo-element, then its custom
+  // properties. Enumerating ~1,400 design tokens per element only to drop them dominated this check,
+  // so the standard list is read once. (Inline: page.evaluate serializes only this function.)
+  const standardProps = [...getComputedStyle(document.documentElement)].filter((prop) => !prop.startsWith("--"));
   try {
     for (const el of a) el.classList.add("auth-shell");
     for (const el of b) el.classList.add("admin-shell");
@@ -333,7 +341,7 @@ export async function verifyDesignSystemContexts({ specimens } = {}) {
         for (const pseudo of [null, "::before", "::after"]) {
           const left = getComputedStyle(react[j], pseudo),
             right = getComputedStyle(dom[j], pseudo);
-          for (const prop of [...left].filter(prop => !prop.startsWith("--"))) {
+          for (const prop of standardProps) {
             properties++;
             if (left.getPropertyValue(prop) !== right.getPropertyValue(prop))
               mismatches.push({
