@@ -19,7 +19,7 @@ function records(jobs: Array<{ job: string; status: string }>) {
 }
 
 function overview(dir: string, needs: Record<string, { result: string }>) {
-  const env = { ...process.env, NEEDS_JSON: JSON.stringify(needs), GATED_JOBS: Object.keys(needs).join(' ') };
+  const env: NodeJS.ProcessEnv = { ...process.env, NEEDS_JSON: JSON.stringify(needs), GATED_JOBS: Object.keys(needs).join(' ') };
   delete env.GITHUB_STEP_SUMMARY;
   return spawnSync(process.execPath, [script, 'overview', dir], { env, encoding: 'utf8' });
 }
