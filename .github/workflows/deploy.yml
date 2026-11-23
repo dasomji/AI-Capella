@@ -159,10 +159,18 @@ jobs:
   # fixtures. Each browser harness invocation owns a fresh Postgres/Mailpit/build; the
   # timing-sensitive Together sync suites have a job to themselves. The `integration-browser`
   # gate below keeps the required check name.
+  # test:integration runs as two parallel legs; the file groups live in scripts/integration-groups.mjs
+  # and the coverage guard fails if a group is missing here.
   integration:
-    name: integration (API, hosting, admin, domain, transcription; schema drift)
+    name: integration (${{ matrix.title }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { group: domain, title: 'admin, domain, HTTP/dev/start hosting; migrations, schema drift' }
+          - { group: transcription, title: 'HTTP accounts and production config, transcription' }
     services:
       mailpit:
         image: axllent/mailpit:v1.27@sha256:e22dce5b36f93c77082e204a3942fb6b283b7896e057458400a4c88344c3df68
@@ -189,6 +197,13 @@ jobs:
       S3_SECRET_ACCESS_KEY: local-only
     steps:
       - *clock
+      - name: Name this leg for the CI overview
+        env:
+          GROUP: ${{ matrix.group }}
+          TITLE: ${{ matrix.title }}
+        run: |
+          echo "CI_JOB_LABEL=integration-$GROUP" >> "$GITHUB_ENV"
+          echo "CI_JOB_TITLE=integration ($TITLE)" >> "$GITHUB_ENV"
       - *checkout
       - &start-fixtures
         name: Start local S3 and pre-pull fixture images (in the background)
@@ -216,18 +231,20 @@ jobs:
         id: ready
         run: echo "Setup took $(( $(date +%s) - CI_JOB_STARTED )) s"
       - name: Apply all migrations to a fresh database (db:migrate)
-        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        if: ${{ matrix.group == 'domain' && !cancelled() && steps.ready.outcome == 'success' }}
         run: node scripts/ci/run-suite.mjs --id db-migrate --title 'Migrations apply to a fresh database' -- npm run db:migrate
       - name: Schema drift — committed drizzle/ matches the schema (db:generate)
-        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        if: ${{ matrix.group == 'domain' && !cancelled() && steps.ready.outcome == 'success' }}
         run: node scripts/ci/run-suite.mjs --id schema-drift --title 'Schema drift' --repro 'npm run db:generate && git status drizzle' -- bash scripts/ci/schema-drift.sh
       - name: Build client and server — the start/hosting tests serve dist/ (vite build)
         id: int-build
         if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
         run: node scripts/ci/run-suite.mjs --id build --title 'Build for test:integration' -- npm run build
-      - name: Integration tests — admin, HTTP/dev/start hosting, domain, transcription (test:integration)
+      - name: Integration tests — ${{ matrix.title }} (test:integration --group ${{ matrix.group }})
         if: ${{ !cancelled() && steps.ready.outcome == 'success' && steps.int-build.outcome == 'success' }}
-        run: node scripts/ci/run-suite.mjs --id integration --title 'Integration tests' -- npm run test:integration
+        env:
+          GROUP: ${{ matrix.group }}
+        run: node scripts/ci/run-suite.mjs --id "integration-$GROUP" --title "Integration tests ($GROUP)" --repro "npm run test:integration -- --group $GROUP" -- npm run test:integration -- --group "$GROUP"
       - &s3-logs
         name: Collect local S3 log
         if: failure() || cancelled()

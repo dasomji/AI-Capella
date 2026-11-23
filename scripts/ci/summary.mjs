@@ -60,7 +60,8 @@ if (mode === 'overview') {
   // Jobs that never uploaded a record (cancelled, runner lost, failed before the first step).
   for (const [id, need] of Object.entries(needs)) {
     if (id === 'checks') continue; // matrix legs report individually
-    if (!jobs.some((j) => j.job === id)) jobs.push({ job: id, title: id, status: need.result, suites: [], missing: true });
+    // Matrix legs label themselves `<job>-<leg>` (integration-domain, integration-transcription).
+    if (!jobs.some((j) => j.job === id || j.job.startsWith(`${id}-`))) jobs.push({ job: id, title: id, status: need.result, suites: [], missing: true });
   }
   const order = (j) => (j.job.startsWith('checks-') ? 1 : 0);
   jobs.sort((a, b) => order(a) - order(b) || (b.finished - b.started || 0) - (a.finished - a.started || 0));

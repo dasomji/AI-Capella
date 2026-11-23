@@ -61,7 +61,7 @@ npm run typecheck
 npm test
 TZ=America/New_York npm test
 npm run build
-npm run test:integration
+npm run test:integration            # all groups; one group: npm run test:integration -- --group domain
 npm run check:secrets
 npm run test:browser
 npm run test:browser:transcription
@@ -125,7 +125,7 @@ together. Superseded runs of the same PR are cancelled.
 | Job (check name) | What it runs | Fixtures |
 |---|---|---|
 | `checks (typecheck)` … `checks (design-tokens)` (9) | typecheck; unit (runner UTC + `TZ=America/New_York`); build; check:secrets; eval dry run; build + test:migration (Java 21, Firestore emulator); test:backup; docker (web + worker images, ops:canary in each); design token + utility guards | own containers where needed |
-| `integration (…)` | db:migrate on a fresh database, schema drift, build (hosting tests serve `dist/`), test:integration | Postgres + Mailpit services, SeaweedFS |
+| `integration (…)` (2 parallel legs) | build (the tests serve `dist/`), then `test:integration -- --group <group>`: `domain` (admin, domain, hosting; also db:migrate on a fresh database and schema drift) and `transcription` (HTTP integration, transcription). Groups: `scripts/integration-groups.mjs` | Postgres + Mailpit services, SeaweedFS |
 | `browser (power hint; accounts …)` | localized route recovery and tour copy, power hint, Phase 2b | harness-owned Postgres/Mailpit/build per script, SeaweedFS |
 | `browser (offline …; Together sync …)` | Phase 5a, Together sync, sync acceptance, then build + test:ops | same; **timing-sensitive sync runs alone on this runner, sequentially** |
 | `browser (admin parity; auth flows; transcription …)` | admin parity, auth flows, transcription | same |
@@ -139,7 +139,7 @@ individually. Without `BROWSER_SCRIPT`, `npm run test:browser` runs six scripts 
 CI runs each one as `BROWSER_SCRIPT=<script> npm run test:browser` with its own fresh fixture;
 every script creates its own accounts. `scripts/ci/check-coverage.mjs` (run by the gate) fails if a
 script is added to that default sequence, or any `test*`/`check:*` npm script exists, that CI
-doesn't run. Documented exceptions are listed in the script. Timeouts are 10 min for checks, 20 min
+doesn't run, or if an integration group has no leg in the `integration` matrix. Documented exceptions are listed in the script. Timeouts are 10 min for checks, 20 min
 for the other jobs and 5 min for the gate, about 3× the observed maximum.
 
 **Reading a failure.** Every suite step runs through `scripts/ci/run-suite.mjs`. It keeps the full

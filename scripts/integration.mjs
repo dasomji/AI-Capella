@@ -1,8 +1,13 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { existsSync } from 'node:fs';
+import { INTEGRATION_FILES, INTEGRATION_GROUPS } from './integration-groups.mjs';
 // Every suite here imports or serves the production build; without it they crash or wait on a server that never starts.
 const buildEntry = `${process.env.LIGHTSCORE_BUILD_ROOT ?? 'dist'}/server/server.js`;
+// `--group <name>` runs one group (CI runs them in parallel jobs); without it every file runs.
+const groupAt = process.argv.indexOf('--group'), group = groupAt === -1 ? undefined : process.argv[groupAt + 1] ?? '';
+if (group !== undefined && !Object.hasOwn(INTEGRATION_GROUPS, group)) { console.error(`unknown integration group '${group}'; expected one of: ${Object.keys(INTEGRATION_GROUPS).join(', ')}`); process.exit(2); }
+const files = group === undefined ? INTEGRATION_FILES : INTEGRATION_GROUPS[group];
 if (!existsSync(buildEntry)) { console.error(`test:integration requires a built client and server (${buildEntry} is missing); run npm run build first`); process.exit(1); }
 const reservation = createServer(); await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
 const hostPort = reservation.address().port; await new Promise(resolve => reservation.close(resolve));
@@ -17,6 +22,6 @@ try {
   for (let i=0;i<60;i++) { const r = spawnSync('docker',['exec',name,'pg_isready','-h','127.0.0.1','-U','postgres']); if (r.status === 0) break; await new Promise(r => setTimeout(r, 250)); }
   const migration = spawnSync(process.execPath,['--import','tsx','scripts/migrate.ts'], { env, stdio: 'inherit' });
   if (migration.status !== 0) throw new Error('Fixture migration failed');
-  const child = spawn(process.execPath,['--import','tsx','--test',...(process.env.AICAP_TEST_PATTERN?['--test-name-pattern',process.env.AICAP_TEST_PATTERN]:[]),'--test-concurrency=1','tests/admin.test.ts','tests/integration.test.ts','tests/hosting.test.ts','tests/domain.test.ts','tests/transcription.test.ts'], {env, stdio: 'inherit'});
+  const child = spawn(process.execPath,['--import','tsx','--test',...(process.env.AICAP_TEST_PATTERN?['--test-name-pattern',process.env.AICAP_TEST_PATTERN]:[]),'--test-concurrency=1',...files], {env, stdio: 'inherit'});
   process.exitCode = await new Promise(resolve => child.on('exit', code => resolve(code ?? 1)));
 } finally { docker(['rm','-fv',name]); }
