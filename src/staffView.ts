@@ -408,13 +408,16 @@ function measureEndBeat(measures: MeasureInfo[], idx: number): number {
   return next ? next.startBeat : m.startBeat + m.beats * (4 / m.beatType);
 }
 
+/** The last measure starting at or before `beat` (else the first); measures are in time order. */
 function measureIndexAtBeat(measures: MeasureInfo[], beat: number): number {
-  let idx = 0;
-  for (let i = 0; i < measures.length; i++) {
-    if (measures[i].startBeat > beat + 1e-9) break;
-    idx = i;
+  let lo = 0;
+  let hi = measures.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (measures[mid].startBeat > beat + 1e-9) hi = mid;
+    else lo = mid + 1;
   }
-  return idx;
+  return Math.max(0, lo - 1);
 }
 
 /** Binary search (notes/gaps are always startBeat-sorted) for the first index at or after `beat`. */
@@ -956,7 +959,9 @@ export class StaffView {
 
   /** Counters for profiling (development): slices painted, of them in the frame that showed them, ... */
   debugInfo() {
-    return { ...this.stats, slots: this.ring.slots, ringW: this.ringMusic?.width ?? 0, ringH: this.ringMusic?.height ?? 0 };
+    const px = (c: HTMLCanvasElement | null) => (c ? c.width * c.height : 0);
+    const mb = (4 * (px(this.ringMusic) + px(this.ringRuler) + px(this.paperCache) + px(this.marginCache))) / 1e6;
+    return { ...this.stats, slots: this.ring.slots, ringW: this.ringMusic?.width ?? 0, ringH: this.ringMusic?.height ?? 0, paperW: this.paperCache?.width ?? 0, paperH: this.paperCache?.height ?? 0, marginW: this.marginCache?.width ?? 0, marginH: this.marginCache?.height ?? 0, mb: Math.round(mb * 10) / 10 };
   }
 
   private renderLogical(displayBeat: number, playheadBeat: number) {
@@ -1283,8 +1288,8 @@ export class StaffView {
       }
     }
     if (lo > hi) return null;
-    // A shadow's blur reaches about 1.5x its value (device px, at least as far in drawing units).
-    const glow = 1.5 * Number(this.theme.roles['score-staff-glow-blur']) + 2;
+    // A shadow's blur reaches about 1.2x its value, in device px (the transform doesn't scale it).
+    const glow = (1.5 * Number(this.theme.roles['score-staff-glow-blur'])) / (this.dpr * this.fill) + 1;
     return [lo - glow, hi + glow];
   }
 
