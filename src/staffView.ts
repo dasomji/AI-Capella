@@ -89,6 +89,15 @@ function paperRepeatPx(stretch: number): number {
 
 const mod = (a: number, n: number) => ((a % n) + n) % n;
 
+/**
+ * A new canvas for a cache painted again (the old one's memory released): drawing the paper into a
+ * reused one after the theme's paper changed kept a trace of the old (renderer-themes check).
+ */
+function freshCanvas(old: HTMLCanvasElement | null): HTMLCanvasElement {
+  if (old) old.width = old.height = 0;
+  return document.createElement('canvas');
+}
+
 // Engraving glyphs from the SMuFL font (Eugene, bundled as a subset -- see theme.ts FONT_MUSIC). SMuFL
 // fonts are drawn at 4 staff spaces per em, with each glyph's origin at its musical reference point
 // (a notehead's centre line, a G clef's G line, a rest's staff line), so fillText at a staff
@@ -1317,11 +1326,9 @@ export class StaffView {
     const stamp = `${this.theme.revision}|${paperEpoch}|${paperKind()}|${NIGHT_PAPER}|${k}|${frame.sx}|${frame.sy}|${w}|${h}`;
     if (stamp !== this.paperStamp || !this.paperCache) {
       this.paperStamp = stamp;
-      const c = (this.paperCache ??= document.createElement('canvas'));
-      const cw = Math.ceil(w * k);
-      const ch = Math.ceil(h * k);
-      if (c.width !== cw) c.width = cw;
-      if (c.height !== ch) c.height = ch;
+      const c = (this.paperCache = freshCanvas(this.paperCache));
+      c.width = Math.ceil(w * k);
+      c.height = Math.ceil(h * k);
       const pctx = c.getContext('2d');
       if (!pctx) return;
       pctx.setTransform(k, 0, 0, k, 0, 0);
@@ -1374,10 +1381,10 @@ export class StaffView {
     // (A voice renamed changes its part's name in place: its label is part of what the cache shows.)
     let names = '';
     for (const layout of layouts) if (layout.staff === 1) names += `|${this.partLabel(layout.partId)}`;
-    const stamp = `${this.version}|${this.theme.revision}|${fontEpoch}|${paperEpoch}|${paperKind()}|${fifths}|${this.scrollY}|${k}|${height}|${this.cssWidth}${names}`;
+    const stamp = `${this.version}|${this.theme.revision}|${fontEpoch}|${paperEpoch}|${paperKind()}|${NIGHT_PAPER}|${fifths}|${this.scrollY}|${k}|${height}|${this.cssWidth}${names}`;
     if (stamp !== this.marginStamp || !this.marginCache) {
       this.marginStamp = stamp;
-      const c = (this.marginCache ??= document.createElement('canvas'));
+      const c = (this.marginCache = freshCanvas(this.marginCache));
       const mctx = c.getContext('2d');
       if (!mctx) return;
       // Its paper and the fade into the music, and the voices' names, which can reach further.
@@ -1386,12 +1393,8 @@ export class StaffView {
       for (const layout of layouts) {
         if (layout.staff === 1) reach = Math.max(reach, 25 + mctx.measureText(this.partLabel(layout.partId)).width + 4);
       }
-      const cw = Math.min(Math.ceil(Math.min(reach, this.cssWidth) * k), Math.max(1, Math.round(this.cssWidth * k)));
-      const ch = Math.max(1, Math.ceil(height * k));
-      if (c.width !== cw) c.width = cw;
-      if (c.height !== ch) c.height = ch;
-      mctx.setTransform(1, 0, 0, 1, 0, 0);
-      mctx.clearRect(0, 0, cw, ch);
+      c.width = Math.min(Math.ceil(Math.min(reach, this.cssWidth) * k), Math.max(1, Math.round(this.cssWidth * k)));
+      c.height = Math.max(1, Math.ceil(height * k));
       mctx.setTransform(k, 0, 0, k, 0, 0);
       this.drawMargin(mctx, layouts, startBeat, height);
     }
