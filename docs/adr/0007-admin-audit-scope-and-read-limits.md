@@ -22,16 +22,15 @@ using structured server stdout, rather than in the product's audit history.
   this change does not delete or rewrite them.
 - Use server pagination and server search for admin lists and detail member tables.
   Remove the aggregate admin read cap and every `list:*` read cap. Authentication,
-  invitations, ensemble creation, owner-approved mutation limits and preview resource admission
-  retain their existing protections. Removing the aggregate limit also leaves
+  recipient invitation flood protection and preview resource admission
+  retain their existing protections; ADR 0008 removes guessed usage quotas. Removing the aggregate limit also leaves
   `PUT /transcription/control` without a blanket limit, as intended by the owner.
 - Keep the required reason and PostgreSQL-backed shared content/download limits:
   10 per minute, 30 per hour and 200 per day per actor. Cap rejection remains 429
   with the cap and waiting instruction; signed original URLs expire in 60 seconds.
 - Extend the existing `server/logger.server.ts` with explicit structured stdout
   events: `admin.content_access` contains UTC timestamp, request ID, actor,
-  target type/ID and the validated reason; `admin.cap_hit` contains UTC timestamp,
-  request ID, actor, cap kind, maximum and window milliseconds. JSON serialization
+  target type/ID and the validated reason; `limit.hit` (ADR 0008) contains UTC timestamp, limit name, scope, value and sanitized route. JSON serialization
   keeps multiline reasons within one log line. Do not log score bodies, object
   keys, signed URLs, credentials, headers or arbitrary request metadata.
 - Grafana can consume these stdout events through the deployment's log collector.

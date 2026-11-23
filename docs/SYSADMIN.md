@@ -52,7 +52,7 @@ tie-breaker and preserves PostgreSQL timestamp precision. Versions use `(version
 actor/target/targetType/action/outcome for audit; state/ensemble for jobs.
 Relationships can be scoped with user or ensemble. `from` / `to` filter creation
 time (`sort=updated` independently orders pieces by update time), as half-open `[from,to)` ranges. Inputs require ISO
-instants with `Z` or an explicit offset. Usage ranges are limited to 366 days.
+instants with `Z` or an explicit offset.
 
 Initial detail sections are batched into one detail endpoint and use the same bounded lists (30 rows plus opaque continuation cursors): memberships, invitations, pieces,
 jobs and audit history are never embedded as unbounded arrays. User detail shows
@@ -113,15 +113,15 @@ Rejected authenticated attempts record a safe failure outcome; untrusted Origins
 are recorded after concealment/authorization. Audit payloads contain reason and
 before/after permission booleans, never invitation tokens or credentials.
 
-Invitations reuse the existing SHA-256 token, 14-day expiry, budgets, idempotency,
+Invitations reuse the existing SHA-256 token, 14-day expiry, recipient flood protection, idempotency,
 mail transport and acceptance. They grant capabilities, with lead promotion
 available after acceptance. Migration 0018 adds `admin_issued` so acceptance checks
 the issuing sysadmin's current verified platform role rather than requiring an
 ensemble membership. Role revocation revokes their pending admin-issued invites.
 Development/test mail uses capture or Mailpit; tests never use real mail.
 
-Management actions share an additional database-backed 20 requests/minute/actor
-limit (including invalid attempts), alongside the existing limits below.
+Management actions have no usage throttle. Protective rejections emit a metadata-only
+`limit.hit` stdout event; denied and origin-rejected requests also go to stdout.
 
 Admin list/detail/statistics reads have no per-actor read limits; lists and member
 tables use bounded server pagination/search. Content/download actions share 10 per minute, 30 per hour and 200 per day per actor, persisted in PostgreSQL. A rejected request returns 429 with the specific cap and waiting instruction.
@@ -170,11 +170,11 @@ rollback (ADR 0002). Audit views expose safe reason excerpts and ensemble scope.
 
 Required content/download reasons are emitted by the existing server logger to
 structured stdout (`event=admin.content_access`, UTC timestamp, request ID, actor,
-target type/ID, reason). Content/download cap hits emit `event=admin.cap_hit` with
-UTC timestamp, request ID, actor, cap kind, maximum and window milliseconds.
+target type/ID, reason). Content/download cap hits emit `event=limit.hit` with
+UTC timestamp, stable limit name, scope, configured value and sanitized route.
 Grafana receives operational logs through the deployment log collector; no app
-read audit replaces it. Alerting hook: match repeated content-hour/content-day
-cap hits. Log collection, retention/access controls and alerts remain operator
+read audit replaces it. Alerting hook: match repeated `admin.content_hour` / `admin.content_day`
+limit hits. Log collection, retention/access controls and alerts remain operator
 work; this change provisions nothing. See [ADR 0007](adr/0007-admin-audit-scope-and-read-limits.md).
 
 Search, ID, cursor and reason strings reject NUL and unpaired surrogates. Typed

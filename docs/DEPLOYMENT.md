@@ -113,9 +113,10 @@ commands ensure SIGTERM reaches the application rather than an npm wrapper.
 Worker startup selects worker-only env validation before importing shared modules.
 The migrator requires only DATABASE_URL.
 Additional limits/defaults are in `.env.example` and `server/env.server.ts`: PDF
-50 MiB, photo 20 MiB, max 60 pages / 40M pixels, ensemble storage 5 GiB, native/XML
-score 20 MiB; user/ensemble active jobs 2/4, page lease 30s, timeout 180s, max attempts 3.
-Do not raise limits without memory/CPU/load testing. Temporary staging is ephemeral;
+50 MiB, photo 20 MiB, max 60 pages / 40M pixels, native/XML
+score 20 MiB; global page concurrency 2, page lease 30s, timeout 180s, max attempts 3.
+Original storage usage is logged without a quota; job admission has no user/ensemble quota.
+Changing protective limits needs owner consent and usage evidence (ADR 0008). Temporary staging is ephemeral;
 originals live only in private S3, never a service filesystem volume.
 
 Use a single HTTPS origin for app, API and sockets. Better Auth derives secure,

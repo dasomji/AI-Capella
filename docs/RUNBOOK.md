@@ -132,7 +132,7 @@ Observability: collect sanitized structured UTC JSON logs and request IDs. Alert
 sustained 5xx, /readyz DB/migration failure, missing rehearsal ownership after deploy
 grace (~30s), sandbox.unavailable, worker crashes, growing queue/expired leases,
 provider account errors, mail failure, backup age/hash/restore failure, disk pressure,
-and repeated content/download `admin.cap_hit` events on structured stdout (SYSADMIN.md;
+and repeated content/download `limit.hit` events on structured stdout (SYSADMIN.md;
 ADR 0007). Admin list/detail reads have no rate caps or audit writes. Logs/audit must exclude passwords, keys,
 session/invitation tokens and score bodies. Keep real failure notifications enabled.
 Schedule accounts:cleanup daily in the trusted environment; worker owns temporary-file

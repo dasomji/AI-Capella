@@ -340,15 +340,15 @@ reorder decisions above.
 
 - Invitation limits use durable send-intent rows across every invitation state:
   five per recipient/ensemble in a rolling 24 hours, at least 60 seconds apart.
-  Ensemble and inviter budgets default to 50 and 100 per rolling day. Revoking,
+  Revoking,
   expiring, deleting an issuer, or recreating an invitation cannot reset history.
-  Expired pending invitations can renew once their window clears. Mutation and
-  ensemble-creation limits are DB-backed (120/minute and 10/rolling day by default).
+  Expired pending invitations can renew once their window clears.
+  AICAP-31 removes aggregate invitation, mutation and ensemble-creation quotas.
 - Body middleware bounds auth/settings requests at 16 KiB and score requests at
   SCORE_MAX_BYTES + 64 KiB before JSON parsing. The decoded score still has the
   SCORE_MAX_BYTES cap. Granular settings follow the client's boolean split map,
   treble/treble8/bass clefs, saved bpm/transpose/sections/played and percussion map;
-  values, keys, nesting and stored map counts are bounded.
+  values, keys and nesting are bounded; AICAP-31 removes stored map count caps.
 - Pending invitations are revoked atomically when their issuer loses authority,
   leaves, is removed, or closes their account. Acceptance independently checks
   issuer authority and clamps a manager's grants to none. Manager resends preserve
@@ -716,10 +716,10 @@ Part A:
   password recovery. Built-start Playwright victim scenario resets an unknown
   attacker password and signs in with the recovered password. Existing real-auth
   reset coverage verifies email ownership and session revocation.
-- A-S1: process-global and per-user admission before bodyLimit/score body reads;
-  defaults 4/1 (`SCORE_UPLOAD_GLOBAL_MAX`, `SCORE_UPLOAD_USER_MAX`). Immediate
-  503/429 with Retry-After: 2; slots held through validation/persistence and
-  released in finally. Real streaming requests cover both limits and release.
+- A-S1: process-global admission before bodyLimit/score body reads;
+  default 4 (`SCORE_UPLOAD_GLOBAL_MAX`). Immediate 503 with Retry-After: 2;
+  slots held through validation/persistence and released in finally.
+  AICAP-31 removes the per-user upload quota.
 - A-S2: invalid percent encoding in score-title headers returns 422 invalid_text.
 - A-S3: separate verification/reset recipient intervals (60 s), rolling 24-hour
   recipient ceiling 100/kind, requester-IP share 5/kind/recipient. Suppressed
@@ -1524,8 +1524,7 @@ other than score-partwise/timewise.
 
 S4: object PUT precedes the short ensemble transaction, protected by a committed
 orphan outbox key; concurrent hash dedupe leaves redundant keys for cleanup.
-Original storage has an operational ceiling, TRANSCRIPTION_STORAGE_MAX_BYTES
-(default 5 GiB per ensemble), enforced under the lock; this is not a money budget.
+AICAP-31 removes the original storage ceiling and logs per-ensemble usage.
 Uploads allow 30 seconds idle and 10 minutes total; filenames strip bidi controls.
 
 S6: HEIC/HEIF and AVIF return unsupported_image_format; HEIC is not supported
@@ -1562,7 +1561,7 @@ check; lack of Python/seccomp fails closed. Size the service memory and upload
 concurrency to leave parent-process headroom alongside these per-child limits.
 
 The full integration pass exposed a test setup error: two same-account uploads
-correctly hit per-user upload admission. The dedupe race now uses two authorized
+used the former per-user upload admission. The dedupe race uses two authorized
 accounts uploading a fresh identical hash, exercising concurrent insertion while
 preserving the intended admission limit.
 
@@ -2051,8 +2050,8 @@ The following supersedes the earlier metric and remaining-work descriptions.
   unpriced_calls retain partial knowledge; totals/averages remain null if any
   attempt is unpriced. Numeric JSON aggregates are numbers. Job metrics expose
   null estimatedCost plus costUnknown/unpricedCalls, never unknown-as-zero.
-- E7: migration 0011 adds started_at and (model,started_at) indexes; usage rejects
-  ranges over 366 elapsed days with a 422 response explaining the limit.
+- E7: migration 0011 adds started_at and (model,started_at) indexes. AICAP-31
+  removes the admin usage-range ceiling.
 - E8: usage uses the same strict offset-aware Zod ISO validation as /metrics;
   impossible dates and naive/reversed ranges fail.
 - E9: real usageSQL tests exercise both DST transitions, distinct 2/3-second
@@ -2518,7 +2517,7 @@ page previews) add no audit rows. Existing historical rows are preserved. Mutati
 and CLI auditing retain atomic commit/savepoint behavior (ADR 0002). Content and
 download actions still require reasons and share 10/min, 30/hour and 200/day
 persistent caps, with clear 429 messages. The existing server logger emits
-`admin.content_access` (reason and target) and `admin.cap_hit` (cap metadata) as
+`admin.content_access` (reason and target) and `limit.hit` (cap metadata) as
 structured UTC stdout for Grafana; no infrastructure is provisioned. See
 [ADR 0007](adr/0007-admin-audit-scope-and-read-limits.md) and SYSADMIN.md.
 The audit UI retains ensemble scope and safe mutation-reason excerpts.
