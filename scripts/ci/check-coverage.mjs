@@ -5,7 +5,10 @@
 //    jobs; every script of that sequence must appear in the workflow.
 // 2. Every `test*` / `check:*` npm script must be run by the workflow or be listed below with a
 //    reason it is not part of CI.
+// 3. `npm run test:integration` runs in parallel legs, one per group of scripts/integration-groups.mjs;
+//    the workflow's integration matrix must list exactly those groups.
 import { readFileSync } from 'node:fs';
+import { INTEGRATION_FILES, INTEGRATION_GROUPS } from '../integration-groups.mjs';
 
 const workflowFile = process.argv[2] ?? '.github/workflows/deploy.yml';
 const workflow = readFileSync(workflowFile, 'utf8');
@@ -33,8 +36,16 @@ for (const name of Object.keys(scripts).filter((n) => /^(test|check)(:|$)/.test(
   const used = name === 'test' ? /\bnpm (run )?test(?![:\w-])/.test(workflow) : runs(name);
   if (!used) problems.push(`npm script "${name}" is not run by ${workflowFile}; run it in a job or add it to NOT_IN_CI in scripts/ci/check-coverage.mjs with a reason`);
 }
+const integrationJob = workflow.match(/\n  integration:\n([\s\S]*?)\n  [\w-]+:\n/)?.[1] ?? '';
+const legs = [...integrationJob.matchAll(/-\s*\{\s*group:\s*([\w-]+)/g)].map((m) => m[1]);
+if (!/npm run test:integration -- --group "\$GROUP"/.test(integrationJob)) problems.push('the integration job no longer runs `npm run test:integration -- --group "$GROUP"` per matrix leg');
+for (const group of Object.keys(INTEGRATION_GROUPS)) {
+  if (!legs.includes(group)) problems.push(`integration group "${group}" (${INTEGRATION_GROUPS[group].join(', ')}) has no leg in the integration job matrix`);
+}
+for (const leg of legs) if (!Object.hasOwn(INTEGRATION_GROUPS, leg)) problems.push(`integration matrix leg "${leg}" is not a group in scripts/integration-groups.mjs`);
+if (new Set(legs).size !== legs.length) problems.push(`integration matrix lists a group more than once (${legs.join(', ')})`);
 if (problems.length) {
   for (const p of problems) console.log(`::error file=${workflowFile},title=CI coverage::${p}`);
   process.exit(1);
 }
-console.log(`CI coverage OK: ${defaults.length} default browser scripts and all test/check npm scripts are run (${Object.keys(NOT_IN_CI).length} documented exceptions).`);
+console.log(`CI coverage OK: ${defaults.length} default browser scripts, all test/check npm scripts (${Object.keys(NOT_IN_CI).length} documented exceptions) and ${legs.length} integration legs covering ${INTEGRATION_FILES.length} files are run.`);

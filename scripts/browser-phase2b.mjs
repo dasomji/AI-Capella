@@ -145,6 +145,8 @@ try {
   await signup(q, emailB, "Member Singer");
   await q.getByRole("button", { name: "Sign in", exact: true }).click();
   await signin(q, emailB);
+  // Sign-in returns to the invitation with a full navigation; evaluating before it lands races the page swap.
+  await q.waitForURL("**/invite/**");
   assert.equal(await q.evaluate(()=>sessionStorage.getItem("lightscore-invite") !== null),true);
   await q.getByRole("button", {name:"Accept invitation", exact:true}).click();
   await q.waitForURL("**/app");

@@ -125,3 +125,30 @@ the artifact name and the re-run command. The gate's overview listed the four fa
 `failure-<job>` artifacts held the per-suite log, the Playwright trace and the final screenshot,
 and the green jobs still reported their timing.
 
+
+## CI follow-ups (AICAP-30, 2026-11-23)
+
+The findings above, resolved. Commands, logs and timings are in the AICAP-30 report.
+
+- **Hosting hang without a build.** `test:integration` and `tests/hosting.test.ts` now stop at
+  once with "run npm run build first". The hosting cleanup tolerates an npm process that already
+  exited, and the standby test closes its pg client in its own `finally`. A crashing server now
+  reports its own error, and the file exits instead of hanging.
+- **Lease-deadline flake (`tests/transcription.test.ts`).** The worker takes its lease timers from
+  an injectable `LeaseClock` (`server/lease-deadline.ts`). The test drives a virtual clock once the
+  worker stalls and asserts an abort at least one heartbeat before the lease runs out. It no longer
+  depends on wall-clock time.
+- **Sync flake (`Execution context was destroyed`).** After an invitation sign-in,
+  browser-sync, browser-sync-acceptance and browser-phase2b wait for `/invite/` before evaluating.
+- **Node 20 actions.** checkout v7.0.1, setup-node v7.1.0, setup-java v6.3.0, cache v6.1.0,
+  upload-artifact v7.0.2 and download-artifact v8.0.2 all run on Node 24 and stay SHA-pinned.
+- **Integration split.** `test:integration` runs as two matrix legs (`domain`, `transcription`;
+  groups in `scripts/integration-groups.mjs`). Together the legs run the same 117 tests as one full
+  run, with no test in both.
+- **Design-system showcase time.** Runner variance is real: per theme×viewport combo, the same
+  suite took 25–53 s across runs. It does not explain the suite's length, though. Since the suite
+  went from 6 to 12 combos (AICAP-28 #5), it has taken 9.4–10.8 min, which made `design-showcase`
+  (14–15.5 min) the longest job, not `integration`. Most of that time went to enumerating
+  ~1,385 custom properties per computed style only to discard them. The parity checks now read
+  the standard property list once. The compared counts are identical, and the suite takes 956 s
+  → 418 s locally.

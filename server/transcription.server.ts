@@ -1,5 +1,5 @@
 import { logLimitHit } from './logger.server';
-import { heartbeatInterval,heartbeatStale,withinAbort } from './lease-deadline';
+import { heartbeatInterval,heartbeatStale,systemClock,withinAbort,type LeaseClock } from './lease-deadline';
 export { heartbeatInterval } from './lease-deadline';
 import { optionalTitle, truncateTitle } from '../src/api/title';
 import { sanitizeOriginalFilename } from './originals.server';
@@ -47,7 +47,7 @@ export class TranscriptionWorker {
  private active=new Set<AbortController>();
  stop(){this.stopping=true;for(const controller of this.active)controller.abort();}
 
- constructor(private provider:TranscriptionProvider=defaultProvider(),private renderer:PageRenderer=env.NODE_ENV==='test'?new ReferenceRenderer():new BoundedPageRenderer(),private assembler:JobAssembler=env.NODE_ENV==='test'?new FakeAssembler():new ScoreAssembler()){}
+ constructor(private provider:TranscriptionProvider=defaultProvider(),private renderer:PageRenderer=env.NODE_ENV==='test'?new ReferenceRenderer():new BoundedPageRenderer(),private assembler:JobAssembler=env.NODE_ENV==='test'?new FakeAssembler():new ScoreAssembler(),private clock:LeaseClock=systemClock){}
  async tick():Promise<boolean>{return workerQueries(()=>this.tickWork());}
  private async tickWork():Promise<boolean>{
  if(this.stopping || await processingPaused())return false;
@@ -63,16 +63,16 @@ export class TranscriptionWorker {
  await db.query("update job_pages set state='running',lease_owner=$2,lease_expires_at=now()+$3*interval '1 millisecond',attempts=attempts+1 where id=$1",[p.id,token,env.TRANSCRIPTION_LEASE_MS]);await db.query("update transcription_jobs set state='running',attempts=attempts+1 where id=$1",[p.job_id]);return p;
  });
  if(!page)return false;
- const abort=new AbortController();this.active.add(abort);if(this.stopping)abort.abort();const timeout=setTimeout(()=>abort.abort(),env.TRANSCRIPTION_TIMEOUT_MS);
- let heartbeatBusy=false;let lastHeartbeat=performance.now(),lastControl=0;
- const heartbeat=setInterval(()=>{void (async()=>{
- if(heartbeatStale(performance.now(),lastHeartbeat,env.TRANSCRIPTION_LEASE_MS)){abort.abort();return;}
+ const abort=new AbortController();this.active.add(abort);if(this.stopping)abort.abort();const timeout=this.clock.setTimeout(()=>abort.abort(),env.TRANSCRIPTION_TIMEOUT_MS);
+ let heartbeatBusy=false;let lastHeartbeat=this.clock.now(),lastControl=0;
+ const heartbeat=this.clock.setInterval(()=>{void (async()=>{
+ if(heartbeatStale(this.clock.now(),lastHeartbeat,env.TRANSCRIPTION_LEASE_MS)){abort.abort();return;}
  if(heartbeatBusy)return;heartbeatBusy=true;
  try{
  const r=await pool.query("update job_pages p set lease_expires_at=now()+$3*interval '1 millisecond' from transcription_jobs j where p.id=$1 and p.lease_owner=$2 and p.state='running' and p.lease_expires_at>now() and j.id=p.job_id and j.state='running' returning p.id",[page.id,token,env.TRANSCRIPTION_LEASE_MS]);
- if(!r.rowCount){abort.abort();return;}lastHeartbeat=performance.now();
- if(performance.now()-lastControl>=Math.max(5000,env.TRANSCRIPTION_LEASE_MS/2)){lastControl=performance.now();if(await processingPaused()){paused=true;abort.abort();}}
- }catch(error){logError('transcription.heartbeat',error);if(performance.now()-lastHeartbeat>=env.TRANSCRIPTION_LEASE_MS-heartbeatInterval(env.TRANSCRIPTION_LEASE_MS))abort.abort();}finally{heartbeatBusy=false;}
+ if(!r.rowCount){abort.abort();return;}lastHeartbeat=this.clock.now();
+ if(this.clock.now()-lastControl>=Math.max(5000,env.TRANSCRIPTION_LEASE_MS/2)){lastControl=this.clock.now();if(await processingPaused()){paused=true;abort.abort();}}
+ }catch(error){logError('transcription.heartbeat',error);if(this.clock.now()-lastHeartbeat>=env.TRANSCRIPTION_LEASE_MS-heartbeatInterval(env.TRANSCRIPTION_LEASE_MS))abort.abort();}finally{heartbeatBusy=false;}
  })();},heartbeatInterval(env.TRANSCRIPTION_LEASE_MS));
 
  const closeAbandoned=()=>pool.query("update provider_calls set outcome='abandoned',finished_at=now(),error_kind='lease_expired',usage=coalesce(usage,'{}') || jsonb_build_object('usage_unknown',true) where lease_owner=$1 and outcome='running'",[token]);
@@ -104,7 +104,7 @@ export class TranscriptionWorker {
  }
  }
  }catch(error){await closeAbandoned();failure=error instanceof ProviderError?error:new ProviderError('infrastructure_error',true);}
- finally{clearTimeout(timeout);clearInterval(heartbeat);this.active.delete(abort);if(this.stopping)paused=true;}
+ finally{this.clock.clearTimeout(timeout);this.clock.clearInterval(heartbeat);this.active.delete(abort);if(this.stopping)paused=true;}
  await transaction(async db=>{
  await db.query('select id from transcription_jobs where id=$1 for update',[page.job_id]);
  const p=(await db.query('select p.*,j.state as job_state from job_pages p join transcription_jobs j on j.id=p.job_id where p.id=$1 for update of p',[page.id])).rows[0];

@@ -1,10 +1,20 @@
 import { createServer } from 'node:net';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { io } from 'socket.io-client';
 const mailpit = process.env.MAILPIT_URL || 'http://127.0.0.1:28025';
+// `npm start` serves the production build; without it the server exits at once, so fail here with the remedy.
+const buildEntry = `${process.env.LIGHTSCORE_BUILD_ROOT ?? 'dist'}/server/server.js`;
+if (!existsSync(buildEntry)) throw new Error(`hosting tests require a built client and server (${buildEntry} is missing); run npm run build first`);
+/** Stop a detached npm process group; a child that already exited must not hide the test's own failure or leave the file hanging. */
+async function stop(child: ChildProcess) {
+ const exited = child.exitCode === null && child.signalCode === null ? new Promise<void>(resolve => child.once('exit', () => resolve())) : undefined;
+ try { process.kill(-child.pid!, 'SIGTERM'); } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error; }
+ await exited;
+}
 async function availablePort(){const s=createServer();await new Promise<void>(r=>s.listen(0,'127.0.0.1',r));const port=(s.address() as {port:number}).port;await new Promise<void>(r=>s.close(()=>r()));return port;}
 for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start, auth and Socket.IO on one HTTP origin`, { timeout: 30000 }, async () => {
  const port = await availablePort(); const base = `http://localhost:${port}`;
@@ -39,14 +49,14 @@ for (const mode of ['dev','start']) test(`${mode}: real npm command serves Start
    await emit('rehearsal:join',{ensembleId:e.id});
    for(const [i,command] of [{type:'selectPiece',pieceId:piece.id,versionNo:1},{type:'play'}].entries())assert.equal((await emit('rehearsal:command',{ensembleId:e.id,commandId:crypto.randomUUID(),clientSentAt:Date.now(),baseRevision:i,command})).status,'accepted');
    const before=(await emit('rehearsal:snapshot',{ensembleId:e.id})).state;c.close();
-   process.kill(-child.pid!,'SIGTERM');await new Promise<void>(r=>child.once('exit',()=>r()));
+   await stop(child);
    child=spawn('npm',['start'],{detached:true,env:{...process.env,NODE_ENV:'test',PORT:String(port),BETTER_AUTH_URL:base,TRUSTED_ORIGINS:base,MAIL_TRANSPORT:'smtp'},stdio:'pipe'});child.stdout.on('data',v=>{logs+=v;});child.stderr.on('data',v=>{logs+=v;});
    let restarted=false;for(let i=0;i<100;i++){try{restarted=(await fetch(base+'/readyz')).ok;}catch{}if(restarted)break;await delay(100);}assert.ok(restarted,logs);
    c=await open();try{const after=(await emit('rehearsal:join',{ensembleId:e.id})).state;assert.equal(after.status,'paused');assert.equal(after.revision,before.revision+1);assert.ok(Math.abs(after.anchor.beat-Math.max(0,after.updatedAt-before.anchor.serverTime)/500)<0.01);assert.equal(after.endsAt,null);}finally{c.close();}
   }
   const socket = io(`${base}/rehearsal`,{extraHeaders:{cookie,origin:base},transports:['polling'],reconnection:false,timeout:3000});
   try { await new Promise<void>((resolve,reject) => { socket.on('connect',resolve); socket.on('connect_error',reject); }); } finally { socket.close(); }
- } finally { process.kill(-child.pid!, 'SIGTERM'); await new Promise<void>(resolve => child.on('exit',()=>resolve())); }
+ } finally { await stop(child); }
 });
 
 test('standby admits HTTP while rehearsal ownership remains unavailable', {timeout:30000},async()=>{
@@ -59,5 +69,5 @@ test('standby admits HTTP while rehearsal ownership remains unavailable', {timeo
   for(let i=0;i<100;i++){try{response=await fetch(base+'/readyz');if(response.ok)break;}catch{}await delay(100);}
   assert.ok(response?.ok,logs);assert.equal((await response.json()).rehearsal,false);
   const rehearsal=await fetch(base+'/readyz/rehearsal');assert.equal(rehearsal.status,503);assert.equal(rehearsal.headers.get('cache-control'),'no-store');
- }finally{process.kill(-child.pid!,'SIGTERM');await new Promise<void>(r=>child.once('exit',()=>r()));await owner.end();}
+ }finally{try{await stop(child);}finally{await owner.end();}}
 });
