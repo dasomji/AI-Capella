@@ -82,10 +82,13 @@ All repository test launchers use `scripts/test-containers.mjs`. A separate watc
 owns each run's containers, marked with a random `com.lightscore.test-run` label.
 Tests call `await fixtures.close()` in `finally`; SIGINT/SIGTERM also close the
 scope, and IPC disconnect lets the watcher clean up after a crashed or SIGKILLed
-runner. Containers use `--rm --restart=no`, and cleanup uses `docker rm -fv` to
+runner. Containers default to `--rm --restart=no`, and cleanup uses `docker rm -fv` to
 remove their anonymous data volumes. It only touches that run's label. A failed
 launch/name collision cannot remove another run's fixture. CI additionally has an
 `always()` cleanup step for its job-scoped S3 service.
+The integration database passes `--rm=false` because outage tests deliberately
+stop and restart it. The watcher still removes that container and its volumes
+when the run ends, including after SIGKILL.
 
 New scripts must use the shared launcher, not ad-hoc `docker run -d` commands:
 

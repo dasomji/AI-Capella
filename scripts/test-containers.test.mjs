@@ -24,7 +24,7 @@ async function until(check) {
 const runnerSource = `
   import { createTestContainers } from ${JSON.stringify(new URL("./test-containers.mjs", import.meta.url).href)};
   const fixtures = await createTestContainers();
-  await fixtures.run(['-d', '--name', process.env.FIXTURE_NAME, 'postgres:17-alpine', 'sh', '-c', 'sleep 300']);
+  await fixtures.run(['--rm=' + process.env.AUTO_REMOVE, '-d', '--name', process.env.FIXTURE_NAME, 'postgres:17-alpine', 'sh', '-c', 'sleep 300']);
   process.on('message', async mode => {
     if (mode === 'failure') throw Error('Deliberate runner failure');
     await fixtures.close();
@@ -33,11 +33,11 @@ const runnerSource = `
   process.send('ready');
 `;
 
-for (const mode of ["normal", "failure", "SIGINT", "SIGTERM", "SIGKILL"]) {
+for (const mode of ["normal", "failure", "SIGINT", "SIGTERM", "SIGKILL", "SIGKILL-restartable"]) {
   test(`removes containers and anonymous volumes after ${mode}`, { timeout: 180000 }, async t => {
     const name = `aicap-cleanup-test-${randomUUID()}`;
     const child = spawn(process.execPath, ["--input-type=module", "-e", runnerSource], {
-      env: { ...process.env, FIXTURE_NAME: name },
+      env: { ...process.env, FIXTURE_NAME: name, AUTO_REMOVE: mode.endsWith("-restartable") ? "false" : "true" },
       stdio: ["ignore", "ignore", "pipe", "ipc"],
     });
     let stderr = "";
@@ -56,17 +56,17 @@ for (const mode of ["normal", "failure", "SIGINT", "SIGTERM", "SIGKILL"]) {
     const container = inspect(name);
     const volumes = container.Mounts.filter(m => m.Type === "volume").map(m => m.Name);
     assert.ok(volumes.length, "Use an image with anonymous volumes to exercise disk cleanup");
-    assert.equal(container.HostConfig.AutoRemove, true);
+    assert.equal(container.HostConfig.AutoRemove, !mode.endsWith("-restartable"));
     assert.equal(container.HostConfig.RestartPolicy.Name, "no");
     assert.ok(container.Config.Labels[fixtureLabel]);
-    if (mode.startsWith("SIG")) child.kill(mode);
+    if (mode.startsWith("SIG")) child.kill(mode.split("-")[0]);
     else child.send(mode);
     const [code, signal] = await exited;
     if (mode === "normal") assert.equal(code, 0, stderr);
     if (mode === "failure") assert.notEqual(code, 0);
     if (mode === "SIGINT") assert.equal(code, 130, stderr);
     if (mode === "SIGTERM") assert.equal(code, 143, stderr);
-    if (mode === "SIGKILL") assert.equal(signal, "SIGKILL");
+    if (mode.startsWith("SIGKILL")) assert.equal(signal, "SIGKILL");
     await until(() => !docker(["ps", "-aq", "--filter", `name=^/${name}$`]));
     await until(() => {
       const remaining = new Set(docker(["volume", "ls", "-q"]).split("\n"));
@@ -74,6 +74,26 @@ for (const mode of ["normal", "failure", "SIGINT", "SIGTERM", "SIGKILL"]) {
     });
   });
 }
+
+test("outage fixtures retain data across stop/start and remove it on scope close", { timeout: 180000 }, async () => {
+  const fixtures = await createTestContainers();
+  const name = `aicap-cleanup-restart-${randomUUID()}`;
+  let volumes;
+  try {
+    await fixtures.run(["--rm=false", "-d", "--name", name, "postgres:17-alpine", "sh", "-c", "sleep 300"]);
+    volumes = inspect(name).Mounts.filter(m => m.Type === "volume").map(m => m.Name);
+    docker(["exec", name, "sh", "-c", "printf fixture > /var/lib/postgresql/data/sentinel"]);
+    docker(["stop", "-t", "1", name]);
+    assert.equal(inspect(name).State.Running, false);
+    docker(["start", name]);
+    assert.equal(docker(["exec", name, "cat", "/var/lib/postgresql/data/sentinel"]), "fixture");
+  } finally {
+    await fixtures.close();
+  }
+  assert.equal(docker(["ps", "-aq", "--filter", `name=^/${name}$`]), "");
+  const remaining = new Set(docker(["volume", "ls", "-q"]).split("\n"));
+  assert.ok(volumes.every(volume => !remaining.has(volume)));
+});
 
 test("a failed launch cannot delete another run's container", { timeout: 180000 }, async () => {
   const owner = await createTestContainers(), other = await createTestContainers();
